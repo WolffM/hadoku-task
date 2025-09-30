@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+dist/
+dist-ssr/
+
+# Build files
+*.local
+*.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env
+.env.local
+.env.*.local

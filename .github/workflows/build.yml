@@ -1,0 +1,103 @@
+name: Build and Deploy Micro-Frontend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # Set these environment variables for your specific app
+    env:
+      APP_NAME: task              # Changed from myapp to task for this specific app
+      BUILD_COMMAND: npm run build  # Or "pnpm run build", "yarn build", etc.
+      DIST_PATH: dist               # Path to built files (usually "dist" or "build")
+    
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          path: source-repo
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      # Uncomment if using pnpm
+      # - name: Setup pnpm
+      #   uses: pnpm/action-setup@v2
+      #   with:
+      #     version: 8
+      
+      # Uncomment if using yarn
+      # - name: Setup Yarn
+      #   run: npm install -g yarn
+      
+      - name: Install dependencies
+        working-directory: source-repo
+        run: npm install
+        # For pnpm: run: pnpm install
+        # For yarn: run: yarn install
+      
+      - name: Build application
+        working-directory: source-repo
+        run: ${{ env.BUILD_COMMAND }}
+      
+      - name: Verify build output
+        working-directory: source-repo
+        run: |
+          if [ ! -d "${{ env.DIST_PATH }}" ]; then
+            echo "❌ Error: Build output directory '${{ env.DIST_PATH }}' not found!"
+            exit 1
+          fi
+          echo "✅ Build output found:"
+          ls -la ${{ env.DIST_PATH }}
+      
+      - name: Checkout hadoku_site
+        uses: actions/checkout@v4
+        with:
+          repository: WolffM/hadoku_site
+          token: ${{ secrets.HADOKU_SITE_TOKEN }}
+          path: hadoku_site
+      
+      - name: Copy built files to hadoku_site
+        run: |
+          TARGET_DIR="hadoku_site/public/mf/${{ env.APP_NAME }}"
+          
+          # Create target directory
+          mkdir -p "$TARGET_DIR"
+          
+          # Copy all built files
+          cp -r source-repo/${{ env.DIST_PATH }}/* "$TARGET_DIR/"
+          
+          echo "✅ Copied files to $TARGET_DIR:"
+          ls -la "$TARGET_DIR"
+      
+      - name: Commit and push to hadoku_site
+        working-directory: hadoku_site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add public/mf/${{ env.APP_NAME }}/
+          
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "ℹ️  No changes to commit"
+          else
+            git commit -m "chore: update ${{ env.APP_NAME }} from ${{ github.repository }}@${{ github.sha }}"
+            git push
+            echo "✅ Deployed ${{ env.APP_NAME }} to hadoku_site"
+          fi
