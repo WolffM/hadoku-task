@@ -59,7 +59,7 @@ export default function App(props: TaskAppProps = {}) {
         <button onClick={() => inputRef.current?.focus()} style={{padding: '10px 12px'}}>Focus</button>
       </div>
       <div className="filters" style={{display: 'flex', gap: 8, marginBottom: 12}}>
-        <button onClick={()=>setFilter(undefined)} className={!filter?'on':''}>All</button>
+        <button onClick={()=>setFilter(undefined)} className={!filter?'on':''}>All!</button>
         {Array.from(new Set(tasks.map(t=>t.tag).filter(Boolean) as string[])).map(tag =>
           <button key={tag} onClick={()=>setFilter(tag)} className={filter===tag?'on':''}>#{tag}</button>
         )}
