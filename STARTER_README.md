@@ -65,7 +65,7 @@ npm run dev
 
 1. Create a GitHub Personal Access Token with `repo` permissions
 2. Go to your repo → Settings → Secrets → Actions
-3. Add secret: `HADOKU_SITE_TOKEN` = your token
+3. Add secret: `HADOKU_WATCHPARTY_DEPLOY_TOKEN` = your token
 
 ### 5. Push to deploy
 
@@ -250,7 +250,7 @@ A: Yes! It's already enabled in `tsconfig.json`.
 - Add to hadoku_site registry: `"css": "/mf/yourapp/style.css"`
 
 **GitHub Actions fails:**
-- Verify `HADOKU_SITE_TOKEN` secret is set
+- Verify `HADOKU_WATCHPARTY_DEPLOY_TOKEN` secret is set
 - Check that token has `repo` and `workflow` permissions
 - Ensure APP_NAME matches your folder name
 
