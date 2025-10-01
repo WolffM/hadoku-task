@@ -81,9 +81,16 @@ jobs:
             exit 1
           fi
 
-          payload=$(cat <<'JSON'
-            {"event_type":"task_updated","client_payload":{"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","ref":"${{ github.ref }}"}}
-            JSON
+          payload=$(cat <<EOF
+            {
+              "event_type": "task_updated",
+              "client_payload": {
+                "run_id": "${{ github.run_id }}",
+                "sha": "${{ github.sha }}",
+                "ref": "${{ github.ref }}"
+              }
+            }
+          EOF
           )
 
           response_file=$(mktemp)
