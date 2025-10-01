@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { api } from './lib/api'
+import { createApi } from './lib/api'
 import type { Task, TasksFile } from './lib/types'
 import type { TaskAppProps } from './entry'
 
 export default function App(props: TaskAppProps = {}) {
-  const { basename = '/task', apiUrl, environment } = props;
+  const { basename = '/task', apiUrl, environment, userType = 'public' } = props;
   const [tasks, setTasks] = useState<Task[]>([])
   const [filter, setFilter] = useState<string | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isAdmin = userType === 'admin'
+  const api = createApi(userType)
 
   useEffect(() => {
     void reload()
@@ -29,11 +31,19 @@ export default function App(props: TaskAppProps = {}) {
   async function addTask(title: string) {
     title = title.trim()
     if (!title) return
-    await api.createTask({ title })
-    await reload()
-    if (inputRef.current) {
-      inputRef.current.value = ''
-      inputRef.current.focus()
+    if (!isAdmin) {
+      alert('Only admin users can create tasks')
+      return
+    }
+    try {
+      await api.createTask({ title })
+      await reload()
+      if (inputRef.current) {
+        inputRef.current.value = ''
+        inputRef.current.focus()
+      }
+    } catch (error) {
+      alert((error as Error).message || 'Failed to create task')
     }
   }
 
@@ -44,7 +54,8 @@ export default function App(props: TaskAppProps = {}) {
         <input
           ref={inputRef}
           className="task-app__input"
-          placeholder="Type a task and press Enter…"
+          placeholder={isAdmin ? "Type a task and press Enter…" : "Read-only view (admin access required)"}
+          disabled={!isAdmin}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

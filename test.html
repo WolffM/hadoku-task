@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task App Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        #taskApp { border: 1px solid #999; margin: 10px 0; min-height: 400px; }
+        button { margin: 5px; padding: 10px; }
+        .error { color: red; background: #fee; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    </style>
+    <!-- Import Map for React -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+        }
+    }
+    </script>
+    <!-- Load task app CSS -->
+    <link rel="stylesheet" href="./dist/style.css">
+</head>
+<body>
+    <h1>Task App Test - Refactored Version</h1>
+    
+    <div class="test-section">
+        <h2>Test Different User Types</h2>
+        <p>This tests the refactored authentication system where userType is passed as props instead of using secrets directly.</p>
+        <button onclick="loadApp('public')">Load as Public User</button>
+        <button onclick="loadApp('friend')">Load as Friend User</button>
+        <button onclick="loadApp('admin')">Load as Admin User</button>
+        <button onclick="clearApp()">Clear App</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Current User Type: <span id="currentUserType">None</span></h2>
+        <div id="status"></div>
+        <div id="taskApp"></div>
+    </div>
+
+    <script type="module">
+        let taskAppModule = null;
+        
+        async function loadTaskApp() {
+            if (!taskAppModule) {
+                try {
+                    taskAppModule = await import('./dist/index.js');
+                    document.getElementById('status').innerHTML = '<div style="color: green;">✅ Task app module loaded successfully</div>';
+                } catch (error) {
+                    document.getElementById('status').innerHTML = `<div class="error">❌ Failed to load task app: ${error.message}</div>`;
+                    console.error('Failed to load task app:', error);
+                    return null;
+                }
+            }
+            return taskAppModule;
+        }
+        
+        window.loadApp = async function(userType) {
+            const container = document.getElementById('taskApp')
+            const currentType = document.getElementById('currentUserType')
+            const status = document.getElementById('status')
+            
+            // Clear existing app first
+            window.clearApp()
+            
+            status.innerHTML = '<div style="color: blue;">⏳ Loading task app...</div>';
+            
+            const app = await loadTaskApp();
+            if (!app) return;
+            
+            try {
+                // Mount new app with userType
+                app.mount(container, { userType })
+                currentType.textContent = userType
+                status.innerHTML = `<div style="color: green;">✅ Task app loaded as ${userType} user</div>`;
+                
+                if (userType === 'admin') {
+                    status.innerHTML += '<div style="color: orange;">ℹ️ Admin users can create tasks (try typing in the input field)</div>';
+                } else {
+                    status.innerHTML += '<div style="color: gray;">ℹ️ Non-admin users have read-only access</div>';
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ Failed to mount app: ${error.message}</div>`;
+                console.error('Failed to mount app:', error);
+            }
+        }
+        
+        window.clearApp = function() {
+            const container = document.getElementById('taskApp')
+            const currentType = document.getElementById('currentUserType')
+            const status = document.getElementById('status')
+            
+            if (taskAppModule) {
+                try {
+                    taskAppModule.unmount(container)
+                } catch (error) {
+                    console.warn('Error unmounting app:', error);
+                }
+            }
+            
+            container.innerHTML = ''
+            currentType.textContent = 'None'
+            status.innerHTML = ''
+        }
+        
+        // Load the app module on page load to check for errors early
+        loadTaskApp();
+    </script>
+</body>
+</html>

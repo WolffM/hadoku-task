@@ -3,24 +3,27 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './style.css'
 
-// Register Service Worker (client-side API)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(new URL('./lib/sw.ts', import.meta.url), { type: 'module' })
-}
+// Service Worker disabled - parent app handles GitHub integration
 
 // Props interface for configuration from hadoku-site
 export interface TaskAppProps {
   basename?: string;
   apiUrl?: string;
   environment?: string;
+  userType?: 'admin' | 'friend' | 'public';
   [key: string]: any;
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
+  // Extract userType from URL params if not provided in props
+  const urlParams = new URLSearchParams(window.location.search)
+  const userType = props.userType || urlParams.get('userType') as ('admin' | 'friend' | 'public') || 'public'
+  
+  const finalProps = { ...props, userType }
   const root = createRoot(el)
-  root.render(<App {...props} />)
+  root.render(<App {...finalProps} />)
   ;(el as any).__root = root
-  console.log('[task-app] Mounted successfully', props)
+  console.log('[task-app] Mounted successfully', finalProps)
 }
 export function unmount(el: HTMLElement) {
   ;(el as any).__root?.unmount()

@@ -1,13 +1,31 @@
 {
   "version": 2,
-  "updatedAt": "2025-09-30T16:58:26Z",
+  "updatedAt": "2025-10-01T23:24:48.166285Z",
   "counters": {
-    "created": 0,
+    "created": 1,
     "completed": 0,
     "edited": 0,
     "deleted": 0,
     "sessions": 0
   },
-  "timeline": [],
-  "tasks": {}
+  "timeline": [
+    {
+      "t": "2025-10-01T23:24:48.164285Z",
+      "event": "create",
+      "id": "01JB2EXAMPLE123"
+    }
+  ],
+  "tasks": {
+    "01JB2EXAMPLE123": {
+      "id": "01JB2EXAMPLE123",
+      "title": "Test task from refactored app",
+      "tag": "refactor",
+      "project": "hadoku-task",
+      "createdAt": "2025-10-01T23:24:48.164285Z",
+      "updatedAt": null,
+      "completedAt": null,
+      "deletedAt": null,
+      "state": "active"
+    }
+  }
 }

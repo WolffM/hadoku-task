@@ -4,8 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
-    'process.env': '{}',
+    // Remove process.env references - use import.meta.env instead
   },
   build: {
     lib: {
