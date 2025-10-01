@@ -109,7 +109,7 @@ async function handleApi(req: Request): Promise<Response> {
       await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: create')
       await ghPutFile(cfg.dataPaths.stats,  JSON.stringify(stats,  null, 2), sSha, 'stats: create')
       bcPost({ type: 'tasks-updated' })
-      return json({ ok: True, id })
+      return json({ ok: true, id })
     }
 
     if (req.method === 'PATCH' && pathname.startsWith('/api/task/')) {
@@ -150,7 +150,7 @@ async function handleApi(req: Request): Promise<Response> {
       await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: update')
       await ghPutFile(cfg.dataPaths.stats,  JSON.stringify(stats,  null, 2), sSha, 'stats: update')
       bcPost({ type: 'tasks-updated' })
-      return json({ ok: True })
+      return json({ ok: true })
     }
 
     if (req.method === 'DELETE' && pathname.startsWith('/api/task/')) {
@@ -185,7 +185,7 @@ async function handleApi(req: Request): Promise<Response> {
       await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: delete')
       await ghPutFile(cfg.dataPaths.stats,  JSON.stringify(stats,  null, 2), sSha, 'stats: delete')
       bcPost({ type: 'tasks-updated' })
-      return json({ ok: True })
+      return json({ ok: true })
     }
 
     return json({ error: 'Not found' }, 404)
