@@ -38,12 +38,12 @@ export default function App(props: TaskAppProps = {}) {
   }
 
   return (
-    <div className="wrap" style={{maxWidth: 720, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, Segoe UI, Arial'}}>
-      <h1 style={{fontSize: 24, marginBottom: 12}}>Tasks</h1>
-      <div className="bar" style={{display: 'flex', gap: 8, marginBottom: 12}}>
+    <div className="task-app">
+      <h1 className="task-app__header">Tasks</h1>
+      <div className="task-app__controls">
         <input
           ref={inputRef}
-          style={{flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 16}}
+          className="task-app__input"
           placeholder="Type a task and press Enter…"
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -56,21 +56,21 @@ export default function App(props: TaskAppProps = {}) {
             }
           }}
         />
-        <button onClick={() => inputRef.current?.focus()} style={{padding: '10px 12px'}}>Focus</button>
+        <button onClick={() => inputRef.current?.focus()}>Focus</button>
       </div>
-      <div className="filters" style={{display: 'flex', gap: 8, marginBottom: 12}}>
+      <div className="task-app__filters">
         <button onClick={()=>setFilter(undefined)} className={!filter?'on':''}>All</button>
         {Array.from(new Set(tasks.map(t=>t.tag).filter(Boolean) as string[])).map(tag =>
           <button key={tag} onClick={()=>setFilter(tag)} className={filter===tag?'on':''}>#{tag}</button>
         )}
       </div>
-      <ul className="list" style={{listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8}}>
+      <ul className="task-app__list">
         {tasks
           .filter(t => !filter || !t.tag || filter===t.tag)
           .map(task => (
-            <li key={task.id} style={{padding: '12px', border: '1px solid #eee', borderRadius: 8}}>
-              <div style={{fontWeight: 500}}>{task.title}</div>
-              {task.tag && <div style={{fontSize: 12, color: '#666', marginTop: 4}}>#{task.tag}</div>}
+            <li key={task.id} className="task-app__item">
+              <div className="task-app__item-title">{task.title}</div>
+              {task.tag && <div className="task-app__item-tag">#{task.tag}</div>}
             </li>
           ))}
       </ul>
