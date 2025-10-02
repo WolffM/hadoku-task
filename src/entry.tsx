@@ -11,7 +11,6 @@ export interface TaskAppProps {
   apiUrl?: string;
   environment?: string;
   userType?: 'admin' | 'friend' | 'public';
-  [key: string]: any;
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
