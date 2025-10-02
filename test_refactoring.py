@@ -62,7 +62,7 @@ def test_refactoring_goals():
     with open('src/App.tsx', 'r') as f:
         app_content = f.read()
     
-    if 'userType' in app_content and 'isAdmin = userType === \'admin\'' in app_content:
+    if 'userType' in app_content and 'canModify = userType === \'admin\' || userType === \'friend\'' in app_content:
         print("✅ App component uses userType prop correctly")
     else:
         print("❌ App component doesn't use userType prop correctly")
@@ -74,7 +74,7 @@ def test_refactoring_goals():
     with open('src/lib/api.ts', 'r') as f:
         api_content = f.read()
     
-    if 'Only admin users can' in api_content and 'X-User-Type' in api_content:
+    if 'Public users cannot' in api_content and 'X-User-Type' in api_content:
         print("✅ API has proper access control based on userType")
     else:
         print("❌ API doesn't have proper access control")

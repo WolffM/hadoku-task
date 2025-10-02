@@ -1,31 +1,443 @@
 {
   "version": 2,
-  "updatedAt": "2025-10-01T23:30:00.000000Z",
+  "updatedAt": "2025-10-02T21:55:20.813003Z",
   "counters": {
-    "created": 1,
-    "completed": 0,
-    "edited": 0,
-    "deleted": 0,
-    "sessions": 0
+    "created": 33,
+    "completed": 4,
+    "edited": 3,
+    "deleted": 26
   },
   "timeline": [
     {
       "t": "2025-10-01T23:30:00.000000Z",
       "event": "create",
       "id": "01JB2FRIEND456"
+    },
+    {
+      "t": "2025-10-02T21:06:43.840092Z",
+      "event": "created",
+      "id": "test_friend_1759439203"
+    },
+    {
+      "t": "2025-10-02T21:06:45.889956Z",
+      "event": "created",
+      "id": "test_friend_1759439205"
+    },
+    {
+      "t": "2025-10-02T21:06:46.638075Z",
+      "event": "created",
+      "id": "test_friend_1759439206"
+    },
+    {
+      "t": "2025-10-02T21:06:48.013160Z",
+      "event": "created",
+      "id": "test_friend_1759439208"
+    },
+    {
+      "t": "2025-10-02T21:06:49.184157Z",
+      "event": "created",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:06:49.886329Z",
+      "event": "created",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:06:50.412046Z",
+      "event": "created",
+      "id": "test_friend_1759439210"
+    },
+    {
+      "t": "2025-10-02T21:07:04.249035Z",
+      "event": "created",
+      "id": "test_friend_1759439224"
+    },
+    {
+      "t": "2025-10-02T21:07:19.615775Z",
+      "event": "delete",
+      "id": "test_friend_1759439224"
+    },
+    {
+      "t": "2025-10-02T21:07:19.637183Z",
+      "event": "delete",
+      "id": "test_friend_1759439210"
+    },
+    {
+      "t": "2025-10-02T21:07:19.660302Z",
+      "event": "delete",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:08:08.627428Z",
+      "event": "created",
+      "id": "test_friend_1759439288"
+    },
+    {
+      "t": "2025-10-02T21:08:15.769832Z",
+      "event": "created",
+      "id": "test_friend_1759439295"
+    },
+    {
+      "t": "2025-10-02T21:08:31.227885Z",
+      "event": "delete",
+      "id": "test_friend_1759439288"
+    },
+    {
+      "t": "2025-10-02T21:08:45.021511Z",
+      "event": "delete",
+      "id": "test_friend_1759439295"
+    },
+    {
+      "t": "2025-10-02T21:08:48.218189Z",
+      "event": "complete",
+      "id": "test_friend_1759439206"
+    },
+    {
+      "t": "2025-10-02T21:08:49.206761Z",
+      "event": "complete",
+      "id": "test_friend_1759439205"
+    },
+    {
+      "t": "2025-10-02T21:12:02.272549Z",
+      "event": "delete",
+      "id": "test_friend_1759439208"
+    },
+    {
+      "t": "2025-10-02T21:12:03.990922Z",
+      "event": "delete",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:17:37.087694Z",
+      "event": "created",
+      "id": "test_friend_1759439857"
+    },
+    {
+      "t": "2025-10-02T21:17:38.820020Z",
+      "event": "created",
+      "id": "test_friend_1759439858"
+    },
+    {
+      "t": "2025-10-02T21:17:39.878868Z",
+      "event": "created",
+      "id": "test_friend_1759439859"
+    },
+    {
+      "t": "2025-10-02T21:17:46.409385Z",
+      "event": "created",
+      "id": "test_friend_1759439866"
+    },
+    {
+      "t": "2025-10-02T21:17:49.038274Z",
+      "event": "edited",
+      "id": "test_friend_1759439859"
+    },
+    {
+      "t": "2025-10-02T21:17:51.257856Z",
+      "event": "edited",
+      "id": "test_friend_1759439858"
+    },
+    {
+      "t": "2025-10-02T21:17:57.707238Z",
+      "event": "edited",
+      "id": "test_friend_1759439859"
+    },
+    {
+      "t": "2025-10-02T21:18:48.634174Z",
+      "event": "deleted",
+      "id": "test_friend_1759439859"
+    },
+    {
+      "t": "2025-10-02T21:18:51.409220Z",
+      "event": "completed",
+      "id": "test_friend_1759439866"
+    },
+    {
+      "t": "2025-10-02T21:18:52.021358Z",
+      "event": "completed",
+      "id": "test_friend_1759439857"
+    },
+    {
+      "t": "2025-10-02T21:18:52.650834Z",
+      "event": "deleted",
+      "id": "test_friend_1759439203"
+    },
+    {
+      "t": "2025-10-02T21:18:53.051053Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:18:53.761192Z",
+      "event": "deleted",
+      "id": "test_friend_1759439858"
+    },
+    {
+      "t": "2025-10-02T21:18:54.304013Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:18:54.866446Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:18:55.453802Z",
+      "event": "completed",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:18:57.370942Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:48:29.104612Z",
+      "event": "created",
+      "id": "test_friend_1759441709"
+    },
+    {
+      "t": "2025-10-02T21:48:29.674769Z",
+      "event": "created",
+      "id": "test_friend_1759441709"
+    },
+    {
+      "t": "2025-10-02T21:48:30.127576Z",
+      "event": "created",
+      "id": "test_friend_1759441710"
+    },
+    {
+      "t": "2025-10-02T21:48:30.505084Z",
+      "event": "created",
+      "id": "test_friend_1759441710"
+    },
+    {
+      "t": "2025-10-02T21:49:18.804181Z",
+      "event": "completed",
+      "id": "test_friend_1759441710"
+    },
+    {
+      "t": "2025-10-02T21:49:19.964666Z",
+      "event": "deleted",
+      "id": "test_friend_1759441709"
+    },
+    {
+      "t": "2025-10-02T21:49:20.434197Z",
+      "event": "deleted",
+      "id": "test_friend_1759441709"
+    },
+    {
+      "t": "2025-10-02T21:49:31.091817Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:49:32.570555Z",
+      "event": "deleted",
+      "id": "test_friend_1759441710"
+    },
+    {
+      "t": "2025-10-02T21:52:07.367386Z",
+      "event": "created",
+      "id": "test_friend_1759441927"
+    },
+    {
+      "t": "2025-10-02T21:52:07.818441Z",
+      "event": "created",
+      "id": "test_friend_1759441927"
+    },
+    {
+      "t": "2025-10-02T21:52:08.093204Z",
+      "event": "created",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:52:08.309356Z",
+      "event": "created",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:52:08.590288Z",
+      "event": "created",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:52:09.960446Z",
+      "event": "deleted",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:52:10.573214Z",
+      "event": "deleted",
+      "id": "test_friend_1759441927"
+    },
+    {
+      "t": "2025-10-02T21:52:11.837427Z",
+      "event": "deleted",
+      "id": "test_friend_1759441927"
+    },
+    {
+      "t": "2025-10-02T21:52:13.331818Z",
+      "event": "deleted",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:52:15.479099Z",
+      "event": "deleted",
+      "id": "test_friend_1759441928"
+    },
+    {
+      "t": "2025-10-02T21:54:30.906530Z",
+      "event": "created",
+      "id": "test_friend_1759442070"
+    },
+    {
+      "t": "2025-10-02T21:54:31.178897Z",
+      "event": "created",
+      "id": "test_friend_1759442071"
+    },
+    {
+      "t": "2025-10-02T21:54:31.973277Z",
+      "event": "created",
+      "id": "test_friend_1759442071"
+    },
+    {
+      "t": "2025-10-02T21:54:32.408209Z",
+      "event": "created",
+      "id": "test_friend_1759442072"
+    },
+    {
+      "t": "2025-10-02T21:54:52.963878Z",
+      "event": "deleted",
+      "id": "test_friend_1759442071"
+    },
+    {
+      "t": "2025-10-02T21:54:53.450090Z",
+      "event": "deleted",
+      "id": "test_friend_1759442072"
+    },
+    {
+      "t": "2025-10-02T21:54:53.829103Z",
+      "event": "deleted",
+      "id": "test_friend_1759442071"
+    },
+    {
+      "t": "2025-10-02T21:54:55.644059Z",
+      "event": "deleted",
+      "id": "test_friend_1759442070"
+    },
+    {
+      "t": "2025-10-02T21:54:55.997877Z",
+      "event": "deleted",
+      "id": "test_friend_1759439209"
+    },
+    {
+      "t": "2025-10-02T21:55:15.155887Z",
+      "event": "created",
+      "id": "test_friend_1759442115155051_6655"
+    },
+    {
+      "t": "2025-10-02T21:55:15.558816Z",
+      "event": "created",
+      "id": "test_friend_1759442115558099_3273"
+    },
+    {
+      "t": "2025-10-02T21:55:16.247958Z",
+      "event": "created",
+      "id": "test_friend_1759442116247044_6061"
+    },
+    {
+      "t": "2025-10-02T21:55:16.759584Z",
+      "event": "created",
+      "id": "test_friend_1759442116758744_9753"
+    },
+    {
+      "t": "2025-10-02T21:55:17.213923Z",
+      "event": "created",
+      "id": "test_friend_1759442117212667_7901"
+    },
+    {
+      "t": "2025-10-02T21:55:18.625410Z",
+      "event": "deleted",
+      "id": "test_friend_1759442117212667_7901"
+    },
+    {
+      "t": "2025-10-02T21:55:19.156879Z",
+      "event": "deleted",
+      "id": "test_friend_1759442116758744_9753"
+    },
+    {
+      "t": "2025-10-02T21:55:19.851230Z",
+      "event": "deleted",
+      "id": "test_friend_1759442116247044_6061"
+    },
+    {
+      "t": "2025-10-02T21:55:20.353569Z",
+      "event": "deleted",
+      "id": "test_friend_1759442115558099_3273"
+    },
+    {
+      "t": "2025-10-02T21:55:20.813003Z",
+      "event": "deleted",
+      "id": "test_friend_1759442115155051_6655"
     }
   ],
   "tasks": {
-    "01JB2FRIEND456": {
-      "id": "01JB2FRIEND456",
-      "title": "Friend task - shared workspace",
-      "tag": "friend",
-      "project": "hadoku-task",
-      "createdAt": "2025-10-01T23:30:00.000000Z",
-      "updatedAt": null,
-      "completedAt": null,
-      "deletedAt": null,
-      "state": "active"
+    "test_friend_1759439857": {
+      "id": "test_friend_1759439857",
+      "title": "nwe task",
+      "tag": null,
+      "state": "Completed",
+      "createdAt": "2025-10-02T21:17:37.086429Z",
+      "updatedAt": "2025-10-02T21:18:52.020524Z",
+      "closedAt": "2025-10-02T21:18:52.020524Z"
+    },
+    "test_friend_1759439858": {
+      "id": "test_friend_1759439858",
+      "title": "ok",
+      "tag": "tag2",
+      "state": "Deleted",
+      "createdAt": "2025-10-02T21:17:38.818639Z",
+      "updatedAt": "2025-10-02T21:18:53.760393Z",
+      "closedAt": "2025-10-02T21:18:53.760393Z"
+    },
+    "test_friend_1759439859": {
+      "id": "test_friend_1759439859",
+      "title": "yes",
+      "tag": "tag2 tag3",
+      "state": "Deleted",
+      "createdAt": "2025-10-02T21:17:39.877845Z",
+      "updatedAt": "2025-10-02T21:18:48.633255Z",
+      "closedAt": "2025-10-02T21:18:48.633255Z"
+    },
+    "test_friend_1759439866": {
+      "id": "test_friend_1759439866",
+      "title": "new task2",
+      "tag": "tag2",
+      "state": "Completed",
+      "createdAt": "2025-10-02T21:17:46.408304Z",
+      "updatedAt": "2025-10-02T21:18:51.408472Z",
+      "closedAt": "2025-10-02T21:18:51.408472Z"
+    },
+    "test_friend_1759439203": {
+      "id": "test_friend_1759439203",
+      "title": "hi",
+      "tag": null,
+      "state": "Deleted",
+      "createdAt": "2025-10-02T21:06:43.839192Z",
+      "updatedAt": "2025-10-02T21:18:52.649823Z",
+      "closedAt": "2025-10-02T21:18:52.649823Z"
+    },
+    "test_friend_1759439209": {
+      "id": "test_friend_1759439209",
+      "title": "it",
+      "tag": "tag1 tag2",
+      "state": "Deleted",
+      "createdAt": "2025-10-02T21:06:49.877980Z",
+      "updatedAt": "2025-10-02T21:18:57.370100Z",
+      "closedAt": "2025-10-02T21:18:57.370100Z"
     }
   }
 }

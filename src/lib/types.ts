@@ -4,11 +4,10 @@ export type Task = {
   id: ULID;
   title: string;
   tag?: string | null;
-  project?: string | null;
+  state: 'Active' | 'Deleted' | 'Completed';
   createdAt: string;         // ISO 8601
   updatedAt?: string | null; // ISO 8601
-  completedAt?: string | null;
-  deleted?: boolean;
+  closedAt?: string | null;
 }
 
 export type TasksFile = {
@@ -22,12 +21,10 @@ export type StatsTaskRecord = {
   id: ULID;
   title: string;
   tag?: string | null;
-  project?: string | null;
+  state: 'Active' | 'Deleted' | 'Completed';
   createdAt: string;
   updatedAt?: string | null;
-  completedAt?: string | null;
-  deletedAt?: string | null;
-  state: 'active' | 'completed' | 'deleted';
+  closedAt?: string | null;
 }
 
 export type StatsFile = {
@@ -38,11 +35,10 @@ export type StatsFile = {
     completed: number;
     edited: number;
     deleted: number;
-    sessions: number;
   };
   timeline: Array<{
     t: string;
-    event: 'create'|'complete'|'edit'|'delete'|'session';
+    event: 'created'|'completed'|'edited'|'deleted';
     id?: ULID;
   }>;
   // Persistent snapshot of every task ever seen (by id)

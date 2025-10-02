@@ -89,13 +89,13 @@ async function handleApi(req: Request): Promise<Response> {
 
     // Mutations update tasks.json and stats.json (v2) including task records
     if (req.method === 'POST' && pathname === '/api/task') {
-      const payload = await req.json() // { title, tag?, project? }
+      const payload = await req.json() // { title, tag? }
       const now = new Date().toISOString()
 
       const { text: tText, sha: tSha } = await ghGetFile(cfg.dataPaths.tasks)
       const tasks = JSON.parse(tText)
       const id = ulid()
-      const task = { id, title: payload.title, tag: payload.tag ?? null, project: payload.project ?? null, createdAt: now }
+      const task = { id, title: payload.title, tag: payload.tag ?? null, createdAt: now }
       tasks.tasks = [task, ...(tasks.tasks || [])]
       tasks.updatedAt = now
 
@@ -103,7 +103,7 @@ async function handleApi(req: Request): Promise<Response> {
       const stats = JSON.parse(sText)
       stats.counters.created++
       stats.timeline.push({ t: now, event: 'create', id })
-      stats.tasks[id] = { id, title: task.title, tag: task.tag, project: task.project, createdAt: now, updatedAt: null, completedAt: null, deletedAt: null, state: 'active' }
+      stats.tasks[id] = { id, title: task.title, tag: task.tag, createdAt: now, updatedAt: null, closedAt: null, state: 'Active' }
       stats.updatedAt = now
 
       await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: create')
@@ -123,23 +123,23 @@ async function handleApi(req: Request): Promise<Response> {
       if (idx < 0) return json({ error: 'Not found' }, 404)
       const t = tasks.tasks[idx]
       Object.assign(t, patch)
-      if (patch.completed === true) t.completedAt = now
+      if (patch.completed === true) t.closedAt = now
       t.updatedAt = now
       tasks.updatedAt = now
 
       const { text: sText, sha: sSha } = await ghGetFile(cfg.dataPaths.stats)
       const stats = JSON.parse(sText)
-      const rec = stats.tasks[id] || { id, title: t.title, tag: t.tag ?? null, project: t.project ?? null, createdAt: t.createdAt, updatedAt: null, completedAt: null, deletedAt: null, state: 'active' }
+      const rec = stats.tasks[id] || { id, title: t.title, tag: t.tag ?? null, createdAt: t.createdAt, updatedAt: null, closedAt: null, state: 'Active' }
       // Update record
       rec.title = t.title
       rec.tag = t.tag ?? null
-      rec.project = t.project ?? null
+      // rec.project removed from schema
       rec.updatedAt = now
       if (patch.completed === true) {
-        rec.completedAt = now
+        rec.closedAt = now
         rec.state = 'completed'
       } else if (patch.completed === false) {
-        rec.completedAt = null
+        rec.closedAt = null
         rec.state = 'active'
       }
       stats.tasks[id] = rec
@@ -171,12 +171,10 @@ async function handleApi(req: Request): Promise<Response> {
         id,
         title: rec.title,
         tag: rec.tag ?? null,
-        project: rec.project ?? null,
         createdAt: rec.createdAt ?? now,
         updatedAt: now,
-        completedAt: rec.completedAt ?? null,
-        deletedAt: now,
-        state: 'deleted'
+        closedAt: now,
+        state: 'Deleted'
       }
       stats.counters.deleted++
       stats.timeline.push({ t: now, event: 'delete', id })

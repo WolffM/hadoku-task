@@ -17,7 +17,7 @@ export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
       const r = await fetch(`/api/stats?userType=${userType}`)
       return r.json()
     },
-    async createTask(data: { title:string; tag?:string; project?:string }) {
+    async createTask(data: { title:string; tag?:string }) {
       if (userType === 'public') {
         throw new Error('Public users cannot create tasks')
       }
@@ -29,6 +29,13 @@ export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
         throw new Error('Public users cannot modify tasks')
       }
       const r = await fetch(`/api/task/${id}`, { method:'PATCH', headers: adminHeaders(userType), body: JSON.stringify(patch) })
+      return r.json()
+    },
+    async completeTask(id: string) {
+      if (userType === 'public') {
+        throw new Error('Public users cannot complete tasks')
+      }
+      const r = await fetch(`/api/task/${id}/complete`, { method:'POST', headers: adminHeaders(userType) })
       return r.json()
     },
     async deleteTask(id: string) {

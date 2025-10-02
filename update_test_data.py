@@ -14,7 +14,6 @@ def update_json_files():
         "id": "01JB2EXAMPLE123",
         "title": "Test task from refactored app",
         "tag": "refactor",
-        "project": "hadoku-task",
         "createdAt": datetime.utcnow().isoformat() + "Z"
     }
     
@@ -52,12 +51,10 @@ def update_json_files():
             'id': test_task['id'],
             'title': test_task['title'],
             'tag': test_task['tag'],
-            'project': test_task['project'],
             'createdAt': test_task['createdAt'],
             'updatedAt': None,
-            'completedAt': None,
-            'deletedAt': None,
-            'state': 'active'
+            'closedAt': None,
+            'state': 'Active'
         }
         stats_data['updatedAt'] = datetime.utcnow().isoformat() + "Z"
         

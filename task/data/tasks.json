@@ -1,13 +1,5 @@
 {
   "version": 1,
   "updatedAt": "2025-10-01T23:24:48.165284Z",
-  "tasks": [
-    {
-      "id": "01JB2EXAMPLE123",
-      "title": "Test task from refactored app",
-      "tag": "refactor",
-      "project": "hadoku-task",
-      "createdAt": "2025-10-01T23:24:48.164285Z"
-    }
-  ]
+  "tasks": []
 }

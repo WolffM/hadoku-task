@@ -4,6 +4,8 @@ Simple HTTP server to test the refactored task app
 """
 import json
 import os
+import time
+import random
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import threading
@@ -88,6 +90,63 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
                 self.send_json_response({'error': str(e)}, 500)
             return
         
+        # Handle complete task endpoint
+        if path.startswith('/api/task/') and path.endswith('/complete'):
+            if user_type == 'public':
+                self.send_json_response({'error': 'Public users cannot complete tasks'}, 403)
+                return
+            
+            # Extract task ID from path like /api/task/test_friend_123/complete
+            path_parts = path.split('/')
+            if len(path_parts) != 5:
+                self.send_json_response({'error': 'Invalid path'}, 400)
+                return
+            
+            task_id = path_parts[3]
+            
+            try:
+                tasks_file = f'task/data/{user_type}/tasks.json'
+                with open(tasks_file, 'r') as f:
+                    tasks_data = json.load(f)
+                
+                # Find and complete the task
+                task_found = False
+                completed_task = None
+                from datetime import datetime, timezone
+                current_time = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+                
+                # Find the task and prepare for removal
+                for i, task in enumerate(tasks_data['tasks']):
+                    if task['id'] == task_id:
+                        # Update task state for stats
+                        task['state'] = 'Completed'
+                        task['closedAt'] = current_time
+                        task['updatedAt'] = current_time
+                        completed_task = task.copy()
+                        # Remove from active tasks
+                        tasks_data['tasks'].pop(i)
+                        task_found = True
+                        break
+                
+                if not task_found:
+                    self.send_json_response({'error': 'Task not found'}, 404)
+                    return
+                
+                # Save updated data
+                tasks_data['updatedAt'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+                with open(tasks_file, 'w') as f:
+                    json.dump(tasks_data, f, indent=2)
+                
+                # Update stats with completed task data
+                self.update_stats(user_type, 'completed', task_id, completed_task)
+                
+                self.send_json_response({'ok': True, 'message': f'Task {task_id} completed by {user_type}'})
+                
+            except Exception as e:
+                print(f"Error completing task: {e}")
+                self.send_json_response({'error': str(e)}, 500)
+            return
+        
         if user_type == 'public':
             self.send_json_response({'error': 'Public users cannot create tasks'}, 403)
             return
@@ -98,16 +157,56 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
             
-            # Simulate creating a task
+            # Create new task with current UTC timestamp
+            from datetime import datetime, timezone
+            
+            # Read existing tasks first to ensure ID uniqueness
+            tasks_file = f'task/data/{user_type}/tasks.json'
+            with open(tasks_file, 'r') as f:
+                tasks_data = json.load(f)
+            
+            # Generate unique ID with microsecond precision + random suffix
+            existing_ids = {task['id'] for task in tasks_data['tasks']}
+            unique_id = None
+            max_attempts = 10
+            
+            for _ in range(max_attempts):
+                timestamp_us = int(time.time() * 1000000)  # microseconds for uniqueness
+                random_suffix = random.randint(1000, 9999)
+                candidate_id = f'test_{user_type}_{timestamp_us}_{random_suffix}'
+                if candidate_id not in existing_ids:
+                    unique_id = candidate_id
+                    break
+                time.sleep(0.001)  # Small delay before retry
+            
+            if not unique_id:
+                self.send_json_response({'error': 'Failed to generate unique ID'}, 500)
+                return
+            
             task = {
-                'id': f'test_{user_type}_{len(data.get("title", "task"))}',
-                'title': data.get('title', ''),
+                'id': unique_id,
+                'title': data.get('title', ''), 
                 'tag': data.get('tag'),
-                'project': data.get('project'),
-                'createdAt': '2025-10-01T12:00:00Z'
+                'state': 'Active',
+                'createdAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
             }
             
-            self.send_json_response({'ok': True, 'id': task['id'], 'task': task})
+            # Actually save the task to the JSON file
+            try:
+                # Add new task to the beginning of the list (tasks_data already loaded above)
+                tasks_data['tasks'].insert(0, task)
+                tasks_data['updatedAt'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+                
+                # Save back to file
+                with open(tasks_file, 'w') as f:
+                    json.dump(tasks_data, f, indent=2)
+                
+                # Update stats
+                self.update_stats(user_type, 'created', task['id'])
+                
+                self.send_json_response({'ok': True, 'id': task['id']})
+            except Exception as e:
+                self.send_json_response({'error': str(e)}, 500)
         else:
             self.send_error(404)
     
@@ -117,8 +216,54 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
         if user_type == 'public':
             self.send_json_response({'error': 'Public users cannot modify tasks'}, 403)
             return
+        
+        # Extract task ID from path like /api/task/test_friend_123
+        path_parts = path.split('/')
+        if len(path_parts) != 4 or path_parts[1] != 'api' or path_parts[2] != 'task':
+            self.send_json_response({'error': 'Invalid path'}, 400)
+            return
+        
+        task_id = path_parts[3]
+        
+        # Read request body
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        patch_data = json.loads(post_data.decode('utf-8'))
+        
+        # Update the task in the JSON file
+        try:
+            tasks_file = f'task/data/{user_type}/tasks.json'
+            with open(tasks_file, 'r') as f:
+                tasks_data = json.load(f)
             
-        self.send_json_response({'ok': True, 'message': f'Task updated by {user_type} (simulated)'})
+            # Find and update the task
+            task_found = False
+            for task in tasks_data['tasks']:
+                if task['id'] == task_id:
+                    # Update only the provided fields
+                    for key, value in patch_data.items():
+                        task[key] = value
+                    task_found = True
+                    break
+            
+            if not task_found:
+                self.send_json_response({'error': 'Task not found'}, 404)
+                return
+            
+            # Save updated data
+            from datetime import datetime, timezone
+            tasks_data['updatedAt'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+            with open(tasks_file, 'w') as f:
+                json.dump(tasks_data, f, indent=2)
+            
+            # Update stats
+            self.update_stats(user_type, 'edited', task_id)
+            
+            self.send_json_response({'ok': True, 'message': f'Task {task_id} updated by {user_type}'})
+            
+        except Exception as e:
+            print(f"Error updating task: {e}")
+            self.send_json_response({'error': str(e)}, 500)
     
     def handle_api_delete(self, path):
         user_type = self.headers.get('X-User-Type', 'public')
@@ -126,8 +271,57 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
         if user_type == 'public':
             self.send_json_response({'error': 'Public users cannot delete tasks'}, 403)
             return
+        
+        # Extract task ID from path like /api/task/test_friend_123
+        path_parts = path.split('/')
+        if len(path_parts) != 4 or path_parts[1] != 'api' or path_parts[2] != 'task':
+            self.send_json_response({'error': 'Invalid path'}, 400)
+            return
+        
+        task_id = path_parts[3]
+        
+        # Mark the task as deleted
+        try:
+            tasks_file = f'task/data/{user_type}/tasks.json'
+            with open(tasks_file, 'r') as f:
+                tasks_data = json.load(f)
             
-        self.send_json_response({'ok': True, 'message': f'Task deleted by {user_type} (simulated)'})
+            # Find and delete the task
+            task_found = False
+            deleted_task = None
+            from datetime import datetime, timezone
+            current_time = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+            
+            # Find the task and prepare for removal
+            for i, task in enumerate(tasks_data['tasks']):
+                if task['id'] == task_id:
+                    # Update task state for stats
+                    task['state'] = 'Deleted'
+                    task['closedAt'] = current_time
+                    task['updatedAt'] = current_time
+                    deleted_task = task.copy()
+                    # Remove from active tasks
+                    tasks_data['tasks'].pop(i)
+                    task_found = True
+                    break
+            
+            if not task_found:
+                self.send_json_response({'error': 'Task not found'}, 404)
+                return
+            
+            # Save updated data
+            tasks_data['updatedAt'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+            with open(tasks_file, 'w') as f:
+                json.dump(tasks_data, f, indent=2)
+            
+            # Update stats with deleted task data
+            self.update_stats(user_type, 'deleted', task_id, deleted_task)
+            
+            self.send_json_response({'ok': True, 'message': f'Task {task_id} deleted by {user_type}'})
+            
+        except Exception as e:
+            print(f"Error deleting task: {e}")
+            self.send_json_response({'error': str(e)}, 500)
 
     def serve_json_file(self, filename):
         try:
@@ -139,6 +333,53 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self.send_error(500)
 
+    def update_stats(self, user_type, event, task_id=None, task_data=None):
+        """Update stats.json with task events and graveyard"""
+        try:
+            stats_file = f'task/data/{user_type}/stats.json'
+            tasks_file = f'task/data/{user_type}/tasks.json'
+            
+            # Load existing stats
+            try:
+                with open(stats_file, 'r') as f:
+                    stats_data = json.load(f)
+            except FileNotFoundError:
+                # Create new stats file
+                stats_data = {
+                    "version": 2,
+                    "updatedAt": "",
+                    "counters": {"created": 0, "completed": 0, "edited": 0, "deleted": 0},
+                    "timeline": [],
+                    "tasks": {}
+                }
+            
+            # Update counters with correct event names
+            if event in stats_data['counters']:
+                stats_data['counters'][event] += 1
+            
+            # Add to timeline
+            from datetime import datetime, timezone
+            current_time = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+            timeline_entry = {
+                "t": current_time,
+                "event": event
+            }
+            if task_id:
+                timeline_entry["id"] = task_id
+            
+            stats_data['timeline'].append(timeline_entry)
+            stats_data['updatedAt'] = current_time
+            
+            # Update graveyard - no need to read tasks file for completed/deleted tasks
+            # They will be passed directly via the task_data parameter
+            
+            # Save stats
+            with open(stats_file, 'w') as f:
+                json.dump(stats_data, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating stats: {e}")
+    
     def send_json_response(self, data, status=200):
         self.send_response(status)
         self.send_header('Content-type', 'application/json')

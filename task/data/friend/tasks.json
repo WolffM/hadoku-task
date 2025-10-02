@@ -1,13 +1,5 @@
 {
   "version": 1,
-  "updatedAt": "2025-10-01T23:30:00.000000Z",
-  "tasks": [
-    {
-      "id": "01JB2FRIEND456",
-      "title": "Friend task - shared workspace",
-      "tag": "friend",
-      "project": "hadoku-task",
-      "createdAt": "2025-10-01T23:30:00.000000Z"
-    }
-  ]
+  "updatedAt": "2025-10-02T21:55:20.812155Z",
+  "tasks": []
 }

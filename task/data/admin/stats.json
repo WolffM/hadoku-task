@@ -20,12 +20,10 @@
       "id": "01JB2EXAMPLE123",
       "title": "Admin task from refactored app",
       "tag": "admin",
-      "project": "hadoku-task",
       "createdAt": "2025-10-01T23:24:48.164285Z",
       "updatedAt": null,
-      "completedAt": null,
-      "deletedAt": null,
-      "state": "active"
+      "state": "active",
+      "closedAt": null
     }
   }
 }
