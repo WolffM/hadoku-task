@@ -8,11 +8,12 @@ export default function App(props: TaskAppProps = {}) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [filter, setFilter] = useState<string | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
-  const isAdmin = userType === 'admin'
+  const canModify = userType === 'admin' || userType === 'friend'
+  const isPublic = userType === 'public'
   const api = createApi(userType)
 
   useEffect(() => {
-    void reload()
+    void initialLoad()
     inputRef.current?.focus()
     try {
       const bc = new BroadcastChannel('tasks')
@@ -21,7 +22,19 @@ export default function App(props: TaskAppProps = {}) {
       }
       return () => bc.close()
     } catch {}
-  }, [])
+  }, [userType])
+
+  async function initialLoad() {
+    if (isPublic) {
+      // Public users: clear tasks on load, then load fresh data
+      try {
+        await api.clearPublicTasks()
+      } catch (error) {
+        console.warn('Failed to clear public tasks:', error)
+      }
+    }
+    await reload()
+  }
 
   async function reload() {
     const tf: TasksFile = await api.getTasks()
@@ -31,8 +44,8 @@ export default function App(props: TaskAppProps = {}) {
   async function addTask(title: string) {
     title = title.trim()
     if (!title) return
-    if (!isAdmin) {
-      alert('Only admin users can create tasks')
+    if (!canModify) {
+      alert('Only admin and friend users can create tasks')
       return
     }
     try {
@@ -54,8 +67,8 @@ export default function App(props: TaskAppProps = {}) {
         <input
           ref={inputRef}
           className="task-app__input"
-          placeholder={isAdmin ? "Type a task and press Enter…" : "Read-only view (admin access required)"}
-          disabled={!isAdmin}
+          placeholder={canModify ? "Type a task and press Enter…" : `Read-only view (${userType} access)`}
+          disabled={!canModify}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

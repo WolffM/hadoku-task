@@ -28,7 +28,12 @@
     
     <div class="test-section">
         <h2>Test Different User Types</h2>
-        <p>This tests the refactored authentication system where userType is passed as props instead of using secrets directly.</p>
+        <p>Each user type has separate data stores and different behaviors:</p>
+        <ul>
+            <li><strong>Public:</strong> Always clears tasks on load, read-only access</li>
+            <li><strong>Friend:</strong> Persistent tasks, can create/modify tasks</li>
+            <li><strong>Admin:</strong> Persistent tasks, can create/modify tasks</li>
+        </ul>
         <button onclick="loadApp('public')">Load as Public User</button>
         <button onclick="loadApp('friend')">Load as Friend User</button>
         <button onclick="loadApp('admin')">Load as Admin User</button>
@@ -77,10 +82,12 @@
                 currentType.textContent = userType
                 status.innerHTML = `<div style="color: green;">✅ Task app loaded as ${userType} user</div>`;
                 
-                if (userType === 'admin') {
-                    status.innerHTML += '<div style="color: orange;">ℹ️ Admin users can create tasks (try typing in the input field)</div>';
-                } else {
-                    status.innerHTML += '<div style="color: gray;">ℹ️ Non-admin users have read-only access</div>';
+                if (userType === 'public') {
+                    status.innerHTML += '<div style="color: red;">ℹ️ Public users: Tasks cleared on load, read-only access</div>';
+                } else if (userType === 'friend') {
+                    status.innerHTML += '<div style="color: blue;">ℹ️ Friend users: Persistent tasks, can create/modify</div>';
+                } else if (userType === 'admin') {
+                    status.innerHTML += '<div style="color: green;">ℹ️ Admin users: Persistent tasks, can create/modify</div>';
                 }
             } catch (error) {
                 status.innerHTML = `<div class="error">❌ Failed to mount app: ${error.message}</div>`;

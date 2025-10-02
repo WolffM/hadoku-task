@@ -45,18 +45,51 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def handle_api_get(self, path):
-        if path == '/api/task':
-            self.serve_json_file('task/data/tasks.json')
-        elif path == '/api/stats':
-            self.serve_json_file('task/data/stats.json')
+        from urllib.parse import parse_qs
+        parsed = urlparse(self.path)
+        query_params = parse_qs(parsed.query)
+        user_type = query_params.get('userType', ['public'])[0]
+        
+        if parsed.path == '/api/task':
+            self.serve_json_file(f'task/data/{user_type}/tasks.json')
+        elif parsed.path == '/api/stats':
+            self.serve_json_file(f'task/data/{user_type}/stats.json')
         else:
             self.send_error(404)
     
     def handle_api_post(self, path):
         user_type = self.headers.get('X-User-Type', 'public')
         
-        if user_type != 'admin':
-            self.send_json_response({'error': 'Admin access required'}, 403)
+        if path == '/api/task/clear':
+            if user_type != 'public':
+                self.send_json_response({'error': 'Only public users can clear tasks'}, 403)
+                return
+            
+            # Clear public tasks
+            try:
+                with open('task/data/public/tasks.json', 'w') as f:
+                    json.dump({
+                        "version": 1,
+                        "updatedAt": "2025-10-01T23:30:00.000000Z",
+                        "tasks": []
+                    }, f, indent=2)
+                
+                with open('task/data/public/stats.json', 'w') as f:
+                    json.dump({
+                        "version": 2,
+                        "updatedAt": "2025-10-01T23:30:00.000000Z",
+                        "counters": {"created": 0, "completed": 0, "edited": 0, "deleted": 0, "sessions": 0},
+                        "timeline": [],
+                        "tasks": {}
+                    }, f, indent=2)
+                
+                self.send_json_response({'ok': True, 'message': 'Public tasks cleared'})
+            except Exception as e:
+                self.send_json_response({'error': str(e)}, 500)
+            return
+        
+        if user_type == 'public':
+            self.send_json_response({'error': 'Public users cannot create tasks'}, 403)
             return
         
         if path == '/api/task':
@@ -67,7 +100,7 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
             
             # Simulate creating a task
             task = {
-                'id': f'test_{len(data.get("title", "task"))}',
+                'id': f'test_{user_type}_{len(data.get("title", "task"))}',
                 'title': data.get('title', ''),
                 'tag': data.get('tag'),
                 'project': data.get('project'),
@@ -81,20 +114,20 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
     def handle_api_patch(self, path):
         user_type = self.headers.get('X-User-Type', 'public')
         
-        if user_type != 'admin':
-            self.send_json_response({'error': 'Admin access required'}, 403)
+        if user_type == 'public':
+            self.send_json_response({'error': 'Public users cannot modify tasks'}, 403)
             return
             
-        self.send_json_response({'ok': True, 'message': 'Task updated (simulated)'})
+        self.send_json_response({'ok': True, 'message': f'Task updated by {user_type} (simulated)'})
     
     def handle_api_delete(self, path):
         user_type = self.headers.get('X-User-Type', 'public')
         
-        if user_type != 'admin':
-            self.send_json_response({'error': 'Admin access required'}, 403)
+        if user_type == 'public':
+            self.send_json_response({'error': 'Public users cannot delete tasks'}, 403)
             return
             
-        self.send_json_response({'ok': True, 'message': 'Task deleted (simulated)'})
+        self.send_json_response({'ok': True, 'message': f'Task deleted by {user_type} (simulated)'})
 
     def serve_json_file(self, filename):
         try:
