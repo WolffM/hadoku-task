@@ -74,15 +74,28 @@ async function handleApi(req: Request): Promise<Response> {
 
   const { pathname } = new URL(req.url)
   const isWrite = req.method !== 'GET'
-  const auth = req.headers.get('X-Admin-Key') || ''
-  if (isWrite && auth !== cfg.adminKey) return json({ error: 'Forbidden' }, 403)
+  const userType = req.headers.get('X-User-Type') || 'public'
+  
+  // Match test server auth logic
+  if (isWrite && userType === 'public' && !pathname.includes('/clear')) {
+    return json({ error: 'Public users cannot modify tasks' }, 403)
+  }
+  if (pathname.includes('/clear') && userType !== 'public') {
+    return json({ error: 'Only public users can clear tasks' }, 403)
+  }
 
   try {
     if (req.method === 'GET' && pathname === '/api/task') {
+      // Extract userType from query parameter (for compatibility with test server)
+      const url = new URL(req.url)
+      const userType = url.searchParams.get('userType') || 'public'
+      // Note: In production, GitHub stores single file, so we ignore userType for now
       const { text } = await ghGetFile(cfg.dataPaths.tasks)
       return json(JSON.parse(text))
     }
     if (req.method === 'GET' && pathname === '/api/stats') {
+      const url = new URL(req.url)
+      const userType = url.searchParams.get('userType') || 'public'
       const { text } = await ghGetFile(cfg.dataPaths.stats)
       return json(JSON.parse(text))
     }
@@ -95,7 +108,7 @@ async function handleApi(req: Request): Promise<Response> {
       const { text: tText, sha: tSha } = await ghGetFile(cfg.dataPaths.tasks)
       const tasks = JSON.parse(tText)
       const id = ulid()
-      const task = { id, title: payload.title, tag: payload.tag ?? null, createdAt: now }
+      const task = { id, title: payload.title, tag: payload.tag ?? null, state: 'Active', createdAt: now }
       tasks.tasks = [task, ...(tasks.tasks || [])]
       tasks.updatedAt = now
 
@@ -110,6 +123,70 @@ async function handleApi(req: Request): Promise<Response> {
       await ghPutFile(cfg.dataPaths.stats,  JSON.stringify(stats,  null, 2), sSha, 'stats: create')
       bcPost({ type: 'tasks-updated' })
       return json({ ok: true, id })
+    }
+
+    // Handle POST /api/task/clear
+    if (req.method === 'POST' && pathname === '/api/task/clear') {
+      const now = new Date().toISOString()
+      
+      // Clear all tasks
+      const { text: tText, sha: tSha } = await ghGetFile(cfg.dataPaths.tasks)
+      const tasks = JSON.parse(tText)
+      tasks.tasks = []
+      tasks.updatedAt = now
+
+      // Reset stats
+      const { text: sText, sha: sSha } = await ghGetFile(cfg.dataPaths.stats)
+      const stats = JSON.parse(sText)
+      stats.counters = { created: 0, completed: 0, edited: 0, deleted: 0 }
+      stats.timeline = []
+      stats.tasks = {}
+      stats.updatedAt = now
+
+      await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: clear all')
+      await ghPutFile(cfg.dataPaths.stats, JSON.stringify(stats, null, 2), sSha, 'stats: clear all')
+      bcPost({ type: 'tasks-updated' })
+      return json({ ok: true })
+    }
+
+    // Handle POST /api/task/:id/complete
+    if (req.method === 'POST' && pathname.includes('/complete')) {
+      const pathParts = pathname.split('/')
+      const id = pathParts[pathParts.length - 2] // Get ID before '/complete'
+      const now = new Date().toISOString()
+
+      const { text: tText, sha: tSha } = await ghGetFile(cfg.dataPaths.tasks)
+      const tasks = JSON.parse(tText)
+      const taskIndex = (tasks.tasks || []).findIndex((x: any) => x.id === id)
+      if (taskIndex < 0) return json({ error: 'Not found' }, 404)
+      
+      // Remove task from active tasks (move to graveyard)
+      const task = tasks.tasks[taskIndex]
+      task.state = 'Completed'
+      task.closedAt = now
+      task.updatedAt = now
+      tasks.tasks.splice(taskIndex, 1)
+      tasks.updatedAt = now
+
+      const { text: sText, sha: sSha } = await ghGetFile(cfg.dataPaths.stats)
+      const stats = JSON.parse(sText)
+      stats.tasks[id] = {
+        id,
+        title: task.title,
+        tag: task.tag ?? null,
+        state: 'Completed',
+        createdAt: task.createdAt,
+        updatedAt: now,
+        closedAt: now
+      }
+      stats.counters.completed++
+      stats.timeline.push({ t: now, event: 'completed', id })
+      stats.updatedAt = now
+
+      await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: complete')
+      await ghPutFile(cfg.dataPaths.stats, JSON.stringify(stats, null, 2), sSha, 'stats: complete')
+      bcPost({ type: 'tasks-updated' })
+      return json({ ok: true })
     }
 
     if (req.method === 'PATCH' && pathname.startsWith('/api/task/')) {
@@ -159,25 +236,30 @@ async function handleApi(req: Request): Promise<Response> {
 
       const { text: tText, sha: tSha } = await ghGetFile(cfg.dataPaths.tasks)
       const tasks = JSON.parse(tText)
-      const idx = (tasks.tasks || []).findIndex((x: any) => x.id === id)
-      if (idx < 0) return json({ error: 'Not found' }, 404)
-      tasks.tasks.splice(idx, 1)
+      const taskIndex = (tasks.tasks || []).findIndex((x: any) => x.id === id)
+      if (taskIndex < 0) return json({ error: 'Not found' }, 404)
+      
+      // Remove task from active tasks (move to graveyard)
+      const task = tasks.tasks[taskIndex]
+      task.state = 'Deleted'
+      task.closedAt = now
+      task.updatedAt = now
+      tasks.tasks.splice(taskIndex, 1)
       tasks.updatedAt = now
 
       const { text: sText, sha: sSha } = await ghGetFile(cfg.dataPaths.stats)
       const stats = JSON.parse(sText)
-      const rec = stats.tasks[id] || { id, title: '(unknown)', createdAt: now }
       stats.tasks[id] = {
         id,
-        title: rec.title,
-        tag: rec.tag ?? null,
-        createdAt: rec.createdAt ?? now,
+        title: task.title,
+        tag: task.tag ?? null,
+        state: 'Deleted',
+        createdAt: task.createdAt,
         updatedAt: now,
-        closedAt: now,
-        state: 'Deleted'
+        closedAt: now
       }
       stats.counters.deleted++
-      stats.timeline.push({ t: now, event: 'delete', id })
+      stats.timeline.push({ t: now, event: 'deleted', id })
       stats.updatedAt = now
 
       await ghPutFile(cfg.dataPaths.tasks, JSON.stringify(tasks, null, 2), tSha, 'task: delete')

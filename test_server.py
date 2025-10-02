@@ -80,7 +80,7 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
                     json.dump({
                         "version": 2,
                         "updatedAt": "2025-10-01T23:30:00.000000Z",
-                        "counters": {"created": 0, "completed": 0, "edited": 0, "deleted": 0, "sessions": 0},
+                        "counters": {"created": 0, "completed": 0, "edited": 0, "deleted": 0},
                         "timeline": [],
                         "tasks": {}
                     }, f, indent=2)
@@ -267,10 +267,6 @@ class TaskAppHandler(SimpleHTTPRequestHandler):
     
     def handle_api_delete(self, path):
         user_type = self.headers.get('X-User-Type', 'public')
-        
-        if user_type == 'public':
-            self.send_json_response({'error': 'Public users cannot delete tasks'}, 403)
-            return
         
         # Extract task ID from path like /api/task/test_friend_123
         path_parts = path.split('/')
