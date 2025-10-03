@@ -607,7 +607,7 @@ export default function App(props: TaskAppProps = {}) {
         </button>
       </div>
       <div className="task-app__filters">
-        <button onClick={()=>setFilter(undefined)} className={!filter?'on':''}>All</button>
+        <button onClick={()=>setFilter(undefined)} className={!filter?'on':''}>All!</button>
         {Array.from(new Set(tasks.flatMap(t => t.tag?.split(' ') || []).filter(Boolean))).map(tag =>
           <button 
             key={tag} 
