@@ -64,28 +64,54 @@ jobs:
           echo "✅ Build output found:"
           ls -la dist
       
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: task-dist
-          path: dist/
-          retention-days: 30
-      
-      - name: Trigger parent site deployment
+      - name: Push built files to parent repository
         env:
           HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
-          echo "Triggering hadoku_site deployment..."
+          echo "Pushing built files to hadoku_site..."
           if [ -z "$HADOKU_SITE_TOKEN" ]; then
             echo "❌ Error: HADOKU_SITE_TOKEN secret is not available."
             exit 1
           fi
 
+          # Clone parent repository
+          git clone https://${{ secrets.HADOKU_SITE_TOKEN }}@github.com/WolffM/hadoku_site.git parent
+          cd parent
+          
+          # Create target directory if it doesn't exist
+          mkdir -p public/mf/task
+          
+          # Remove old build files and copy new ones
+          rm -rf public/mf/task/*
+          cp -r ../dist/* public/mf/task/
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push changes
+          git add public/mf/task/
+          if git diff --staged --quiet; then
+            echo "✅ No changes to commit - build output is identical"
+            echo "CHANGES_MADE=false" >> $GITHUB_ENV
+          else
+            git commit -m "chore: update task app build from ${{ github.sha }}"
+            git push
+            echo "✅ Successfully pushed task app build to hadoku_site"
+            echo "CHANGES_MADE=true" >> $GITHUB_ENV
+          fi
+      
+      - name: Trigger parent site deployment
+        if: env.CHANGES_MADE == 'true'
+        env:
+          HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+        run: |
+          echo "Triggering hadoku_site deployment..."
+          
           payload=$(cat <<EOF
             {
               "event_type": "task_updated",
               "client_payload": {
-                "run_id": "${{ github.run_id }}",
                 "sha": "${{ github.sha }}",
                 "ref": "${{ github.ref }}"
               }
@@ -112,5 +138,5 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Triggered hadoku_site deployment with run_id: ${{ github.run_id }}"
+          echo "✅ Triggered hadoku_site deployment"
           rm -f "$response_file"
