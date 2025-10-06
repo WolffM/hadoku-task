@@ -1,0 +1,145 @@
+/**
+ * Button styles - All button variants
+ */
+
+/* Info button */
+.task-app__info-btn {
+  background: none;
+  border: none;
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  opacity: 0.7;
+  transition: opacity var(--transition-smooth),
+              background-color var(--transition-smooth);
+}
+
+.task-app__info-btn:hover {
+  opacity: 1;
+  background-color: var(--color-neutral-light);
+}
+
+/* Action buttons - base styles */
+.task-app__action-btn {
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  transition: all var(--transition-smooth);
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  opacity: 0.7;
+  margin: 0;
+  padding: 0;
+  align-self: stretch;
+}
+
+.task-app__action-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.task-app__action-btn:last-child {
+  border-top-right-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.task-app__action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.3 !important;
+  transform: none !important;
+}
+
+/* Complete button */
+.task-app__complete-btn {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.task-app__complete-btn:hover {
+  background-color: var(--color-success-dark);
+}
+
+/* Delete button */
+.task-app__delete-btn {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.task-app__delete-btn:hover {
+  background-color: var(--color-danger-dark);
+}
+
+/* Tag button */
+.task-app__tag-btn {
+  background-color: var(--color-neutral);
+  color: white;
+}
+
+.task-app__tag-btn:hover {
+  opacity: 1;
+  background-color: var(--color-border-light);
+}
+
+/* Sort button */
+.task-app__sort-btn {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  opacity: 0.4;
+  transition: opacity var(--transition-smooth),
+              background-color var(--transition-smooth);
+  min-width: 20px;
+}
+
+.task-app__sort-btn:hover {
+  opacity: 0.8;
+  background-color: var(--color-border-light);
+}
+
+.task-app__sort-btn--active {
+  opacity: 1;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* Clear tag button */
+.task-app__clear-tag-btn {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  opacity: 0.6;
+  transition: opacity var(--transition-smooth),
+              background-color var(--transition-smooth);
+}
+
+.task-app__clear-tag-btn:hover {
+  opacity: 1;
+  background-color: var(--color-danger-light);
+}
+
+/* Clear all button */
+.task-app__clear-btn {
+  background: var(--color-danger-dark);
+  color: white;
+  border: none;
+  padding: 6px var(--spacing-lg);
+  border-radius: 6px;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-smooth);
+}
+
+.task-app__clear-btn:hover {
+  background: #b91c1c;
+}

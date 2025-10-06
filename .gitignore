@@ -22,3 +22,9 @@ dist-ssr/
 .env
 .env.local
 .env.*.local
+
+# Backup files
+*.old.*
+*.backup.*
+
+# Note: task/data is intentionally committed for personal backup/sync

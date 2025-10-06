@@ -1,0 +1,56 @@
+/**
+ * Main app styles - App structure, header, controls, filters
+ */
+
+.task-app {
+  max-width: 720px;
+  margin: var(--spacing-4xl) auto;
+  padding: 0 var(--spacing-xl) var(--spacing-5xl);
+}
+
+.task-app__header {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Controls section */
+.task-app__controls {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.task-app__input {
+  flex: 1;
+  padding: 10px var(--spacing-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.task-app__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Filters section */
+.task-app__filters {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.task-app__filters button {
+  transition: all var(--transition-smooth);
+}
+
+.task-app__filter-drag-over {
+  background-color: var(--color-primary-light) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-focus-sm) !important;
+}

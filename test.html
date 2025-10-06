@@ -11,7 +11,7 @@
         button { margin: 5px; padding: 10px; }
         .error { color: red; background: #fee; padding: 10px; margin: 10px 0; border-radius: 4px; }
     </style>
-    <!-- Import Map for React -->
+    <!-- Import Map for React (requires modern browser - Safari 16.4+, Chrome 89+, Firefox 108+) -->
     <script type="importmap">
     {
         "imports": {
@@ -31,14 +31,14 @@
         <h2>Test Different User Types</h2>
         <p>Each user type has separate data stores and different behaviors:</p>
         <ul>
-            <li><strong>Public:</strong> Always clears tasks on load, read-only access</li>
-            <li><strong>Friend:</strong> Persistent tasks, can create/modify tasks</li>
-            <li><strong>Admin:</strong> Persistent tasks, can create/modify tasks</li>
+            <li><strong>Public:</strong> Full task management, ephemeral storage (cleared on page refresh)</li>
+            <li><strong>Friend:</strong> Full task management, persistent storage (GitHub commits, cross-tab sync)</li>
+            <li><strong>Admin:</strong> Full task management, persistent storage (GitHub commits, cross-tab sync)</li>
         </ul>
-        <button onclick="loadApp('public')">Load as Public User</button>
-        <button onclick="loadApp('friend')">Load as Friend User</button>
-        <button onclick="loadApp('admin')">Load as Admin User</button>
-        <button onclick="clearApp()">Clear App</button>
+        <p><em>Note: Clicking a button will reload the page with the selected user type (simulates production behavior)</em></p>
+        <button onclick="loadAsUserType('public')">Load as Public User</button>
+        <button onclick="loadAsUserType('friend')">Load as Friend User</button>
+        <button onclick="loadAsUserType('admin')">Load as Admin User</button>
     </div>
     
     <div class="test-section">
@@ -50,13 +50,18 @@
     <script type="module">
         let taskAppModule = null;
         
+        // Function to reload page with userType parameter (simulates production behavior)
+        window.loadAsUserType = function(userType) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('userType', userType);
+            window.location.href = url.toString();
+        }
+        
         async function loadTaskApp() {
             if (!taskAppModule) {
                 try {
-                    // Add cache buster to ensure fresh module load
-                    const cacheBuster = '?v=' + Date.now();
-                    taskAppModule = await import('./dist/index.js' + cacheBuster);
-                    document.getElementById('status').innerHTML = '<div style="color: green;">✅ Task app module loaded successfully</div>';
+                    taskAppModule = await import('./dist/index.js');
+                    console.log('Task app module loaded successfully');
                 } catch (error) {
                     document.getElementById('status').innerHTML = `<div class="error">❌ Failed to load task app: ${error.message}</div>`;
                     console.error('Failed to load task app:', error);
@@ -66,13 +71,14 @@
             return taskAppModule;
         }
         
-        window.loadApp = async function(userType) {
-            const container = document.getElementById('taskApp')
-            const currentType = document.getElementById('currentUserType')
-            const status = document.getElementById('status')
+        async function initApp() {
+            const container = document.getElementById('taskApp');
+            const currentType = document.getElementById('currentUserType');
+            const status = document.getElementById('status');
             
-            // Clear existing app first
-            window.clearApp()
+            // Get userType from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const userType = urlParams.get('userType') || 'public';
             
             status.innerHTML = '<div style="color: blue;">⏳ Loading task app...</div>';
             
@@ -80,17 +86,17 @@
             if (!app) return;
             
             try {
-                // Mount new app with userType
-                app.mount(container, { userType })
-                currentType.textContent = userType
+                // Mount app with userType
+                app.mount(container, { userType });
+                currentType.textContent = userType;
                 status.innerHTML = `<div style="color: green;">✅ Task app loaded as ${userType} user</div>`;
                 
                 if (userType === 'public') {
-                    status.innerHTML += '<div style="color: red;">ℹ️ Public users: Tasks cleared on load, read-only access</div>';
+                    status.innerHTML += '<div style="color: orange;">ℹ️ Public users: Full task management, ephemeral storage (cleared on refresh)</div>';
                 } else if (userType === 'friend') {
-                    status.innerHTML += '<div style="color: blue;">ℹ️ Friend users: Persistent tasks, can create/modify</div>';
+                    status.innerHTML += '<div style="color: blue;">ℹ️ Friend users: Full task management, persistent storage (GitHub commits)</div>';
                 } else if (userType === 'admin') {
-                    status.innerHTML += '<div style="color: green;">ℹ️ Admin users: Persistent tasks, can create/modify</div>';
+                    status.innerHTML += '<div style="color: green;">ℹ️ Admin users: Full task management, persistent storage (GitHub commits)</div>';
                 }
             } catch (error) {
                 status.innerHTML = `<div class="error">❌ Failed to mount app: ${error.message}</div>`;
@@ -98,26 +104,8 @@
             }
         }
         
-        window.clearApp = function() {
-            const container = document.getElementById('taskApp')
-            const currentType = document.getElementById('currentUserType')
-            const status = document.getElementById('status')
-            
-            if (taskAppModule) {
-                try {
-                    taskAppModule.unmount(container)
-                } catch (error) {
-                    console.warn('Error unmounting app:', error);
-                }
-            }
-            
-            container.innerHTML = ''
-            currentType.textContent = 'None'
-            status.innerHTML = ''
-        }
-        
-        // Load the app module on page load to check for errors early
-        loadTaskApp();
+        // Initialize app on page load
+        initApp();
     </script>
 </body>
 </html>

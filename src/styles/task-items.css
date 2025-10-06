@@ -1,0 +1,91 @@
+/**
+ * Task item styles - List and individual task items
+ */
+
+.task-app__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.task-app__list--column {
+  margin: 0;
+}
+
+.task-app__list--column .task-app__item {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+/* Individual task item */
+.task-app__item {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  transition: transform var(--transition-smooth),
+              box-shadow var(--transition-smooth);
+  overflow: hidden;
+  min-height: 60px;
+}
+
+.task-app__item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.task-app__item:active {
+  cursor: grabbing;
+}
+
+/* Task item content */
+.task-app__item-content {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  flex: 1;
+  min-width: 0;
+}
+
+.task-app__item-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.task-app__item-title {
+  flex: 1;
+  font-weight: var(--font-weight-semibold);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: var(--line-height-normal);
+  margin-bottom: var(--spacing-xs);
+}
+
+.task-app__item-age {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-left: auto;
+  padding-left: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.task-app__item-tag {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.task-app__item-actions {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}

@@ -1,18 +1,22 @@
 {
   "version": 2,
-  "updatedAt": "2025-10-01T23:24:48.166285Z",
+  "updatedAt": "2025-10-06T22:12:31.925Z",
   "counters": {
-    "created": 1,
+    "created": 2,
     "completed": 0,
     "edited": 0,
-    "deleted": 0,
-    "sessions": 0
+    "deleted": 0
   },
   "timeline": [
     {
       "t": "2025-10-01T23:24:48.164285Z",
       "event": "create",
       "id": "01JB2EXAMPLE123"
+    },
+    {
+      "t": "2025-10-06T22:12:31.925Z",
+      "event": "create",
+      "id": "MGFOSBATOKKU6VVWKQT9JIBOHJ"
     }
   ],
   "tasks": {
@@ -24,6 +28,15 @@
       "updatedAt": null,
       "state": "active",
       "closedAt": null
+    },
+    "MGFOSBATOKKU6VVWKQT9JIBOHJ": {
+      "id": "MGFOSBATOKKU6VVWKQT9JIBOHJ",
+      "title": "ok",
+      "tag": null,
+      "createdAt": "2025-10-06T22:12:31.925Z",
+      "updatedAt": null,
+      "closedAt": null,
+      "state": "Active"
     }
   }
 }

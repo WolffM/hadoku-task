@@ -1,0 +1,78 @@
+/**
+ * Task layout styles - Grid layout and tag columns
+ */
+
+.task-app__dynamic-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3xl);
+}
+
+/* Tag grid */
+.task-app__tag-grid {
+  display: grid;
+  gap: var(--spacing-xl);
+}
+
+.task-app__tag-grid--2col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.task-app__tag-grid--3col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Tag column */
+.task-app__tag-column {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-alt);
+  transition: all var(--transition-smooth);
+  border: 2px dashed transparent;
+}
+
+.task-app__tag-column:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-neutral-lighter);
+}
+
+.task-app__tag-column--drag-over {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: var(--shadow-focus-alt);
+}
+
+/* Tag header */
+.task-app__tag-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.task-app__tag-header {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.task-app__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Remaining tasks section */
+.task-app__remaining {
+  border-top: 2px solid var(--color-border-light);
+  padding-top: var(--spacing-xl);
+}
+
+.task-app__remaining-header {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--color-text-secondary);
+}

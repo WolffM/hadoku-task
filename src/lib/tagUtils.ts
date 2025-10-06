@@ -1,0 +1,94 @@
+/**
+ * Tag parsing and filtering utilities
+ */
+
+import type { Task } from './types'
+
+/**
+ * Parse task input and extract title and tags
+ */
+export function parseTaskInput(input: string): { title: string; tag?: string } {
+  // Normalize tag by converting spaces to hyphens
+  const normalizeTag = (tag: string) => tag.replace(/\s+/g, '-')
+  
+  // Handle quoted tasks with tags: "New task" #friend #soon
+  const quotedMatch = input.match(/^["']([^"']+)["']\s*(.*)$/)
+  if (quotedMatch) {
+    const title = quotedMatch[1]
+    const tagsText = quotedMatch[2]
+    // Match tags: # followed by non-whitespace characters
+    const tags = tagsText.match(/#[^\s#]+/g)?.map(tag => normalizeTag(tag.slice(1))) || []
+    return { title, tag: tags.join(' ') || undefined }
+  }
+  
+  // Handle unquoted tasks with tags: New task #friend #soon
+  const tagMatch = input.match(/^(.+?)\s+(#.+)$/)
+  if (tagMatch) {
+    const title = tagMatch[1]
+    const tagsText = tagMatch[2]
+    // Match tags: # followed by non-whitespace characters
+    const tags = tagsText.match(/#[^\s#]+/g)?.map(tag => normalizeTag(tag.slice(1))) || []
+    return { title, tag: tags.join(' ') || undefined }
+  }
+  
+  // Plain task without tags
+  return { title: input }
+}
+
+/**
+ * Get the top N tags from a list of tasks
+ */
+export function getTopTags(tasks: Task[], limit = 6): string[] {
+  const taskTags = tasks.flatMap(t => t.tag?.split(' ') || []).filter(Boolean)
+  const tagCounts: { [tag: string]: number } = {}
+  taskTags.forEach(tag => tagCounts[tag] = (tagCounts[tag] || 0) + 1)
+  return Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([tag]) => tag)
+}
+
+/**
+ * Get all tasks that have a specific tag
+ */
+export function getTasksByTag(tasks: Task[], tag: string): Task[] {
+  return tasks.filter(t => t.tag?.split(' ').includes(tag))
+}
+
+/**
+ * Get tasks that have a specific tag (exclusive to first matching top tag)
+ */
+export function getTasksByTagExclusive(tasks: Task[], tag: string, topTags: string[]): Task[] {
+  return tasks.filter(t => {
+    const taskTags = t.tag?.split(' ') || []
+    if (!taskTags.includes(tag)) return false
+    
+    // Only show in the first matching top tag column
+    const firstMatchingTag = topTags.find(topTag => taskTags.includes(topTag))
+    return firstMatchingTag === tag
+  })
+}
+
+/**
+ * Get tasks that don't have any of the excluded tags
+ */
+export function getRemainingTasks(tasks: Task[], excludeTags: string[], filter?: string): Task[] {
+  return tasks.filter(t => {
+    if (!filter) {
+      // No filter: exclude tasks that have any of the top tags
+      const taskTags = t.tag?.split(' ') || []
+      return !excludeTags.some(tag => taskTags.includes(tag))
+    } else {
+      // Filter active: only show filtered tasks that don't have top tags
+      const taskTags = t.tag?.split(' ') || []
+      return taskTags.includes(filter) && !excludeTags.some(tag => taskTags.includes(tag))
+    }
+  })
+}
+
+/**
+ * Get all unique tags from tasks
+ */
+export function getAllTags(tasks: Task[]): string[] {
+  return Array.from(new Set(tasks.flatMap(t => t.tag?.split(' ') || []).filter(Boolean)))
+}
