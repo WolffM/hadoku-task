@@ -2,9 +2,9 @@
  * Task Operations - Pure functions for task CRUD operations
  */
 
-import type { TasksFile, StatsFile, Task } from '../types'
-import { generateULID } from '../utils'
-import * as StatsOps from './stats-operations'
+import type { TasksFile, StatsFile, Task } from '../types.js'
+import { generateULID } from '../utils.js'
+import * as StatsOps from './stats-operations.js'
 
 export interface TaskOperationResult {
   tasks: TasksFile

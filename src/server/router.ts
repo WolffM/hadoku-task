@@ -4,12 +4,12 @@
  */
 
 import { Router } from 'express'
-import type { RouterConfig } from './types'
-import { ensureUserDataExists } from './storage'
-import { SyncQueue } from './sync-queue'
-import { DataAccess } from './handlers/data-access'
-import { createTaskRoutes } from './routes/tasks'
-import { createTaskOperationRoutes } from './routes/task-operations'
+import type { RouterConfig } from './types.js'
+import { ensureUserDataExists } from './storage.js'
+import { SyncQueue } from './sync-queue.js'
+import { DataAccess } from './handlers/data-access.js'
+import { createTaskRoutes } from './routes/tasks.js'
+import { createTaskOperationRoutes } from './routes/task-operations.js'
 
 export interface TaskRouter extends Router {
   syncQueue: SyncQueue

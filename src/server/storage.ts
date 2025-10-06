@@ -5,8 +5,8 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import type { TasksFile, StatsFile, DataType, UserType } from './types'
-import { createEmptyTasksFile, createEmptyStatsFile } from './utils'
+import type { TasksFile, StatsFile, DataType, UserType } from './types.js'
+import { createEmptyTasksFile, createEmptyStatsFile } from './utils.js'
 
 // In-memory storage for public users (singleton)
 const publicData: {

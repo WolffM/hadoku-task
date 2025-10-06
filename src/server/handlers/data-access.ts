@@ -2,9 +2,9 @@
  * Data Access Layer - Unified interface for public vs file-based storage
  */
 
-import type { RouterConfig, TasksFile, StatsFile, UserType } from '../types'
-import { getPublicData, setPublicData, readUserData, writeUserData } from '../storage'
-import { SyncQueue } from '../sync-queue'
+import type { RouterConfig, TasksFile, StatsFile, UserType } from '../types.js'
+import { getPublicData, setPublicData, readUserData, writeUserData } from '../storage.js'
+import { SyncQueue } from '../sync-queue.js'
 
 export class DataAccess {
   constructor(

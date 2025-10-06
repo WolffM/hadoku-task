@@ -3,8 +3,8 @@
  * Manages batching of file updates to GitHub API
  */
 
-import type { GitHubConfig, DataType, UserType } from './types'
-import { readUserData } from './storage'
+import type { GitHubConfig, DataType, UserType } from './types.js'
+import { readUserData } from './storage.js'
 
 const GHP = 'https://api.github.com'
 

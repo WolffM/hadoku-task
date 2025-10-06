@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:router": "tsc -p tsconfig.server.json",
+    "build:router": "tsc -p tsconfig.server.json --moduleResolution bundler",
     "build:all": "npm run build && npm run build:router",
     "preview": "vite preview",
     "test:server": "tsx test-server.ts"

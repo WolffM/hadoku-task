@@ -3,10 +3,10 @@
  */
 
 import { Router, type Request, type Response } from 'express'
-import type { UserType } from '../types'
-import { DataAccess } from '../handlers/data-access'
-import * as TaskOps from '../handlers/task-operations'
-import { createISO } from '../utils'
+import type { UserType } from '../types.js'
+import { DataAccess } from '../handlers/data-access.js'
+import * as TaskOps from '../handlers/task-operations.js'
+import { createISO } from '../utils.js'
 
 export function createTaskOperationRoutes(dataAccess: DataAccess): Router {
   const router = Router()
