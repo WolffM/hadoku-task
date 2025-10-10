@@ -18,14 +18,8 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
   const api = createApi(userType)
 
   async function initialLoad() {
-    if (isPublic) {
-      // Public users: clear tasks on load, then load fresh data
-      try {
-        await api.clearPublicTasks()
-      } catch (error) {
-        console.warn('Failed to clear public tasks:', error)
-      }
-    }
+    // Public mode now uses localStorage (no server calls)
+    // Admin/friend modes load from server
     await reload()
   }
 

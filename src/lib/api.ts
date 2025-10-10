@@ -1,4 +1,5 @@
 import type { TasksFile, StatsFile } from './types'
+import { createLocalStorageApi } from './localStorageApi'
 
 function adminHeaders(userType: string) {
   return {
@@ -7,7 +8,16 @@ function adminHeaders(userType: string) {
   }
 }
 
+/**
+ * Create API client - returns localStorage client for public mode, server API for admin/friend
+ */
 export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
+  // Public mode: browser-only, zero server interaction
+  if (userType === 'public') {
+    return createLocalStorageApi()
+  }
+  
+  // Admin/Friend mode: use server API
   return {
     async getTasks(): Promise<TasksFile> {
       const r = await fetch(`/task/api?userType=${userType}`)
@@ -34,11 +44,9 @@ export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
       return r.json()
     },
     async clearPublicTasks() {
-      if (userType !== 'public') {
-        throw new Error('Only public users can clear tasks')
-      }
-      const r = await fetch('/task/api/clear', { method:'POST', headers: adminHeaders(userType) })
-      return r.json()
+      // This method only exists for backward compatibility
+      // Admin/friend users cannot clear tasks via API
+      throw new Error('Clear operation only available for public users')
     }
   }
 }
