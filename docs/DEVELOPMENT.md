@@ -242,7 +242,7 @@ rm -rf dist/
 ```
 dist/
 ├── index.js          # Client bundle (~18.58KB, gzipped: 4.80KB)
-├── style.css         # Styles (~8.25KB, gzipped: 1.92KB)
+├── style.css         # Styles (~8.98KB, gzipped: 2.01KB)
 └── server/           # Server code (TypeScript → JavaScript)
     ├── router.js
     ├── handlers/
@@ -601,6 +601,15 @@ CI/CD handles this automatically on push to main.
 ---
 
 ## Resources
+
+### Project Documentation
+
+- **[Architecture](ARCHITECTURE.md)** - System design, patterns, and data flow
+- **[API Reference](API.md)** - Complete endpoint documentation
+- **[Child App Template](CHILD_APP_TEMPLATE.md)** - Template for creating new apps
+- **[README](../README.md)** - Project overview and quick start
+
+### External Resources
 
 - [React Documentation](https://react.dev)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs)

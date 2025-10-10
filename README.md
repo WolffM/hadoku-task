@@ -49,7 +49,8 @@ Fix bug #high priority [Enter]           # Multi-word tag  #high-priority
 
  **[Architecture](docs/ARCHITECTURE.md)** - System design, patterns, refactoring details  
  **[API Reference](docs/API.md)** - Complete endpoint documentation  
- **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines
+ **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines  
+ **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps
 
 ---
 
@@ -61,7 +62,7 @@ npm run build:router   # Server only
 npm run build:all      # Both
 ```
 
-**Output**: `dist/index.js` (~18KB), `dist/style.css` (~8KB), `dist/server/`
+**Output**: `dist/index.js` (~18KB), `dist/style.css` (~9KB), `dist/server/`
 
 **Deploy to**: 
 - Client  `hadoku_site/public/mf/task/`
@@ -71,40 +72,27 @@ npm run build:all      # Both
 
 ## Architecture
 
-### Client (React - 131 lines, 79% reduction)
-```
-src/
- App.tsx              # Main component
- components/          # TaskItem, TaskLayout
- hooks/               # useTasks, useDragAndDrop, useTaskSort
- lib/                 # Utilities, types
- styles/              # Modular CSS with design tokens
-```
+### Overview
 
-### Server (Express - 43 lines, 91% reduction)
-```
-src/server/
- router.ts            # Main router
- handlers/            # Data access, operations
- routes/              # HTTP endpoints
-```
+**Client** (React - 131 lines, 79% reduction):
+- Main component orchestrates custom hooks
+- Modular components (TaskItem, TaskLayout)
+- Utility libraries for tags, formatting, layout
+- 7 CSS files with design token system
 
-### CSS (7 modular files)
-```
-src/styles/
- variables.css        # Design tokens
- base.css            # Global resets
- buttons.css         # Button variants
- ...                 # Items, layout, main
-```
+**Server** (Express - 43 lines, 91% reduction):
+- Main router with modular route handlers
+- Data access layer (public vs file-based storage)
+- Pure operation functions (create, complete, update, delete)
+- TypeScript compiled to JavaScript
 
-See **[Architecture docs](docs/ARCHITECTURE.md)** for details.
+See **[Architecture docs](docs/ARCHITECTURE.md)** for detailed system design and **[Development Guide](docs/DEVELOPMENT.md#project-structure)** for complete directory structure.
 
 ---
 
 ## API
 
-All endpoints at `/api/task`:
+All endpoints at `/task/api`:
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -126,15 +114,16 @@ See **[API docs](docs/API.md)** for examples.
 ```javascript
 import { mount } from '/mf/task/index.js'
 mount(document.getElementById('app'), {
-  apiUrl: '/api/task',
+  apiUrl: '/task/api',
   userType: 'friend'
 })
 ```
 
 ### Server
 ```typescript
-import { createTaskRouter } from './apps/task/router.js'
-app.use('/api/task', createTaskRouter({ dataPath: './data/task' }))
+// Option A: Nested Express app (stable client contract)
+import { createTaskApp } from './apps/task/app.js'
+app.use('/task', createTaskApp({ dataPath: './data/task' }))
 ```
 
 See **[CHILD_APP_TEMPLATE.md](CHILD_APP_TEMPLATE.md)** for full integration guide.

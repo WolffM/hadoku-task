@@ -60,7 +60,7 @@ import './style.css'
 
 export interface MyAppProps {
   basename?: string      // Base URL path
-  apiUrl?: string        // API endpoint (e.g., '/api/myapp')
+  apiUrl?: string        // API endpoint (e.g., '/myapp/api')
   environment?: string   // 'development' | 'production'
   userType?: 'admin' | 'friend' | 'public'
 }
@@ -312,7 +312,7 @@ export function createMyAppRouter(config: MyAppConfig) {
       import { mount } from '/mf/myapp/index.js'
       
       mount(document.getElementById('app'), {
-        apiUrl: '/api/myapp',
+        apiUrl: '/myapp/api',
         environment: 'production',
         userType: 'friend'
       })
@@ -323,23 +323,194 @@ export function createMyAppRouter(config: MyAppConfig) {
 
 ### How Parent Uses Your Router
 
+The parent supports **two integration patterns**:
+
+1. **Nested Express App** (local router, e.g., task API)
+2. **Tunneled Remote API** (proxied to external server, e.g., watchparty API)
+
+Both patterns create the same stable client contract: `/myapp/api/*`
+
+---
+
+#### **Pattern 1: Nested Express App (Local Router)**
+
+For lightweight APIs that run directly in the parent process (JSON commits, database queries, etc.):
+
+**Step 1: Import Your Router**
+```typescript
+import { createMyAppRouter } from './apps/myapp/router.js'
+```
+
+**Step 2: Create Nested Express App**
+```typescript
+const myAppApp = express()
+myAppApp.use('/api', createMyAppRouter({
+  dataPath: join(rootDir, 'data', 'myapp'),
+  environment
+}))
+```
+
+**Step 3: Mount as Nested App**
+```typescript
+app.use('/myapp', myAppApp)
+```
+
+This creates the stable client contract where your API is at `/myapp/api/*` and you can add other routes like `/myapp/health` without affecting the client.
+
+---
+
+#### **Pattern 2: Tunneled Remote API (Proxy)**
+
+For heavy APIs that run on your local/home server (media streaming, FFmpeg, etc.):
+
+**Step 1: Create Proxy Middleware**
+```typescript
+import { createProxyMiddleware } from 'http-proxy-middleware'
+```
+
+**Step 2: Create Nested Express App with Proxy**
+```typescript
+const watchpartyApp = express()
+watchpartyApp.use('/api', createProxyMiddleware({
+  target: 'https://watchparty-api.hadoku.me',
+  changeOrigin: true
+}))
+```
+
+**Step 3: Mount as Nested App**
+```typescript
+app.use('/watchparty', watchpartyApp)
+```
+
+Client still uses `/watchparty/api/*`, but requests are proxied to your tunnel endpoint.
+
+---
+
+#### **Unified Helper Function**
+
+To simplify mounting both patterns, you can use a helper:
+
+```typescript
+import express from 'express'
+import { createProxyMiddleware } from 'http-proxy-middleware'
+
+function mountMicroApp(app, name, routerFactoryOrProxy) {
+  const micro = express()
+  
+  if (typeof routerFactoryOrProxy === 'function') {
+    // Pattern 1: Local router (nested Express app)
+    micro.use('/api', routerFactoryOrProxy())
+  } else {
+    // Pattern 2: Remote proxy (tunneled API)
+    micro.use('/api', createProxyMiddleware({
+      target: routerFactoryOrProxy,
+      changeOrigin: true
+    }))
+  }
+  
+  app.use(`/${name}`, micro)
+}
+
+// Example usage:
+
+// Local JSON-committing Task API
+mountMicroApp(app, 'task', () => createTaskRouter({ dataPath, environment }))
+
+// Remote Watchparty API (tunneled to your home server)
+mountMicroApp(app, 'watchparty', 'https://watchparty-api.hadoku.me')
+```
+
+**Benefits**:
+- Same client contract (`/{app}/api/*`) for both patterns
+- Easy to switch between local and remote
+- Simple, consistent mounting API
+- Future-proof for edge deployments
+
+---
+
+#### **Update API Info (Optional)**
+```typescript
+// In the /api endpoint
+endpoints: {
+  health: '/health',
+  task: '/task/api',
+  myapp: '/myapp/api'  // Add your app
+}
+
+// In the /health endpoint
+services: {
+  api: 'running',
+  task: 'running',
+  myapp: 'running'  // Add your app
+}
+```
+
+#### **Complete Example**
+
 **`hadoku_site/api/server.ts`**:
 ```typescript
 import express from 'express'
+import { join, dirname } from 'path'
+import { createProxyMiddleware } from 'http-proxy-middleware'
+import { createTaskRouter } from './apps/task/router.js'
 import { createMyAppRouter } from './apps/myapp/router.js'
 
 const app = express()
+const rootDir = dirname(__dirname)
+const environment = process.env.NODE_ENV || 'development'
+
 app.use(express.json())
 
-// Mount your router
-const myAppRouter = createMyAppRouter({
-  dataPath: './data/myapp'
-})
+// Helper to mount micro-apps with either pattern
+function mountMicroApp(app, name, routerFactoryOrProxy) {
+  const micro = express()
+  
+  if (typeof routerFactoryOrProxy === 'function') {
+    // Pattern 1: Local router
+    micro.use('/api', routerFactoryOrProxy())
+  } else {
+    // Pattern 2: Remote proxy
+    micro.use('/api', createProxyMiddleware({
+      target: routerFactoryOrProxy,
+      changeOrigin: true
+    }))
+  }
+  
+  app.use(`/${name}`, micro)
+}
 
-app.use('/api/myapp', myAppRouter)
+// Mount local task API (lightweight JSON commits)
+mountMicroApp(app, 'task', () => createTaskRouter({
+  dataPath: join(rootDir, 'data', 'task'),
+  environment
+}))
+
+// Mount your new local API
+mountMicroApp(app, 'myapp', () => createMyAppRouter({
+  dataPath: join(rootDir, 'data', 'myapp'),
+  environment
+}))
+
+// Mount remote watchparty API (heavy media streaming)
+// Requires Cloudflare Tunnel or similar at watchparty-api.hadoku.me
+mountMicroApp(app, 'watchparty', 'https://watchparty-api.hadoku.me')
+
+// API info endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    endpoints: {
+      health: '/health',
+      task: '/task/api',
+      myapp: '/myapp/api',
+      watchparty: '/watchparty/api'
+    }
+  })
+})
 
 app.listen(3000)
 ```
+
+**That's it!** The parent never needs to know about your individual endpoints - they're all encapsulated in your router or proxied transparently. Both patterns use the same stable client contract.
 
 ---
 
@@ -417,11 +588,12 @@ import { createMyAppRouter } from './src/server/router.js'
 const app = express()
 app.use(express.json())
 
-const router = createMyAppRouter({
+const myAppApp = express()
+myAppApp.use('/api', createMyAppRouter({
   dataPath: './data'
-})
+}))
 
-app.use('/api/myapp', router)
+app.use('/myapp', myAppApp)
 app.use(express.static('.'))
 
 app.listen(3001, () => {

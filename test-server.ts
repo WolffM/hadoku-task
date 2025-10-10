@@ -22,8 +22,10 @@ const taskRouter = createTaskRouter({
   } : undefined
 })
 
-// Mount the router at /api/task
-app.use('/api/task', taskRouter)
+// Mount using nested Express app pattern (stable client contract)
+const taskApp = express()
+taskApp.use('/api', taskRouter)
+app.use('/task', taskApp)
 
 // Graceful shutdown: flush queue before exit
 process.on('SIGTERM', async () => {

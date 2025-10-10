@@ -1,6 +1,6 @@
 # API Documentation
 
-All endpoints are relative to `/api/task`.
+All endpoints are relative to `/task/api`.
 
 ## Authentication
 
@@ -43,7 +43,7 @@ User type is determined by:
 
 **Example**:
 ```bash
-curl http://localhost:3001/api/task?userType=friend
+curl http://localhost:3001/task/api?userType=friend
 ```
 
 ---
@@ -78,7 +78,7 @@ curl http://localhost:3001/api/task?userType=friend
 
 **Example**:
 ```bash
-curl http://localhost:3001/api/task/stats?userType=friend
+curl http://localhost:3001/task/api/stats?userType=friend
 ```
 
 ---
@@ -112,7 +112,7 @@ curl http://localhost:3001/api/task/stats?userType=friend
 
 **Example**:
 ```bash
-curl -X POST http://localhost:3001/api/task \
+curl -X POST http://localhost:3001/task/api \
   -H "Content-Type: application/json" \
   -H "X-User-Type: friend" \
   -d '{"title":"Buy groceries","tag":"home"}'
@@ -142,7 +142,7 @@ curl -X POST http://localhost:3001/api/task \
 
 **Example**:
 ```bash
-curl -X POST http://localhost:3001/api/task/01HQXXX.../complete \
+curl -X POST http://localhost:3001/task/api/01HQXXX.../complete \
   -H "X-User-Type: friend"
 ```
 
@@ -177,7 +177,7 @@ curl -X POST http://localhost:3001/api/task/01HQXXX.../complete \
 
 **Example**:
 ```bash
-curl -X PATCH http://localhost:3001/api/task/01HQXXX... \
+curl -X PATCH http://localhost:3001/task/api/01HQXXX... \
   -H "Content-Type: application/json" \
   -H "X-User-Type: friend" \
   -d '{"title":"Buy groceries and milk","tag":"urgent"}'
@@ -205,7 +205,7 @@ curl -X PATCH http://localhost:3001/api/task/01HQXXX... \
 
 **Example**:
 ```bash
-curl -X DELETE http://localhost:3001/api/task/01HQXXX... \
+curl -X DELETE http://localhost:3001/task/api/01HQXXX... \
   -H "X-User-Type: friend"
 ```
 
@@ -227,7 +227,7 @@ curl -X DELETE http://localhost:3001/api/task/01HQXXX... \
 
 **Example**:
 ```bash
-curl -X POST http://localhost:3001/api/task/clear \
+curl -X POST http://localhost:3001/task/api/clear \
   -H "X-User-Type: public"
 ```
 
@@ -294,7 +294,7 @@ const limiter = rateLimit({
   max: 100 // limit each IP to 100 requests per windowMs
 })
 
-app.use('/api/task', limiter, taskRouter)
+app.use('/task', taskApp)
 ```
 
 ---
@@ -354,5 +354,13 @@ const body = createTaskSchema.parse(req.body)
 3. **Caching**: Add Redis for public user sessions
 4. **Compression**: Enable gzip compression in Express
 5. **CDN**: Serve static assets from CDN
+
+---
+
+## See Also
+
+- **[Architecture](ARCHITECTURE.md)** - System design, data flow, and patterns
+- **[Development Guide](DEVELOPMENT.md)** - Testing strategies and debugging tips
+- **[README](../README.md)** - Project overview and quick start
 
 ---

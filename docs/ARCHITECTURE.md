@@ -12,33 +12,15 @@ Hadoku Task Manager uses a modular architecture with clear separation between cl
 
 ## Client Architecture (React Frontend)
 
-```
-src/
-├── App.tsx                    # Main component (131 lines) - orchestrates hooks & layout
-├── entry.tsx                  # Micro-frontend mount/unmount exports
-├── components/
-│   ├── TaskItem.tsx          # Individual task card with actions
-│   └── TaskLayout.tsx        # Dynamic grid layout with tag columns
-├── hooks/
-│   ├── useTasks.ts           # Task CRUD operations & API calls
-│   ├── useDragAndDrop.ts     # Drag-and-drop state & handlers
-│   └── useTaskSort.ts        # Sort state & utilities
-├── lib/
-│   ├── api.ts                # API client wrapper
-│   ├── formatters.ts         # Date/time formatting utilities
-│   ├── layoutUtils.ts        # Grid layout calculations
-│   ├── tagUtils.ts           # Tag parsing & filtering logic
-│   ├── types.ts              # TypeScript interfaces
-│   └── ulid.ts               # ULID generation
-└── styles/
-    ├── index.css             # Main stylesheet (imports all others)
-    ├── variables.css         # CSS custom properties (design tokens)
-    ├── base.css              # Global resets & base styles
-    ├── buttons.css           # Button variants (complete, delete, tag, etc.)
-    ├── task-items.css        # Task list & item card styles
-    ├── task-layout.css       # Grid layout & tag column styles
-    └── main.css              # App structure, controls, filters
-```
+**Key Files**:
+- `App.tsx` (131 lines) - Main orchestrator using custom hooks
+- `entry.tsx` - Micro-frontend mount/unmount exports
+- `components/` - TaskItem (card), TaskLayout (grid)
+- `hooks/` - useTasks (CRUD), useDragAndDrop, useTaskSort
+- `lib/` - Utilities (api, formatters, tagUtils, types, ulid)
+- `styles/` - 7 CSS modules with design tokens
+
+See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure with line counts.
 
 ### Component Hierarchy
 
@@ -65,24 +47,22 @@ App (131 lines)
 ### Build Output
 
 - **Client bundle**: `dist/index.js` (~18.58KB, gzipped: 4.80KB)
-- **Styles**: `dist/style.css` (~8.25KB, gzipped: 1.92KB)
+- **Styles**: `dist/style.css` (~8.98KB, gzipped: 2.01KB)
 - **Deploy target**: `hadoku_site/public/mf/task/`
 
 ---
 
 ## Server Architecture (Express Backend)
 
-```
-src/server/
-├── router.ts                      # Main Express router (43 lines) - mounts routes
-├── handlers/
-│   ├── data-access.ts            # Unified data access layer (public vs file-based)
-│   ├── stats-operations.ts       # Pure stats functions (record/clear)
-│   └── task-operations.ts        # Pure task functions (create/complete/update/delete)
-└── routes/
-    ├── tasks.ts                  # GET/POST endpoints (get tasks, create, clear)
-    └── task-operations.ts        # Task action endpoints (complete, update, delete)
-```
+**Key Files**:
+- `router.ts` (43 lines) - Main Express router, mounts all routes
+- `handlers/data-access.ts` - Unified storage layer (public vs file-based)
+- `handlers/stats-operations.ts` - Pure stats functions
+- `handlers/task-operations.ts` - Pure task functions
+- `routes/tasks.ts` - GET/POST endpoints
+- `routes/task-operations.ts` - Task action endpoints
+
+See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure with line counts.
 
 ### Router Architecture
 
@@ -307,7 +287,7 @@ type UserType = 'public' | 'friend' | 'admin'
 
 ### Client
 - **Bundle size**: 18.58KB (4.80KB gzipped)
-- **CSS size**: 8.25KB (1.92KB gzipped)
+- **CSS size**: 8.98KB (2.01KB gzipped)
 - **Initial load**: ~50-100ms
 - **Task operations**: Instant UI updates (optimistic)
 
@@ -378,10 +358,12 @@ import { createTaskRouter } from './router'
 
 test('POST / creates task', async () => {
   const app = express()
-  app.use('/api/task', createTaskRouter({ dataPath: './test-data' }))
+  const taskApp = express()
+  taskApp.use('/api', createTaskRouter({ dataPath: './test-data' }))
+  app.use('/task', taskApp)
   
   const response = await request(app)
-    .post('/api/task')
+    .post('/task/api')
     .set('X-User-Type', 'public')
     .send({ title: 'Test', tag: 'work' })
   
@@ -402,3 +384,12 @@ test('POST / creates task', async () => {
 - Use design tokens for all styling
 - Keep pure functions separate from I/O
 - Document new patterns in this file
+
+---
+
+## See Also
+
+- **[API Reference](API.md)** - Complete endpoint documentation with examples
+- **[Development Guide](DEVELOPMENT.md)** - Development workflow and contribution guidelines
+- **[Child App Template](CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps
+- **[README](../README.md)** - Project overview and quick start
