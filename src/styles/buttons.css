@@ -2,6 +2,16 @@
  * Button styles - All button variants
  */
 
+/* Shared button utilities */
+.task-app__btn-fade {
+  transition: opacity var(--transition-smooth),
+              background-color var(--transition-smooth);
+}
+
+.task-app__btn-fade:hover {
+  opacity: 1;
+}
+
 /* Info button */
 .task-app__info-btn {
   background: none;
@@ -26,8 +36,10 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  transition: all var(--transition-smooth);
-  width: 32px;
+  transition: opacity var(--transition-smooth),
+              transform var(--transition-smooth),
+              background-color var(--transition-smooth);
+  width: var(--size-action-btn-width);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,7 +108,7 @@
   opacity: 0.4;
   transition: opacity var(--transition-smooth),
               background-color var(--transition-smooth);
-  min-width: 20px;
+  min-width: var(--size-sort-btn-min-width);
 }
 
 .task-app__sort-btn:hover {
@@ -134,12 +146,12 @@
   color: white;
   border: none;
   padding: 6px var(--spacing-lg);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-size: var(--font-size-xs);
   cursor: pointer;
   transition: background-color var(--transition-smooth);
 }
 
 .task-app__clear-btn:hover {
-  background: #b91c1c;
+  background: var(--color-danger-darker);
 }

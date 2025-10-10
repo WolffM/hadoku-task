@@ -2,6 +2,13 @@
  * Task layout styles - Grid layout and tag columns
  */
 
+/* Shared drag-over utility */
+.task-app__drag-over {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: var(--shadow-focus-alt);
+}
+
 .task-app__dynamic-layout {
   display: flex;
   flex-direction: column;
@@ -37,13 +44,14 @@
   background-color: var(--color-neutral-lighter);
 }
 
+/* Use shared drag-over utility */
 .task-app__tag-column--drag-over {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
   box-shadow: var(--shadow-focus-alt);
 }
 
-/* Tag header */
+/* Section headers - shared styles */
 .task-app__tag-header-row {
   display: flex;
   justify-content: space-between;
@@ -51,10 +59,14 @@
   margin-bottom: var(--spacing-md);
 }
 
-.task-app__tag-header {
-  font-size: var(--font-size-sm);
+.task-app__tag-header,
+.task-app__remaining-header {
   font-weight: var(--font-weight-semibold);
   margin: 0;
+}
+
+.task-app__tag-header {
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
 }
 
@@ -72,7 +84,6 @@
 
 .task-app__remaining-header {
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  margin: 0 0 var(--spacing-lg) 0;
   color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-lg);
 }

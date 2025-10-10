@@ -32,7 +32,7 @@
   transition: transform var(--transition-smooth),
               box-shadow var(--transition-smooth);
   overflow: hidden;
-  min-height: 60px;
+  min-height: var(--size-task-item-min-height);
 }
 
 .task-app__item:hover {

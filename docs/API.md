@@ -356,24 +356,3 @@ const body = createTaskSchema.parse(req.body)
 5. **CDN**: Serve static assets from CDN
 
 ---
-
-## WebSocket Support (Future)
-
-For real-time updates, consider adding WebSocket support:
-
-```typescript
-import { Server } from 'socket.io'
-
-const io = new Server(server)
-
-io.on('connection', (socket) => {
-  socket.on('subscribe', (userType) => {
-    socket.join(userType)
-  })
-})
-
-// After task operation
-io.to(userType).emit('task:created', task)
-```
-
----

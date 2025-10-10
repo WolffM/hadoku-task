@@ -34,7 +34,8 @@ button {
               border-color var(--transition-fast);
 }
 
-button:hover {
+/* Only apply hover to buttons without specific classes (filter buttons) */
+.task-app__filters button:hover:not(.task-app__filter-drag-over) {
   background-color: var(--color-neutral-light);
 }
 

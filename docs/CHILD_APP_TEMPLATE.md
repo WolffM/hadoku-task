@@ -37,14 +37,7 @@ Edit `package.json`:
 }
 ```
 
-### 3. Configure GitHub Secret
-
-Add `HADOKU_SITE_TOKEN` secret to your repository:
-1. Go to repository Settings → Secrets and variables → Actions
-2. Add new secret: `HADOKU_SITE_TOKEN`
-3. Value will be synced from parent by admin script
-
-### 4. Update Build Workflow
+### 3. Update Build Workflow
 
 Edit `.github/workflows/build.yml`:
 - Change app name in paths

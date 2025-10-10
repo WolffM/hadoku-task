@@ -25,17 +25,6 @@ const taskRouter = createTaskRouter({
 // Mount the router at /api/task
 app.use('/api/task', taskRouter)
 
-// Periodic sync (15 minutes)
-const SYNC_INTERVAL = 15 * 60 * 1000
-if (taskRouter.config.githubConfig) {
-  console.log(`🔄 GitHub sync enabled (every ${SYNC_INTERVAL / 60000} minutes)`)
-  setInterval(() => {
-    taskRouter.syncQueue.flush(taskRouter.config.dataPath, taskRouter.config.githubConfig)
-  }, SYNC_INTERVAL)
-} else {
-  console.log('⏭️  GitHub sync disabled (no GITHUB_TOKEN)')
-}
-
 // Graceful shutdown: flush queue before exit
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, flushing sync queue...')
