@@ -2,7 +2,7 @@
 
 **Template for creating micro-frontend child apps for hadoku.me**
 
-This template provides the structure and configuration needed to create a new child app that integrates with the parent `hadoku_site` application.
+This template provides the structure and configuration needed to create a new child app that integrates with the parent `hadoku_site` application via **npm packages**.
 
 ---
 
@@ -11,7 +11,7 @@ This template provides the structure and configuration needed to create a new ch
 Child apps are independent applications that:
 - Run as micro-frontends mounted in the parent app
 - Provide framework-agnostic API handlers using the Universal Adapter Pattern
-- Auto-deploy to parent on code changes
+- **Auto-publish to GitHub Packages** on push to main
 - Share authentication/user context from parent
 - Support multiple deployment strategies (Cloudflare Workers, self-hosted)
 
@@ -33,16 +33,20 @@ npm install
 Edit `package.json`:
 ```json
 {
-  "name": "hadoku-my-app",
-  "version": "0.1.0"
+  "name": "@wolffm/my-app",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WolffM/hadoku-my-app.git"
+  }
 }
 ```
 
-### 3. Update Build Workflow
+**Important:** The package scope (`@wolffm`) must match your GitHub username.
 
-Edit `.github/workflows/build.yml`:
-- Change app name in paths
-- Update deployment directories
+### 3. Configure Auto-Publishing
+
+The `.github/workflows/publish.yml` workflow automatically publishes to GitHub Packages on every push to main. No changes needed!
 
 ---
 

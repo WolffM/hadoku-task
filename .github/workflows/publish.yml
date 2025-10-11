@@ -2,8 +2,8 @@ name: Publish Package
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+    branches:
+      - main  # Trigger on every push to main
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
@@ -28,7 +28,56 @@ jobs:
       - name: Build
         run: npm run build:all
       
+      - name: Set version with commit hash
+        run: |
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          npm version 1.0.0-${COMMIT_SHORT} --no-git-tag-version
+      
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+          echo "@hadoku:registry=https://npm.pkg.github.com" >> ~/.npmrc
+      
       - name: Publish to GitHub Packages
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Notify parent to update and redeploy
+        env:
+          HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+        run: |
+          echo "Notifying hadoku_site to update @wolffm/task package..."
+          
+          if [ -z "$HADOKU_SITE_TOKEN" ]; then
+            echo "⚠️  Warning: HADOKU_SITE_TOKEN not available, skipping parent notification"
+            exit 0
+          fi
+          
+          payload=$(cat <<EOF
+            {
+              "event_type": "package_updated",
+              "client_payload": {
+                "package": "@wolffm/task",
+                "sha": "${{ github.sha }}",
+                "ref": "${{ github.ref }}"
+              }
+            }
+          EOF
+          )
+
+          status_code=$(curl -sS \
+            -o /dev/null \
+            -w "%{http_code}" \
+            -X POST "https://api.github.com/repos/WolffM/hadoku_site/dispatches" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $HADOKU_SITE_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$payload")
+
+          if [ "$status_code" != "204" ]; then
+            echo "❌ Failed to notify hadoku_site (HTTP $status_code)"
+            exit 1
+          fi
+
+          echo "✅ Notified hadoku_site to update package"

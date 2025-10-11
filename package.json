@@ -1,11 +1,11 @@
 {
-  "name": "@hadoku/task",
+  "name": "@wolffm/task",
   "version": "1.0.0",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WolffM/hadoku-task.git"
+    "url": "git+https://github.com/WolffM/hadoku-task.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
