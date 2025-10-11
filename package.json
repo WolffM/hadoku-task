@@ -3,16 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "src/server"
+  ],
   "exports": {
-    ".": "./dist/index.js",
-    "./api": "./src/server/index.ts",
-    "./api/types": "./src/server/types.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./api": {
+      "import": "./src/server/index.ts",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./api/types": {
+      "import": "./src/server/types.ts",
+      "types": "./dist/server/types.d.ts"
+    }
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:router": "tsc -p tsconfig.server.json --moduleResolution bundler",
-    "build:all": "npm run build && npm run build:router",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:all": "npm run build && npm run build:server",
     "preview": "vite preview",
     "test:server": "tsx test-server.ts"
   },

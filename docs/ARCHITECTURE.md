@@ -2,25 +2,54 @@
 
 ## Overview
 
-Hadoku Task Manager uses a modular architecture with clear separation between client, server, and shared utilities. The codebase has been extensively refactored for maintainability:
+Hadoku Task Manager uses the **Universal Adapter Pattern** - a framework-agnostic architecture that separates pure business logic from framework-specific routing. This enables deployment flexibility across Cloudflare Workers, self-hosted servers, or any web framework.
 
-- **App.tsx**: Reduced from 612 → 131 lines (79% reduction)
-- **Router**: Reduced from 506 → 43 lines (91% reduction)  
-- **CSS**: Split from 1 monolithic file → 7 organized modules with design tokens
+**Key Benefits**:
+- ✅ **Framework Agnostic** - Handlers work with Express, Hono, Cloudflare Workers, etc.
+- ✅ **Deployment Flexibility** - Deploy to Workers (KV) or self-hosted (filesystem)
+- ✅ **Pure Business Logic** - No framework coupling in core operations
+- ✅ **Single Source of Truth** - Types imported from package via npm link
+
+---
+
+## Universal Adapter Pattern
+
+### Core Concept
+
+The package exports **pure handlers** and a **Storage interface**. The parent app implements storage for their environment:
+
+```typescript
+// Child exports (src/server/index.ts)
+export * as TaskHandlers from './handlers.js'
+export type { Storage as TaskStorage } from './storage.js'
+
+// Parent implements storage
+const storage: TaskStorage = {
+  getTasks: async (userType) => { /* KV, filesystem, DB, etc */ },
+  saveTasks: async (userType, tasks) => { /* ... */ },
+  getStats: async (userType) => { /* ... */ },
+  saveStats: async (userType, stats) => { /* ... */ }
+}
+
+// Parent uses handlers with any framework
+const result = await TaskHandlers.createTask(storage, auth, input)
+```
+
+See **[Universal Adapter Pattern](UNIVERSAL_ADAPTER_PATTERN.md)** for complete implementation guide.
 
 ---
 
 ## Client Architecture (React Frontend)
 
 **Key Files**:
-- `App.tsx` (131 lines) - Main orchestrator using custom hooks
+- `App.tsx` - Main orchestrator using custom hooks
 - `entry.tsx` - Micro-frontend mount/unmount exports
 - `components/` - TaskItem (card), TaskLayout (grid)
 - `hooks/` - useTasks (CRUD), useDragAndDrop, useTaskSort
-- `lib/` - Utilities (api, formatters, tagUtils, types, ulid)
+- `lib/` - Utilities (api, formatters, tagUtils, ulid)
 - `styles/` - 7 CSS modules with design tokens
 
-See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure with line counts.
+See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure.
 
 ### Component Hierarchy
 
@@ -46,154 +75,158 @@ App (131 lines)
 
 ### Build Output
 
-- **Client bundle**: `dist/index.js` (~18.58KB, gzipped: 4.80KB)
-- **Styles**: `dist/style.css` (~8.98KB, gzipped: 2.01KB)
+- **Client bundle**: `dist/index.js` (~21KB)
+- **Styles**: `dist/style.css` (~9KB)
 - **Deploy target**: `hadoku_site/public/mf/task/`
 
 ---
 
-## Server Architecture (Express Backend)
+## Server Architecture (Framework-Agnostic Handlers)
 
 **Key Files**:
-- `router.ts` (43 lines) - Main Express router, mounts all routes
-- `handlers/data-access.ts` - Unified storage layer (public vs file-based)
-- `handlers/stats-operations.ts` - Pure stats functions
-- `handlers/task-operations.ts` - Pure task functions
-- `routes/tasks.ts` - GET/POST endpoints
-- `routes/task-operations.ts` - Task action endpoints
+- `handlers.ts` - Pure business logic (createTask, updateTask, etc.)
+- `storage.ts` - Storage interface + filesystem implementation
+- `types.ts` - Shared TypeScript types (exported via npm link)
+- `utils.ts` - Utility functions (ULID generation with Web Crypto API)
+- `router.ts` - Express adapter (for testing/self-hosted)
+- `routes-adapter.ts` - Route factory for any framework
 
-See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure with line counts.
+See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure.
 
-### Router Architecture
+### Handler Architecture
 
-**Main Router** (`router.ts` - 43 lines):
+**Pure Business Logic** (`handlers.ts`):
 ```typescript
-export function createTaskRouter(config: TaskRouterConfig): Router {
-  const dataAccess = new DataAccess(config.dataPath)
+export async function getTasks(storage: Storage, auth: AuthContext) {
+  const tasks = await storage.getTasks(auth.userType)
+  return { tasks: tasks.tasks.filter(t => !t.closedAt) }
+}
+
+export async function createTask(
+  storage: Storage,
+  auth: AuthContext,
+  input: CreateTaskInput
+) {
+  // Pure logic - no framework coupling
+  const tasks = await storage.getTasks(auth.userType)
+  const stats = await storage.getStats(auth.userType)
+  
+  const newTask = { id: generateULID(), title: input.title, ... }
+  const updatedTasks = { ...tasks, tasks: [...tasks.tasks, newTask] }
+  const updatedStats = recordCreation(stats, newTask)
+  
+  await storage.saveTasks(auth.userType, updatedTasks)
+  await storage.saveStats(auth.userType, updatedStats)
+  
+  return newTask
+}
+```
+
+**Benefits**:
+- ✅ No Express/Hono/framework dependencies
+- ✅ Works in any JavaScript runtime (Node.js, Cloudflare Workers, Deno)
+- ✅ Easy to test (just mock the Storage interface)
+- ✅ Reusable across different parent apps
+
+### Storage Interface
+
+**Purpose**: Abstract storage implementation from business logic
+
+```typescript
+export interface Storage {
+  getTasks(userType: UserType): Promise<TasksFile>
+  saveTasks(userType: UserType, tasks: TasksFile): Promise<void>
+  getStats(userType: UserType): Promise<StatsFile>
+  saveStats(userType: UserType, stats: StatsFile): Promise<void>
+}
+```
+
+**Implementations**:
+- **Filesystem** (`storage.ts`) - For self-hosted (included in child repo)
+- **Cloudflare KV** - Parent implements for Workers deployment
+- **Database** - Parent could implement for SQL/NoSQL
+
+### Express Adapter
+
+**For Testing & Self-Hosted** (`router.ts`):
+```typescript
+export function createTaskRouter(config: RouterConfig): Router {
+  const storage = createStorage(config.dataPath)
   const router = Router()
   
-  router.use('/', createTaskRoutes(dataAccess))
-  router.use('/', createTaskOperationRoutes(dataAccess))
+  // Use createRoutes from routes-adapter.ts
+  router.use('/', createRoutes(storage))
   
   return router
 }
 ```
 
-**Key Pattern**: Data Access Layer eliminates duplication
-- Before: 506 lines with repeated if/else for public vs file-based storage
-- After: 43 lines + unified DataAccess class
+**Note**: This is just one possible adapter. Parent apps can use handlers directly with Hono, Cloudflare Workers, or any framework.
 
-### Data Access Layer
+### Route Adapter
 
-**Purpose**: Abstract storage differences between user types
-
+**Framework-Agnostic Route Factory** (`routes-adapter.ts`):
 ```typescript
-class DataAccess {
-  async getTasks(userType: UserType): Promise<TaskFile>
-  async getStats(userType: UserType): Promise<StatsFile>
-  async setTasks(userType: UserType, tasks: TaskFile): Promise<void>
-  async setStats(userType: UserType, stats: StatsFile): Promise<void>
+export function createRoutes(storage: Storage) {
+  return {
+    getTasks: async (auth) => await TaskHandlers.getTasks(storage, auth),
+    createTask: async (auth, input) => await TaskHandlers.createTask(storage, auth, input),
+    // ... other routes
+  }
 }
 ```
 
-**Implementation**:
-- **Public users**: In-memory Map storage
-- **Friend/Admin users**: File system (with automatic directory creation)
-
-### Pure Operation Functions
-
-**Task Operations** (`task-operations.ts`):
-```typescript
-export function createTask(tasks: TaskFile, ...): TaskOperationResult
-export function completeTask(tasks: TaskFile, ...): TaskOperationResult
-export function updateTask(tasks: TaskFile, ...): TaskOperationResult
-export function deleteTask(tasks: TaskFile, ...): TaskOperationResult
-export function clearTasks(tasks: TaskFile): TaskOperationResult
-```
-
-**Stats Operations** (`stats-operations.ts`):
-```typescript
-export function recordCreation(stats: StatsFile, ...): StatsFile
-export function recordCompletion(stats: StatsFile, ...): StatsFile
-export function recordUpdate(stats: StatsFile, ...): StatsFile
-export function recordDeletion(stats: StatsFile, ...): StatsFile
-export function clearStats(stats: StatsFile): StatsFile
-```
-
-**Benefits**:
-- ✅ Pure functions (no side effects)
-- ✅ Easily testable
-- ✅ Immutable operations
-- ✅ Reusable across routes
-
-### Route Handlers
-
-**Task Routes** (`routes/tasks.ts`):
-- `GET /` - Get all tasks
-- `GET /stats` - Get statistics
-- `POST /` - Create new task
-- `POST /clear` - Clear all tasks (public only)
-
-**Task Operation Routes** (`routes/task-operations.ts`):
-- `POST /:id/complete` - Mark task complete
-- `PATCH /:id` - Update task
-- `DELETE /:id` - Delete task
-
-**Pattern**: Routes handle HTTP, operations handle logic
-```typescript
-// Route handler
-router.post('/', async (req, res) => {
-  const tasks = await dataAccess.getTasks(userType)
-  const stats = await dataAccess.getStats(userType)
-  
-  // Pure function does the work
-  const result = createTask(tasks, stats, title, tag, timestamp)
-  
-  await dataAccess.setTasks(userType, result.tasks)
-  await dataAccess.setStats(userType, result.stats)
-  
-  res.json(result.task)
-})
-```
+This adapter can be used with Express, Hono, or any framework.
 
 ### Build Output
 
 ```
 dist/server/
-├── router.js                 # Main Express router
-├── handlers/
-│   ├── data-access.js       # Data access layer
-│   ├── stats-operations.js  # Stats operation functions
-│   └── task-operations.js   # Task operation functions
-└── routes/
-    ├── tasks.js             # Task GET/POST routes
-    └── task-operations.js   # Task action routes
+├── handlers.js          # Pure business logic (exported)
+├── storage.js           # Storage interface + filesystem impl
+├── types.js             # TypeScript types (exported)
+├── utils.js             # Utilities (exported)
+├── router.js            # Express adapter (optional)
+├── routes-adapter.js    # Route factory
+└── sync-queue.js        # Git commit queue (for filesystem storage)
 ```
 
-**Deploy target**: `hadoku_site/api/apps/task/`
+**Deploy targets**: 
+- Self-hosted: `hadoku_site/api/apps/task/`
+- Cloudflare Workers: `hadoku_site/functions/task/lib/`
 
 ---
 
 ## Data Storage
 
-### Public Users
+### Storage Interface Pattern
 
-**Storage**: In-memory Map  
-**Persistence**: None (lost on restart)  
-**Performance**: < 1ms  
-**Use Case**: Anonymous users, demos
+The child repo exports a **Storage interface**. The parent implements storage based on their deployment:
 
 ```typescript
-// In DataAccess class
-private publicData = new Map<string, any>()
+export interface Storage {
+  getTasks(userType: UserType): Promise<TasksFile>
+  saveTasks(userType: UserType, tasks: TasksFile): Promise<void>
+  getStats(userType: UserType): Promise<StatsFile>
+  saveStats(userType: UserType, stats: StatsFile): Promise<void>
+}
 ```
 
-### Friend/Admin Users
+### Filesystem Storage (Included)
 
-**Storage**: File system + Git  
-**Persistence**: Permanent (committed to repository)  
-**Performance**: ~5-10ms  
-**Use Case**: Authenticated users
+The child repo includes a filesystem implementation (`storage.ts`) for self-hosted deployments:
+
+**Public Users**:
+- **Storage**: In-memory Map  
+- **Persistence**: None (lost on restart)  
+- **Performance**: < 1ms  
+- **Use Case**: Anonymous users, demos
+
+**Friend/Admin Users**:
+- **Storage**: File system + Git commits  
+- **Persistence**: Committed to repository  
+- **Performance**: ~5-10ms  
+- **Use Case**: Authenticated users
 
 ```
 task/data/
@@ -205,65 +238,104 @@ task/data/
     └── stats.json
 ```
 
-**Auto-creation**: Directories and files created automatically on first write
+**Git Integration**: Automatic commits for backup and sync.
 
-**Git Integration**: Task data files are committed to the repository for:
-- ✅ **Backup** - Tasks backed up to GitHub
-- ✅ **Sync** - Pull/push to sync across machines  
-- ✅ **History** - Git tracks changes over time
-- ✅ **Simplicity** - No separate backup strategy needed
+### Cloudflare KV Storage (Parent Implements)
 
-**Note**: This approach works well for personal apps. For multi-user production apps, consider using a database and excluding data files from Git
+For Cloudflare Workers deployment, the parent implements KV storage:
+
+```typescript
+// Parent app implements
+const storage: TaskStorage = {
+  getTasks: async (userType) => {
+    const key = `tasks:${userType}`
+    const data = await env.TASK_KV.get(key, 'json')
+    return data || { version: 1, tasks: [], updatedAt: new Date().toISOString() }
+  },
+  saveTasks: async (userType, tasks) => {
+    await env.TASK_KV.put(`tasks:${userType}`, JSON.stringify(tasks))
+  },
+  // ... getStats, saveStats
+}
+```
 
 ---
 
 ## Design Patterns
 
-### 1. Data Access Layer Pattern
-**Problem**: Massive duplication for public vs file-based storage  
-**Solution**: Single DataAccess class with unified interface  
-**Benefit**: 91% code reduction in router
+### 1. Universal Adapter Pattern
+**Purpose**: Separate pure business logic from framework-specific routing  
+**Implementation**: Handlers export pure functions, storage is injected  
+**Benefit**: Deploy to any environment (Workers, self-hosted, serverless)
 
-### 2. Pure Operation Functions
-**Problem**: Business logic mixed with HTTP handling  
-**Solution**: Extract pure functions that return new objects  
-**Benefit**: Testable, reusable, predictable
+### 2. Storage Interface Pattern
+**Purpose**: Abstract storage implementation from business logic  
+**Implementation**: Storage interface with getTasks, saveTasks, getStats, saveStats  
+**Benefit**: Swap storage backends without changing handlers
 
-### 3. Custom Hooks Pattern
-**Problem**: App.tsx becoming too large (612 lines)  
-**Solution**: Extract stateful logic into custom hooks  
-**Benefit**: 79% code reduction, reusable logic
+### 3. Pure Handler Functions
+**Purpose**: Business logic without side effects  
+**Implementation**: Handlers take storage + auth + input, return results  
+**Benefit**: Testable, reusable, framework-agnostic
 
-### 4. Component Composition
-**Problem**: Monolithic rendering logic  
-**Solution**: TaskLayout and TaskItem components  
+### 4. Custom Hooks Pattern
+**Purpose**: Extract stateful React logic into reusable hooks  
+**Implementation**: useTasks, useDragAndDrop, useTaskSort  
+**Benefit**: Clean component code, reusable state management
+
+### 5. Component Composition
+**Purpose**: Modular UI rendering  
+**Implementation**: TaskLayout and TaskItem components  
 **Benefit**: Clear separation of concerns
 
-### 5. CSS Design Tokens
-**Problem**: Magic numbers repeated throughout CSS  
-**Solution**: CSS custom properties in variables.css  
-**Benefit**: Centralized theme, easy updates
+### 6. CSS Design Tokens
+**Purpose**: Centralized theme configuration  
+**Implementation**: CSS custom properties in variables.css  
+**Benefit**: Consistent styling, easy theme updates
+
+### 7. npm Link Self-Import
+**Purpose**: Single source of truth for types  
+**Implementation**: Frontend imports types from package via npm link  
+**Benefit**: Eliminate type duplication between frontend and server
 
 ---
 
 ## Type System
 
-### Shared Types
+### Single Source of Truth
 
-All TypeScript interfaces defined in `src/lib/types.ts`:
+All TypeScript types are defined in `src/server/types.ts` and exported via package exports:
+
+```typescript
+// package.json
+{
+  "exports": {
+    "./api/types": "./src/server/types.ts"
+  }
+}
+
+// Frontend imports via npm link
+import { Task, TasksFile, StatsFile } from '@hadoku/task/api/types'
+
+// Parent imports from published package
+import { Task, TasksFile, StatsFile } from '@hadoku/task/api/types'
+```
+
+### Core Types
 
 ```typescript
 interface Task {
-  id: string        // ULID
+  id: ULID          // Unique identifier
   title: string
   tag?: string
   createdAt: string // ISO timestamp
   updatedAt: string
+  closedAt?: string // When completed or deleted
 }
 
-interface TaskFile {
+interface TasksFile {
   version: number
-  tasks: Task[]
+  tasks: Task[]     // Active tasks only
   updatedAt: string
 }
 
@@ -275,27 +347,43 @@ interface StatsFile {
     totalDeleted: number
     totalUpdated: number
   }
-  timeline: TimelineEvent[]
+  graveyard: StatsTaskRecord[] // Completed/deleted tasks
+}
+
+interface StatsTaskRecord {
+  id: ULID
+  title: string
+  tag?: string
+  createdAt: string
+  closedAt: string
+  reason: 'completed' | 'deleted'
 }
 
 type UserType = 'public' | 'friend' | 'admin'
 ```
+
+**Key Design**: 
+- Active tasks in `tasks.json`
+- Completed/deleted tasks in `stats.json` graveyard
+- Single `closedAt` timestamp (no separate completedAt/deletedAt)
 
 ---
 
 ## Performance Characteristics
 
 ### Client
-- **Bundle size**: 18.58KB (4.80KB gzipped)
-- **CSS size**: 8.98KB (2.01KB gzipped)
+- **Bundle size**: ~21KB
+- **CSS size**: ~9KB
 - **Initial load**: ~50-100ms
 - **Task operations**: Instant UI updates (optimistic)
 
-### Server
-- **Public users**: < 1ms (in-memory)
-- **Friend/Admin users**: ~5-10ms (file I/O)
-- **Concurrent requests**: Handled by Express
-- **Memory footprint**: Minimal (~5MB base)
+### Server (Handlers)
+- **Pure functions**: No overhead (just JS execution)
+- **Storage-dependent**: Performance varies by implementation
+  - In-memory: < 1ms
+  - Filesystem: ~5-10ms
+  - Cloudflare KV: ~10-50ms (depends on region)
+  - Database: Varies by DB and query
 
 ---
 
@@ -304,23 +392,29 @@ type UserType = 'public' | 'friend' | 'admin'
 ### Adding New Features
 
 1. **New Task Property**:
-   - Update `Task` interface in `types.ts`
-   - Update task operations in `task-operations.ts`
-   - Update UI in `TaskItem.tsx`
+   - Update `Task` interface in `src/server/types.ts`
+   - Update handler logic in `src/server/handlers.ts`
+   - Update UI in `src/components/TaskItem.tsx`
 
-2. **New Route**:
-   - Add function to appropriate file in `routes/`
-   - Mount in `router.ts`
+2. **New Handler**:
+   - Add function to `src/server/handlers.ts`
+   - Export in `src/server/index.ts`
+   - Parent uses handler with their framework
 
 3. **New Storage Backend**:
-   - Extend `DataAccess` class
-   - Add new methods for storage type
-   - Update constructor to handle config
+   - Implement `Storage` interface
+   - Use with existing handlers
+   - No changes needed to business logic
 
 4. **New UI Component**:
    - Create in `src/components/`
    - Import in `App.tsx` or `TaskLayout.tsx`
    - Add styles to appropriate file in `src/styles/`
+
+5. **New Framework Adapter**:
+   - Import handlers from `@hadoku/task/api`
+   - Create routes using your framework
+   - Inject your Storage implementation
 
 ---
 
@@ -331,44 +425,58 @@ type UserType = 'public' | 'friend' | 'admin'
 **Pure functions** (easy to test):
 - `src/lib/tagUtils.ts` - Tag parsing & filtering
 - `src/lib/formatters.ts` - Date formatting
-- `src/server/handlers/task-operations.ts` - Task operations
-- `src/server/handlers/stats-operations.ts` - Stats operations
+- `src/server/handlers.ts` - Task operations (framework-agnostic)
+- `src/server/utils.ts` - ULID generation
 
 **Example**:
 ```typescript
-import { createTask } from './task-operations'
+import { TaskHandlers } from '@hadoku/task/api'
 
-test('createTask adds new task', () => {
-  const tasks = { version: 1, tasks: [], updatedAt: '' }
-  const stats = { version: 2, counters: {...}, timeline: [] }
+test('createTask adds new task', async () => {
+  // Mock storage
+  const storage = {
+    getTasks: async () => ({ version: 1, tasks: [], updatedAt: '' }),
+    saveTasks: async () => {},
+    getStats: async () => ({ version: 2, counters: {...}, graveyard: [] }),
+    saveStats: async () => {}
+  }
   
-  const result = createTask(tasks, stats, 'Test', 'tag', Date.now())
+  const auth = { userType: 'public' }
+  const input = { title: 'Test', tag: 'work' }
   
-  expect(result.tasks.tasks).toHaveLength(1)
-  expect(result.task.title).toBe('Test')
+  const result = await TaskHandlers.createTask(storage, auth, input)
+  
+  expect(result.title).toBe('Test')
+  expect(result.tag).toBe('work')
 })
 ```
 
 ### Integration Testing
 
-**Routes** (test with supertest):
+**Test with real storage implementation**:
 ```typescript
-import request from 'supertest'
-import { createTaskRouter } from './router'
+import { TaskHandlers } from '@hadoku/task/api'
+import { createStorage } from '@hadoku/task/api/storage'
 
-test('POST / creates task', async () => {
-  const app = express()
-  const taskApp = express()
-  taskApp.use('/api', createTaskRouter({ dataPath: './test-data' }))
-  app.use('/task', taskApp)
+test('full CRUD workflow', async () => {
+  const storage = createStorage('/tmp/test-data')
+  const auth = { userType: 'friend' }
   
-  const response = await request(app)
-    .post('/task/api')
-    .set('X-User-Type', 'public')
-    .send({ title: 'Test', tag: 'work' })
+  // Create
+  const task = await TaskHandlers.createTask(storage, auth, { title: 'Test' })
+  expect(task.title).toBe('Test')
   
-  expect(response.status).toBe(200)
-  expect(response.body.title).toBe('Test')
+  // Update
+  const updated = await TaskHandlers.updateTask(storage, auth, task.id, { title: 'Updated' })
+  expect(updated.title).toBe('Updated')
+  
+  // Complete
+  const completed = await TaskHandlers.completeTask(storage, auth, task.id)
+  expect(completed.closedAt).toBeDefined()
+  
+  // Verify removed from active tasks
+  const { tasks } = await TaskHandlers.getTasks(storage, auth)
+  expect(tasks).toHaveLength(0)
 })
 ```
 

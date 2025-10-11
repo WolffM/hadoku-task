@@ -10,9 +10,10 @@ This template provides the structure and configuration needed to create a new ch
 
 Child apps are independent applications that:
 - Run as micro-frontends mounted in the parent app
-- Optionally provide backend API routers
+- Provide framework-agnostic API handlers using the Universal Adapter Pattern
 - Auto-deploy to parent on code changes
 - Share authentication/user context from parent
+- Support multiple deployment strategies (Cloudflare Workers, self-hosted)
 
 ---
 
@@ -209,9 +210,9 @@ jobs:
 
 ---
 
-## Optional: Backend API Router
+## Backend API Handlers (Universal Adapter Pattern)
 
-If your app needs server-side logic, create an Express router.
+If your app needs server-side logic, use the Universal Adapter Pattern for framework-agnostic handlers.
 
 ### Directory Structure
 
@@ -221,42 +222,97 @@ src/
 ├── entry.tsx         # Mount/unmount exports
 ├── components/       # React components (optional)
 ├── hooks/            # Custom hooks (optional)
-├── lib/              # Utilities & types
-└── server/           # Backend code (optional)
-    ├── router.ts                  # Express router (main entry)
-    ├── storage.ts                 # Low-level storage operations
-    ├── utils.ts                   # Utility functions
-    ├── types.ts                   # TypeScript types
-    ├── handlers/                  # Business logic (optional)
-    │   └── data-access.ts        # Data access layer
-    └── routes/                    # HTTP routes (optional)
-        └── my-routes.ts          # Route handlers
+├── lib/              # Frontend utilities
+└── server/           # Backend handlers (framework-agnostic)
+    ├── index.ts      # Exports (handlers, types, storage interface)
+    ├── handlers.ts   # Pure business logic
+    ├── storage.ts    # Storage interface + filesystem implementation
+    ├── types.ts      # TypeScript types (single source of truth)
+    ├── utils.ts      # Utility functions
+    ├── router.ts     # Express adapter (optional, for testing)
+    └── routes-adapter.ts  # Route factory (optional)
 ```
 
-### Router Template
+### Handler Template
 
-**`src/server/router.ts`**:
+**`src/server/handlers.ts`** (Framework-agnostic):
 ```typescript
-import { Router } from 'express'
+import type { Storage, AuthContext, MyData } from './types.js'
 
-export interface MyAppConfig {
-  dataPath: string
-  // Add your config options
+export async function getData(storage: Storage, auth: AuthContext) {
+  const data = await storage.getData(auth.userType)
+  return { data }
 }
 
-export function createMyAppRouter(config: MyAppConfig) {
+export async function createItem(
+  storage: Storage,
+  auth: AuthContext,
+  input: { title: string }
+) {
+  const data = await storage.getData(auth.userType)
+  const newItem = { id: generateId(), title: input.title, createdAt: new Date().toISOString() }
+  
+  const updated = { ...data, items: [...data.items, newItem] }
+  await storage.saveData(auth.userType, updated)
+  
+  return newItem
+}
+```
+
+### Storage Interface
+
+**`src/server/storage.ts`**:
+```typescript
+export interface Storage {
+  getData(userType: UserType): Promise<MyData>
+  saveData(userType: UserType, data: MyData): Promise<void>
+}
+
+// Filesystem implementation (for self-hosted)
+export function createStorage(dataPath: string): Storage {
+  return {
+    async getData(userType) {
+      // Read from filesystem
+    },
+    async saveData(userType, data) {
+      // Write to filesystem
+    }
+  }
+}
+```
+
+### Package Exports
+
+**`src/server/index.ts`**:
+```typescript
+export * as MyAppHandlers from './handlers.js'
+export * as MyAppUtils from './utils.js'
+export type { Storage as MyAppStorage } from './storage.js'
+export type { MyData, AuthContext, UserType } from './types.js'
+```
+
+### Express Adapter (Optional)
+
+**`src/server/router.ts`** (For testing/self-hosted):
+```typescript
+import { Router } from 'express'
+import * as Handlers from './handlers.js'
+import { createStorage } from './storage.js'
+
+export function createMyAppRouter(config: { dataPath: string }) {
+  const storage = createStorage(config.dataPath)
   const router = Router()
   
-  // GET /
-  router.get('/', (req, res) => {
-    res.json({ message: 'Hello from my app!' })
+  router.get('/', async (req, res) => {
+    const auth = { userType: req.header('X-User-Type') || 'public' }
+    const result = await Handlers.getData(storage, auth)
+    res.json(result)
   })
   
-  // POST /
-  router.post('/', (req, res) => {
-    const data = req.body
-    // Handle request
-    res.json({ ok: true })
+  router.post('/', async (req, res) => {
+    const auth = { userType: req.header('X-User-Type') || 'public' }
+    const result = await Handlers.createItem(storage, auth, req.body)
+    res.json(result)
   })
   
   return router
@@ -264,6 +320,24 @@ export function createMyAppRouter(config: MyAppConfig) {
 ```
 
 ### Build Configuration
+
+**`package.json`** (Package exports):
+```json
+{
+  "name": "@hadoku/myapp",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./api": "./src/server/index.ts",
+    "./api/types": "./src/server/types.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "build:handlers": "tsc -p tsconfig.server.json --moduleResolution bundler",
+    "build:all": "npm run build && npm run build:handlers"
+  }
+}
+```
 
 **`tsconfig.server.json`**:
 ```json
@@ -280,22 +354,11 @@ export function createMyAppRouter(config: MyAppConfig) {
 }
 ```
 
-**`package.json`**:
-```json
-{
-  "scripts": {
-    "build": "vite build",
-    "build:router": "tsc -p tsconfig.server.json",
-    "build:all": "npm run build && npm run build:router"
-  }
-}
-```
-
 ---
 
 ## Parent Integration
 
-### How Parent Loads Your App
+### How Parent Loads Your App (Client)
 
 **`hadoku_site/src/pages/myapp.astro`**:
 ```astro
@@ -321,196 +384,117 @@ export function createMyAppRouter(config: MyAppConfig) {
 </html>
 ```
 
-### How Parent Uses Your Router
+### How Parent Uses Your Handlers (Server)
 
-The parent supports **two integration patterns**:
+The parent imports your handlers and creates routes with their chosen framework.
 
-1. **Nested Express App** (local router, e.g., task API)
-2. **Tunneled Remote API** (proxied to external server, e.g., watchparty API)
-
-Both patterns create the same stable client contract: `/myapp/api/*`
-
----
-
-#### **Pattern 1: Nested Express App (Local Router)**
-
-For lightweight APIs that run directly in the parent process (JSON commits, database queries, etc.):
-
-**Step 1: Import Your Router**
-```typescript
-import { createMyAppRouter } from './apps/myapp/router.js'
-```
-
-**Step 2: Create Nested Express App**
-```typescript
-const myAppApp = express()
-myAppApp.use('/api', createMyAppRouter({
-  dataPath: join(rootDir, 'data', 'myapp'),
-  environment
-}))
-```
-
-**Step 3: Mount as Nested App**
-```typescript
-app.use('/myapp', myAppApp)
-```
-
-This creates the stable client contract where your API is at `/myapp/api/*` and you can add other routes like `/myapp/health` without affecting the client.
-
----
-
-#### **Pattern 2: Tunneled Remote API (Proxy)**
-
-For heavy APIs that run on your local/home server (media streaming, FFmpeg, etc.):
-
-**Step 1: Create Proxy Middleware**
-```typescript
-import { createProxyMiddleware } from 'http-proxy-middleware'
-```
-
-**Step 2: Create Nested Express App with Proxy**
-```typescript
-const watchpartyApp = express()
-watchpartyApp.use('/api', createProxyMiddleware({
-  target: 'https://watchparty-api.hadoku.me',
-  changeOrigin: true
-}))
-```
-
-**Step 3: Mount as Nested App**
-```typescript
-app.use('/watchparty', watchpartyApp)
-```
-
-Client still uses `/watchparty/api/*`, but requests are proxied to your tunnel endpoint.
-
----
-
-#### **Unified Helper Function**
-
-To simplify mounting both patterns, you can use a helper:
+#### **Option 1: Cloudflare Workers (Hono)**
 
 ```typescript
-import express from 'express'
-import { createProxyMiddleware } from 'http-proxy-middleware'
+import { Hono } from 'hono'
+import { MyAppHandlers, MyAppStorage } from '@hadoku/myapp/api'
 
-function mountMicroApp(app, name, routerFactoryOrProxy) {
-  const micro = express()
-  
-  if (typeof routerFactoryOrProxy === 'function') {
-    // Pattern 1: Local router (nested Express app)
-    micro.use('/api', routerFactoryOrProxy())
-  } else {
-    // Pattern 2: Remote proxy (tunneled API)
-    micro.use('/api', createProxyMiddleware({
-      target: routerFactoryOrProxy,
-      changeOrigin: true
-    }))
+const app = new Hono()
+
+// Implement storage with Cloudflare KV
+const storage: MyAppStorage = {
+  getData: async (userType) => {
+    const data = await env.MYAPP_KV.get(`data:${userType}`, 'json')
+    return data || { version: 1, items: [] }
+  },
+  saveData: async (userType, data) => {
+    await env.MYAPP_KV.put(`data:${userType}`, JSON.stringify(data))
   }
-  
-  app.use(`/${name}`, micro)
 }
 
-// Example usage:
+// Create routes using handlers
+app.get('/myapp/api', async (c) => {
+  const auth = { userType: c.req.header('X-User-Type') || 'public' }
+  return c.json(await MyAppHandlers.getData(storage, auth))
+})
 
-// Local JSON-committing Task API
-mountMicroApp(app, 'task', () => createTaskRouter({ dataPath, environment }))
-
-// Remote Watchparty API (tunneled to your home server)
-mountMicroApp(app, 'watchparty', 'https://watchparty-api.hadoku.me')
+app.post('/myapp/api', async (c) => {
+  const auth = { userType: c.req.header('X-User-Type') || 'public' }
+  const input = await c.req.json()
+  return c.json(await MyAppHandlers.createItem(storage, auth, input))
+})
 ```
 
-**Benefits**:
-- Same client contract (`/{app}/api/*`) for both patterns
-- Easy to switch between local and remote
-- Simple, consistent mounting API
-- Future-proof for edge deployments
+#### **Option 2: Self-Hosted (Express)**
 
----
-
-#### **Update API Info (Optional)**
-```typescript
-// In the /api endpoint
-endpoints: {
-  health: '/health',
-  task: '/task/api',
-  myapp: '/myapp/api'  // Add your app
-}
-
-// In the /health endpoint
-services: {
-  api: 'running',
-  task: 'running',
-  myapp: 'running'  // Add your app
-}
-```
-
-#### **Complete Example**
-
-**`hadoku_site/api/server.ts`**:
 ```typescript
 import express from 'express'
-import { join, dirname } from 'path'
-import { createProxyMiddleware } from 'http-proxy-middleware'
-import { createTaskRouter } from './apps/task/router.js'
 import { createMyAppRouter } from './apps/myapp/router.js'
 
 const app = express()
-const rootDir = dirname(__dirname)
-const environment = process.env.NODE_ENV || 'development'
 
-app.use(express.json())
+// Use the included Express adapter
+app.use('/myapp/api', createMyAppRouter({ dataPath: './data/myapp' }))
+```
 
-// Helper to mount micro-apps with either pattern
-function mountMicroApp(app, name, routerFactoryOrProxy) {
-  const micro = express()
-  
-  if (typeof routerFactoryOrProxy === 'function') {
-    // Pattern 1: Local router
-    micro.use('/api', routerFactoryOrProxy())
-  } else {
-    // Pattern 2: Remote proxy
-    micro.use('/api', createProxyMiddleware({
-      target: routerFactoryOrProxy,
-      changeOrigin: true
-    }))
-  }
-  
-  app.use(`/${name}`, micro)
-}
+Both approaches create the same client contract: `/myapp/api/*`
 
-// Mount local task API (lightweight JSON commits)
-mountMicroApp(app, 'task', () => createTaskRouter({
-  dataPath: join(rootDir, 'data', 'task'),
-  environment
-}))
+---
 
-// Mount your new local API
-mountMicroApp(app, 'myapp', () => createMyAppRouter({
-  dataPath: join(rootDir, 'data', 'myapp'),
-  environment
-}))
+### Deployment Strategy Examples
 
-// Mount remote watchparty API (heavy media streaming)
-// Requires Cloudflare Tunnel or similar at watchparty-api.hadoku.me
-mountMicroApp(app, 'watchparty', 'https://watchparty-api.hadoku.me')
+#### **Self-Hosted with Express**
 
-// API info endpoint
-app.get('/api', (req, res) => {
-  res.json({
-    endpoints: {
-      health: '/health',
-      task: '/task/api',
-      myapp: '/myapp/api',
-      watchparty: '/watchparty/api'
-    }
-  })
-})
+The parent uses your included Express adapter:
 
+```typescript
+import express from 'express'
+import { createMyAppRouter } from './apps/myapp/router.js'
+
+const app = express()
+app.use('/myapp/api', createMyAppRouter({ dataPath: './data/myapp' }))
 app.listen(3000)
 ```
 
-**That's it!** The parent never needs to know about your individual endpoints - they're all encapsulated in your router or proxied transparently. Both patterns use the same stable client contract.
+Your `router.ts` uses the filesystem storage implementation you provide.
+
+---
+
+#### **Cloudflare Workers with Hono**
+
+The parent imports your handlers and implements KV storage:
+
+```typescript
+import { Hono } from 'hono'
+import { MyAppHandlers, MyAppStorage } from '@hadoku/myapp/api'
+
+const app = new Hono()
+
+// Parent implements KV storage
+const createStorage = (env): MyAppStorage => ({
+  getData: async (userType) => {
+    const data = await env.MYAPP_KV.get(`data:${userType}`, 'json')
+    return data || { version: 1, items: [] }
+  },
+  saveData: async (userType, data) => {
+    await env.MYAPP_KV.put(`data:${userType}`, JSON.stringify(data))
+  }
+})
+
+// Use handlers with Hono
+app.get('/myapp/api', async (c) => {
+  const storage = createStorage(c.env)
+  const auth = { userType: c.req.header('X-User-Type') || 'public' }
+  return c.json(await MyAppHandlers.getData(storage, auth))
+})
+
+export default app
+```
+
+---
+
+### Benefits of Universal Adapter Pattern
+
+✅ **Framework Agnostic** - Same handlers work with Express, Hono, or any framework  
+✅ **Deployment Flexibility** - Self-hosted or Cloudflare Workers without code changes  
+✅ **Storage Abstraction** - Parent chooses storage (filesystem, KV, database)  
+✅ **Pure Business Logic** - Handlers have no framework dependencies  
+✅ **Easy Testing** - Mock the Storage interface for unit tests
 
 ---
 
@@ -676,13 +660,15 @@ Add to workflow:
 ## Best Practices
 
 1. **Keep entry point minimal** - Just mount/unmount logic
-2. **Export TypeScript types** - For parent integration
-3. **Support all user types** - public, friend, admin
-4. **Handle props gracefully** - Provide defaults
-5. **Clean up on unmount** - Remove listeners, timers
-6. **Test locally first** - Before deploying
-7. **Document your API** - If you have a router
-8. **Use consistent naming** - Match parent conventions
+2. **Use Universal Adapter Pattern** - Export pure handlers, not framework-specific code
+3. **Single source of truth for types** - Export types from `src/server/types.ts` via package.json
+4. **Support all user types** - public, friend, admin
+5. **Handle props gracefully** - Provide defaults
+6. **Clean up on unmount** - Remove listeners, timers
+7. **Test locally first** - Before deploying
+8. **Document your handlers** - List exported functions and their signatures
+9. **Use consistent naming** - Match parent conventions
+10. **Implement Storage interface** - Don't couple handlers to specific storage
 
 ---
 

@@ -1,23 +1,10 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "target": "ES2020",
     "outDir": "./dist/server",
     "rootDir": "./src/server",
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "moduleDetection": "force"
+    "emitDeclarationOnly": true
   },
-  "ts-node": {
-    "esm": true
-  },
-  "include": ["src/server/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/server/**/*.ts"]
 }

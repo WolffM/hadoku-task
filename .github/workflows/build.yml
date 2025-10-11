@@ -62,26 +62,26 @@ jobs:
             exit 1
           fi
 
-          # Verify server build
+          # Verify server type definitions
           if [ ! -d "dist/server" ]; then
             echo "❌ Error: dist/server directory was not created"
             exit 1
           fi
 
-          if [ ! -f "dist/server/router.js" ]; then
-            echo "❌ Error: dist/server/router.js was not created"
+          if [ ! -f "dist/server/index.d.ts" ]; then
+            echo "❌ Error: dist/server/index.d.ts was not created"
             exit 1
           fi
 
-          if [ ! -s "dist/server/router.js" ]; then
-            echo "❌ Error: dist/server/router.js is empty"
+          if [ ! -s "dist/server/index.d.ts" ]; then
+            echo "❌ Error: dist/server/index.d.ts is empty"
             exit 1
           fi
 
           echo "✅ Client build output found:"
           ls -la dist/*.js dist/*.css
           echo ""
-          echo "✅ Server build output found:"
+          echo "✅ Server type definitions found:"
           ls -la dist/server/
       
       - name: Push built files to parent repository
@@ -100,43 +100,30 @@ jobs:
           
           # Create target directories if they don't exist
           mkdir -p public/mf/task
-          mkdir -p api/apps/task
-          mkdir -p functions/task/lib
-          
-          # Remove old build files and copy new ones
           
           # Copy client build to public/mf/task/
           echo "📦 Copying client build to public/mf/task/..."
           rm -rf public/mf/task/*
           cp -r ../dist/index.js ../dist/style.css public/mf/task/
           
-          # Copy server build to api/apps/task/ (for local Express development)
-          echo "📦 Copying server build to api/apps/task/..."
-          rm -rf api/apps/task/*
-          cp -r ../dist/server/* api/apps/task/
-          cp ../package.json api/apps/task/
-          
-          # Copy server build to functions/task/lib/ (for Cloudflare Pages Functions)
-          echo "📦 Copying server build to functions/task/lib/..."
-          rm -rf functions/task/lib/*
-          cp -r ../dist/server/* functions/task/lib/
+          echo "✅ Note: Server API uses npm link workflow"
+          echo "   Parent repo should run: npm link @hadoku/task"
+          echo "   This links to src/server/ TypeScript source directly"
           
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Commit and push changes
-          git add public/mf/task/ api/apps/task/ functions/task/lib/
+          git add public/mf/task/
           if git diff --staged --quiet; then
             echo "✅ No changes to commit - build output is identical"
             echo "CHANGES_MADE=false" >> $GITHUB_ENV
           else
-            git commit -m "chore: update task app (client + server) from ${{ github.sha }}"
+            git commit -m "chore: update task app client from ${{ github.sha }}"
             git push
             echo "✅ Successfully pushed task app to hadoku_site"
             echo "  - Client: public/mf/task/"
-            echo "  - Server (local): api/apps/task/"
-            echo "  - Server (Cloudflare): functions/task/lib/"
             echo "CHANGES_MADE=true" >> $GITHUB_ENV
           fi
       
