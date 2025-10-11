@@ -62,9 +62,19 @@ jobs:
             exit 1
           fi
 
-          # Verify server type definitions
+          # Verify server build (JavaScript + type definitions)
           if [ ! -d "dist/server" ]; then
             echo "❌ Error: dist/server directory was not created"
+            exit 1
+          fi
+
+          if [ ! -f "dist/server/index.js" ]; then
+            echo "❌ Error: dist/server/index.js was not created"
+            exit 1
+          fi
+
+          if [ ! -s "dist/server/index.js" ]; then
+            echo "❌ Error: dist/server/index.js is empty"
             exit 1
           fi
 
@@ -73,15 +83,10 @@ jobs:
             exit 1
           fi
 
-          if [ ! -s "dist/server/index.d.ts" ]; then
-            echo "❌ Error: dist/server/index.d.ts is empty"
-            exit 1
-          fi
-
           echo "✅ Client build output found:"
           ls -la dist/*.js dist/*.css
           echo ""
-          echo "✅ Server type definitions found:"
+          echo "✅ Server build output found (JS + types):"
           ls -la dist/server/
       
       - name: Push built files to parent repository
@@ -100,30 +105,33 @@ jobs:
           
           # Create target directories if they don't exist
           mkdir -p public/mf/task
+          mkdir -p api/apps/task
           
           # Copy client build to public/mf/task/
           echo "📦 Copying client build to public/mf/task/..."
           rm -rf public/mf/task/*
           cp -r ../dist/index.js ../dist/style.css public/mf/task/
           
-          echo "✅ Note: Server API uses npm link workflow"
-          echo "   Parent repo should run: npm link @hadoku/task"
-          echo "   This links to src/server/ TypeScript source directly"
+          # Copy server build to api/apps/task/ (compiled JavaScript)
+          echo "📦 Copying server build to api/apps/task/..."
+          rm -rf api/apps/task/*
+          cp -r ../dist/server/* api/apps/task/
           
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Commit and push changes
-          git add public/mf/task/
+          git add public/mf/task/ api/apps/task/
           if git diff --staged --quiet; then
             echo "✅ No changes to commit - build output is identical"
             echo "CHANGES_MADE=false" >> $GITHUB_ENV
           else
-            git commit -m "chore: update task app client from ${{ github.sha }}"
+            git commit -m "chore: update task app (client + server) from ${{ github.sha }}"
             git push
             echo "✅ Successfully pushed task app to hadoku_site"
             echo "  - Client: public/mf/task/"
+            echo "  - Server: api/apps/task/"
             echo "CHANGES_MADE=true" >> $GITHUB_ENV
           fi
       

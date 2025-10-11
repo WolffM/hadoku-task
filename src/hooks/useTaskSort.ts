@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react'
-import type { Task } from '@hadoku/task/api/types'
+import type { Task } from '../lib/types'
 
 export type SortDirection = 'asc' | 'desc' | null
 
