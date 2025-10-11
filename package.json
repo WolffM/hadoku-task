@@ -1,10 +1,27 @@
 {
   "name": "@hadoku/task",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "API definitions and business logic for the Task application.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WolffM/hadoku-task.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "dist/server",
+    "dist/index.js",
+    "dist/style.css"
+  ],
   "exports": {
-    ".": "./dist/index.js"
+    "./api": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./frontend": "./dist/index.js",
+    "./style.css": "./dist/style.css"
   },
   "scripts": {
     "dev": "vite",
