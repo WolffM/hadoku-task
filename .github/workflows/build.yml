@@ -101,6 +101,7 @@ jobs:
           # Create target directories if they don't exist
           mkdir -p public/mf/task
           mkdir -p api/apps/task
+          mkdir -p functions/task/lib
           
           # Remove old build files and copy new ones
           
@@ -109,18 +110,23 @@ jobs:
           rm -rf public/mf/task/*
           cp -r ../dist/index.js ../dist/style.css public/mf/task/
           
-          # Copy server build to api/apps/task/
+          # Copy server build to api/apps/task/ (for local Express development)
           echo "📦 Copying server build to api/apps/task/..."
           rm -rf api/apps/task/*
           cp -r ../dist/server/* api/apps/task/
           cp ../package.json api/apps/task/
+          
+          # Copy server build to functions/task/lib/ (for Cloudflare Pages Functions)
+          echo "📦 Copying server build to functions/task/lib/..."
+          rm -rf functions/task/lib/*
+          cp -r ../dist/server/* functions/task/lib/
           
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Commit and push changes
-          git add public/mf/task/ api/apps/task/
+          git add public/mf/task/ api/apps/task/ functions/task/lib/
           if git diff --staged --quiet; then
             echo "✅ No changes to commit - build output is identical"
             echo "CHANGES_MADE=false" >> $GITHUB_ENV
@@ -129,7 +135,8 @@ jobs:
             git push
             echo "✅ Successfully pushed task app to hadoku_site"
             echo "  - Client: public/mf/task/"
-            echo "  - Server: api/apps/task/"
+            echo "  - Server (local): api/apps/task/"
+            echo "  - Server (Cloudflare): functions/task/lib/"
             echo "CHANGES_MADE=true" >> $GITHUB_ENV
           fi
       
