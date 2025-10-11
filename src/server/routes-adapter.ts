@@ -14,8 +14,8 @@ import type { UserType } from './types.js'
 export function createTaskRoutes(storage: TaskStorage): Router {
   const router = Router()
 
-  // GET /api - Get all tasks
-  router.get('/api', async (req: Request, res: Response) => {
+  // GET / - Get all tasks
+  router.get('/', async (req: Request, res: Response) => {
     const userType = (req.query.userType as UserType) || 'public'
     const auth = { userType }
 
@@ -27,8 +27,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // GET /api/stats - Get stats
-  router.get('/api/stats', async (req: Request, res: Response) => {
+  // GET /stats - Get stats
+  router.get('/stats', async (req: Request, res: Response) => {
     const userType = (req.query.userType as UserType) || 'public'
     const auth = { userType }
 
@@ -40,8 +40,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // POST /api - Create task
-  router.post('/api', async (req: Request, res: Response) => {
+  // POST / - Create task
+  router.post('/', async (req: Request, res: Response) => {
     const userType = (req.headers['x-user-type'] as UserType) || 'public'
     const auth = { userType }
 
@@ -53,8 +53,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // POST /api/:id/complete - Complete task
-  router.post('/api/:id/complete', async (req: Request, res: Response) => {
+  // POST /:id/complete - Complete task
+  router.post('/:id/complete', async (req: Request, res: Response) => {
     const userType = (req.headers['x-user-type'] as UserType) || 'public'
     const auth = { userType }
 
@@ -67,8 +67,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // PATCH /api/:id - Update task
-  router.patch('/api/:id', async (req: Request, res: Response) => {
+  // PATCH /:id - Update task
+  router.patch('/:id', async (req: Request, res: Response) => {
     const userType = (req.headers['x-user-type'] as UserType) || 'public'
     const auth = { userType }
 
@@ -81,8 +81,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // DELETE /api/:id - Delete task
-  router.delete('/api/:id', async (req: Request, res: Response) => {
+  // DELETE /:id - Delete task
+  router.delete('/:id', async (req: Request, res: Response) => {
     const userType = (req.headers['x-user-type'] as UserType) || 'public'
     const auth = { userType }
 
@@ -95,8 +95,8 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // POST /api/clear - Clear tasks (public only)
-  router.post('/api/clear', async (req: Request, res: Response) => {
+  // POST /clear - Clear tasks (public only)
+  router.post('/clear', async (req: Request, res: Response) => {
     const userType = (req.headers['x-user-type'] as UserType) || 'public'
     const auth = { userType }
 

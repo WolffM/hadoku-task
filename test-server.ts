@@ -11,6 +11,13 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Disable buffering and enable immediate response flushing
+app.use((req, res, next) => {
+  res.setHeader('X-Accel-Buffering', 'no')
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  next()
+})
+
 // Create the task router with local data path
 const taskRouter = createTaskRouter({
   dataPath: './task/data',
@@ -50,9 +57,9 @@ app.use(express.static('.'))
 
 const PORT = 3001
 
-app.listen(PORT, () => {
-  console.log(`✅ Test server running on http://localhost:${PORT}`)
-  console.log(`📝 Open http://localhost:${PORT} to test the app`)
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`✅ Test server running on http://127.0.0.1:${PORT}`)
+  console.log(`📝 Open http://127.0.0.1:${PORT} to test the app`)
   console.log(`🔧 Using Task Router from src/server/router.ts`)
   console.log(`📊 Sync queue size: ${taskRouter.syncQueue.size()}`)
 })

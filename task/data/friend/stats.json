@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "updatedAt": "2025-10-10T23:13:02.455Z",
+  "updatedAt": "2025-10-11T20:53:18.919Z",
   "counters": {
-    "created": 48,
+    "created": 62,
     "completed": 9,
-    "edited": 10,
-    "deleted": 30
+    "edited": 23,
+    "deleted": 44
   },
   "timeline": [
     {
@@ -537,6 +537,211 @@
       "t": "2025-10-10T23:13:02.455Z",
       "event": "edit",
       "id": "MGLGPCVPNFXR11CXJRJAE0HT6V"
+    },
+    {
+      "t": "2025-10-11T20:43:24.731Z",
+      "event": "edited",
+      "id": "MGLGPCD53RH0TVRQBVD050ECJV"
+    },
+    {
+      "t": "2025-10-11T20:43:26.812Z",
+      "event": "edited",
+      "id": "MGLEEQYJRBPDWL9R4OFF17MC31"
+    },
+    {
+      "t": "2025-10-11T20:43:52.256Z",
+      "event": "deleted",
+      "id": "MGLEEQYJRBPDWL9R4OFF17MC31"
+    },
+    {
+      "t": "2025-10-11T20:43:56.971Z",
+      "event": "deleted",
+      "id": "MGLEERIJXNWX2YZN1GFDXAWXH6"
+    },
+    {
+      "t": "2025-10-11T20:44:02.081Z",
+      "event": "deleted",
+      "id": "MGLEFOM75UNF3ZWMNFQI1GDV77"
+    },
+    {
+      "t": "2025-10-11T20:44:05.779Z",
+      "event": "created",
+      "id": "MGMQTUDW810RPO1ML4S0U04Z6A"
+    },
+    {
+      "t": "2025-10-11T20:44:08.848Z",
+      "event": "created",
+      "id": "MGMQTWR4XIY32WC2ZPMEYJ0XVY"
+    },
+    {
+      "t": "2025-10-11T20:44:12.618Z",
+      "event": "created",
+      "id": "MGMQTZNV7NLAI462A2XL3R0XE3"
+    },
+    {
+      "t": "2025-10-11T20:44:15.133Z",
+      "event": "edited",
+      "id": "MGMQTZNV7NLAI462A2XL3R0XE3"
+    },
+    {
+      "t": "2025-10-11T20:44:19.127Z",
+      "event": "edited",
+      "id": "MGMQTUDW810RPO1ML4S0U04Z6A"
+    },
+    {
+      "t": "2025-10-11T20:45:14.223Z",
+      "event": "deleted",
+      "id": "MGMQTUDW810RPO1ML4S0U04Z6A"
+    },
+    {
+      "t": "2025-10-11T20:45:15.302Z",
+      "event": "deleted",
+      "id": "MGLGPCD53RH0TVRQBVD050ECJV"
+    },
+    {
+      "t": "2025-10-11T20:47:03.146Z",
+      "event": "created",
+      "id": "MGMQXN8R89RUH08E5OVPZQWDY9"
+    },
+    {
+      "t": "2025-10-11T20:47:06.533Z",
+      "event": "created",
+      "id": "MGMQXPUUBK4LNC238CKMT4M2HS"
+    },
+    {
+      "t": "2025-10-11T20:47:09.827Z",
+      "event": "created",
+      "id": "MGMQXSECF7AILS54GG2BQM8386"
+    },
+    {
+      "t": "2025-10-11T20:47:12.115Z",
+      "event": "created",
+      "id": "MGMQXU5WUXZUXRM2D4HKGMPKIZ"
+    },
+    {
+      "t": "2025-10-11T20:47:13.352Z",
+      "event": "created",
+      "id": "MGMQXV480U4BBM00T3U36OPN9R"
+    },
+    {
+      "t": "2025-10-11T20:47:15.667Z",
+      "event": "edited",
+      "id": "MGMQXU5WUXZUXRM2D4HKGMPKIZ"
+    },
+    {
+      "t": "2025-10-11T20:47:18.951Z",
+      "event": "edited",
+      "id": "MGMQXSECF7AILS54GG2BQM8386"
+    },
+    {
+      "t": "2025-10-11T20:50:00.207Z",
+      "event": "deleted",
+      "id": "MGMQXPUUBK4LNC238CKMT4M2HS"
+    },
+    {
+      "t": "2025-10-11T20:50:03.035Z",
+      "event": "deleted",
+      "id": "MGMQXN8R89RUH08E5OVPZQWDY9"
+    },
+    {
+      "t": "2025-10-11T20:50:04.633Z",
+      "event": "deleted",
+      "id": "MGMQXSECF7AILS54GG2BQM8386"
+    },
+    {
+      "t": "2025-10-11T20:50:05.421Z",
+      "event": "deleted",
+      "id": "MGLGPCVPNFXR11CXJRJAE0HT6V"
+    },
+    {
+      "t": "2025-10-11T20:50:10.555Z",
+      "event": "created",
+      "id": "MGMR1NUKX2NMK2084W39DG7BPK"
+    },
+    {
+      "t": "2025-10-11T20:50:14.770Z",
+      "event": "created",
+      "id": "MGMR1R3N2VG6E9CZ7UHC00PDMM"
+    },
+    {
+      "t": "2025-10-11T20:50:16.810Z",
+      "event": "created",
+      "id": "MGMR1SOB31KHZRMQ7MAA4QEP2M"
+    },
+    {
+      "t": "2025-10-11T20:50:18.754Z",
+      "event": "edited",
+      "id": "MGMR1NUKX2NMK2084W39DG7BPK"
+    },
+    {
+      "t": "2025-10-11T20:50:20.150Z",
+      "event": "edited",
+      "id": "MGMQXV480U4BBM00T3U36OPN9R"
+    },
+    {
+      "t": "2025-10-11T20:50:21.192Z",
+      "event": "edited",
+      "id": "MGMQTWR4XIY32WC2ZPMEYJ0XVY"
+    },
+    {
+      "t": "2025-10-11T20:50:24.396Z",
+      "event": "deleted",
+      "id": "MGMQTZNV7NLAI462A2XL3R0XE3"
+    },
+    {
+      "t": "2025-10-11T20:50:24.936Z",
+      "event": "deleted",
+      "id": "MGMR1NUKX2NMK2084W39DG7BPK"
+    },
+    {
+      "t": "2025-10-11T20:50:25.700Z",
+      "event": "deleted",
+      "id": "MGMQTWR4XIY32WC2ZPMEYJ0XVY"
+    },
+    {
+      "t": "2025-10-11T20:53:09.017Z",
+      "event": "created",
+      "id": "MGMR5HJUYGPZ3XYBV52IFWDYLJ"
+    },
+    {
+      "t": "2025-10-11T20:53:09.423Z",
+      "event": "created",
+      "id": "MGMR5HV3RBCM3NS8U5RHK6T226"
+    },
+    {
+      "t": "2025-10-11T20:53:10.172Z",
+      "event": "created",
+      "id": "MGMR5IFYJULZBK3PJOQ70B4D42"
+    },
+    {
+      "t": "2025-10-11T20:53:12.972Z",
+      "event": "edited",
+      "id": "MGMR5IFYJULZBK3PJOQ70B4D42"
+    },
+    {
+      "t": "2025-10-11T20:53:14.267Z",
+      "event": "edited",
+      "id": "MGMR5HV3RBCM3NS8U5RHK6T226"
+    },
+    {
+      "t": "2025-10-11T20:53:16.104Z",
+      "event": "edited",
+      "id": "MGMR5HJUYGPZ3XYBV52IFWDYLJ"
+    },
+    {
+      "t": "2025-10-11T20:53:16.913Z",
+      "event": "edited",
+      "id": "MGMR1SOB31KHZRMQ7MAA4QEP2M"
+    },
+    {
+      "t": "2025-10-11T20:53:18.599Z",
+      "event": "deleted",
+      "id": "MGMQXV480U4BBM00T3U36OPN9R"
+    },
+    {
+      "t": "2025-10-11T20:53:18.919Z",
+      "event": "deleted",
+      "id": "MGMR5HJUYGPZ3XYBV52IFWDYLJ"
     }
   ],
   "tasks": {
@@ -660,29 +865,29 @@
     "MGLEEQYJRBPDWL9R4OFF17MC31": {
       "id": "MGLEEQYJRBPDWL9R4OFF17MC31",
       "title": "more",
-      "tag": null,
+      "tag": "test",
+      "state": "Deleted",
       "createdAt": "2025-10-10T22:08:39.929Z",
-      "updatedAt": null,
-      "closedAt": null,
-      "state": "Active"
+      "updatedAt": "2025-10-11T20:43:52.256Z",
+      "closedAt": "2025-10-11T20:43:52.256Z"
     },
     "MGLEERIJXNWX2YZN1GFDXAWXH6": {
       "id": "MGLEERIJXNWX2YZN1GFDXAWXH6",
       "title": "yes",
       "tag": "i-see",
+      "state": "Deleted",
       "createdAt": "2025-10-10T22:08:40.649Z",
-      "updatedAt": "2025-10-10T22:08:43.490Z",
-      "closedAt": null,
-      "state": "Active"
+      "updatedAt": "2025-10-11T20:43:56.971Z",
+      "closedAt": "2025-10-11T20:43:56.971Z"
     },
     "MGLEFOM75UNF3ZWMNFQI1GDV77": {
       "id": "MGLEFOM75UNF3ZWMNFQI1GDV77",
       "title": "ok",
       "tag": "i-see",
+      "state": "Deleted",
       "createdAt": "2025-10-10T22:09:23.550Z",
-      "updatedAt": "2025-10-10T22:10:18.843Z",
-      "closedAt": null,
-      "state": "Active"
+      "updatedAt": "2025-10-11T20:44:02.081Z",
+      "closedAt": "2025-10-11T20:44:02.081Z"
     },
     "MGLEFPZULY7NDH0QP2RE1SLINH": {
       "id": "MGLEFPZULY7NDH0QP2RE1SLINH",
@@ -696,20 +901,140 @@
     "MGLGPCD53RH0TVRQBVD050ECJV": {
       "id": "MGLGPCD53RH0TVRQBVD050ECJV",
       "title": "nice",
-      "tag": null,
+      "tag": "test",
+      "state": "Deleted",
       "createdAt": "2025-10-10T23:12:53.454Z",
-      "updatedAt": null,
-      "closedAt": null,
-      "state": "Active"
+      "updatedAt": "2025-10-11T20:45:15.302Z",
+      "closedAt": "2025-10-11T20:45:15.302Z"
     },
     "MGLGPCVPNFXR11CXJRJAE0HT6V": {
       "id": "MGLGPCVPNFXR11CXJRJAE0HT6V",
       "title": "ok",
       "tag": "i-see",
+      "state": "Deleted",
       "createdAt": "2025-10-10T23:12:54.132Z",
-      "updatedAt": "2025-10-10T23:13:02.455Z",
-      "closedAt": null,
-      "state": "Active"
+      "updatedAt": "2025-10-11T20:50:05.421Z",
+      "closedAt": "2025-10-11T20:50:05.421Z"
+    },
+    "MGMQTUDW810RPO1ML4S0U04Z6A": {
+      "id": "MGMQTUDW810RPO1ML4S0U04Z6A",
+      "title": "test",
+      "tag": "i-see",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:44:05.779Z",
+      "updatedAt": "2025-10-11T20:45:14.223Z",
+      "closedAt": "2025-10-11T20:45:14.223Z"
+    },
+    "MGMQTWR4XIY32WC2ZPMEYJ0XVY": {
+      "id": "MGMQTWR4XIY32WC2ZPMEYJ0XVY",
+      "title": "ok",
+      "tag": "i-see",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:44:08.848Z",
+      "updatedAt": "2025-10-11T20:50:25.700Z",
+      "closedAt": "2025-10-11T20:50:25.700Z"
+    },
+    "MGMQTZNV7NLAI462A2XL3R0XE3": {
+      "id": "MGMQTZNV7NLAI462A2XL3R0XE3",
+      "title": "new task",
+      "tag": "test",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:44:12.618Z",
+      "updatedAt": "2025-10-11T20:50:24.396Z",
+      "closedAt": "2025-10-11T20:50:24.396Z"
+    },
+    "MGMQXN8R89RUH08E5OVPZQWDY9": {
+      "id": "MGMQXN8R89RUH08E5OVPZQWDY9",
+      "title": "new task",
+      "tag": null,
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:47:03.146Z",
+      "closedAt": "2025-10-11T20:50:03.035Z",
+      "updatedAt": "2025-10-11T20:50:03.035Z"
+    },
+    "MGMQXPUUBK4LNC238CKMT4M2HS": {
+      "id": "MGMQXPUUBK4LNC238CKMT4M2HS",
+      "title": "i create",
+      "tag": null,
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:47:06.533Z",
+      "closedAt": "2025-10-11T20:50:00.207Z",
+      "updatedAt": "2025-10-11T20:50:00.207Z"
+    },
+    "MGMQXSECF7AILS54GG2BQM8386": {
+      "id": "MGMQXSECF7AILS54GG2BQM8386",
+      "title": "more",
+      "tag": "test",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:47:09.827Z",
+      "updatedAt": "2025-10-11T20:50:04.633Z",
+      "closedAt": "2025-10-11T20:50:04.633Z"
+    },
+    "MGMQXU5WUXZUXRM2D4HKGMPKIZ": {
+      "id": "MGMQXU5WUXZUXRM2D4HKGMPKIZ",
+      "title": "another one",
+      "tag": "i-see",
+      "state": "Active",
+      "createdAt": "2025-10-11T20:47:12.115Z",
+      "updatedAt": "2025-10-11T20:47:15.667Z"
+    },
+    "MGMQXV480U4BBM00T3U36OPN9R": {
+      "id": "MGMQXV480U4BBM00T3U36OPN9R",
+      "title": "ok",
+      "tag": "i-see",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:47:13.352Z",
+      "updatedAt": "2025-10-11T20:53:18.599Z",
+      "closedAt": "2025-10-11T20:53:18.599Z"
+    },
+    "MGMR1NUKX2NMK2084W39DG7BPK": {
+      "id": "MGMR1NUKX2NMK2084W39DG7BPK",
+      "title": "new task",
+      "tag": "test",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:50:10.555Z",
+      "updatedAt": "2025-10-11T20:50:24.936Z",
+      "closedAt": "2025-10-11T20:50:24.936Z"
+    },
+    "MGMR1R3N2VG6E9CZ7UHC00PDMM": {
+      "id": "MGMR1R3N2VG6E9CZ7UHC00PDMM",
+      "title": "ho",
+      "tag": null,
+      "state": "Active",
+      "createdAt": "2025-10-11T20:50:14.770Z"
+    },
+    "MGMR1SOB31KHZRMQ7MAA4QEP2M": {
+      "id": "MGMR1SOB31KHZRMQ7MAA4QEP2M",
+      "title": "i fo snoyhrt onr",
+      "tag": "task",
+      "state": "Active",
+      "createdAt": "2025-10-11T20:50:16.810Z",
+      "updatedAt": "2025-10-11T20:53:16.913Z"
+    },
+    "MGMR5HJUYGPZ3XYBV52IFWDYLJ": {
+      "id": "MGMR5HJUYGPZ3XYBV52IFWDYLJ",
+      "title": "i create",
+      "tag": "i-see",
+      "state": "Deleted",
+      "createdAt": "2025-10-11T20:53:09.017Z",
+      "updatedAt": "2025-10-11T20:53:18.919Z",
+      "closedAt": "2025-10-11T20:53:18.919Z"
+    },
+    "MGMR5HV3RBCM3NS8U5RHK6T226": {
+      "id": "MGMR5HV3RBCM3NS8U5RHK6T226",
+      "title": "ok",
+      "tag": "task",
+      "state": "Active",
+      "createdAt": "2025-10-11T20:53:09.423Z",
+      "updatedAt": "2025-10-11T20:53:14.267Z"
+    },
+    "MGMR5IFYJULZBK3PJOQ70B4D42": {
+      "id": "MGMR5IFYJULZBK3PJOQ70B4D42",
+      "title": "new",
+      "tag": "task",
+      "state": "Active",
+      "createdAt": "2025-10-11T20:53:10.172Z",
+      "updatedAt": "2025-10-11T20:53:12.972Z"
     }
   }
 }
