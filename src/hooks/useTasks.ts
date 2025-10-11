@@ -4,7 +4,7 @@
 
 import { useState } from 'react'
 import { createApi } from '../lib/api'
-import type { Task, TasksFile } from '../lib/types'
+import type { Task, TasksFile } from '@hadoku/task/api/types'
 import { parseTaskInput } from '../lib/tagUtils'
 
 interface UseTasksProps {

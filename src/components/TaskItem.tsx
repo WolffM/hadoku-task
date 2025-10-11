@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import type { Task } from '../lib/types'
+import type { Task } from '@hadoku/task/api/types'
 import { formatAge } from '../lib/formatters'
 
 interface TaskItemProps {

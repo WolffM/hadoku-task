@@ -1,12 +1,54 @@
 /**
  * Storage layer for Task Router
  * Handles both in-memory (public) and file-based (friend/admin) storage
+ * Also provides Storage interface implementation
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import type { TasksFile, StatsFile, DataType, UserType } from './types.js'
-import { createEmptyTasksFile, createEmptyStatsFile } from './utils.js'
+import process from 'process'
+import type { TasksFile, StatsFile, DataType, UserType, RouterConfig } from './types.js'
+import { now } from './utils.js'
+import type { SyncQueue } from './sync-queue.js'
+
+/**
+ * Storage interface - defines the contract for data persistence
+ */
+export interface Storage {
+  getTasks(userType: UserType): Promise<TasksFile>;
+  saveTasks(userType: UserType, tasks: TasksFile): Promise<void>;
+  getStats(userType: UserType): Promise<StatsFile>;
+  saveStats(userType: UserType, stats: StatsFile): Promise<void>;
+}
+
+/**
+ * Create empty tasks file structure
+ */
+function createEmptyTasksFile(): TasksFile {
+  return {
+    version: 1,
+    tasks: [],
+    updatedAt: now()
+  }
+}
+
+/**
+ * Create empty stats file structure
+ */
+function createEmptyStatsFile(): StatsFile {
+  return {
+    version: 2,
+    counters: {
+      created: 0,
+      completed: 0,
+      edited: 0,
+      deleted: 0
+    },
+    timeline: [],
+    tasks: {},
+    updatedAt: now()
+  }
+}
 
 // In-memory storage for public users (singleton)
 const publicData: {
@@ -101,5 +143,55 @@ export function writeUserData(
   } catch (error) {
     console.error(`Error writing ${filePath}:`, error)
     throw error
+  }
+}
+
+export function createStorage(config: RouterConfig, syncQueue: SyncQueue): Storage {
+  const basePath = config.dataPath
+
+  return {
+    async getTasks(userType: UserType): Promise<TasksFile> {
+      if (userType === 'public') {
+        return publicData.tasks
+      }
+      
+      ensureUserDataExists(userType, basePath)
+      return readUserData(userType, 'tasks', basePath) as TasksFile
+    },
+
+    async saveTasks(userType: UserType, data: TasksFile): Promise<void> {
+      if (userType === 'public') {
+        publicData.tasks = data
+        return
+      }
+
+      writeUserData(userType, 'tasks', data, basePath)
+      
+      if (config.githubConfig && syncQueue) {
+        syncQueue.add(userType, 'tasks')
+      }
+    },
+
+    async getStats(userType: UserType): Promise<StatsFile> {
+      if (userType === 'public') {
+        return publicData.stats
+      }
+      
+      ensureUserDataExists(userType, basePath)
+      return readUserData(userType, 'stats', basePath) as StatsFile
+    },
+
+    async saveStats(userType: UserType, data: StatsFile): Promise<void> {
+      if (userType === 'public') {
+        publicData.stats = data
+        return
+      }
+
+      writeUserData(userType, 'stats', data, basePath)
+      
+      if (config.githubConfig && syncQueue) {
+        syncQueue.add(userType, 'stats')
+      }
+    }
   }
 }

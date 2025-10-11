@@ -4,7 +4,7 @@
  */
 
 import { ulid } from './ulid'
-import type { TasksFile, StatsFile, Task } from './types'
+import type { TasksFile, StatsFile, Task } from '@hadoku/task/api/types'
 
 const STORAGE_KEY = 'hadoku-public-tasks'
 const STATS_KEY = 'hadoku-public-stats'

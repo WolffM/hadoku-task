@@ -1,5 +1,5 @@
 /**
- * Utility functions for the Task Router
+ * Utility functions for the Task API
  */
 
 /**
@@ -18,35 +18,6 @@ export function generateULID(): string {
 /**
  * Get current ISO 8601 timestamp
  */
-export function createISO(): string {
+export function now(): string {
   return new Date().toISOString()
-}
-
-/**
- * Create empty tasks file structure
- */
-export function createEmptyTasksFile() {
-  return {
-    version: 1,
-    tasks: [],
-    updatedAt: createISO()
-  }
-}
-
-/**
- * Create empty stats file structure
- */
-export function createEmptyStatsFile() {
-  return {
-    version: 2,
-    counters: {
-      created: 0,
-      completed: 0,
-      edited: 0,
-      deleted: 0
-    },
-    timeline: [],
-    tasks: {},
-    updatedAt: createISO()
-  }
 }

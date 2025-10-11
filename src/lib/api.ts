@@ -1,4 +1,4 @@
-import type { TasksFile, StatsFile } from './types'
+import type { TasksFile, StatsFile } from '@hadoku/task/api/types'
 import { createLocalStorageApi } from './localStorageApi'
 
 function adminHeaders(userType: string) {

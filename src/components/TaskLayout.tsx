@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import type { Task } from '../lib/types'
+import type { Task } from '@hadoku/task/api/types'
 import type { SortDirection } from '../hooks/useTaskSort'
 import { TaskItem } from './TaskItem'
 import { getLayoutConfig } from '../lib/layoutUtils'

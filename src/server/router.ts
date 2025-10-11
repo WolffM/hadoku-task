@@ -1,15 +1,13 @@
 /**
  * Task Management Express Router
- * Main entry point for the Task API
+ * Main entry point for the Task API - now using framework-agnostic handlers
  */
 
 import { Router } from 'express'
 import type { RouterConfig } from './types.js'
-import { ensureUserDataExists } from './storage.js'
+import { ensureUserDataExists, createStorage } from './storage.js'
 import { SyncQueue } from './sync-queue.js'
-import { DataAccess } from './handlers/data-access.js'
-import { createTaskRoutes } from './routes/tasks.js'
-import { createTaskOperationRoutes } from './routes/task-operations.js'
+import { createTaskRoutes } from './routes-adapter.js'
 
 export interface TaskRouter extends Router {
   syncQueue: SyncQueue
@@ -18,6 +16,7 @@ export interface TaskRouter extends Router {
 
 /**
  * Create and configure the Task router
+ * This is now a thin adapter that connects Express to the framework-agnostic handlers
  */
 export function createTaskRouter(config: RouterConfig): TaskRouter {
   const router = Router() as TaskRouter
@@ -31,12 +30,11 @@ export function createTaskRouter(config: RouterConfig): TaskRouter {
   ensureUserDataExists('friend', config.dataPath)
   ensureUserDataExists('admin', config.dataPath)
   
-  // Create data access layer
-  const dataAccess = new DataAccess(config, syncQueue)
+  // Create storage that implements Storage interface
+  const storage = createStorage(config, syncQueue)
   
-  // Mount routes
-  router.use('/', createTaskRoutes(dataAccess))
-  router.use('/', createTaskOperationRoutes(dataAccess))
+  // Mount routes (thin adapter layer using api/ handlers)
+  router.use('/', createTaskRoutes(storage))
   
   return router
 }

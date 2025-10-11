@@ -50,7 +50,8 @@ Fix bug #high priority [Enter]           # Multi-word tag  #high-priority
  **[Architecture](docs/ARCHITECTURE.md)** - System design, patterns, refactoring details  
  **[API Reference](docs/API.md)** - Complete endpoint documentation  
  **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines  
- **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps
+ **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps  
+ **[Universal Adapter Pattern](docs/UNIVERSAL_ADAPTER_PATTERN.md)** - Framework-agnostic API handlers (NEW!)
 
 ---
 
