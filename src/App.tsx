@@ -91,7 +91,7 @@ export default function App(props: TaskAppProps = {}) {
         </button>
       </div>
       <div className="task-app__filters">
-        <button onClick={() => setFilter(undefined)} className={!filter ? 'on' : ''}>All</button>
+        <button onClick={() => setFilter(undefined)} className={!filter ? 'on' : ''}>All!</button>
         {getAllTags(tasks).map(tag =>
           <button 
             key={tag} 
