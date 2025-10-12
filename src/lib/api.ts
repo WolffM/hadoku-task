@@ -10,18 +10,19 @@ function adminHeaders(userType: string) {
 
 /**
  * Create optimistic API client
- * - All modes (public/friend/admin) use localStorage for immediate updates
- * - Friend/admin also sync to Cloudflare Workers KV in background
+ * - All user types use localStorage for immediate updates
+ * - "public" is localStorage-only, no server sync
+ * - All other user types (friend, admin, custom names) sync to server in background
  */
-export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
-  const localStorage = createLocalStorageApi()
+export function createApi(userType: string = 'public') {
+  const localStorage = createLocalStorageApi(userType)
   
   // Public mode: localStorage only, no server sync
   if (userType === 'public') {
     return localStorage
   }
   
-  // Friend/Admin mode: localStorage + background server sync
+  // All other modes: localStorage + background server sync
   return {
     async getTasks(): Promise<TasksFile> {
       // Return localStorage immediately for instant response

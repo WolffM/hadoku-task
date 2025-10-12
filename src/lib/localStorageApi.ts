@@ -1,17 +1,18 @@
 /**
- * localStorage-based API client for public mode
+ * localStorage-based API client for all user types
  * Provides the same interface as the server API but stores data locally
  */
 
 import { ulid } from './ulid'
 import type { TasksFile, StatsFile, Task } from './types'
 
-const STORAGE_KEY = 'hadoku-public-tasks'
-const STATS_KEY = 'hadoku-public-stats'
+// Generate storage keys based on user type
+const getTasksKey = (userType: string) => `hadoku-${userType}-tasks`
+const getStatsKey = (userType: string) => `hadoku-${userType}-stats`
 
 // Helper to get tasks from localStorage
-function getTasks(): TasksFile {
-  const stored = localStorage.getItem(STORAGE_KEY)
+function getTasks(userType: string = 'public'): TasksFile {
+  const stored = localStorage.getItem(getTasksKey(userType))
   if (stored) {
     return JSON.parse(stored)
   }
@@ -24,14 +25,14 @@ function getTasks(): TasksFile {
 }
 
 // Helper to save tasks to localStorage
-function saveTasks(tasksFile: TasksFile): void {
+function saveTasks(tasksFile: TasksFile, userType: string = 'public'): void {
   tasksFile.updatedAt = new Date().toISOString()
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasksFile))
+  localStorage.setItem(getTasksKey(userType), JSON.stringify(tasksFile))
 }
 
 // Helper to get stats from localStorage
-function getStats(): StatsFile {
-  const stored = localStorage.getItem(STATS_KEY)
+function getStats(userType: string = 'public'): StatsFile {
+  const stored = localStorage.getItem(getStatsKey(userType))
   if (stored) {
     return JSON.parse(stored)
   }
@@ -51,17 +52,18 @@ function getStats(): StatsFile {
 }
 
 // Helper to save stats to localStorage
-function saveStats(statsFile: StatsFile): void {
+function saveStats(statsFile: StatsFile, userType: string = 'public'): void {
   statsFile.updatedAt = new Date().toISOString()
-  localStorage.setItem(STATS_KEY, JSON.stringify(statsFile))
+  localStorage.setItem(getStatsKey(userType), JSON.stringify(statsFile))
 }
 
 // Helper to update stats for an event
 function recordEvent(
   event: 'created' | 'completed' | 'edited' | 'deleted',
-  task: Task
+  task: Task,
+  userType: string = 'public'
 ): void {
-  const stats = getStats()
+  const stats = getStats(userType)
   
   // Update counters
   stats.counters[event]++
@@ -84,24 +86,24 @@ function recordEvent(
     closedAt: task.closedAt
   }
   
-  saveStats(stats)
+  saveStats(stats, userType)
 }
 
 /**
  * Create a localStorage-based API client that mirrors the server API interface
  */
-export function createLocalStorageApi() {
+export function createLocalStorageApi(userType: string = 'public') {
   return {
     async getTasks(): Promise<TasksFile> {
-      return getTasks()
+      return getTasks(userType)
     },
 
     async getStats(): Promise<StatsFile> {
-      return getStats()
+      return getStats(userType)
     },
 
     async createTask(data: { title: string; tag?: string }): Promise<Task> {
-      const tasksFile = getTasks()
+      const tasksFile = getTasks(userType)
       const now = new Date().toISOString()
       
       const newTask: Task = {
@@ -115,14 +117,14 @@ export function createLocalStorageApi() {
       }
       
       tasksFile.tasks.push(newTask)
-      saveTasks(tasksFile)
-      recordEvent('created', newTask)
+      saveTasks(tasksFile, userType)
+      recordEvent('created', newTask, userType)
       
       return newTask
     },
 
     async patchTask(id: string, updates: Partial<Pick<Task, 'title' | 'tag'>>): Promise<Task> {
-      const tasksFile = getTasks()
+      const tasksFile = getTasks(userType)
       const task = tasksFile.tasks.find(t => t.id === id)
       
       if (!task) {
@@ -134,14 +136,14 @@ export function createLocalStorageApi() {
       if (updates.tag !== undefined) task.tag = updates.tag
       task.updatedAt = new Date().toISOString()
       
-      saveTasks(tasksFile)
-      recordEvent('edited', task)
+      saveTasks(tasksFile, userType)
+      recordEvent('edited', task, userType)
       
       return task
     },
 
     async completeTask(id: string): Promise<Task> {
-      const tasksFile = getTasks()
+      const tasksFile = getTasks(userType)
       const task = tasksFile.tasks.find(t => t.id === id)
       
       if (!task) {
@@ -153,14 +155,14 @@ export function createLocalStorageApi() {
       task.updatedAt = now
       task.closedAt = now
       
-      saveTasks(tasksFile)
-      recordEvent('completed', task)
+      saveTasks(tasksFile, userType)
+      recordEvent('completed', task, userType)
       
       return task
     },
 
     async deleteTask(id: string): Promise<Task> {
-      const tasksFile = getTasks()
+      const tasksFile = getTasks(userType)
       const task = tasksFile.tasks.find(t => t.id === id)
       
       if (!task) {
@@ -172,15 +174,15 @@ export function createLocalStorageApi() {
       task.updatedAt = now
       task.closedAt = now
       
-      saveTasks(tasksFile)
-      recordEvent('deleted', task)
+      saveTasks(tasksFile, userType)
+      recordEvent('deleted', task, userType)
       
       return task
     },
 
     async clearPublicTasks(): Promise<{ message: string }> {
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem(STATS_KEY)
+      localStorage.removeItem(getTasksKey(userType))
+      localStorage.removeItem(getStatsKey(userType))
       return { message: 'All tasks cleared' }
     }
   }

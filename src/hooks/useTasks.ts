@@ -8,7 +8,7 @@ import type { Task, TasksFile } from '@hadoku/task/api/types'
 import { parseTaskInput } from '../lib/tagUtils'
 
 interface UseTasksProps {
-  userType: 'public' | 'friend' | 'admin'
+  userType: string // Any string supported: 'public', 'friend', 'admin', or custom names
   isPublic: boolean
 }
 

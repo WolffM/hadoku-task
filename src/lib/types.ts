@@ -6,7 +6,10 @@
 // Core domain types
 export type ULID = string;
 
-export type UserType = 'public' | 'friend' | 'admin';
+// UserType is any string identifier
+// "public" is special: localStorage-only, no server sync
+// All others (friend, admin, custom names) sync to server
+export type UserType = string;
 
 export interface Task {
   id: ULID;

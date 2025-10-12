@@ -10,6 +10,7 @@ export default function App(props: TaskAppProps = {}) {
   const { basename = '/task', apiUrl, environment, userType = 'public' } = props;
   const [filter, setFilter] = useState<string | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
+  // "public" is special: localStorage-only, no server. All other types sync to server.
   const isPublic = userType === 'public'
 
   // Task operations hook
