@@ -23,7 +23,8 @@ npm run dev
 -  **Tag Support** - Organize with `#tags`
 -  **Smart Filtering** - Filter by tag or view all
 -  **Drag & Drop** - Move tasks between columns
--  **Multi-User** - Public (in-memory), Friend/Admin (persistent)
+-  **Optimistic Updates** - Instant UI response, background sync to Cloudflare Workers KV
+-  **Multi-User** - Public (localStorage only), Friend/Admin (localStorage + KV persistence)
 -  **Framework Agnostic** - Pure handlers work with Express, Hono, Cloudflare Workers
 
 ---
@@ -96,9 +97,15 @@ const result = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
 ```
 
 **Deployment Flexibility**:
-- ✅ **Cloudflare Workers** - Use with Hono + KV storage
-- ✅ **Self-hosted** - Use with Express + filesystem storage
+- ✅ **Cloudflare Workers** - Use with Hono + Workers KV storage
+- ✅ **Self-hosted** - Use with Express + filesystem storage (for testing/development)
 - ✅ **Any framework** - Just implement the Storage interface
+
+**Client Architecture**:
+- **All user types** use browser localStorage for instant UI updates
+- **Public mode** - localStorage only, no persistence
+- **Friend/Admin mode** - localStorage + background sync to Cloudflare Workers KV
+- Zero blocking on API calls, optimistic updates everywhere
 
 ### Client (React)
 

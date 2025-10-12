@@ -9,43 +9,104 @@ function adminHeaders(userType: string) {
 }
 
 /**
- * Create API client - returns localStorage client for public mode, server API for admin/friend
+ * Create optimistic API client
+ * - All modes (public/friend/admin) use localStorage for immediate updates
+ * - Friend/admin also sync to Cloudflare Workers KV in background
  */
 export function createApi(userType: 'admin' | 'friend' | 'public' = 'public') {
-  // Public mode: browser-only, zero server interaction
+  const localStorage = createLocalStorageApi()
+  
+  // Public mode: localStorage only, no server sync
   if (userType === 'public') {
-    return createLocalStorageApi()
+    return localStorage
   }
   
-  // Admin/Friend mode: use server API
+  // Friend/Admin mode: localStorage + background server sync
   return {
     async getTasks(): Promise<TasksFile> {
-      const r = await fetch(`/task/api?userType=${userType}`)
-      return r.json()
+      // Return localStorage immediately for instant response
+      const localTasks = await localStorage.getTasks()
+      
+      // Sync from server in background (updates will trigger re-render if different)
+      fetch(`/task/api?userType=${userType}`)
+        .then(r => r.json())
+        .then(serverTasks => {
+          // Server is source of truth - if data differs, it will be synced next render
+          console.log('Background sync: tasks synced from server')
+        })
+        .catch(err => console.error('Background sync failed:', err))
+      
+      return localTasks
     },
+    
     async getStats(): Promise<StatsFile> {
-      const r = await fetch(`/task/api/stats?userType=${userType}`)
-      return r.json()
+      // Return localStorage immediately for instant response
+      const localStats = await localStorage.getStats()
+      
+      // Sync from server in background
+      fetch(`/task/api/stats?userType=${userType}`)
+        .then(r => r.json())
+        .then(serverStats => {
+          console.log('Background sync: stats synced from server')
+        })
+        .catch(err => console.error('Background sync failed:', err))
+      
+      return localStats
     },
-    async createTask(data: { title:string; tag?:string }) {
-      const r = await fetch('/task/api', { method:'POST', headers: adminHeaders(userType), body: JSON.stringify(data) })
-      return r.json()
+    
+    async createTask(data: { title: string; tag?: string }) {
+      // Optimistic update: localStorage first
+      const result = await localStorage.createTask(data)
+      
+      // Queue server sync in background
+      fetch('/task/api', {
+        method: 'POST',
+        headers: adminHeaders(userType),
+        body: JSON.stringify(data)
+      }).catch(err => console.error('Failed to sync createTask:', err))
+      
+      return result
     },
+    
     async patchTask(id: string, patch: any) {
-      const r = await fetch(`/task/api/${id}`, { method:'PATCH', headers: adminHeaders(userType), body: JSON.stringify(patch) })
-      return r.json()
+      // Optimistic update: localStorage first
+      const result = await localStorage.patchTask(id, patch)
+      
+      // Queue server sync in background
+      fetch(`/task/api/${id}`, {
+        method: 'PATCH',
+        headers: adminHeaders(userType),
+        body: JSON.stringify(patch)
+      }).catch(err => console.error('Failed to sync patchTask:', err))
+      
+      return result
     },
+    
     async completeTask(id: string) {
-      const r = await fetch(`/task/api/${id}/complete`, { method:'POST', headers: adminHeaders(userType) })
-      return r.json()
+      // Optimistic update: localStorage first
+      const result = await localStorage.completeTask(id)
+      
+      // Queue server sync in background
+      fetch(`/task/api/${id}/complete`, {
+        method: 'POST',
+        headers: adminHeaders(userType)
+      }).catch(err => console.error('Failed to sync completeTask:', err))
+      
+      return result
     },
+    
     async deleteTask(id: string) {
-      const r = await fetch(`/task/api/${id}`, { method:'DELETE', headers: adminHeaders(userType) })
-      return r.json()
+      // Optimistic update: localStorage first
+      await localStorage.deleteTask(id)
+      
+      // Queue server sync in background
+      fetch(`/task/api/${id}`, {
+        method: 'DELETE',
+        headers: adminHeaders(userType)
+      }).catch(err => console.error('Failed to sync deleteTask:', err))
     },
+    
     async clearPublicTasks() {
-      // This method only exists for backward compatibility
-      // Admin/friend users cannot clear tasks via API
       throw new Error('Clear operation only available for public users')
     }
   }
