@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
-          scope: '@hadoku'
+          scope: '@wolffm'
       
       - name: Install dependencies
         run: npm ci
@@ -28,15 +28,10 @@ jobs:
       - name: Build
         run: npm run build:all
       
-      - name: Set version with commit hash
-        run: |
-          COMMIT_SHORT=$(git rev-parse --short HEAD)
-          npm version 1.0.0-${COMMIT_SHORT} --no-git-tag-version
-      
       - name: Configure npm for GitHub Packages
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
-          echo "@hadoku:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
       
       - name: Publish to GitHub Packages
         run: npm publish
