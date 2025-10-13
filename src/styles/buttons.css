@@ -20,6 +20,7 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
+  color: var(--color-text);
   opacity: 0.7;
   transition: opacity var(--transition-smooth),
               background-color var(--transition-smooth);
@@ -38,8 +39,11 @@
   font-weight: var(--font-weight-bold);
   transition: opacity var(--transition-smooth),
               transform var(--transition-smooth),
-              background-color var(--transition-smooth);
+              background-color var(--transition-smooth),
+              filter var(--transition-smooth);
   width: var(--size-action-btn-width);
+  min-width: var(--size-action-btn-width);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,7 +52,8 @@
   margin: 0;
   padding: 0;
   align-self: stretch;
-  height: 100%;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .task-app__action-btn:hover {
@@ -70,21 +75,21 @@
 /* Complete button */
 .task-app__complete-btn {
   background-color: var(--color-success);
-  color: white;
+  color: var(--color-success-text);
 }
 
 .task-app__complete-btn:hover {
-  background-color: var(--color-success-dark);
+  filter: brightness(1.1);
 }
 
 /* Delete button */
 .task-app__delete-btn {
   background-color: var(--color-danger);
-  color: white;
+  color: var(--color-danger-text);
 }
 
 .task-app__delete-btn:hover {
-  background-color: var(--color-danger-dark);
+  filter: brightness(1.1);
 }
 
 /* Tag button */
@@ -102,19 +107,31 @@
 .task-app__sort-btn {
   background: none;
   border: none;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-sm);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  opacity: 0.4;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  opacity: 0.7;
   transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth);
-  min-width: var(--size-sort-btn-min-width);
+              background-color var(--transition-smooth),
+              color var(--transition-smooth);
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .task-app__sort-btn:hover {
-  opacity: 0.8;
-  background-color: var(--color-border-light);
+  opacity: 1;
+  color: var(--color-text);
+  background-color: var(--color-neutral-light);
 }
 
 .task-app__sort-btn--active {
@@ -127,17 +144,30 @@
 .task-app__clear-tag-btn {
   background: none;
   border: none;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-sm);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  opacity: 0.6;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  opacity: 0.7;
   transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth);
+              background-color var(--transition-smooth),
+              color var(--transition-smooth);
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .task-app__clear-tag-btn:hover {
   opacity: 1;
+  color: var(--color-text);
   background-color: var(--color-danger-light);
 }
 

@@ -14,6 +14,8 @@ export default function App(props: TaskAppProps = {}) {
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const [theme, setTheme] = useState<'light' | 'dark' | 'strawberry' | 'ocean' | 'forest' | 'cyberpunk' | 'coffee' | 'lavender'>('light')
+  const [showThemePicker, setShowThemePicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   // "public" is special: localStorage-only, no server. All other types sync to server.
   const isPublic = userType === 'public'
@@ -59,6 +61,26 @@ export default function App(props: TaskAppProps = {}) {
     inputRef.current?.focus()
   }, [userType])
 
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
+  // Close theme picker when clicking outside
+  useEffect(() => {
+    if (!showThemePicker) return
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.theme-picker')) {
+        setShowThemePicker(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showThemePicker])
+
   // Handle task input
   async function handleAddTask(input: string) {
     const success = await addTask(input)
@@ -103,10 +125,89 @@ export default function App(props: TaskAppProps = {}) {
         } catch {}
       }}
     >
-      <h1 className="task-app__header">Tasks</h1>
-  <div className="task-app__boards" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div className="task-app__header-container">
+        <h1 className="task-app__header">Tasks</h1>
+        <div className="theme-picker">
+          <button 
+            className="theme-toggle-btn" 
+            onClick={() => setShowThemePicker(!showThemePicker)}
+            aria-label="Choose theme"
+            title="Choose theme"
+          >
+            {theme === 'light' ? '☼' : 
+             theme === 'dark' ? '☽' : 
+             theme === 'strawberry' ? '❖' :
+             theme === 'ocean' ? '≈' :
+             theme === 'forest' ? '❦' :
+             theme === 'cyberpunk' ? '◆' :
+             theme === 'coffee' ? '◉' :
+             '✿'}
+          </button>
+          {showThemePicker && (
+            <div className="theme-picker__dropdown">
+              <button 
+                className={`theme-picker__option ${theme === 'light' ? 'active' : ''}`}
+                onClick={() => { setTheme('light'); setShowThemePicker(false); }}
+                title="Light theme"
+              >
+                ☼
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'dark' ? 'active' : ''}`}
+                onClick={() => { setTheme('dark'); setShowThemePicker(false); }}
+                title="Dark theme"
+              >
+                ☽
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'strawberry' ? 'active' : ''}`}
+                onClick={() => { setTheme('strawberry'); setShowThemePicker(false); }}
+                title="Strawberry theme"
+              >
+                ❖
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'ocean' ? 'active' : ''}`}
+                onClick={() => { setTheme('ocean'); setShowThemePicker(false); }}
+                title="Ocean theme"
+              >
+                ≈
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'forest' ? 'active' : ''}`}
+                onClick={() => { setTheme('forest'); setShowThemePicker(false); }}
+                title="Forest theme"
+              >
+                ❦
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'cyberpunk' ? 'active' : ''}`}
+                onClick={() => { setTheme('cyberpunk'); setShowThemePicker(false); }}
+                title="Cyberpunk theme"
+              >
+                ◆
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'coffee' ? 'active' : ''}`}
+                onClick={() => { setTheme('coffee'); setShowThemePicker(false); }}
+                title="Coffee theme"
+              >
+                ◉
+              </button>
+              <button 
+                className={`theme-picker__option ${theme === 'lavender' ? 'active' : ''}`}
+                onClick={() => { setTheme('lavender'); setShowThemePicker(false); }}
+                title="Lavender theme"
+              >
+                ✿
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="task-app__boards">
         {/* Render up to 5 board buttons, highlight active */}
-        <div className="task-app__board-list" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="task-app__board-list">
           {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => (
             <button
               key={b.id}
@@ -181,15 +282,6 @@ export default function App(props: TaskAppProps = {}) {
             }
           }}
         />
-        <button 
-          className="task-app__info-btn" 
-          title="Task syntax:
-• New task → New task
-• &quot;New task&quot; → New task
-• &quot;New task&quot; #friend #soon → New task with tags"
-        >
-          ℹ️
-        </button>
       </div>
       <div className="task-app__filters">
         {(() => {
@@ -262,55 +354,31 @@ export default function App(props: TaskAppProps = {}) {
 
       {confirmClearTag && (
         <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-          }}
+          className="modal-overlay"
           onClick={() => setConfirmClearTag(null)}
         >
           <div 
-            style={{
-              backgroundColor: 'white',
-              padding: '24px',
-              borderRadius: '8px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-            }}
+            className="modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Clear Tag #{confirmClearTag.tag}?</h3>
+            <h3>Clear Tag #{confirmClearTag.tag}?</h3>
             <p>
               This will remove <strong>#{confirmClearTag.tag}</strong> from{' '}
               <strong>{confirmClearTag.count} task(s)</strong> and delete the tag from the board.
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="modal-actions">
               <button 
+                className="modal-button"
                 onClick={() => setConfirmClearTag(null)}
-                style={{ padding: '8px 16px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button 
+                className="modal-button modal-button--danger"
                 onClick={async () => {
                   const tag = confirmClearTag.tag
                   setConfirmClearTag(null)
                   await clearTasksByTag(tag)
-                }}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: '#dc3545', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
                 }}
               >
                 Clear Tag
@@ -322,33 +390,17 @@ export default function App(props: TaskAppProps = {}) {
 
       {showNewBoardDialog && (
         <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-          }}
+          className="modal-overlay"
           onClick={() => setShowNewBoardDialog(false)}
         >
           <div 
-            style={{
-              backgroundColor: 'white',
-              padding: '24px',
-              borderRadius: '8px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-            }}
+            className="modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Create New Board</h3>
+            <h3>Create New Board</h3>
             <input
               type="text"
+              className="modal-input"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Board name"
@@ -365,23 +417,16 @@ export default function App(props: TaskAppProps = {}) {
                   setShowNewBoardDialog(false)
                 }
               }}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '16px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                marginBottom: '16px'
-              }}
             />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="modal-actions">
               <button 
+                className="modal-button"
                 onClick={() => setShowNewBoardDialog(false)}
-                style={{ padding: '8px 16px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button 
+                className="modal-button modal-button--primary"
                 onClick={async () => {
                   if (!inputValue.trim()) return
                   const name = inputValue.trim()
@@ -393,14 +438,6 @@ export default function App(props: TaskAppProps = {}) {
                   }
                 }}
                 disabled={!inputValue.trim()}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: inputValue.trim() ? '#007bff' : '#ccc',
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
-                }}
               >
                 Create
               </button>
@@ -411,33 +448,17 @@ export default function App(props: TaskAppProps = {}) {
 
       {showNewTagDialog && (
         <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-          }}
+          className="modal-overlay"
           onClick={() => setShowNewTagDialog(false)}
         >
           <div 
-            style={{
-              backgroundColor: 'white',
-              padding: '24px',
-              borderRadius: '8px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-            }}
+            className="modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Create New Tag</h3>
+            <h3>Create New Tag</h3>
             <input
               type="text"
+              className="modal-input"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Tag name (without #)"
@@ -454,23 +475,16 @@ export default function App(props: TaskAppProps = {}) {
                   setShowNewTagDialog(false)
                 }
               }}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '16px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                marginBottom: '16px'
-              }}
             />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="modal-actions">
               <button 
+                className="modal-button"
                 onClick={() => setShowNewTagDialog(false)}
-                style={{ padding: '8px 16px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button 
+                className="modal-button modal-button--primary"
                 onClick={async () => {
                   if (!inputValue.trim()) return
                   const normalized = inputValue.trim().replace(/\s+/g, '-')
@@ -482,14 +496,6 @@ export default function App(props: TaskAppProps = {}) {
                   }
                 }}
                 disabled={!inputValue.trim()}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: inputValue.trim() ? '#007bff' : '#ccc',
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
-                }}
               >
                 Create
               </button>

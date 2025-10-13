@@ -8,10 +8,108 @@
   padding: 0 var(--spacing-xl) var(--spacing-5xl);
 }
 
+/* Header container with theme toggle */
+.task-app__header-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
 .task-app__header {
   font-size: var(--font-size-lg);
-  margin-bottom: var(--spacing-lg);
+  margin: 0;
   font-weight: var(--font-weight-semibold);
+}
+
+/* Theme picker container */
+.theme-picker {
+  position: relative;
+}
+
+/* Theme toggle button */
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  opacity: 0.7;
+  transition: background-color var(--transition-fast),
+              opacity var(--transition-fast);
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--color-primary-hover);
+  opacity: 1;
+}
+
+.theme-toggle-btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus-sm);
+}
+
+/* Theme picker dropdown */
+.theme-picker__dropdown {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--spacing-sm));
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-xs);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: var(--spacing-xs);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  white-space: nowrap;
+}
+
+.theme-picker__option {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  opacity: 0.5;
+  transition: background-color var(--transition-fast),
+              opacity var(--transition-fast),
+              transform var(--transition-fast);
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.theme-picker__option:hover {
+  background-color: var(--color-primary-hover);
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+.theme-picker__option.active {
+  opacity: 1;
+  background-color: var(--color-primary-light);
 }
 
 /* Controls section */
@@ -23,30 +121,43 @@
 
 /* Space between board selector row and controls - match filters offset */
 .task-app__boards {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
   margin-bottom: 8px;
 }
 
-.board-add-btn {
-  /* slightly larger and more prominent + button */
-  padding: 8px 12px;
-  font-size: 18px;
-  line-height: 1;
-  border-radius: 8px;
+.task-app__board-list {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
 }
 
-/* Modern style: no border by default, subtle hover background */
 .board-add-btn {
+  /* Match filter add button style */
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  border-radius: 999px;
   border: none;
   background: transparent;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), 
+              color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .board-add-btn:hover {
-  background: var(--color-neutral-light);
+  background: var(--color-primary-hover);
+  color: var(--color-text);
 }
 
 .board-add-btn:focus {
   outline: none;
+  box-shadow: var(--shadow-focus-sm);
 }
 
 .task-app__board-current[data-open] .board-dropdown {
@@ -85,14 +196,17 @@
 .task-app__board-list .board-btn {
   background: transparent;
   border: none;
-  padding: 6px 10px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              color var(--transition-fast);
 }
 
 .task-app__board-list .board-btn:hover {
-  background-color: rgba(37,99,235,0.06);
+  background-color: var(--color-primary-hover);
   color: var(--color-text);
 }
 
@@ -153,9 +267,16 @@
   padding: 10px var(--spacing-lg);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
   font-size: var(--font-size-base);
+  font-family: var(--font-family);
   transition: border-color var(--transition-fast),
               box-shadow var(--transition-fast);
+}
+
+.task-app__input::placeholder {
+  color: var(--color-text-tertiary);
 }
 
 .task-app__input:focus {
@@ -187,15 +308,18 @@
 .task-app__filters button {
   background: transparent;
   border: none;
-  padding: 6px 10px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              color var(--transition-fast);
 }
 
 /* Hover state mirrors board button hover */
 .task-app__filters button:hover:not(.task-app__filter-drag-over) {
-  background-color: rgba(37,99,235,0.06);
+  background-color: var(--color-primary-hover);
   color: var(--color-text);
 }
 
@@ -216,7 +340,7 @@
 /* Drag-over state for filter buttons - higher specificity, no !important needed */
 .task-app__filters button.task-app__filter-drag-over {
   /* Use the same visual as regular hover: light blue tint and normal text color */
-  background-color: rgba(37,99,235,0.06);
+  background-color: var(--color-primary-hover);
   color: var(--color-text);
   border-color: transparent;
   box-shadow: none;
@@ -225,7 +349,7 @@
 /* Board pill drag-over visual parity */
 .task-app__board-list .board-btn--drag-over {
   /* Match regular hover for board pills (light tint, normal text color) */
-  background-color: rgba(37,99,235,0.06);
+  background-color: var(--color-primary-hover);
   color: var(--color-text);
   box-shadow: none;
 }
