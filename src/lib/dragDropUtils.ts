@@ -3,7 +3,7 @@
  * Tries custom format first, falls back to plain text.
  * 
  * @param dataTransfer - The DataTransfer object from a drag/drop event
- * @returns Array of task IDs
+ * @returns Array of task IDs (empty array if none found)
  */
 export function getTaskIdsFromDragEvent(dataTransfer: DataTransfer): string[] {
   let ids: string[] = []

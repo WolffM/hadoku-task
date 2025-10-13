@@ -1,0 +1,2 @@
+npm run version:patch
+git add package.json
