@@ -1,2 +1,2 @@
 npm run version:patch
-git add package.json
+git add package.json package-lock.json
