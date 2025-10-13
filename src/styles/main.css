@@ -299,9 +299,6 @@
               box-shadow var(--transition-smooth);
 }
 
-/* italicize filter button text, but not the add button */
-.task-app__filters button:not(.task-app__filter-add) { font-style: italic; }
-
 /* lighter hover for filters so active state remains visually dominant */
 
 /* Make filter buttons visually match the board pill buttons */
