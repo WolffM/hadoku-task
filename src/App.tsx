@@ -61,11 +61,12 @@ export default function App(props: TaskAppProps = {}) {
   // Sort hook
   const sortHook = useTaskSort()
 
-  // Initialize
+  // Initialize and reload when user context changes
   useEffect(() => {
+    console.log('[App] User context changed, initializing...', { userType, userId })
     void initialLoad()
     inputRef.current?.focus()
-  }, [userType])
+  }, [userType, userId])
 
   // Apply theme to container element (scoped, not document-wide)
   useEffect(() => {

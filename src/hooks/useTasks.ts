@@ -2,7 +2,7 @@
  * Hook for managing task operations
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createApi } from '../lib/api'
 import type { Task, TasksFile, BoardsFile } from '../lib/types'
 import { parseTaskInput } from '../lib/tagUtils'
@@ -31,7 +31,11 @@ function deferredBroadcast(sessionId: string, userType: string, userId?: string,
 export function useTasks({ userType, userId }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
-  const api = createApi(userType as 'public' | 'friend' | 'admin', userId || 'public')
+  // ✅ FIX: Recreate API when userType or userId changes
+  const api = useMemo(
+    () => createApi(userType as 'public' | 'friend' | 'admin', userId || 'public'),
+    [userType, userId]
+  )
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
 
@@ -54,18 +58,37 @@ export function useTasks({ userType, userId }: UseTasksProps) {
     }
   }
 
+  // ✅ FIX: Clear state and reload when user context changes
+  useEffect(() => {
+    console.log('[useTasks] User context changed, clearing state and reloading', { userType, userId })
+    setTasks([])
+    setPendingOperations(new Set())
+    setBoards(null)
+    setCurrentBoardId('main')
+    void reload()
+  }, [userType, userId])
+
   // Listen for broadcasted updates about tasks or boards
   useEffect(() => {
-    console.log('[useTasks] Setting up BroadcastChannel listener', { currentBoardId })
+    console.log('[useTasks] Setting up BroadcastChannel listener', { currentBoardId, userType, userId })
     try {
       const bcListener = new BroadcastChannel('tasks')
       bcListener.onmessage = (e) => {
         const msg = e.data || {}
-        console.log('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId })
+        console.log('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId, currentContext: { userType, userId } })
         
         // Ignore messages from the same session to prevent infinite loops
         if (msg.sessionId === SESSION_ID) {
           console.log('[useTasks] Ignoring own broadcast message')
+          return
+        }
+        
+        // ✅ FIX: Only respond to messages for the current user context
+        if (msg.userType !== userType || msg.userId !== userId) {
+          console.log('[useTasks] Ignoring message for different user context', { 
+            msgContext: { userType: msg.userType, userId: msg.userId },
+            currentContext: { userType, userId }
+          })
           return
         }
         
@@ -81,7 +104,7 @@ export function useTasks({ userType, userId }: UseTasksProps) {
     } catch (err) {
       console.error('[useTasks] Failed to setup BroadcastChannel', err)
     }
-  }, [currentBoardId]) // Recreate listener when board changes to capture latest state
+  }, [currentBoardId, userType, userId]) // ✅ FIX: Recreate listener when user context changes
 
   async function addTask(input: string) {
     input = input.trim()
