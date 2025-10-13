@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "2.0.0",
+  "version": "2.0.3",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -29,7 +29,10 @@
     "build:server": "tsc -p tsconfig.server.json",
     "build:all": "npm run build && npm run build:server",
     "preview": "vite preview",
-    "test:server": "tsx test-server.ts"
+    "test:server": "tsx test-server.ts",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "prepublishOnly": "npm run version:patch && npm run build:all",
+    "prepare": "node -e \"try{require('fs').mkdirSync('.git/hooks',{recursive:true})}catch(e){}\" && node -e \"require('fs').writeFileSync('.git/hooks/pre-push','#!/bin/sh\\nnpm run version:patch\\ngit add package.json\\ngit commit --amend --no-edit\\n',{mode:0o755})\""
   },
   "dependencies": {
     "react": "^18.3.1",
