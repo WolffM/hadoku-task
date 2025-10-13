@@ -9,6 +9,8 @@ import type {
   Task,
   TasksFile,
   StatsFile,
+  BoardsFile,
+  UserType,
   CreateTaskInput,
   UpdateTaskInput,
   ULID
@@ -106,31 +108,38 @@ function recordDeletion(stats: StatsFile, task: Task, timestamp: string): StatsF
 // --- Read Operations ---
 
 /**
- * Get all tasks for a user
- * Public users cannot access server storage
+ * Get all boards for a user
+ * Supports multi-board structure with tasks organized by board
+ * Public users get in-memory boards (for testing/development)
  */
-export async function getTasks(
+export async function getBoards(
   storage: Storage,
-  auth: AuthContext
+  auth: AuthContext & { userId?: string }
+): Promise<BoardsFile> {
+  // Public users can use boards with in-memory storage
+  return await storage.getBoards(auth.userType, auth.userId);
+}
+
+/**
+ * Get all tasks for a user
+ * Internal use only - used by write operations that haven't been migrated to boards yet
+ */
+async function getTasks(
+  storage: Storage,
+  userType: UserType
 ): Promise<TasksFile> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot access server storage');
-  }
-  return await storage.getTasks(auth.userType);
+  return await storage.getTasks(userType);
 }
 
 /**
  * Get stats for a user
- * Public users cannot access server storage
+ * Internal use only - used by write operations that haven't been migrated to boards yet
  */
-export async function getStats(
+async function getStats(
   storage: Storage,
-  auth: AuthContext
+  userType: UserType
 ): Promise<StatsFile> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot access server storage');
-  }
-  return await storage.getStats(auth.userType);
+  return await storage.getStats(userType);
 }
 
 // --- Write Operations ---
@@ -149,8 +158,8 @@ export async function createTask(
   }
 
   const timestamp = now();
-  const tasks = await storage.getTasks(auth.userType);
-  const stats = await storage.getStats(auth.userType);
+  const tasks = await getTasks(storage, auth.userType);
+  const stats = await getStats(storage, auth.userType);
 
   const id = generateULID();
   const newTask: Task = {
@@ -190,8 +199,8 @@ export async function updateTask(
   }
 
   const timestamp = now();
-  const tasks = await storage.getTasks(auth.userType);
-  const stats = await storage.getStats(auth.userType);
+  const tasks = await getTasks(storage, auth.userType);
+  const stats = await getStats(storage, auth.userType);
 
   const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {
@@ -236,8 +245,8 @@ export async function completeTask(
   }
 
   const timestamp = now();
-  const tasks = await storage.getTasks(auth.userType);
-  const stats = await storage.getStats(auth.userType);
+  const tasks = await getTasks(storage, auth.userType);
+  const stats = await getStats(storage, auth.userType);
 
   const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {
@@ -278,8 +287,8 @@ export async function deleteTask(
   taskId: ULID
 ): Promise<{ ok: boolean; message: string }> {
   const timestamp = now();
-  const tasks = await storage.getTasks(auth.userType);
-  const stats = await storage.getStats(auth.userType);
+  const tasks = await getTasks(storage, auth.userType);
+  const stats = await getStats(storage, auth.userType);
 
   const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {

@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import process from 'process'
-import type { TasksFile, StatsFile, DataType, UserType, RouterConfig } from './types.js'
+import type { TasksFile, StatsFile, BoardsFile, Board, DataType, UserType, RouterConfig } from './types.js'
 import { now } from './utils.js'
 import type { SyncQueue } from './sync-queue.js'
 
@@ -19,6 +19,9 @@ export interface Storage {
   saveTasks(userType: UserType, tasks: TasksFile): Promise<void>;
   getStats(userType: UserType): Promise<StatsFile>;
   saveStats(userType: UserType, stats: StatsFile): Promise<void>;
+  // Board operations
+  getBoards(userType: UserType, userId?: string): Promise<BoardsFile>;
+  saveBoards(userType: UserType, boards: BoardsFile, userId?: string): Promise<void>;
 }
 
 /**
@@ -50,13 +53,31 @@ function createEmptyStatsFile(): StatsFile {
   }
 }
 
+/**
+ * Create empty boards file structure
+ */
+function createEmptyBoardsFile(): BoardsFile {
+  return {
+    version: 1,
+    updatedAt: now(),
+    boards: [{
+      id: 'main',
+      name: 'Main',
+      tasks: [],
+      tags: []
+    }]
+  }
+}
+
 // In-memory storage for public users (singleton)
 const publicData: {
   tasks: TasksFile
   stats: StatsFile
+  boards: BoardsFile
 } = {
   tasks: createEmptyTasksFile(),
-  stats: createEmptyStatsFile()
+  stats: createEmptyStatsFile(),
+  boards: createEmptyBoardsFile()
 }
 
 /**
@@ -192,6 +213,91 @@ export function createStorage(config: RouterConfig, syncQueue: SyncQueue): Stora
       if (config.githubConfig && syncQueue) {
         syncQueue.add(userType, 'stats')
       }
+    },
+
+    async getBoards(userType: UserType, userId?: string): Promise<BoardsFile> {
+      if (userType === 'public') {
+        return publicData.boards
+      }
+      
+      // For admin/friend with userId, use subdirectory structure
+      const boardsPath = userId 
+        ? join(basePath, userType, userId, 'boards.json')
+        : join(basePath, userType, 'boards.json')
+      
+      // If boards.json exists, return it
+      if (existsSync(boardsPath)) {
+        try {
+          const content = readFileSync(boardsPath, 'utf-8')
+          return JSON.parse(content) as BoardsFile
+        } catch (error) {
+          console.error(`Error reading ${boardsPath}:`, error)
+        }
+      }
+      
+      // Migration: If boards.json doesn't exist, try to migrate from old tasks.json format
+      const oldTasksPath = userId
+        ? join(basePath, userType, userId, 'tasks.json')
+        : join(basePath, userType, 'tasks.json')
+      
+      if (existsSync(oldTasksPath)) {
+        try {
+          const content = readFileSync(oldTasksPath, 'utf-8')
+          const tasksFile = JSON.parse(content) as TasksFile
+          
+          // Create new boards format with main board containing old tasks
+          const boardsFile: BoardsFile = {
+            version: 1,
+            updatedAt: now(),
+            boards: [{
+              id: 'main',
+              name: 'Main',
+              tasks: tasksFile.tasks || [],
+              tags: []
+            }]
+          }
+          
+          // Save migrated data
+          await this.saveBoards(userType, boardsFile, userId)
+          return boardsFile
+        } catch (error) {
+          console.error(`Error migrating from ${oldTasksPath}:`, error)
+        }
+      }
+      
+      // No data found, return empty boards structure
+      return createEmptyBoardsFile()
+    },
+
+    async saveBoards(userType: UserType, boards: BoardsFile, userId?: string): Promise<void> {
+      if (userType === 'public') {
+        publicData.boards = boards
+        return
+      }
+
+      // For admin/friend with userId, use subdirectory structure
+      const targetDir = userId 
+        ? join(basePath, userType, userId)
+        : join(basePath, userType)
+      
+      // Ensure directory exists
+      if (!existsSync(targetDir)) {
+        mkdirSync(targetDir, { recursive: true })
+      }
+
+      const boardsPath = join(targetDir, 'boards.json')
+      
+      try {
+        writeFileSync(boardsPath, JSON.stringify(boards, null, 2))
+      } catch (error) {
+        console.error(`Error writing ${boardsPath}:`, error)
+        throw error
+      }
+      
+      // TODO: Add to sync queue when boards support is added
+      // if (config.githubConfig && syncQueue) {
+      //   syncQueue.add(userType, 'boards')
+      // }
     }
   }
 }

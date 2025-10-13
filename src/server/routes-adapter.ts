@@ -14,27 +14,15 @@ import type { UserType } from './types.js'
 export function createTaskRoutes(storage: TaskStorage): Router {
   const router = Router()
 
-  // GET / - Get all tasks
-  router.get('/', async (req: Request, res: Response) => {
+  // GET /boards - Get all boards (new multi-board architecture)
+  router.get('/boards', async (req: Request, res: Response) => {
     const userType = (req.query.userType as UserType) || 'public'
-    const auth = { userType }
+    const userId = req.query.userId as string | undefined
+    const auth = { userType, userId }
 
     try {
-      const tasks = await TaskHandlers.getTasks(storage, auth)
-      res.json(tasks)
-    } catch (error: any) {
-      res.status(403).json({ error: error.message })
-    }
-  })
-
-  // GET /stats - Get stats
-  router.get('/stats', async (req: Request, res: Response) => {
-    const userType = (req.query.userType as UserType) || 'public'
-    const auth = { userType }
-
-    try {
-      const stats = await TaskHandlers.getStats(storage, auth)
-      res.json(stats)
+      const boards = await TaskHandlers.getBoards(storage, auth)
+      res.json(boards)
     } catch (error: any) {
       res.status(403).json({ error: error.message })
     }

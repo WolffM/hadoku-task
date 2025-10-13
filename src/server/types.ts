@@ -24,6 +24,22 @@ export interface TasksFile {
   tasks: Task[];
 }
 
+// Board types (multi-board support)
+export interface Board {
+  id: string; // boardId, e.g. "main", "work"
+  name: string; // display name
+  tasks: Task[];
+  // persistent list of known tags for this board (allows empty tag lists to remain)
+  tags?: string[];
+  stats?: StatsFile;
+}
+
+export interface BoardsFile {
+  version: 1;
+  updatedAt: string;
+  boards: Board[];
+}
+
 export interface StatsTaskRecord {
   id: ULID;
   title: string;

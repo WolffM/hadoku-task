@@ -31,6 +31,8 @@ export type {
   TasksFile,
   StatsFile,
   StatsTaskRecord,
+  Board,
+  BoardsFile,
   UserType,
   AuthContext,
   CreateTaskInput,
