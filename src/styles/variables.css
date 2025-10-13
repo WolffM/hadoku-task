@@ -97,14 +97,14 @@
   /* Success - Bright yellow for completion */
   --color-success: #fde047;
   --color-success-dark: #facc15;
-  --color-success-text: #1e293b;
+  --color-success-text: #0f172a;
   
   /* Danger - Deep purple for deletion */
   --color-danger: #c084fc;
   --color-danger-dark: #a855f7;
   --color-danger-darker: #9333ea;
   --color-danger-light: #581c87;
-  --color-danger-text: #1e293b;
+  --color-danger-text: #0f172a;
   
   /* Neutral - Slate grays */
   --color-neutral: #94a3b8;
@@ -247,14 +247,14 @@
   /* Success - NEON green (full saturation) */
   --color-success: #39ff14;
   --color-success-dark: #00ff00;
-  --color-success-text: #020617;
+  --color-success-text: #000000;
   
   /* Danger - NEON pink (full saturation) */
   --color-danger: #ff10f0;
   --color-danger-dark: #ff00ff;
   --color-danger-darker: #cc00cc;
   --color-danger-light: #800080;
-  --color-danger-text: #020617;
+  --color-danger-text: #000000;
   
   /* Neutral - Cool gray */
   --color-neutral: #64748b;

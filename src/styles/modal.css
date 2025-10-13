@@ -91,7 +91,7 @@
 
 .modal-button--primary {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-bg-card);
   border: none;
 }
 
@@ -107,7 +107,7 @@
 
 .modal-button--danger {
   background-color: var(--color-danger);
-  color: white;
+  color: var(--color-danger-text);
   border: none;
 }
 

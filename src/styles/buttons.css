@@ -95,7 +95,7 @@
 /* Tag button */
 .task-app__tag-btn {
   background-color: var(--color-neutral);
-  color: white;
+  color: var(--color-bg-card);
 }
 
 .task-app__tag-btn:hover {
@@ -174,7 +174,7 @@
 /* Clear all button */
 .task-app__clear-btn {
   background: var(--color-danger-dark);
-  color: white;
+  color: var(--color-danger-text);
   border: none;
   padding: 6px var(--spacing-lg);
   border-radius: var(--radius-md);
