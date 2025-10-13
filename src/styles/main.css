@@ -136,7 +136,8 @@
 .board-add-btn {
   /* Match filter add button style */
   padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   line-height: 1;
   border-radius: 999px;
   border: none;
@@ -277,6 +278,7 @@
 
 .task-app__input::placeholder {
   color: var(--color-text-tertiary);
+  opacity: 0.6;
 }
 
 .task-app__input:focus {
@@ -350,3 +352,42 @@
   color: var(--color-text);
   box-shadow: none;
 }
+
+/* Board context menu and Tag context menu */
+.board-context-menu,
+.tag-context-menu {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  padding: var(--spacing-xs);
+  z-index: 10000;
+  min-width: 160px;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.context-menu-item:hover {
+  background-color: var(--color-neutral-light);
+}
+
+.context-menu-item--danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item--danger:hover {
+  background-color: var(--color-danger-light);
+}
+

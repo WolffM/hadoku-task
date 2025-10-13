@@ -289,8 +289,19 @@ export function useTasks({ userType, userId }: UseTasksProps) {
   // Board helpers
   async function createBoard(boardId: string) {
     await api.createBoard(boardId)
-    await reload()
+    // Switch to the new board first, then reload
     setCurrentBoardId(boardId)
+    // Fetch the boards and set tasks for the new board
+    const bf = await api.getBoards()
+    setBoards(bf)
+    const board = bf.boards.find(b => b.id === boardId)
+    if (board) {
+      console.log('[useTasks] createBoard: switched to new board', { boardId, taskCount: board.tasks?.length || 0 })
+      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
+    } else {
+      console.log('[useTasks] createBoard: new board not found (should be empty)', { boardId })
+      setTasks([])
+    }
   }
 
   // Move multiple tasks to another board
@@ -317,15 +328,38 @@ export function useTasks({ userType, userId }: UseTasksProps) {
     console.log('[useTasks] moveTasksToBoard: broadcasting bulk update with delay')
     deferredBroadcast(SESSION_ID, userType, userId)
     
-    console.log('[useTasks] moveTasksToBoard: calling reload')
-    await reload()
+    // Reload the target board specifically (not currentBoardId which may be stale)
+    console.log('[useTasks] moveTasksToBoard: reloading target board', { targetBoardId })
+    const bf = await api.getBoards()
+    setBoards(bf)
+    const targetBoard = bf.boards.find(b => b.id === targetBoardId)
+    if (targetBoard) {
+      console.log('[useTasks] moveTasksToBoard: loaded target board tasks', { count: targetBoard.tasks?.length || 0 })
+      setTasks((targetBoard.tasks || []).filter((t: Task) => t.state === 'Active'))
+    }
     console.log('[useTasks] moveTasksToBoard END')
   }
 
   async function deleteBoard(boardId: string) {
     await api.deleteBoard(boardId)
-    if (currentBoardId === boardId) setCurrentBoardId('main')
-    await reload()
+    // If we're deleting the current board, switch to main and load its tasks
+    if (currentBoardId === boardId) {
+      setCurrentBoardId('main')
+      // Fetch boards and explicitly load main board's tasks
+      const bf = await api.getBoards()
+      setBoards(bf)
+      const mainBoard = bf.boards.find(b => b.id === 'main')
+      if (mainBoard) {
+        console.log('[useTasks] deleteBoard: switched to main board', { taskCount: mainBoard.tasks?.length || 0 })
+        setTasks((mainBoard.tasks || []).filter((t: Task) => t.state === 'Active'))
+      } else {
+        console.log('[useTasks] deleteBoard: main board not found')
+        setTasks([])
+      }
+    } else {
+      // If we're not on the deleted board, just reload normally
+      await reload()
+    }
   }
 
   async function createTagOnBoard(tag: string) {

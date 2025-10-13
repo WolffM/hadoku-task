@@ -121,10 +121,6 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         .then(() => console.log('[api] Background sync: deleteTask completed'))
         .catch(err => console.error('[api] Failed to sync deleteTask:', err))
     },
-    
-    async clearPublicTasks() {
-      throw new Error('Clear operation only available for public users')
-    },
 
     // Board operations
     async createBoard(boardId: string) {

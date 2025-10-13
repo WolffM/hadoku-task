@@ -29,14 +29,12 @@
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
   cursor: grab;
-  transition: transform var(--transition-smooth),
-              box-shadow var(--transition-smooth);
+  transition: box-shadow var(--transition-smooth);
   overflow: hidden;
   min-height: var(--size-task-item-min-height);
 }
 
 .task-app__item:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 

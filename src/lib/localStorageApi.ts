@@ -329,11 +329,5 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       saveBoardsIndex(index, userType, userId)
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     },
-
-    async clearPublicTasks(): Promise<{ message: string }> {
-      localStorage.removeItem(getTasksKey(userType, userId, 'main'))
-      localStorage.removeItem(getStatsKey(userType, userId, 'main'))
-      return { message: 'All tasks cleared' }
-    }
   }
 }

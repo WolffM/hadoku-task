@@ -65,6 +65,65 @@ export function TaskLayout({
   clearRemainingTasks
   , onDeletePersistedTag
 }: TaskLayoutProps) {
+  // Helper function to render a tag column with header and tasks
+  const renderTagColumn = (tag: string, tagTasks: Task[]) => (
+    <div 
+      key={tag} 
+      className={`task-app__tag-column ${dragOverTag === tag ? 'task-app__tag-column--drag-over' : ''}`}
+      onDragOver={(e) => onDragOver(e, tag)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, tag)}
+    >
+      <div className="task-app__tag-header-row">
+        <h3 className="task-app__tag-header">#{tag}</h3>
+        <div className="task-app__header-actions">
+          <button 
+            className="task-app__sort-btn task-app__sort-btn--active"
+            onClick={() => toggleSort(tag)}
+            title={getSortTitle(sortDirections[tag] || 'desc')}
+          >
+            {getSortIcon(sortDirections[tag] || 'desc')}
+          </button>
+          <button 
+            className="task-app__clear-tag-btn"
+            onClick={() => clearTasksByTag(tag)}
+            title={`Clear all #${tag} tasks`}
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+      <ul className="task-app__list task-app__list--column">
+        {sortTasksByAge(tagTasks, sortDirections[tag] || 'desc').map(task => (
+          <TaskItem
+            key={task.id}
+            task={task}
+            isDraggable={true}
+            pendingOperations={pendingOperations}
+            onComplete={onComplete}
+            onDelete={onDelete}
+            onAddTag={onAddTag}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            selected={selectedIds ? selectedIds.has(task.id) : false}
+          />
+        ))}
+      </ul>
+    </div>
+  )
+
+  // Helper function to get filtered tasks for a tag
+  const getFilteredTagTasks = (tag: string, maxItems: number) => {
+    let tagTasks = getTasksByTag(tasks, tag)
+    if (hasActiveFilters) {
+      tagTasks = tagTasks.filter(t => {
+        const taskTags = t.tag?.split(' ') || []
+        return filters!.some(f => taskTags.includes(f))
+      })
+    }
+    return tagTasks.slice(0, maxItems)
+  }
+
   const tagCount = topTags.length
 
   // Apply multi-select filters to all tasks
@@ -92,8 +151,8 @@ export function TaskLayout({
       })
     : topTags.slice(0, layoutConfig.useTags)
 
-  // No tags or 1 tag: simple list (use visibleTopTags length so filters can collapse layout)
-  if (visibleTopTags.length <= 1) {
+  // No tags: simple list (use visibleTopTags length so filters can collapse layout)
+  if (visibleTopTags.length === 0) {
     return (
       <ul className="task-app__list">
         {filteredTasks.map(task => (
@@ -123,196 +182,17 @@ export function TaskLayout({
 
   return (
     <div className="task-app__dynamic-layout">
-      {visibleTopTags.length > 0 && (
-        // Special layout for exactly 5 visible tags: show 2 cols on the first row and 3 on the second
-        visibleTopTags.length === 5 ? (
-          <>
-            <div className={`task-app__tag-grid task-app__tag-grid--2col`}>
-              {visibleTopTags.slice(0, 2).map(tag => {
-                let tagTasks = getTasksByTag(tasks, tag)
-                if (hasActiveFilters) {
-                  tagTasks = tagTasks.filter(t => {
-                    const taskTags = t.tag?.split(' ') || []
-                    return filters!.some(f => taskTags.includes(f))
-                  })
-                }
-                tagTasks = tagTasks.slice(0, layoutConfig.maxPerColumn)
-
-                return (
-                  <div 
-                    key={tag} 
-                    className={`task-app__tag-column ${dragOverTag === tag ? 'task-app__tag-column--drag-over' : ''}`}
-                    onDragOver={(e) => onDragOver(e, tag)}
-                    onDragLeave={onDragLeave}
-                    onDrop={(e) => onDrop(e, tag)}
-                  >
-                    <div className="task-app__tag-header-row">
-                      <h3 className="task-app__tag-header">#{tag}</h3>
-                      <div className="task-app__header-actions">
-                        <button 
-                          className={`task-app__sort-btn ${sortDirections[tag] ? 'task-app__sort-btn--active' : ''}`}
-                          onClick={() => toggleSort(tag)}
-                          title={getSortTitle(sortDirections[tag])}
-                        >
-                          {getSortIcon(sortDirections[tag])}
-                        </button>
-                        <button 
-                          className="task-app__clear-tag-btn"
-                          onClick={() => clearTasksByTag(tag)}
-                          title={`Remove #${tag} from all tasks`}
-                        >
-                          🧹
-                        </button>
-                        <button 
-                          className="task-app__delete-tag-btn"
-                          onClick={() => onDeletePersistedTag && onDeletePersistedTag(tag)}
-                          title={`Delete #${tag} from board`}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                    <ul className="task-app__list task-app__list--column">
-                      {sortTasksByAge(tagTasks, sortDirections[tag]).map(task => (
-                        <TaskItem
-                          key={task.id}
-                          task={task}
-                          isDraggable={true}
-                          pendingOperations={pendingOperations}
-                          onComplete={onComplete}
-                          onDelete={onDelete}
-                          onAddTag={onAddTag}
-                          onDragStart={onDragStart}
-                          onDragEnd={onDragEnd}
-                          selected={selectedIds ? selectedIds.has(task.id) : false}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                )
+      {visibleLayoutConfig.rows.length > 0 && (
+        <>
+          {visibleLayoutConfig.rows.map((row, rowIndex) => (
+            <div key={rowIndex} className={`task-app__tag-grid task-app__tag-grid--${row.columns}col`}>
+              {row.tagIndices.map(tagIndex => {
+                const tag = visibleTopTags[tagIndex]
+                return tag ? renderTagColumn(tag, getFilteredTagTasks(tag, visibleLayoutConfig.maxPerColumn)) : null
               })}
             </div>
-
-            <div className={`task-app__tag-grid task-app__tag-grid--3col`}>
-              {visibleTopTags.slice(2, 5).map(tag => {
-                let tagTasks = getTasksByTag(tasks, tag)
-                if (hasActiveFilters) {
-                  tagTasks = tagTasks.filter(t => {
-                    const taskTags = t.tag?.split(' ') || []
-                    return filters!.some(f => taskTags.includes(f))
-                  })
-                }
-                tagTasks = tagTasks.slice(0, layoutConfig.maxPerColumn)
-
-                return (
-                  <div 
-                    key={tag} 
-                    className={`task-app__tag-column ${dragOverTag === tag ? 'task-app__tag-column--drag-over' : ''}`}
-                    onDragOver={(e) => onDragOver(e, tag)}
-                    onDragLeave={onDragLeave}
-                    onDrop={(e) => onDrop(e, tag)}
-                  >
-                    <div className="task-app__tag-header-row">
-                      <h3 className="task-app__tag-header">#{tag}</h3>
-                      <div className="task-app__header-actions">
-                        <button 
-                          className={`task-app__sort-btn ${sortDirections[tag] ? 'task-app__sort-btn--active' : ''}`}
-                          onClick={() => toggleSort(tag)}
-                          title={getSortTitle(sortDirections[tag])}
-                        >
-                          {getSortIcon(sortDirections[tag])}
-                        </button>
-                        <button 
-                          className="task-app__clear-tag-btn"
-                          onClick={() => clearTasksByTag(tag)}
-                          title={`Clear all #${tag} tasks`}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                    <ul className="task-app__list task-app__list--column">
-                      {sortTasksByAge(tagTasks, sortDirections[tag]).map(task => (
-                        <TaskItem
-                          key={task.id}
-                          task={task}
-                          isDraggable={true}
-                          pendingOperations={pendingOperations}
-                          onComplete={onComplete}
-                          onDelete={onDelete}
-                          onAddTag={onAddTag}
-                          onDragStart={onDragStart}
-                          onDragEnd={onDragEnd}
-                          selected={selectedIds ? selectedIds.has(task.id) : false}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        ) : (
-          <div className={`task-app__tag-grid task-app__tag-grid--${visibleLayoutConfig.columns}col`}>
-          {visibleTopTags.map(tag => {
-            // Allow duplicate tasks across columns for better visibility
-            let tagTasks = getTasksByTag(tasks, tag)
-            if (hasActiveFilters) {
-              tagTasks = tagTasks.filter(t => {
-                const taskTags = t.tag?.split(' ') || []
-                return filters!.some(f => taskTags.includes(f))
-              })
-            }
-            tagTasks = tagTasks.slice(0, layoutConfig.maxPerColumn)
-            
-            return (
-              <div 
-                key={tag} 
-                className={`task-app__tag-column ${dragOverTag === tag ? 'task-app__tag-column--drag-over' : ''}`}
-                onDragOver={(e) => onDragOver(e, tag)}
-                onDragLeave={onDragLeave}
-                onDrop={(e) => onDrop(e, tag)}
-              >
-                <div className="task-app__tag-header-row">
-                  <h3 className="task-app__tag-header">#{tag}</h3>
-                  <div className="task-app__header-actions">
-                    <button 
-                      className={`task-app__sort-btn ${sortDirections[tag] ? 'task-app__sort-btn--active' : ''}`}
-                      onClick={() => toggleSort(tag)}
-                      title={getSortTitle(sortDirections[tag])}
-                    >
-                      {getSortIcon(sortDirections[tag])}
-                    </button>
-                    <button 
-                      className="task-app__clear-tag-btn"
-                      onClick={() => clearTasksByTag(tag)}
-                      title={`Clear all #${tag} tasks`}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-                <ul className="task-app__list task-app__list--column">
-                  {sortTasksByAge(tagTasks, sortDirections[tag]).map(task => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      isDraggable={true}
-                      pendingOperations={pendingOperations}
-                      onComplete={onComplete}
-                      onDelete={onDelete}
-                      onAddTag={onAddTag}
-                      onDragStart={onDragStart}
-                      onDragEnd={onDragEnd}
-                      selected={selectedIds ? selectedIds.has(task.id) : false}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
-        </div>
-        )
+          ))}
+        </>
       )}
       
       {remainingTasks.length > 0 && (
@@ -326,11 +206,11 @@ export function TaskLayout({
             <h3 className="task-app__remaining-header">Other Tasks</h3>
             <div className="task-app__header-actions">
               <button 
-                className={`task-app__sort-btn ${sortDirections['other'] ? 'task-app__sort-btn--active' : ''}`}
+                className="task-app__sort-btn task-app__sort-btn--active"
                 onClick={() => toggleSort('other')}
-                title={getSortTitle(sortDirections['other'])}
+                title={getSortTitle(sortDirections['other'] || 'desc')}
               >
-                {getSortIcon(sortDirections['other'])}
+                {getSortIcon(sortDirections['other'] || 'desc')}
               </button>
               <button 
                 className="task-app__clear-tag-btn"
@@ -342,7 +222,7 @@ export function TaskLayout({
             </div>
           </div>
           <ul className="task-app__list">
-            {sortTasksByAge(remainingTasks, sortDirections['other']).map(task => (
+            {sortTasksByAge(remainingTasks, sortDirections['other'] || 'desc').map(task => (
               <TaskItem
                 key={task.id}
                 task={task}

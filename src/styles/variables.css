@@ -90,12 +90,12 @@
   /* Typography - Modern, sleek sans-serif */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', Roboto, 'Helvetica Neue', Arial, sans-serif;
   
-  /* Primary - Vibrant blue for accents */
-  --color-primary: #60a5fa;
-  --color-primary-dark: #3b82f6;
-  --color-primary-light: #1e3a8a;
+  /* Primary - Lavender purple with yellow warmth */
+  --color-primary: #d8b4fe;
+  --color-primary-dark: #c084fc;
+  --color-primary-light: #4c1d95;
   --color-primary-bg: #1e293b;
-  --color-primary-hover: rgba(96, 165, 250, 0.1);
+  --color-primary-hover: rgba(216, 180, 254, 0.15);
   
   /* Success - Bright yellow for completion */
   --color-success: #fde047;
@@ -115,9 +115,9 @@
   --color-neutral-lighter: #1e293b;
   
   /* Text - High contrast for readability */
-  --color-text: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #64748b;
+  --color-text: #f8fafc;
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #cbd5e1;
   --color-text-muted: #94a3b8;
   
   /* Borders - Subtle but visible */
@@ -133,9 +133,9 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(96, 165, 250, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(96, 165, 250, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(251, 113, 133, 0.3);
+  --shadow-focus-sm: 0 0 0 2px rgba(251, 113, 133, 0.3);
+  --shadow-focus-alt: 0 0 0 2px rgba(251, 113, 133, 0.2);
 }
 
 /* Strawberry Theme - Sweet pink and red palette */
@@ -202,11 +202,11 @@
   --color-success-dark: #ea580c;
   --color-success-text: white;
   
-  /* Danger - Electric cyan (opposing) */
-  --color-danger: #06b6d4;
-  --color-danger-dark: #0891b2;
-  --color-danger-darker: #0e7490;
-  --color-danger-light: #164e63;
+  /* Danger - Hot magenta/pink (tropical contrast) */
+  --color-danger: #ec4899;
+  --color-danger-dark: #db2777;
+  --color-danger-darker: #be185d;
+  --color-danger-light: #500724;
   --color-danger-text: white;
   
   /* Neutral - Ocean gray */
@@ -290,24 +290,24 @@
 
 /* Coffee Theme - Rich espresso tones (dark) */
 [data-theme="coffee"] {
-  /* Primary - Caramel */
-  --color-primary: #d97706;
-  --color-primary-dark: #b45309;
-  --color-primary-light: #451a03;
+  /* Primary - Warm terracotta/burnt orange */
+  --color-primary: #ea580c;
+  --color-primary-dark: #c2410c;
+  --color-primary-light: #431407;
   --color-primary-bg: #292524;
-  --color-primary-hover: rgba(217, 119, 6, 0.15);
+  --color-primary-hover: rgba(234, 88, 12, 0.15);
   
-  /* Success - Warm caramel (opposing coffee tones) */
-  --color-success: #f59e0b;
-  --color-success-dark: #d97706;
-  --color-success-text: white;
+  /* Success - Golden honey */
+  --color-success: #facc15;
+  --color-success-dark: #eab308;
+  --color-success-text: #1c1917;
   
-  /* Danger - Rich espresso brown */
-  --color-danger: #78350f;
-  --color-danger-dark: #451a03;
+  /* Danger - Deep espresso brown */
+  --color-danger: #57534e;
+  --color-danger-dark: #44403c;
   --color-danger-darker: #292524;
   --color-danger-light: #1c1917;
-  --color-danger-text: white;
+  --color-danger-text: #fef3c7;
   
   /* Neutral - Warm brown */
   --color-neutral: #78716c;
@@ -333,30 +333,30 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
   --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.8);
-  --shadow-focus: 0 0 0 3px rgba(217, 119, 6, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(217, 119, 6, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(217, 119, 6, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
+  --shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
+  --shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
 }
 
 /* Lavender Theme - Soft purple elegance (light) */
 [data-theme="lavender"] {
-  /* Primary - Soft purple */
-  --color-primary: #a855f7;
-  --color-primary-dark: #9333ea;
+  /* Primary - Soft lavender purple */
+  --color-primary: #c084fc;
+  --color-primary-dark: #a855f7;
   --color-primary-light: #f3e8ff;
   --color-primary-bg: #faf5ff;
-  --color-primary-hover: rgba(168, 85, 247, 0.08);
+  --color-primary-hover: rgba(192, 132, 252, 0.08);
   
   /* Success - Bright lime green (complementary) */
   --color-success: #84cc16;
   --color-success-dark: #65a30d;
   --color-success-text: #1f1f29;
   
-  /* Danger - Deep violet (analogous) */
-  --color-danger: #7c3aed;
-  --color-danger-dark: #6d28d9;
-  --color-danger-darker: #5b21b6;
-  --color-danger-light: #ddd6fe;
+  /* Danger - Deep blue-violet (contrasting) */
+  --color-danger: #6366f1;
+  --color-danger-dark: #4f46e5;
+  --color-danger-darker: #4338ca;
+  --color-danger-light: #e0e7ff;
   --color-danger-text: white;
   
   /* Neutral - Warm gray */
@@ -380,10 +380,10 @@
   --color-bg-alt: #f3e8ff;
   
   /* Shadows - Soft purple tint */
-  --shadow-sm: 0 1px 2px rgba(168, 85, 247, 0.06);
-  --shadow-md: 0 2px 4px rgba(168, 85, 247, 0.1);
-  --shadow-modal: 0 8px 24px rgba(168, 85, 247, 0.15);
-  --shadow-focus: 0 0 0 3px rgba(168, 85, 247, 0.2);
-  --shadow-focus-sm: 0 0 0 2px rgba(168, 85, 247, 0.2);
-  --shadow-focus-alt: 0 0 0 2px rgba(168, 85, 247, 0.15);
+  --shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
+  --shadow-md: 0 2px 4px rgba(192, 132, 252, 0.1);
+  --shadow-modal: 0 8px 24px rgba(192, 132, 252, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
+  --shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
+  --shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
 }
