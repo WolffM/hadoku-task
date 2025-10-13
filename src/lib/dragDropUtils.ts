@@ -1,6 +1,9 @@
 /**
  * Extracts task IDs from a drag/drop dataTransfer object.
  * Tries custom format first, falls back to plain text.
+ * 
+ * @param dataTransfer - The DataTransfer object from a drag/drop event
+ * @returns Array of task IDs
  */
 export function getTaskIdsFromDragEvent(dataTransfer: DataTransfer): string[] {
   let ids: string[] = []
