@@ -23,6 +23,7 @@ npm run dev
 -  **Tag Support** - Organize with `#tags`
 -  **Smart Filtering** - Filter by tag or view all
 -  **Drag & Drop** - Move tasks between columns
+-  **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
 -  **Optimistic Updates** - Instant UI response, background sync to Cloudflare Workers KV
 -  **Multi-User** - Public (localStorage only), Friend/Admin (localStorage + KV persistence)
 -  **Framework Agnostic** - Pure handlers work with Express, Hono, Cloudflare Workers
@@ -45,6 +46,19 @@ Fix bug #high priority [Enter]           # Multi-word tag  #high-priority
 - **+** Add tag
 - **Drag** Move between columns
 
+### Themes
+Choose from 7 carefully crafted themes with the theme picker (icon in top-right):
+
+- **☼ Light** - Clean blue and white
+- **☽ Dark** - Sophisticated midnight palette  
+- **❖ Strawberry** - Sweet pink tones
+- **≈ Ocean** - Deep sea blues
+- **◆ Cyberpunk** - Neon dystopia
+- **◉ Coffee** - Rich espresso tones
+- **✿ Lavender** - Soft purple elegance
+
+Each theme includes distinct button colors for visual interest and proper contrast.
+
 ---
 
 ## Documentation
@@ -66,7 +80,7 @@ npm run build:all      # Both
 ```
 
 **Output**: 
-- Client: `dist/index.js` (~21KB), `dist/style.css` (~9KB)
+- **Client bundle**: `dist/index.js` (~21KB), `dist/style.css` (~11KB with 7 themes)
 - Handlers: `dist/server/` (TypeScript compiled to JavaScript)
 
 **Deploy to**: 
@@ -107,12 +121,14 @@ const result = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
 - **Friend/Admin mode** - localStorage + background sync to Cloudflare Workers KV
 - Zero blocking on API calls, optimistic updates everywhere
 
-### Client (React)
+### Client Architecture
 
-- Main component orchestrates custom hooks
+- Main component with theme state orchestrates custom hooks
 - Modular components (TaskItem, TaskLayout)
 - Utility libraries for tags, formatting, layout
-- 7 CSS files with design token system
+- Comprehensive CSS module system with 7 complete themes
+- Design token system with ~45 CSS custom properties per theme
+- Theme picker with horizontal dropdown and monochrome Unicode icons
 
 ### Server Handlers
 
@@ -212,11 +228,18 @@ npm run test:server   # With backend
 | Utility | `src/lib/` |
 | API call | `src/hooks/useTasks.ts` |
 | Component | `src/components/` |
-| Styles | `src/styles/` |
+| Styles | `src/styles/` (modular CSS files) |
+| Theme | `src/styles/variables.css` + `App.tsx` |
 | Operation | `src/server/handlers/` |
 | Route | `src/server/routes/` |
 
-**Guidelines**: Keep files <250 lines, use CSS variables, extract reusable logic.
+**Styling Guidelines**: 
+- Use CSS custom properties for all colors, spacing, typography
+- Add new themes by defining all ~45 variables in `variables.css`
+- Include `--color-success-text` and `--color-danger-text` for button visibility
+- Keep CSS files modular (variables, layout, buttons, modals, filters, boards, tasks)
+
+**Code Guidelines**: Keep files <250 lines, extract reusable logic.
 
 See **[Development docs](docs/DEVELOPMENT.md)** for detailed workflow.
 

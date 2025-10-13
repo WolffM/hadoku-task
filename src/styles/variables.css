@@ -235,56 +235,6 @@
   --shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
 }
 
-/* Forest Theme - Deep woodland greens (dark) */
-[data-theme="forest"] {
-  /* Primary - Moss green */
-  --color-primary: #84cc16;
-  --color-primary-dark: #65a30d;
-  --color-primary-light: #1a2e05;
-  --color-primary-bg: #1a2e05;
-  --color-primary-hover: rgba(132, 204, 22, 0.15);
-  
-  /* Success - Autumn orange (fall foliage) */
-  --color-success: #f97316;
-  --color-success-dark: #ea580c;
-  --color-success-text: white;
-  
-  /* Danger - Deep purple (twilight) */
-  --color-danger: #8b5cf6;
-  --color-danger-dark: #7c3aed;
-  --color-danger-darker: #6d28d9;
-  --color-danger-light: #4c1d95;
-  --color-danger-text: white;
-  
-  /* Neutral - Forest gray */
-  --color-neutral: #78716c;
-  --color-neutral-light: #2d3a2d;
-  --color-neutral-lighter: #1a2e1a;
-  
-  /* Text - Pale green-tinted white */
-  --color-text: #ecfccb;
-  --color-text-secondary: #d9f99d;
-  --color-text-tertiary: #bef264;
-  --color-text-muted: #84cc16;
-  
-  /* Borders - Deep forest */
-  --color-border: #365314;
-  --color-border-light: #4a5a3a;
-  
-  /* Backgrounds - Dark forest floor */
-  --color-bg: #14120e;
-  --color-bg-card: #1f2617;
-  --color-bg-alt: #2d3a2d;
-  
-  /* Shadows - Forest depths */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.8);
-  --shadow-focus: 0 0 0 3px rgba(132, 204, 22, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(132, 204, 22, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(132, 204, 22, 0.2);
-}
-
 /* Cyberpunk Theme - Neon dystopia (dark) */
 [data-theme="cyberpunk"] {
   /* Primary - Electric cyan */

@@ -42,12 +42,21 @@ See **[Universal Adapter Pattern](UNIVERSAL_ADAPTER_PATTERN.md)** for complete i
 ## Client Architecture (React Frontend)
 
 **Key Files**:
-- `App.tsx` - Main orchestrator using custom hooks
+- `App.tsx` - Main orchestrator with theme state and custom hooks
 - `entry.tsx` - Micro-frontend mount/unmount exports
 - `components/` - TaskItem (card), TaskLayout (grid)
 - `hooks/` - useTasks (CRUD), useDragAndDrop, useTaskSort
 - `lib/` - Utilities (api, formatters, tagUtils, ulid)
-- `styles/` - 7 CSS modules with design tokens
+- `styles/` - Modular CSS system with comprehensive theming
+
+**Styling System**:
+- `variables.css` - Design tokens and 8 complete theme definitions
+- `main.css` - Layout, header, theme picker, task app structure
+- `buttons.css` - All button variants with theme-aware colors
+- `modal.css` - Reusable modal components
+- `filters.css` - Tag filter buttons
+- `boards.css` - Board navigation and management
+- `tasks.css` - Task item cards and layout
 
 See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete directory structure.
 
@@ -65,6 +74,25 @@ App (131 lines)
         └── TaskItem (for each untagged/remaining task)
 ```
 
+### Theming System
+
+**7 Complete Themes**:
+- **Light** - Clean blue and white with sky blue/sunset orange buttons
+- **Dark** - Sophisticated midnight palette with bright yellow/light purple buttons
+- **Strawberry** - Sweet pink tones with plant green/hot magenta buttons
+- **Ocean** - Deep sea blues with vibrant coral/electric cyan buttons
+- **Cyberpunk** - Neon dystopia with full-saturation neon green/neon pink buttons
+- **Coffee** - Rich espresso tones with warm caramel/espresso brown buttons
+- **Lavender** - Soft purple elegance with bright lime/deep violet buttons
+
+**Theme Implementation**:
+- CSS custom properties (~45 variables per theme)
+- Data attribute selector `[data-theme="..."]` for instant switching
+- Theme picker with horizontal dropdown
+- Monochrome Unicode icons (☼☽❖≈◆◉✿) inheriting text color
+- Dynamic button text colors (white or dark) for visibility
+- Comprehensive color system: primary, success/danger, neutral, text, borders, backgrounds, shadows
+
 ### Data Flow
 
 1. **User Action** → TaskItem component
@@ -76,8 +104,10 @@ App (131 lines)
 ### Build Output
 
 - **Client bundle**: `dist/index.js` (~21KB)
-- **Styles**: `dist/style.css` (~9KB)
+- **Styles**: `dist/style.css` (~11KB with 7 complete themes)
 - **Deploy target**: `hadoku_site/public/mf/task/`
+
+**Note**: CSS includes all 7 themes (~45 variables × 7 themes = ~315 theme variables), plus shared tokens and component styles.
 
 ---
 
@@ -288,15 +318,147 @@ const storage: TaskStorage = {
 **Implementation**: TaskLayout and TaskItem components  
 **Benefit**: Clear separation of concerns
 
-### 6. CSS Design Tokens
-**Purpose**: Centralized theme configuration  
-**Implementation**: CSS custom properties in variables.css  
-**Benefit**: Consistent styling, easy theme updates
+### 6. CSS Design Tokens & Theming
+**Purpose**: Centralized theme configuration with multiple theme support  
+**Implementation**: CSS custom properties with data attribute selectors `[data-theme]`  
+**Structure**: ~45 variables per theme (primary, success/danger, text, borders, backgrounds, shadows)  
+**Benefit**: Consistent styling, instant theme switching, easy to add new themes
 
-### 7. npm Link Self-Import
+### 7. Dynamic Button Text Colors
+**Purpose**: Ensure button text visibility across all themes  
+**Implementation**: `--color-success-text` and `--color-danger-text` variables (white or dark)  
+**Benefit**: Accessible buttons with proper contrast regardless of background color
+
+### 8. npm Link Self-Import
 **Purpose**: Single source of truth for types  
 **Implementation**: Frontend imports types from package via npm link  
 **Benefit**: Eliminate type duplication between frontend and server
+
+---
+
+## Styling Architecture
+
+### CSS Module System
+
+The app uses a modular CSS architecture with separate files for different concerns:
+
+**Core Files**:
+- `variables.css` - Design tokens and theme definitions (~450 lines)
+- `main.css` - Layout, header, theme picker, app structure
+- `buttons.css` - All button variants (action, sort, clear, theme)
+- `modal.css` - Reusable modal dialog components
+- `filters.css` - Tag filter buttons and add button
+- `boards.css` - Board navigation and management
+- `tasks.css` - Task item cards and grid layout
+
+### Theme System Architecture
+
+**Data Attribute Switching**:
+```css
+/* Default (light) theme in :root */
+:root { --color-primary: #2563eb; }
+
+/* Theme override via data attribute */
+[data-theme="dark"] { --color-primary: #60a5fa; }
+```
+
+**Theme Structure** (45 variables per theme):
+```css
+[data-theme="themename"] {
+  /* Primary colors (5 variants) */
+  --color-primary: ...
+  --color-primary-dark: ...
+  --color-primary-light: ...
+  --color-primary-bg: ...
+  --color-primary-hover: ...
+  
+  /* Success/Danger (theme-specific opposing colors) */
+  --color-success: ...
+  --color-success-dark: ...
+  --color-success-text: white | #darkcolor  /* For visibility */
+  --color-danger: ...
+  --color-danger-dark: ...
+  --color-danger-darker: ...
+  --color-danger-light: ...
+  --color-danger-text: white | #darkcolor  /* For visibility */
+  
+  /* Neutral, text, borders, backgrounds, shadows... */
+}
+```
+
+**Button Color Philosophy**:
+Each theme has unique, opposing button colors that reflect the theme's personality:
+- **Light**: Sky blue (complete) vs Sunset orange (delete)
+- **Dark**: Bright yellow vs Light purple
+- **Strawberry**: Plant green vs Hot magenta
+- **Cyberpunk**: NEON green vs NEON pink (full saturation)
+- **Ocean**: Vibrant coral vs Electric cyan
+- **Coffee**: Warm caramel vs Rich espresso brown
+
+**Text Color System**:
+- Light button backgrounds (yellow, lime, neon) use dark text (`#1e293b`, `#1f1f29`, `#020617`)
+- Dark button backgrounds use white text
+- Ensures checkmark ✓ and X are always visible
+
+### Theme Picker Component
+
+**Location**: Top-right corner of header
+
+**Implementation**:
+```tsx
+// App.tsx
+const [theme, setTheme] = useState<'light' | 'dark' | ...>('light')
+const [showThemePicker, setShowThemePicker] = useState(false)
+
+// Apply to document
+useEffect(() => {
+  document.documentElement.setAttribute('data-theme', theme)
+}, [theme])
+```
+
+**UI Structure**:
+- Toggle button (32x32px, circular hover) shows current theme icon
+- Horizontal dropdown opens to the right
+- 7 option buttons (32x32px each) with monochrome Unicode icons
+- Click-outside handler closes dropdown
+
+**Icons**: ☼ (sun), ☽ (moon), ❖ (diamond), ≈ (waves), ◆ (diamond), ◉ (bean), ✿ (flower)
+
+### Adding a New Theme
+
+1. **Define theme in `variables.css`**:
+```css
+[data-theme="mytheme"] {
+  /* Copy structure from existing theme */
+  /* Define all 45 variables */
+  /* Choose creative opposing button colors */
+  --color-success: #color;
+  --color-success-text: white; /* or dark color */
+  --color-danger: #opposingcolor;
+  --color-danger-text: white; /* or dark color */
+}
+```
+
+2. **Add to type union in `App.tsx`**:
+```tsx
+const [theme, setTheme] = useState<'light' | ... | 'mytheme'>('light')
+```
+
+3. **Add icon mapping**:
+```tsx
+{theme === 'mytheme' ? '◈' : ...}
+```
+
+4. **Add dropdown button**:
+```tsx
+<button 
+  className={`theme-picker__option ${theme === 'mytheme' ? 'active' : ''}`}
+  onClick={() => { setTheme('mytheme'); setShowThemePicker(false); }}
+  title="My Theme"
+>
+  ◈
+</button>
+```
 
 ---
 
@@ -373,9 +535,11 @@ type UserType = 'public' | 'friend' | 'admin'
 
 ### Client
 - **Bundle size**: ~21KB
-- **CSS size**: ~9KB
+- **CSS size**: ~11KB (includes 7 complete themes)
 - **Initial load**: ~50-100ms
 - **Task operations**: Instant UI updates (optimistic)
+- **Theme switching**: Instant (CSS custom property override)
+- **Themes**: All loaded upfront, no async loading needed
 
 ### Server (Handlers)
 - **Pure functions**: No overhead (just JS execution)
@@ -415,6 +579,13 @@ type UserType = 'public' | 'friend' | 'admin'
    - Import handlers from `@hadoku/task/api`
    - Create routes using your framework
    - Inject your Storage implementation
+
+6. **New Theme**:
+   - Add theme definition block in `src/styles/variables.css`
+   - Define all CSS custom properties (~45 variables)
+   - Add theme option to type union in `App.tsx`
+   - Add button to theme picker dropdown with Unicode icon
+   - Ensure button colors use `--color-success-text` and `--color-danger-text` for visibility
 
 ---
 

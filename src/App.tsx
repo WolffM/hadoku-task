@@ -14,7 +14,7 @@ export default function App(props: TaskAppProps = {}) {
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [theme, setTheme] = useState<'light' | 'dark' | 'strawberry' | 'ocean' | 'forest' | 'cyberpunk' | 'coffee' | 'lavender'>('light')
+  const [theme, setTheme] = useState<'light' | 'dark' | 'strawberry' | 'ocean' | 'cyberpunk' | 'coffee' | 'lavender'>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   // "public" is special: localStorage-only, no server. All other types sync to server.
@@ -138,7 +138,6 @@ export default function App(props: TaskAppProps = {}) {
              theme === 'dark' ? '☽' : 
              theme === 'strawberry' ? '❖' :
              theme === 'ocean' ? '≈' :
-             theme === 'forest' ? '❦' :
              theme === 'cyberpunk' ? '◆' :
              theme === 'coffee' ? '◉' :
              '✿'}
@@ -172,13 +171,6 @@ export default function App(props: TaskAppProps = {}) {
                 title="Ocean theme"
               >
                 ≈
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'forest' ? 'active' : ''}`}
-                onClick={() => { setTheme('forest'); setShowThemePicker(false); }}
-                title="Forest theme"
-              >
-                ❦
               </button>
               <button 
                 className={`theme-picker__option ${theme === 'cyberpunk' ? 'active' : ''}`}
