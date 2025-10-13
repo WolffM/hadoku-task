@@ -3,7 +3,6 @@ import type { TaskAppProps } from './entry'
 import { useTasks, SESSION_ID } from './hooks/useTasks'
 import { useDragAndDrop } from './hooks/useDragAndDrop'
 import { useTaskSort } from './hooks/useTaskSort'
-import { useLongPress } from './hooks/useLongPress'
 import { TaskLayout } from './components/TaskLayout'
 import { Modal } from './components/Modal'
 import { ContextMenu } from './components/ContextMenu'
@@ -272,27 +271,39 @@ export default function App(props: TaskAppProps = {}) {
       <div className="task-app__boards">
         {/* Render up to 5 board buttons, highlight active */}
         <div className="task-app__board-list">
-          {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => {
-            const longPress = useLongPress({
-              onLongPress: (e) => {
+          {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => (
+            <button
+              key={b.id}
+              className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
+              onClick={() => switchBoard(b.id)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                if (b.id === 'main') return // Don't allow deleting main board
+                setBoardContextMenu({ boardId: b.id, x: e.clientX, y: e.clientY })
+              }}
+              onTouchStart={(e) => {
                 if (b.id === 'main') return
-                const touch = e.touches[0]
-                setBoardContextMenu({ boardId: b.id, x: touch.clientX, y: touch.clientY })
-              }
-            })
-            
-            return (
-              <button
-                key={b.id}
-                className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
-                onClick={() => switchBoard(b.id)}
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  if (b.id === 'main') return // Don't allow deleting main board
-                  setBoardContextMenu({ boardId: b.id, x: e.clientX, y: e.clientY })
-                }}
-                {...longPress}
-                aria-pressed={currentBoardId === b.id}
+                const timer = setTimeout(() => {
+                  const touch = e.touches[0]
+                  setBoardContextMenu({ boardId: b.id, x: touch.clientX, y: touch.clientY })
+                }, 500)
+                ;(e.currentTarget as any).__longPressTimer = timer
+              }}
+              onTouchEnd={(e) => {
+                const timer = (e.currentTarget as any).__longPressTimer
+                if (timer) {
+                  clearTimeout(timer)
+                  ;(e.currentTarget as any).__longPressTimer = null
+                }
+              }}
+              onTouchMove={(e) => {
+                const timer = (e.currentTarget as any).__longPressTimer
+                if (timer) {
+                  clearTimeout(timer)
+                  ;(e.currentTarget as any).__longPressTimer = null
+                }
+              }}
+              aria-pressed={currentBoardId === b.id}
                 onDragOver={(e) => {
                   // Indicate this board can accept drops
                   e.preventDefault()
@@ -319,8 +330,7 @@ export default function App(props: TaskAppProps = {}) {
               >
                 {b.name}
               </button>
-            )
-          })}
+          ))}
         </div>
 
         <div className="task-app__board-actions">
@@ -381,12 +391,6 @@ export default function App(props: TaskAppProps = {}) {
           const all = Array.from(new Set([...persistedTags, ...derived, ...customTags]))
           return all.map(tag => {
           const on = selectedFilters.has(tag)
-          const longPress = useLongPress({
-            onLongPress: (e) => {
-              const touch = e.touches[0]
-              setTagContextMenu({ tag, x: touch.clientX, y: touch.clientY })
-            }
-          })
           
           return (
             <button
@@ -403,7 +407,27 @@ export default function App(props: TaskAppProps = {}) {
                 e.preventDefault()
                 setTagContextMenu({ tag, x: e.clientX, y: e.clientY })
               }}
-              {...longPress}
+              onTouchStart={(e) => {
+                const timer = setTimeout(() => {
+                  const touch = e.touches[0]
+                  setTagContextMenu({ tag, x: touch.clientX, y: touch.clientY })
+                }, 500)
+                ;(e.currentTarget as any).__longPressTimer = timer
+              }}
+              onTouchEnd={(e) => {
+                const timer = (e.currentTarget as any).__longPressTimer
+                if (timer) {
+                  clearTimeout(timer)
+                  ;(e.currentTarget as any).__longPressTimer = null
+                }
+              }}
+              onTouchMove={(e) => {
+                const timer = (e.currentTarget as any).__longPressTimer
+                if (timer) {
+                  clearTimeout(timer)
+                  ;(e.currentTarget as any).__longPressTimer = null
+                }
+              }}
               className={`${on ? 'on' : ''} ${dragAndDrop.dragOverFilter === tag ? 'task-app__filter-drag-over' : ''}`}
               onDragOver={(e) => dragAndDrop.onFilterDragOver(e, tag)}
               onDragLeave={dragAndDrop.onFilterDragLeave}

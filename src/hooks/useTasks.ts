@@ -328,8 +328,9 @@ export function useTasks({ userType, userId }: UseTasksProps) {
     console.log('[useTasks] moveTasksToBoard: broadcasting bulk update with delay')
     deferredBroadcast(SESSION_ID, userType, userId)
     
-    // Reload the target board specifically (not currentBoardId which may be stale)
-    console.log('[useTasks] moveTasksToBoard: reloading target board', { targetBoardId })
+    // Switch to the target board and reload it
+    console.log('[useTasks] moveTasksToBoard: switching to target board', { targetBoardId })
+    setCurrentBoardId(targetBoardId)
     const bf = await api.getBoards()
     setBoards(bf)
     const targetBoard = bf.boards.find(b => b.id === targetBoardId)
