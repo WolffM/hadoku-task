@@ -3,8 +3,12 @@ import type { TaskAppProps } from './entry'
 import { useTasks, SESSION_ID } from './hooks/useTasks'
 import { useDragAndDrop } from './hooks/useDragAndDrop'
 import { useTaskSort } from './hooks/useTaskSort'
+import { useLongPress } from './hooks/useLongPress'
 import { TaskLayout } from './components/TaskLayout'
+import { Modal } from './components/Modal'
+import { ContextMenu } from './components/ContextMenu'
 import { getTopTags, getAllTags } from './lib/tagUtils'
+import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
 
 export default function App(props: TaskAppProps = {}) {
   const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public' } = props;
@@ -18,7 +22,6 @@ export default function App(props: TaskAppProps = {}) {
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   // "public" is special: localStorage-only, no server. All other types sync to server.
   const isPublic = userType === 'public'
@@ -269,73 +272,55 @@ export default function App(props: TaskAppProps = {}) {
       <div className="task-app__boards">
         {/* Render up to 5 board buttons, highlight active */}
         <div className="task-app__board-list">
-          {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => (
-            <button
-              key={b.id}
-              className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
-              onClick={() => switchBoard(b.id)}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                if (b.id === 'main') return // Don't allow deleting main board
-                setBoardContextMenu({ boardId: b.id, x: e.clientX, y: e.clientY })
-              }}
-              onTouchStart={(e) => {
+          {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => {
+            const longPress = useLongPress({
+              onLongPress: (e) => {
                 if (b.id === 'main') return
-                const timer = setTimeout(() => {
-                  const touch = e.touches[0]
-                  setBoardContextMenu({ boardId: b.id, x: touch.clientX, y: touch.clientY })
-                }, 500) // 500ms long-press
-                setLongPressTimer(timer)
-              }}
-              onTouchEnd={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer)
-                  setLongPressTimer(null)
-                }
-              }}
-              onTouchMove={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer)
-                  setLongPressTimer(null)
-                }
-              }}
-              aria-pressed={currentBoardId === b.id}
-              onDragOver={(e) => {
-                // Indicate this board can accept drops
-                e.preventDefault()
-                e.dataTransfer.dropEffect = 'move'
-                // set a temporary state by using dragOverFilter semantic to indicate board hover
-                try { (dragAndDrop as any).setDragOverFilter?.(`board:${b.id}`) } catch {}
-              }}
-              onDragLeave={(e) => {
-                try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
-              }}
-              onDrop={async (e) => {
-                e.preventDefault()
-                try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
-                // read our custom payload
-                let ids: string[] = []
-                try {
-                  const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
-                  if (raw) ids = JSON.parse(raw)
-                } catch {}
-                if (ids.length === 0) {
-                  const t = e.dataTransfer.getData('text/plain')
-                  if (t) ids = [t]
-                }
-                if (ids.length === 0) return
-                try {
-                  await moveTasksToBoard(b.id, ids)
-                  try { dragAndDrop.clearSelection() } catch {}
-                } catch (err) {
-                  console.error('Failed moving tasks to board', err)
-                  alert((err as Error).message || 'Failed to move tasks')
-                }
-              }}
-            >
-              {b.name}
-            </button>
-          ))}
+                const touch = e.touches[0]
+                setBoardContextMenu({ boardId: b.id, x: touch.clientX, y: touch.clientY })
+              }
+            })
+            
+            return (
+              <button
+                key={b.id}
+                className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
+                onClick={() => switchBoard(b.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  if (b.id === 'main') return // Don't allow deleting main board
+                  setBoardContextMenu({ boardId: b.id, x: e.clientX, y: e.clientY })
+                }}
+                {...longPress}
+                aria-pressed={currentBoardId === b.id}
+                onDragOver={(e) => {
+                  // Indicate this board can accept drops
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  // set a temporary state by using dragOverFilter semantic to indicate board hover
+                  try { (dragAndDrop as any).setDragOverFilter?.(`board:${b.id}`) } catch {}
+                }}
+                onDragLeave={(e) => {
+                  try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault()
+                  try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                  const ids = getTaskIdsFromDragEvent(e.dataTransfer)
+                  if (ids.length === 0) return
+                  try {
+                    await moveTasksToBoard(b.id, ids)
+                    try { dragAndDrop.clearSelection() } catch {}
+                  } catch (err) {
+                    console.error('Failed moving tasks to board', err)
+                    alert((err as Error).message || 'Failed to move tasks')
+                  }
+                }}
+              >
+                {b.name}
+              </button>
+            )
+          })}
         </div>
 
         <div className="task-app__board-actions">
@@ -359,17 +344,7 @@ export default function App(props: TaskAppProps = {}) {
                 e.preventDefault()
                 try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
                 
-                // Get task IDs from drag data
-                let ids: string[] = []
-                try {
-                  const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
-                  if (raw) ids = JSON.parse(raw)
-                } catch {}
-                if (ids.length === 0) {
-                  const t = e.dataTransfer.getData('text/plain')
-                  if (t) ids = [t]
-                }
-                
+                const ids = getTaskIdsFromDragEvent(e.dataTransfer)
                 if (ids.length > 0) {
                   // Open dialog and store the task IDs to move after creation
                   setInputValue('')
@@ -406,6 +381,13 @@ export default function App(props: TaskAppProps = {}) {
           const all = Array.from(new Set([...persistedTags, ...derived, ...customTags]))
           return all.map(tag => {
           const on = selectedFilters.has(tag)
+          const longPress = useLongPress({
+            onLongPress: (e) => {
+              const touch = e.touches[0]
+              setTagContextMenu({ tag, x: touch.clientX, y: touch.clientY })
+            }
+          })
+          
           return (
             <button
               key={tag}
@@ -421,25 +403,7 @@ export default function App(props: TaskAppProps = {}) {
                 e.preventDefault()
                 setTagContextMenu({ tag, x: e.clientX, y: e.clientY })
               }}
-              onTouchStart={(e) => {
-                const timer = setTimeout(() => {
-                  const touch = e.touches[0]
-                  setTagContextMenu({ tag, x: touch.clientX, y: touch.clientY })
-                }, 500)
-                setLongPressTimer(timer)
-              }}
-              onTouchEnd={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer)
-                  setLongPressTimer(null)
-                }
-              }}
-              onTouchMove={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer)
-                  setLongPressTimer(null)
-                }
-              }}
+              {...longPress}
               className={`${on ? 'on' : ''} ${dragAndDrop.dragOverFilter === tag ? 'task-app__filter-drag-over' : ''}`}
               onDragOver={(e) => dragAndDrop.onFilterDragOver(e, tag)}
               onDragLeave={dragAndDrop.onFilterDragLeave}
@@ -466,17 +430,7 @@ export default function App(props: TaskAppProps = {}) {
             e.preventDefault()
             dragAndDrop.onFilterDragLeave(e)
             
-            // Get task IDs from drag data
-            let ids: string[] = []
-            try {
-              const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
-              if (raw) ids = JSON.parse(raw)
-            } catch {}
-            if (ids.length === 0) {
-              const t = e.dataTransfer.getData('text/plain')
-              if (t) ids = [t]
-            }
-            
+            const ids = getTaskIdsFromDragEvent(e.dataTransfer)
             if (ids.length > 0) {
               // Open dialog and store the task IDs to tag after creation
               setInputValue('')
@@ -519,218 +473,120 @@ export default function App(props: TaskAppProps = {}) {
         <div className="marquee-overlay" style={{ left: dragAndDrop.marqueeRect.x, top: dragAndDrop.marqueeRect.y, width: dragAndDrop.marqueeRect.w, height: dragAndDrop.marqueeRect.h }} />
       )}
 
-      {confirmClearTag && (
-        <div 
-          className="modal-overlay"
-          onClick={() => setConfirmClearTag(null)}
-        >
-          <div 
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>Clear Tag #{confirmClearTag.tag}?</h3>
-            <p>
-              This will remove <strong>#{confirmClearTag.tag}</strong> from{' '}
-              <strong>{confirmClearTag.count} task(s)</strong> and delete the tag from the board.
-            </p>
-            <div className="modal-actions">
-              <button 
-                className="modal-button"
-                onClick={() => setConfirmClearTag(null)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="modal-button modal-button--danger"
-                onClick={async () => {
-                  const tag = confirmClearTag.tag
-                  setConfirmClearTag(null)
-                  await clearTasksByTag(tag)
-                }}
-              >
-                Clear Tag
-              </button>
+      <Modal
+        isOpen={!!confirmClearTag}
+        title={`Clear Tag #${confirmClearTag?.tag}?`}
+        onClose={() => setConfirmClearTag(null)}
+        onConfirm={async () => {
+          if (!confirmClearTag) return
+          const tag = confirmClearTag.tag
+          setConfirmClearTag(null)
+          await clearTasksByTag(tag)
+        }}
+        confirmLabel="Clear Tag"
+        confirmDanger={true}
+      >
+        {confirmClearTag && (
+          <p>
+            This will remove <strong>#{confirmClearTag.tag}</strong> from{' '}
+            <strong>{confirmClearTag.count} task(s)</strong> and delete the tag from the board.
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={showNewBoardDialog}
+        title="Create New Board"
+        onClose={() => {
+          setShowNewBoardDialog(false)
+          delete (window as any).__pendingBoardTaskIds
+        }}
+        onConfirm={async () => {
+          if (!inputValue.trim()) return
+          setShowNewBoardDialog(false)
+          try {
+            await handleCreateBoard(inputValue)
+          } catch (err) {
+            console.error('[App] Failed to create board:', err)
+          }
+        }}
+        inputValue={inputValue}
+        onInputChange={setInputValue}
+        inputPlaceholder="Board name"
+        confirmLabel="Create"
+        confirmDisabled={!inputValue.trim()}
+      >
+        {(() => {
+          const pendingIds = (window as any).__pendingBoardTaskIds as string[] | undefined
+          if (pendingIds && pendingIds.length > 0) {
+            return (
+              <p className="modal-hint">
+                {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''} will be moved to this board
+              </p>
+            )
+          }
+          return null
+        })()}
+      </Modal>
+
+      <Modal
+        isOpen={showNewTagDialog}
+        title="Create New Tag"
+        onClose={() => {
+          setShowNewTagDialog(false)
+          delete (window as any).__pendingTagTaskIds
+        }}
+        onConfirm={async () => {
+          if (!inputValue.trim()) return
+          setShowNewTagDialog(false)
+          try {
+            await handleCreateTag(inputValue)
+          } catch (err) {
+            console.error('[App] Failed to create tag:', err)
+          }
+        }}
+        inputValue={inputValue}
+        onInputChange={setInputValue}
+        inputPlaceholder="Enter new tag name"
+        confirmLabel="Create"
+        confirmDisabled={!inputValue.trim()}
+      >
+        {(() => {
+          const pendingIds = (window as any).__pendingTagTaskIds as string[] | undefined
+          if (pendingIds && pendingIds.length > 0) {
+            return (
+              <p className="modal-hint">
+                This tag will be applied to {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''}
+              </p>
+            )
+          }
+          return null
+        })()}
+        
+        {getAllTags(tasks).length > 0 && (
+          <div className="modal-section">
+            <label className="modal-label">Existing tags:</label>
+            <div className="modal-tags-list">
+              {getAllTags(tasks).map(tag => (
+                <span key={tag} className="modal-tag-chip">
+                  #{tag}
+                </span>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {showNewBoardDialog && (
-        <div 
-          className="modal-overlay"
-          onClick={() => setShowNewBoardDialog(false)}
-        >
-          <div 
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>Create New Board</h3>
-            
-            {(() => {
-              const pendingIds = (window as any).__pendingBoardTaskIds as string[] | undefined
-              if (pendingIds && pendingIds.length > 0) {
-                return (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 0 }}>
-                    {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''} will be moved to this board
-                  </p>
-                )
-              }
-              return null
-            })()}
-            
-            <input
-              type="text"
-              className="modal-input"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Board name"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && inputValue.trim()) {
-                  setShowNewBoardDialog(false)
-                  handleCreateBoard(inputValue).catch(err => {
-                    console.error('[App] Failed to create board:', err)
-                  })
-                }
-                if (e.key === 'Escape') {
-                  setShowNewBoardDialog(false)
-                  // Clear pending task IDs if dialog is cancelled
-                  delete (window as any).__pendingBoardTaskIds
-                }
-              }}
-            />
-            <div className="modal-actions">
-              <button 
-                className="modal-button"
-                onClick={() => {
-                  setShowNewBoardDialog(false)
-                  // Clear pending task IDs if dialog is cancelled
-                  delete (window as any).__pendingBoardTaskIds
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                className="modal-button modal-button--primary"
-                onClick={async () => {
-                  if (!inputValue.trim()) return
-                  setShowNewBoardDialog(false)
-                  try {
-                    await handleCreateBoard(inputValue)
-                  } catch (err) {
-                    console.error('[App] Failed to create board:', err)
-                  }
-                }}
-                disabled={!inputValue.trim()}
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showNewTagDialog && (
-        <div 
-          className="modal-overlay"
-          onClick={() => setShowNewTagDialog(false)}
-        >
-          <div 
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>Create New Tag</h3>
-            
-            {(() => {
-              const pendingIds = (window as any).__pendingTagTaskIds as string[] | undefined
-              if (pendingIds && pendingIds.length > 0) {
-                return (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 0 }}>
-                    This tag will be applied to {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''}
-                  </p>
-                )
-              }
-              return null
-            })()}
-            
-            {getAllTags(tasks).length > 0 && (
-              <div className="modal-section">
-                <label className="modal-label">Existing tags:</label>
-                <div className="modal-tags-list">
-                  {getAllTags(tasks).map(tag => (
-                    <span key={tag} className="modal-tag-chip">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <input
-              type="text"
-              className="modal-input"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Enter new tag name"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && inputValue.trim()) {
-                  setShowNewTagDialog(false)
-                  handleCreateTag(inputValue).catch(err => {
-                    console.error('[App] Failed to create tag:', err)
-                  })
-                }
-                if (e.key === 'Escape') {
-                  setShowNewTagDialog(false)
-                  // Clear pending task IDs if dialog is cancelled
-                  delete (window as any).__pendingTagTaskIds
-                }
-              }}
-            />
-            <div className="modal-actions">
-              <button 
-                className="modal-button"
-                onClick={() => {
-                  setShowNewTagDialog(false)
-                  // Clear pending task IDs if dialog is cancelled
-                  delete (window as any).__pendingTagTaskIds
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                className="modal-button modal-button--primary"
-                onClick={async () => {
-                  if (!inputValue.trim()) return
-                  setShowNewTagDialog(false)
-                  try {
-                    await handleCreateTag(inputValue)
-                  } catch (err) {
-                    console.error('[App] Failed to create tag:', err)
-                  }
-                }}
-                disabled={!inputValue.trim()}
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Board context menu */}
-      {boardContextMenu && (
-        <div 
-          className="board-context-menu"
-          style={{
-            position: 'fixed',
-            left: `${boardContextMenu.x}px`,
-            top: `${boardContextMenu.y}px`,
-          }}
-        >
-          <button
-            className="context-menu-item context-menu-item--danger"
-            onClick={async () => {
+      <ContextMenu
+        isOpen={!!boardContextMenu}
+        x={boardContextMenu?.x || 0}
+        y={boardContextMenu?.y || 0}
+        items={[
+          {
+            label: '🗑️ Delete Board',
+            isDanger: true,
+            onClick: async () => {
+              if (!boardContextMenu) return
               const boardName = boards?.boards?.find(b => b.id === boardContextMenu.boardId)?.name || boardContextMenu.boardId
               if (confirm(`Delete board "${boardName}"? All tasks on this board will be permanently deleted.`)) {
                 try {
@@ -741,26 +597,21 @@ export default function App(props: TaskAppProps = {}) {
                   alert((err as Error).message || 'Failed to delete board')
                 }
               }
-            }}
-          >
-            🗑️ Delete Board
-          </button>
-        </div>
-      )}
+            }
+          }
+        ]}
+      />
 
-      {/* Tag context menu */}
-      {tagContextMenu && (
-        <div 
-          className="tag-context-menu"
-          style={{
-            position: 'fixed',
-            left: `${tagContextMenu.x}px`,
-            top: `${tagContextMenu.y}px`,
-          }}
-        >
-          <button
-            className="context-menu-item context-menu-item--danger"
-            onClick={async () => {
+      <ContextMenu
+        isOpen={!!tagContextMenu}
+        x={tagContextMenu?.x || 0}
+        y={tagContextMenu?.y || 0}
+        items={[
+          {
+            label: '🗑️ Delete Tag',
+            isDanger: true,
+            onClick: async () => {
+              if (!tagContextMenu) return
               const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tagContextMenu.tag))
               if (confirm(`Delete tag "${tagContextMenu.tag}" and remove it from ${tagTasks.length} task(s)?`)) {
                 try {
@@ -771,12 +622,10 @@ export default function App(props: TaskAppProps = {}) {
                   alert((err as Error).message || 'Failed to delete tag')
                 }
               }
-            }}
-          >
-            🗑️ Delete Tag
-          </button>
-        </div>
-      )}
+            }
+          }
+        ]}
+      />
       </div>
     </div>
   )
