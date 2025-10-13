@@ -22,6 +22,7 @@ export default function App(props: TaskAppProps = {}) {
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   // "public" is special: localStorage-only, no server. All other types sync to server.
   const isPublic = userType === 'public'
 
@@ -66,9 +67,11 @@ export default function App(props: TaskAppProps = {}) {
     inputRef.current?.focus()
   }, [userType])
 
-  // Apply theme to document
+  // Apply theme to container element (scoped, not document-wide)
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
+    if (containerRef.current) {
+      containerRef.current.setAttribute('data-theme', theme)
+    }
   }, [theme])
 
   // Close theme picker and context menus when clicking outside
@@ -173,7 +176,8 @@ export default function App(props: TaskAppProps = {}) {
 
   return (
     <div
-      style={{ minHeight: '100vh', width: '100%' }}
+      ref={containerRef}
+      className="task-app-container"
       onMouseDown={dragAndDrop.selectionStartHandler}
       onMouseMove={dragAndDrop.selectionMoveHandler}
       onMouseUp={dragAndDrop.selectionEndHandler}
@@ -303,7 +307,7 @@ export default function App(props: TaskAppProps = {}) {
                   ;(e.currentTarget as any).__longPressTimer = null
                 }
               }}
-              aria-pressed={currentBoardId === b.id}
+              aria-pressed={currentBoardId === b.id ? 'true' : 'false'}
                 onDragOver={(e) => {
                   // Indicate this board can accept drops
                   e.preventDefault()
@@ -494,7 +498,15 @@ export default function App(props: TaskAppProps = {}) {
       />
 
       {dragAndDrop.isSelecting && dragAndDrop.marqueeRect && (
-        <div className="marquee-overlay" style={{ left: dragAndDrop.marqueeRect.x, top: dragAndDrop.marqueeRect.y, width: dragAndDrop.marqueeRect.w, height: dragAndDrop.marqueeRect.h }} />
+        <div
+          className="marquee-overlay"
+          style={{
+            left: `${dragAndDrop.marqueeRect.x}px`,
+            top: `${dragAndDrop.marqueeRect.y}px`,
+            width: `${dragAndDrop.marqueeRect.w}px`,
+            height: `${dragAndDrop.marqueeRect.h}px`
+          }}
+        />
       )}
 
       <Modal

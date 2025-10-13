@@ -61,6 +61,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-md);
+  padding-right: 80px; /* Width of 2 action buttons (64px) + small gap (4px) to align above timestamp */
 }
 
 .task-app__tag-header,
@@ -72,12 +73,6 @@
 .task-app__tag-header {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-}
-
-.task-app__header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
 }
 
 /* Remaining tasks section */

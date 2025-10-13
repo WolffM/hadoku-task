@@ -1,8 +1,9 @@
 /**
  * CSS Custom Properties - Design tokens for the task app
+ * Scoped to .task-app-container to avoid conflicts with parent site styles
  */
 
-:root {
+.task-app-container {
   /* Colors */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
@@ -35,6 +36,7 @@
   --color-bg: #f8fafc;
   --color-bg-card: #ffffff;
   --color-bg-alt: #fafafa;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
   
   /* Spacing */
   --spacing-xs: 2px;
@@ -86,7 +88,7 @@
 }
 
 /* Dark Theme - Sophisticated midnight palette */
-[data-theme="dark"] {
+.task-app-container[data-theme="dark"] {
   /* Typography - Modern, sleek sans-serif */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', Roboto, 'Helvetica Neue', Arial, sans-serif;
   
@@ -128,6 +130,7 @@
   --color-bg: #0f172a;
   --color-bg-card: #1e293b;
   --color-bg-alt: #0c1322;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
   
   /* Shadows - Deeper for depth */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -139,7 +142,7 @@
 }
 
 /* Strawberry Theme - Sweet pink and red palette */
-[data-theme="strawberry"] {
+.task-app-container[data-theme="strawberry"] {
   /* Primary - Strawberry red */
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff477a;
@@ -178,6 +181,7 @@
   --color-bg: #fffbfc;
   --color-bg-card: #fff5f8;
   --color-bg-alt: #fff0f4;
+  --color-bg-overlay: rgba(255, 107, 157, 0.3);
   
   /* Shadows - Warm and soft */
   --shadow-sm: 0 1px 2px rgba(255, 107, 157, 0.08);
@@ -189,7 +193,7 @@
 }
 
 /* Ocean Theme - Deep sea blues (dark) */
-[data-theme="ocean"] {
+.task-app-container[data-theme="ocean"] {
   /* Primary - Bright aqua for accents */
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
@@ -228,6 +232,7 @@
   --color-bg: #082f49;
   --color-bg-card: #0c4a6e;
   --color-bg-alt: #164e63;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
   
   /* Shadows - Deep water */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -239,7 +244,7 @@
 }
 
 /* Cyberpunk Theme - Neon dystopia (dark) */
-[data-theme="cyberpunk"] {
+.task-app-container[data-theme="cyberpunk"] {
   /* Primary - Electric cyan */
   --color-primary: #22d3ee;
   --color-primary-dark: #06b6d4;
@@ -278,6 +283,7 @@
   --color-bg: #020617;
   --color-bg-card: #0c1929;
   --color-bg-alt: #1e293b;
+  --color-bg-overlay: rgba(0, 0, 0, 0.8);
   
   /* Shadows - Neon glow */
   --shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
@@ -289,7 +295,7 @@
 }
 
 /* Coffee Theme - Rich espresso tones (dark) */
-[data-theme="coffee"] {
+.task-app-container[data-theme="coffee"] {
   /* Primary - Warm terracotta/burnt orange */
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
@@ -328,6 +334,7 @@
   --color-bg: #1c1917;
   --color-bg-card: #292524;
   --color-bg-alt: #3e3933;
+  --color-bg-overlay: rgba(0, 0, 0, 0.75);
   
   /* Shadows - Warm and deep */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -339,7 +346,7 @@
 }
 
 /* Lavender Theme - Soft purple elegance (light) */
-[data-theme="lavender"] {
+.task-app-container[data-theme="lavender"] {
   /* Primary - Soft lavender purple */
   --color-primary: #c084fc;
   --color-primary-dark: #a855f7;
@@ -378,6 +385,7 @@
   --color-bg: #fafafa;
   --color-bg-card: #faf5ff;
   --color-bg-alt: #f3e8ff;
+  --color-bg-overlay: rgba(192, 132, 252, 0.25);
   
   /* Shadows - Soft purple tint */
   --shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);

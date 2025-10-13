@@ -76,22 +76,13 @@ export function TaskLayout({
     >
       <div className="task-app__tag-header-row">
         <h3 className="task-app__tag-header">#{tag}</h3>
-        <div className="task-app__header-actions">
-          <button 
-            className="task-app__sort-btn task-app__sort-btn--active"
-            onClick={() => toggleSort(tag)}
-            title={getSortTitle(sortDirections[tag] || 'desc')}
-          >
-            {getSortIcon(sortDirections[tag] || 'desc')}
-          </button>
-          <button 
-            className="task-app__clear-tag-btn"
-            onClick={() => clearTasksByTag(tag)}
-            title={`Clear all #${tag} tasks`}
-          >
-            🗑️
-          </button>
-        </div>
+        <button 
+          className="task-app__sort-btn task-app__sort-btn--active"
+          onClick={() => toggleSort(tag)}
+          title={getSortTitle(sortDirections[tag] || 'desc')}
+        >
+          {getSortIcon(sortDirections[tag] || 'desc')}
+        </button>
       </div>
       <ul className="task-app__list task-app__list--column">
         {sortTasksByAge(tagTasks, sortDirections[tag] || 'desc').map(task => (
@@ -204,22 +195,13 @@ export function TaskLayout({
         >
           <div className="task-app__tag-header-row">
             <h3 className="task-app__remaining-header">Other Tasks</h3>
-            <div className="task-app__header-actions">
-              <button 
-                className="task-app__sort-btn task-app__sort-btn--active"
-                onClick={() => toggleSort('other')}
-                title={getSortTitle(sortDirections['other'] || 'desc')}
-              >
-                {getSortIcon(sortDirections['other'] || 'desc')}
-              </button>
-              <button 
-                className="task-app__clear-tag-btn"
-                onClick={() => clearRemainingTasks(remainingTasks)}
-                title="Clear all remaining tasks"
-              >
-                🗑️
-              </button>
-            </div>
+            <button 
+              className="task-app__sort-btn task-app__sort-btn--active"
+              onClick={() => toggleSort('other')}
+              title={getSortTitle(sortDirections['other'] || 'desc')}
+            >
+              {getSortIcon(sortDirections['other'] || 'desc')}
+            </button>
           </div>
           <ul className="task-app__list">
             {sortTasksByAge(remainingTasks, sortDirections['other'] || 'desc').map(task => (

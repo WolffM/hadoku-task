@@ -20,7 +20,6 @@ export function ContextMenu({ isOpen, x, y, items }: ContextMenuProps) {
     <div 
       className="board-context-menu"
       style={{
-        position: 'fixed',
         left: `${x}px`,
         top: `${y}px`,
       }}

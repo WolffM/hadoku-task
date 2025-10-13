@@ -71,21 +71,24 @@
 }
 
 /* Complete button */
-.task-app__complete-btn {
+.task-app__action-btn.task-app__complete-btn {
   background: linear-gradient(180deg, var(--color-success) 0%, var(--color-success-dark) 100%);
   color: var(--color-success-text);
+  border: none;
 }
 
 /* Delete button */
-.task-app__delete-btn {
+.task-app__action-btn.task-app__delete-btn {
   background: linear-gradient(180deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
   color: var(--color-danger-text);
+  border: none;
 }
 
 /* Tag button */
-.task-app__tag-btn {
+.task-app__action-btn.task-app__tag-btn {
   background-color: var(--color-neutral);
   color: var(--color-bg-card);
+  border: none;
 }
 
 .task-app__tag-btn:hover {
@@ -97,10 +100,10 @@
 .task-app__sort-btn {
   background: none;
   border: none;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
+  font-size: 22px;
   color: var(--color-primary);
   transition: background-color var(--transition-smooth);
   width: 28px;
@@ -127,11 +130,11 @@
 .task-app__clear-tag-btn {
   background: none;
   border: none;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 20px;
+  color: var(--color-danger);
   opacity: 0.7;
   transition: opacity var(--transition-smooth),
               background-color var(--transition-smooth),
@@ -150,7 +153,7 @@
 
 .task-app__clear-tag-btn:hover {
   opacity: 1;
-  color: var(--color-text);
+  color: var(--color-danger-dark);
   background-color: var(--color-danger-light);
 }
 
