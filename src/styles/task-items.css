@@ -16,7 +16,7 @@
 
 .task-app__list--column .task-app__item {
   margin-bottom: var(--spacing-md);
-  padding: var(--spacing-md);
+  padding: 0; /* remove padding so action buttons reach top-to-bottom */
   font-size: var(--font-size-sm);
 }
 
@@ -60,12 +60,28 @@
 }
 
 .task-app__item-title {
-  flex: 1;
   font-weight: var(--font-weight-semibold);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
   line-height: var(--line-height-normal);
-  margin-bottom: var(--spacing-xs);
+  margin: 0 0 var(--spacing-xs) 0;
+  /* Clamp to two lines and then ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  /* standard property for compatibility */
+  line-clamp: 2;
+  /* Fallback: limit height to roughly two lines */
+  max-height: calc(var(--line-height-normal) * 2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.task-app__item-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
 }
 
 .task-app__item-age {
@@ -80,6 +96,11 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
+  /* Do not allow tags to wrap; truncate with ellipsis if they exceed available space */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .task-app__item-actions {

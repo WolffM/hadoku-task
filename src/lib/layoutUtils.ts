@@ -14,6 +14,7 @@ export interface LayoutConfig {
 export function getLayoutConfig(tagCount: number): LayoutConfig {
   if (tagCount === 2) return { columns: 2, useTags: 2, maxPerColumn: Infinity }
   if (tagCount === 3) return { columns: 3, useTags: 3, maxPerColumn: Infinity }
-  if (tagCount >= 4 && tagCount <= 5) return { columns: 2, useTags: 4, maxPerColumn: 10 }
+  if (tagCount === 4) return { columns: 2, useTags: 4, maxPerColumn: 10 }
+  if (tagCount === 5) return { columns: 3, useTags: 5, maxPerColumn: 10 }
   return { columns: 3, useTags: 6, maxPerColumn: 10 } // 6+ tags
 }

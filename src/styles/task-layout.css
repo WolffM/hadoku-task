@@ -30,25 +30,29 @@
 }
 
 /* Tag column */
+
 .task-app__tag-column {
-  border: 1px solid var(--color-border-light);
+  /* Minimal default: no border or background to keep layout clean */
+  border: none;
   border-radius: var(--radius-md);
   padding: var(--spacing-lg);
-  background: var(--color-bg-alt);
+  background: transparent;
   transition: all var(--transition-smooth);
-  border: 2px dashed transparent;
 }
 
-.task-app__tag-column:hover {
-  border-color: var(--color-primary);
-  background-color: var(--color-neutral-lighter);
-}
+/* No hover surface - only show highlight on active drag-over */
 
 /* Use shared drag-over utility */
 .task-app__tag-column--drag-over {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
   box-shadow: var(--shadow-focus-alt);
+}
+
+/* Only show special hover/dashed when actively dragging over a column */
+.task-app__tag-column.task-app__drag-over-active {
+  border: 2px dashed var(--color-primary);
+  background: var(--color-primary-bg);
 }
 
 /* Section headers - shared styles */
@@ -78,12 +82,26 @@
 
 /* Remaining tasks section */
 .task-app__remaining {
-  border-top: 2px solid var(--color-border-light);
-  padding-top: var(--spacing-xl);
+  /* Minimal default like tag columns */
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  background: transparent;
+  transition: all var(--transition-smooth);
 }
+
+/* No hover surface for remaining area - only highlight on drag-over */
 
 .task-app__remaining-header {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-lg);
+}
+
+/* When the remaining area is a drop target, show a rounded box similar to tag columns */
+.task-app__remaining.task-app__tag-column--drag-over {
+  /* Blue highlight only when actively dragging over */
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: var(--shadow-focus-alt);
 }

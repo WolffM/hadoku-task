@@ -10,15 +10,17 @@ export interface TaskAppProps {
   basename?: string;
   apiUrl?: string;
   environment?: string;
-  userType?: string; // Any string supported: 'public', 'friend', 'admin', or custom names
+  userType?: 'public' | 'friend' | 'admin';
+  userId?: string;
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   // Extract userType from URL params if not provided in props
   const urlParams = new URLSearchParams(window.location.search)
-  const userType = props.userType || urlParams.get('userType') || 'public'
+  const userType = props.userType || (urlParams.get('userType') as ('public' | 'friend' | 'admin')) || 'public'
+  const userId = props.userId || urlParams.get('userId') || 'public'
   
-  const finalProps = { ...props, userType }
+  const finalProps = { ...props, userType, userId }
   const root = createRoot(el)
   root.render(<App {...finalProps} />)
   ;(el as any).__root = root

@@ -14,6 +14,8 @@ interface TaskItemProps {
   onDelete: (taskId: string) => void
   onAddTag: (taskId: string) => void
   onDragStart?: (e: React.DragEvent, taskId: string) => void
+  onDragEnd?: (e: React.DragEvent) => void
+  selected?: boolean
 }
 
 export function TaskItem({
@@ -23,25 +25,40 @@ export function TaskItem({
   onComplete,
   onDelete,
   onAddTag,
-  onDragStart
+  onDragStart,
+  onDragEnd,
+  selected = false
 }: TaskItemProps) {
   const isCompleting = pendingOperations.has(`complete-${task.id}`)
   const isDeleting = pendingOperations.has(`delete-${task.id}`)
 
   return (
     <li 
-      className="task-app__item"
+      className={`task-app__item ${selected ? 'selected' : ''}`}
+      data-task-id={task.id}
       draggable={isDraggable}
       onDragStart={onDragStart ? (e) => onDragStart(e, task.id) : undefined}
+      onDragEnd={(e) => {
+        // Remove dragging class if present
+        const el = e.currentTarget as HTMLElement
+        el.classList.remove('dragging')
+        // Call external onDragEnd if provided
+        if (onDragEnd) {
+          try { onDragEnd(e) } catch {}
+        }
+      }}
     >
       <div className="task-app__item-content">
-        <div className="task-app__item-title-row">
-          <div className="task-app__item-title">{task.title}</div>
+  <div className="task-app__item-title" title={task.title}>{task.title}</div>
+
+        <div className="task-app__item-meta-row">
+          {task.tag ? (
+            <div className="task-app__item-tag">
+              {task.tag.split(' ').map((tag: string) => `#${tag}`).join(' ')}
+            </div>
+          ) : <div />}
           <div className="task-app__item-age">{formatAge(task.createdAt)}</div>
         </div>
-        {task.tag && <div className="task-app__item-tag">
-          {task.tag.split(' ').map(tag => `#${tag}`).join(' ')}
-        </div>}
       </div>
       <div className="task-app__item-actions">
         <button 
@@ -60,14 +77,7 @@ export function TaskItem({
         >
           {isDeleting ? '⏳' : '×'}
         </button>
-        <button 
-          className="task-app__action-btn task-app__tag-btn"
-          onClick={() => onAddTag(task.id)}
-          title="Add tag"
-          disabled={isCompleting || isDeleting}
-        >
-          🏷️
-        </button>
+        {/* tag button removed per UI decision - only complete and delete remain */}
       </div>
     </li>
   )

@@ -2,42 +2,86 @@
  * Hook for managing task operations
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createApi } from '../lib/api'
-import type { Task, TasksFile } from '@hadoku/task/api/types'
+import type { Task, TasksFile, BoardsFile } from '../lib/types'
 import { parseTaskInput } from '../lib/tagUtils'
 
 interface UseTasksProps {
-  userType: string // Any string supported: 'public', 'friend', 'admin', or custom names
-  isPublic: boolean
+  userType: string
+  userId?: string
 }
 
-export function useTasks({ userType, isPublic }: UseTasksProps) {
+// Generate a unique session ID to identify this tab's broadcasts
+export const SESSION_ID = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+// Helper to broadcast with delay to ensure localStorage propagation across tabs
+function deferredBroadcast(sessionId: string, userType: string, userId?: string, delayMs: number = 50) {
+  setTimeout(() => {
+    try {
+      const bc = new BroadcastChannel('tasks')
+      bc.postMessage({ type: 'tasks-updated', sessionId, userType, userId })
+      bc.close()
+    } catch (err) {
+      console.error('[useTasks] Broadcast failed:', err)
+    }
+  }, delayMs)
+}
+
+export function useTasks({ userType, userId }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
-  const api = createApi(userType)
+  const api = createApi(userType as 'public' | 'friend' | 'admin', userId || 'public')
+  const [boards, setBoards] = useState<BoardsFile | null>(null)
+  const [currentBoardId, setCurrentBoardId] = useState<string>('main')
 
   async function initialLoad() {
-    // Public mode now uses localStorage (no server calls)
-    // Admin/friend modes load from server
+    console.log('[useTasks] initialLoad called')
     await reload()
   }
 
   async function reload() {
-    const tf: TasksFile = await api.getTasks()
-    // Only show Active tasks in the UI
-    setTasks((tf.tasks || []).filter(t => t.state === 'Active'))
-  }
-
-  function broadcastTasksUpdated() {
-    try {
-      const bc = new BroadcastChannel('tasks')
-      bc.postMessage({ type: 'tasks-updated' })
-      bc.close()
-    } catch (error) {
-      console.warn('Failed to broadcast task update:', error)
+    console.log('[useTasks] reload called', { currentBoardId, stack: new Error().stack?.split('\n').slice(1, 4).join('\n') })
+    const bf = await api.getBoards()
+    setBoards(bf)
+    const board = bf.boards.find(b => b.id === currentBoardId)
+    if (board) {
+      console.log('[useTasks] reload: found current board', { boardId: board.id, taskCount: board.tasks?.length || 0 })
+      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
+    } else {
+      console.log('[useTasks] reload: board not found', { currentBoardId })
+      setTasks([])
     }
   }
+
+  // Listen for broadcasted updates about tasks or boards
+  useEffect(() => {
+    console.log('[useTasks] Setting up BroadcastChannel listener', { currentBoardId })
+    try {
+      const bcListener = new BroadcastChannel('tasks')
+      bcListener.onmessage = (e) => {
+        const msg = e.data || {}
+        console.log('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId })
+        
+        // Ignore messages from the same session to prevent infinite loops
+        if (msg.sessionId === SESSION_ID) {
+          console.log('[useTasks] Ignoring own broadcast message')
+          return
+        }
+        
+        if (msg.type === 'tasks-updated' || msg.type === 'boards-updated') {
+          console.log('[useTasks] BroadcastChannel: triggering reload for currentBoardId =', currentBoardId)
+          void reload()
+        }
+      }
+      return () => {
+        console.log('[useTasks] Cleaning up BroadcastChannel listener', { currentBoardId })
+        bcListener.close()
+      }
+    } catch (err) {
+      console.error('[useTasks] Failed to setup BroadcastChannel', err)
+    }
+  }, [currentBoardId]) // Recreate listener when board changes to capture latest state
 
   async function addTask(input: string) {
     input = input.trim()
@@ -45,9 +89,8 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     
     try {
       const parsed = parseTaskInput(input)
-      await api.createTask(parsed)
+      await api.createTask(parsed, currentBoardId)
       await reload()
-      broadcastTasksUpdated()
       return true
     } catch (error) {
       alert((error as Error).message || 'Failed to create task')
@@ -67,9 +110,8 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     setPendingOperations(prev => new Set([...prev, operationKey]))
     
     try {
-      await api.completeTask(taskId)
+      await api.completeTask(taskId, currentBoardId)
       await reload()
-      broadcastTasksUpdated()
     } catch (error) {
       // Only show error if it's not a 404 (task already processed)
       if (!(error as any)?.message?.includes('404')) {
@@ -86,10 +128,12 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
   }
 
   async function deleteTask(taskId: string) {
+    console.log('[useTasks] deleteTask START', { taskId, currentBoardId })
     const operationKey = `delete-${taskId}`
     
     // Prevent duplicate requests
     if (pendingOperations.has(operationKey)) {
+      console.log('[useTasks] deleteTask: already pending, skipping', { operationKey })
       return
     }
     
@@ -97,9 +141,11 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     setPendingOperations(prev => new Set([...prev, operationKey]))
     
     try {
-      await api.deleteTask(taskId)
+      console.log('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
+      await api.deleteTask(taskId, currentBoardId)
+      console.log('[useTasks] deleteTask: calling reload')
       await reload()
-      broadcastTasksUpdated()
+      console.log('[useTasks] deleteTask END')
     } catch (error) {
       // Only show error if it's not a 404 (task already processed)
       if (!(error as any)?.message?.includes('404')) {
@@ -119,8 +165,8 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     const newTag = prompt('Enter tag (without #):')
     if (!newTag) return
     
-    // Normalize tag: convert spaces to hyphens
-    const normalizedTag = newTag.trim().replace(/\s+/g, '-')
+    // Normalize tag: remove any leading '#' characters, trim, convert spaces to hyphens
+    const normalizedTag = newTag.trim().replace(/^#+/, '').replace(/\s+/g, '-')
     
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
@@ -131,36 +177,99 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     const updatedTags = [...existingTags, normalizedTag].join(' ')
     
     try {
-      await api.patchTask(taskId, { tag: updatedTags })
+      await api.patchTask(taskId, { tag: updatedTags }, currentBoardId)
       await reload()
-      broadcastTasksUpdated()
     } catch (error) {
       alert((error as Error).message || 'Failed to add tag')
     }
   }
 
-  async function updateTaskTags(taskId: string, updates: { tag: string }) {
+  // updateTaskTags now returns an object with suppressBroadcast and skipReload options
+  async function updateTaskTags(taskId: string, updates: { tag: string }, options: { suppressBroadcast?: boolean, skipReload?: boolean } = {}) {
+    const { suppressBroadcast = false, skipReload = false } = options
     try {
-      await api.patchTask(taskId, updates)
-      await reload()
-      broadcastTasksUpdated()
+      await api.patchTask(taskId, updates, currentBoardId, suppressBroadcast)
+      if (!skipReload) {
+        await reload()
+      }
     } catch (error) {
+      throw error
+    }
+  }
+  
+  // Helper for bulk tag updates - suppresses broadcasts and reloads, then does both once at the end
+  async function bulkUpdateTaskTags(updates: Array<{ taskId: string, tag: string }>) {
+    console.log('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
+    try {
+      // Suppress broadcasts during bulk operation
+      for (const { taskId, tag } of updates) {
+        await api.patchTask(taskId, { tag }, currentBoardId, true)
+      }
+      
+      // Manually broadcast after bulk operation completes
+      console.log('[useTasks] bulkUpdateTaskTags: broadcasting bulk update with delay')
+      deferredBroadcast(SESSION_ID, userType, userId)
+      
+      console.log('[useTasks] bulkUpdateTaskTags: calling reload')
+      await reload()
+      console.log('[useTasks] bulkUpdateTaskTags END')
+    } catch (error) {
+      console.error('[useTasks] bulkUpdateTaskTags ERROR', error)
       throw error
     }
   }
 
   async function clearTasksByTag(tag: string) {
-    if (!confirm(`Clear all tasks with #${tag} tag?`)) return
+    console.log('[useTasks] clearTasksByTag START', { tag, currentBoardId, taskCount: tasks.length })
     
-    try {
-      const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
-      for (const task of tagTasks) {
-        await api.deleteTask(task.id)
+    // Check if we have tasks with this tag
+    const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
+    console.log('[useTasks] clearTasksByTag: found tasks with tag', { tag, count: tagTasks.length })
+    
+    if (tagTasks.length === 0) {
+      console.log('[useTasks] clearTasksByTag: no tasks found with this tag, just deleting tag')
+      try {
+        await api.deleteTag(tag, currentBoardId)
+        await reload()
+        console.log('[useTasks] clearTasksByTag END (no tasks to clear)')
+      } catch (error) {
+        console.error('[useTasks] clearTasksByTag ERROR', error)
+        // Note: alert() may also be blocked - log instead
+        console.error('[useTasks] clearTasksByTag: Please fix this error:', (error as Error).message)
       }
+      return
+    }
+    
+    // NOTE: Browser dialogs (confirm/prompt/alert) are being blocked by browser/extension
+    // Proceeding without confirmation - TODO: implement custom React modal for confirmation
+    console.log('[useTasks] clearTasksByTag: proceeding without confirmation (dialogs blocked)', { taskCount: tagTasks.length })
+
+    try {
+      console.log('[useTasks] clearTasksByTag: starting to patch tasks')
+      
+      // Suppress individual broadcasts during bulk operation
+      for (const task of tagTasks) {
+        const existingTags = task.tag?.split(' ') || []
+        const updatedTags = existingTags.filter(tg => tg !== tag)
+        const tagValue = updatedTags.length > 0 ? updatedTags.join(' ') : null
+        console.log('[useTasks] clearTasksByTag: patching task', { taskId: task.id, oldTags: existingTags, newTags: updatedTags })
+        await api.patchTask(task.id, { tag: tagValue }, currentBoardId, true)
+      }
+      
+      console.log('[useTasks] clearTasksByTag: deleting tag from board', { tag, currentBoardId })
+      await api.deleteTag(tag, currentBoardId)
+      
+      // Manually broadcast after bulk operation completes
+      console.log('[useTasks] clearTasksByTag: broadcasting bulk update with delay')
+      deferredBroadcast(SESSION_ID, userType, userId)
+      
+      console.log('[useTasks] clearTasksByTag: calling reload')
       await reload()
-      broadcastTasksUpdated()
+      
+      console.log('[useTasks] clearTasksByTag END')
     } catch (error) {
-      alert((error as Error).message || 'Failed to clear tagged tasks')
+      console.error('[useTasks] clearTasksByTag ERROR', error)
+      alert((error as Error).message || 'Failed to remove tag from tasks')
     }
   }
 
@@ -169,26 +278,106 @@ export function useTasks({ userType, isPublic }: UseTasksProps) {
     
     try {
       for (const task of tasksToDelete) {
-        await api.deleteTask(task.id)
+        await api.deleteTask(task.id, currentBoardId)
       }
       await reload()
-      broadcastTasksUpdated()
     } catch (error) {
       alert((error as Error).message || 'Failed to clear remaining tasks')
     }
   }
 
+  // Board helpers
+  async function createBoard(boardId: string) {
+    await api.createBoard(boardId)
+    await reload()
+    setCurrentBoardId(boardId)
+  }
+
+  // Move multiple tasks to another board
+  async function moveTasksToBoard(targetBoardId: string, ids: string[]) {
+    console.log('[useTasks] moveTasksToBoard START', { targetBoardId, ids, currentBoardId })
+    if (!boards) return
+    const tasksToMove: { id: string; title: string; tag?: string; boardId: string }[] = []
+    for (const b of boards.boards) {
+      for (const t of b.tasks || []) {
+        if (ids.includes(t.id)) {
+          tasksToMove.push({ id: t.id, title: t.title, tag: t.tag || undefined, boardId: b.id })
+        }
+      }
+    }
+    console.log('[useTasks] moveTasksToBoard: found tasks to move', { count: tasksToMove.length })
+
+    // Suppress individual broadcasts during bulk operation
+    for (const t of tasksToMove) {
+      await api.createTask({ title: t.title, tag: t.tag }, targetBoardId, true)
+      await api.deleteTask(t.id, t.boardId, true)
+    }
+    
+    // Manually broadcast after bulk operation completes
+    console.log('[useTasks] moveTasksToBoard: broadcasting bulk update with delay')
+    deferredBroadcast(SESSION_ID, userType, userId)
+    
+    console.log('[useTasks] moveTasksToBoard: calling reload')
+    await reload()
+    console.log('[useTasks] moveTasksToBoard END')
+  }
+
+  async function deleteBoard(boardId: string) {
+    await api.deleteBoard(boardId)
+    if (currentBoardId === boardId) setCurrentBoardId('main')
+    await reload()
+  }
+
+  async function createTagOnBoard(tag: string) {
+    await api.createTag(tag, currentBoardId)
+    await reload()
+  }
+
+  async function deleteTagOnBoard(tag: string) {
+    await api.deleteTag(tag, currentBoardId)
+    await reload()
+  }
+
+  function switchBoard(boardId: string) {
+    setCurrentBoardId(boardId)
+    const board = boards?.boards.find(b => b.id === boardId)
+    if (board) {
+      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
+    } else {
+      // Board not present in memory (race) - reload from API
+      void reload()
+    }
+  }
+
   return {
+    // Task state
     tasks,
     pendingOperations,
-    initialLoad,
-    reload,
+    
+    // Task operations
     addTask,
     completeTask,
     deleteTask,
     addTagToTask,
     updateTaskTags,
+    bulkUpdateTaskTags,
     clearTasksByTag,
-    clearRemainingTasks
+    clearRemainingTasks,
+    
+    // Board state
+    boards,
+    currentBoardId,
+    
+    // Board operations
+    createBoard,
+    deleteBoard,
+    switchBoard,
+    moveTasksToBoard,
+    createTagOnBoard,
+    deleteTagOnBoard,
+    
+    // Lifecycle
+    initialLoad,
+    reload
   }
 }
