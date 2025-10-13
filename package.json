@@ -31,8 +31,7 @@
     "preview": "vite preview",
     "test:server": "tsx test-server.ts",
     "version:patch": "npm version patch --no-git-tag-version",
-    "prepublishOnly": "npm run version:patch && npm run build:all",
-    "prepare": "node -e \"try{require('fs').mkdirSync('.git/hooks',{recursive:true})}catch(e){}\" && node -e \"require('fs').writeFileSync('.git/hooks/pre-push','#!/bin/sh\\nnpm run version:patch\\ngit add package.json\\ngit commit --amend --no-edit\\n',{mode:0o755})\""
+    "prepublishOnly": "npm run version:patch && npm run build:all"
   },
   "dependencies": {
     "react": "^18.3.1",
