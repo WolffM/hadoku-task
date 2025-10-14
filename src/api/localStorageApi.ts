@@ -3,11 +3,11 @@
  * Provides the same interface as the server API but stores data locally
  */
 
-import { ulid } from './ulid'
-import type { TasksFile, StatsFile, Task, BoardsFile, Board } from './types'
+import { ulid } from '../domain/utils/ulid'
+import type { TasksFile, StatsFile, Task, BoardsFile, Board } from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
-import * as TaskHandlers from '../server/handlers'
+import * as TaskHandlers from '../domain/handlers/handlers'
 
 // Helper to broadcast with delay to ensure localStorage propagation across tabs
 function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, delayMs: number = 50) {
@@ -260,7 +260,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     // User preferences
-    async getPreferences(): Promise<import('./types').UserPreferences> {
+    async getPreferences(): Promise<import('../domain/types').UserPreferences> {
       const key = `${userType}-${userId}-preferences`
       const stored = localStorage.getItem(key)
       if (stored) {
@@ -274,7 +274,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       }
     },
 
-    async savePreferences(prefs: Partial<import('./types').UserPreferences>): Promise<void> {
+    async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>): Promise<void> {
       const key = `${userType}-${userId}-preferences`
       const current = await this.getPreferences()
       const updated = {

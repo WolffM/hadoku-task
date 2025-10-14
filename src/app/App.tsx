@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { TaskAppProps } from './entry'
-import { useTasks, SESSION_ID } from './hooks/useTasks'
-import { useDragAndDrop } from './hooks/useDragAndDrop'
-import { useTaskSort } from './hooks/useTaskSort'
-import { useLongPress } from './hooks/useLongPress'
-import { TaskLayout } from './components/TaskLayout'
-import { Modal } from './components/Modal'
-import { ContextMenu } from './components/ContextMenu'
-import { getTopTags, getAllTags } from './lib/tagUtils'
-import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
-import { createApi } from './lib/api'
-import type { ThemeName } from './lib/types'
+import { useTasks, SESSION_ID } from '../hooks/useTasks'
+import { useDragAndDrop } from '../hooks/useDragAndDrop'
+import { useTaskSort } from '../hooks/useTaskSort'
+import { BoardButton } from '../components/BoardButton'
+import { TagFilterButton } from '../components/TagFilterButton'
+import { TaskLayout } from '../components/TaskLayout'
+import { Modal } from '../components/Modal'
+import { ContextMenu } from '../components/ContextMenu'
+import { getTopTags, getAllTags } from '../domain/utils/tags'
+import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
+import { createApi } from '../api/client'
+import type { ThemeName } from './types'
 
 // UI Configuration
 const MAX_BOARDS = 5 // Maximum number of boards to display in the board list
@@ -40,6 +41,7 @@ export default function App(props: TaskAppProps = {}) {
     taskIds: string[]
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
@@ -176,9 +178,30 @@ export default function App(props: TaskAppProps = {}) {
     }
   }
 
+  // Validate board name for duplicates
+  function validateBoardName(name: string): string | null {
+    const trimmed = name.trim()
+    if (!trimmed) return 'Board name cannot be empty'
+    
+    const existingNames = boards?.boards?.map(b => b.id.toLowerCase()) || []
+    if (existingNames.includes(trimmed.toLowerCase())) {
+      return `Board "${trimmed}" already exists`
+    }
+    
+    return null // Valid
+  }
+
   // Handle board creation and optionally move pending tasks
   async function handleCreateBoard(boardName: string) {
     const name = boardName.trim()
+    
+    // Validate before attempting to create
+    const error = validateBoardName(name)
+    if (error) {
+      setValidationError(error)
+      return
+    }
+    
     try {
       // Always create the board first
       await createBoard(name)
@@ -196,9 +219,10 @@ export default function App(props: TaskAppProps = {}) {
       
       // Clear the pending operation
       setPendingTaskOperation(null)
+      setValidationError(null)
     } catch (err) {
       console.error('[App] Failed to create board:', err)
-      throw err
+      setValidationError((err as Error).message || 'Failed to create board')
     }
   }
 
@@ -261,46 +285,18 @@ export default function App(props: TaskAppProps = {}) {
       <div className="task-app__boards">
         {/* Render up to MAX_BOARDS board buttons, highlight active */}
         <div className="task-app__board-list">
-          {(boards && boards.boards ? boards.boards.slice(0, MAX_BOARDS) : [{ id: 'main', name: 'main' }]).map(b => (
-            <button
+          {(boards && boards.boards ? boards.boards.slice(0, MAX_BOARDS) : [{ id: 'main', name: 'main', tasks: [], tags: [] }]).map(b => (
+            <BoardButton
               key={b.id}
-              className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
-              onClick={() => switchBoard(b.id)}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                if (b.id === 'main') return // Don't allow deleting main board
-                setBoardContextMenu({ boardId: b.id, x: e.clientX, y: e.clientY })
-              }}
-              {...(b.id !== 'main' ? useLongPress({
-                onLongPress: (x, y) => setBoardContextMenu({ boardId: b.id, x, y })
-              }) : {})}
-              aria-pressed={currentBoardId === b.id ? 'true' : 'false'}
-                onDragOver={(e) => {
-                  // Indicate this board can accept drops
-                  e.preventDefault()
-                  e.dataTransfer.dropEffect = 'move'
-                  // set a temporary state by using dragOverFilter semantic to indicate board hover
-                  dragAndDrop.setDragOverFilter(`board:${b.id}`)
-                }}
-                onDragLeave={(e) => {
-                  dragAndDrop.setDragOverFilter(null)
-                }}
-                onDrop={async (e) => {
-                  e.preventDefault()
-                  dragAndDrop.setDragOverFilter(null)
-                  const ids = getTaskIdsFromDragEvent(e.dataTransfer)
-                  if (ids.length === 0) return
-                  try {
-                    await moveTasksToBoard(b.id, ids)
-                    try { dragAndDrop.clearSelection() } catch {}
-                  } catch (err) {
-                    console.error('Failed moving tasks to board', err)
-                    alert((err as Error).message || 'Failed to move tasks')
-                  }
-                }}
-              >
-                {b.name}
-              </button>
+              board={b}
+              isActive={currentBoardId === b.id}
+              isDragOver={dragAndDrop.dragOverFilter === `board:${b.id}`}
+              onSwitch={switchBoard}
+              onContextMenu={(boardId, x, y) => setBoardContextMenu({ boardId, x, y })}
+              onDragOverFilter={dragAndDrop.setDragOverFilter}
+              onMoveTasksToBoard={moveTasksToBoard}
+              onClearSelection={dragAndDrop.clearSelection}
+            />
           ))}
         </div>
 
@@ -311,6 +307,7 @@ export default function App(props: TaskAppProps = {}) {
               className={`board-add-btn ${dragAndDrop.dragOverFilter === 'add-board' ? 'board-btn--drag-over' : ''}`}
               onClick={() => {
                 setInputValue('')
+                setValidationError(null)
                 setShowNewBoardDialog(true)
               }}
               onDragOver={(e) => {
@@ -360,13 +357,13 @@ export default function App(props: TaskAppProps = {}) {
           const derived = getAllTags(tasks)
           // Persisted tags should appear in the filters even if there are no matching tasks
           const all = Array.from(new Set([...persistedTags, ...derived]))
-          return all.map(tag => {
-          const on = selectedFilters.has(tag)
-          
-          return (
-            <button
+          return all.map(tag => (
+            <TagFilterButton
               key={tag}
-              onClick={() => {
+              tag={tag}
+              isActive={selectedFilters.has(tag)}
+              isDragOver={dragAndDrop.dragOverFilter === tag}
+              onToggle={(tag) => {
                 setSelectedFilters(prev => {
                   const copy = new Set(prev)
                   if (copy.has(tag)) copy.delete(tag)
@@ -374,22 +371,12 @@ export default function App(props: TaskAppProps = {}) {
                   return copy
                 })
               }}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                setTagContextMenu({ tag, x: e.clientX, y: e.clientY })
-              }}
-              {...useLongPress({
-                onLongPress: (x, y) => setTagContextMenu({ tag, x, y })
-              })}
-              className={`${on ? 'on' : ''} ${dragAndDrop.dragOverFilter === tag ? 'task-app__filter-drag-over' : ''}`}
-              onDragOver={(e) => dragAndDrop.onFilterDragOver(e, tag)}
+              onContextMenu={(tag, x, y) => setTagContextMenu({ tag, x, y })}
+              onDragOver={dragAndDrop.onFilterDragOver}
               onDragLeave={dragAndDrop.onFilterDragLeave}
-              onDrop={(e) => dragAndDrop.onFilterDrop(e, tag)}
-            >
-              #{tag}
-            </button>
-          )
-          })
+              onDrop={dragAndDrop.onFilterDrop}
+            />
+          ))
         })()}
         <button 
           className={`task-app__filter-add ${dragAndDrop.dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
@@ -485,25 +472,38 @@ export default function App(props: TaskAppProps = {}) {
         onClose={() => {
           setShowNewBoardDialog(false)
           setPendingTaskOperation(null)
+          setValidationError(null)
         }}
         onConfirm={async () => {
           if (!inputValue.trim()) return
-          setShowNewBoardDialog(false)
-          try {
-            await handleCreateBoard(inputValue)
-          } catch (err) {
-            console.error('[App] Failed to create board:', err)
+          
+          // Validate before closing modal
+          const error = validateBoardName(inputValue)
+          if (error) {
+            setValidationError(error)
+            return // Don't close modal if validation fails
           }
+          
+          setShowNewBoardDialog(false)
+          await handleCreateBoard(inputValue)
         }}
         inputValue={inputValue}
-        onInputChange={setInputValue}
+        onInputChange={(value) => {
+          setInputValue(value)
+          setValidationError(null) // Clear error on input change
+        }}
         inputPlaceholder="Board name"
         confirmLabel="Create"
-        confirmDisabled={!inputValue.trim()}
+        confirmDisabled={!inputValue.trim() || validateBoardName(inputValue) !== null}
       >
         {pendingTaskOperation?.type === 'move-to-board' && pendingTaskOperation.taskIds.length > 0 && (
           <p className="modal-hint">
             {pendingTaskOperation.taskIds.length} task{pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
+          </p>
+        )}
+        {validationError && (
+          <p className="modal-error" style={{ color: 'var(--error-color, #d32f2f)', marginTop: '0.5rem' }}>
+            {validationError}
           </p>
         )}
       </Modal>

@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "2.2.28",
+  "version": "2.2.32",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -15,7 +15,9 @@
     "dist/index.js",
     "dist/style.css",
     "API.md",
-    "README.md"
+    "README.md",
+    "docs/PARENT_API_REFERENCE.md",
+    "docs/refator/PARENT_API_COMPLIANCE.md"
   ],
   "exports": {
     "./api": {

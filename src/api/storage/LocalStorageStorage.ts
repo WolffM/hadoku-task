@@ -3,7 +3,7 @@
  * Used by handlers.ts to persist data client-side
  */
 
-import type { TasksFile, StatsFile, BoardsFile } from '../types'
+import type { TasksFile, StatsFile, BoardsFile } from '../../domain/types'
 
 export class LocalStorageStorage {
   constructor(

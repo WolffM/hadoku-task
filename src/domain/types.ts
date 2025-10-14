@@ -107,3 +107,10 @@ export interface SyncQueueItem {
 }
 
 export type DataType = 'tasks' | 'stats'
+
+// User preferences (synced to server)
+export interface UserPreferences {
+  version: 1
+  updatedAt: string
+  theme?: string
+}

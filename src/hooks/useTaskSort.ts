@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react'
-import type { Task } from '../lib/types'
+import type { Task } from '../domain/types'
 
 export type SortDirection = 'asc' | 'desc'
 

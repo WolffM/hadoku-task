@@ -4,11 +4,11 @@
     "module": "ESNext",
     "target": "ES2022",
     "outDir": "./dist/server",
-    "rootDir": "./src/server",
+    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "moduleResolution": "node"
   },
-  "include": ["src/server/**/*.ts"]
+  "include": ["src/server/**/*.ts", "src/domain/**/*.ts"]
 }

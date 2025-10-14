@@ -4,7 +4,7 @@
 
 import React, { useState, useRef } from 'react'
 import { useEffect } from 'react'
-import type { Task } from '@hadoku/task/api/types'
+import type { Task } from '../../domain/types'
 
 interface UseDragAndDropProps {
   tasks: Task[]

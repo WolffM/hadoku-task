@@ -7,6 +7,12 @@ dist-ssr/
 *.local
 *.log*
 
+# TypeScript compilation artifacts
+src/**/*.js
+src/**/*.d.ts
+src/**/*.js.map
+src/**/*.d.ts.map
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

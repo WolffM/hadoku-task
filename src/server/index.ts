@@ -23,8 +23,8 @@
  * ```
  */
 
-export * as TaskHandlers from './handlers.js';
-export * as TaskUtils from './utils.js';
+export * as TaskHandlers from '../domain/handlers/handlers.js';
+export * as TaskUtils from '../domain/utils/shared.js';
 export type { Storage as TaskStorage } from './storage.js';
 export type {
   Task,
@@ -38,4 +38,4 @@ export type {
   CreateTaskInput,
   UpdateTaskInput,
   ULID
-} from './types.js';
+} from '../domain/types.js';

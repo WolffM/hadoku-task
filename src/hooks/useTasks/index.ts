@@ -3,16 +3,16 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { createApi } from '../lib/api'
-import type { Task, TasksFile, BoardsFile } from '../lib/types'
-import { parseTaskInput } from '../lib/tagUtils'
-import { SESSION_ID } from '../lib/session'
+import { createApi } from '../../api/client'
+import type { Task, TasksFile, BoardsFile } from '../../domain/types'
+import { parseTaskInput } from '../../domain/utils/tags'
+import { SESSION_ID } from '../../api/session'
 import {
   deferredBroadcast,
   withPendingOperation,
   withBulkOperation,
   extractBoardTasks,
-} from './useTasksHelpers'
+} from './helpers'
 
 interface UseTasksProps {
   userType: string

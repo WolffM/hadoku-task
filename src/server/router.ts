@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express'
-import type { RouterConfig } from './types.js'
+import type { RouterConfig } from '../domain/types.js'
 import { ensureUserDataExists, createStorage } from './storage.js'
 import { SyncQueue } from './sync-queue.js'
 import { createTaskRoutes } from './routes-adapter.js'

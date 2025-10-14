@@ -3,7 +3,7 @@
  * These functions are completely framework-agnostic and can be used with any web framework
  */
 
-import type { Storage } from './storage.js';
+import type { Storage } from '../../server/storage.js';
 import type {
   AuthContext,
   Task,
@@ -14,8 +14,8 @@ import type {
   CreateTaskInput,
   UpdateTaskInput,
   ULID
-} from './types.js';
-import { generateULID, now } from './utils.js';
+} from '../types.js';
+import { generateULID, now } from '../utils/shared.js';
 import {
   findTaskOrThrow,
   findBoardOrThrow,
@@ -119,7 +119,7 @@ function recordDeletion(stats: StatsFile, task: Task, timestamp: string): StatsF
  */
 export async function getBoards(
   storage: Storage,
-  auth: AuthContext & { userId?: string }
+  auth: AuthContext
 ): Promise<BoardsFile> {
   // Get board metadata (id, name, tags only in v2 architecture)
   const boardsFile = await storage.getBoards(auth.userType, auth.userId);
@@ -151,7 +151,7 @@ export async function getBoards(
  */
 export async function getBoardTasks(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   boardId: string
 ): Promise<Task[]> {
   const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
@@ -163,7 +163,7 @@ export async function getBoardTasks(
  */
 export async function getBoardStats(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   boardId: string
 ): Promise<StatsFile> {
   const stats = await storage.getStats(auth.userType, auth.userId, boardId);
@@ -178,7 +178,7 @@ export async function getBoardStats(
  */
 export async function createTask(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   input: CreateTaskInput,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; id: ULID }> {
@@ -218,7 +218,7 @@ export async function createTask(
  */
 export async function updateTask(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   taskId: ULID,
   input: UpdateTaskInput,
   boardId: string = 'main'
@@ -260,7 +260,7 @@ export async function updateTask(
  */
 export async function completeTask(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   taskId: ULID,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
@@ -301,7 +301,7 @@ export async function completeTask(
  */
 export async function deleteTask(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   taskId: ULID,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
@@ -344,7 +344,7 @@ export async function deleteTask(
  */
 export async function createBoard(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   input: { id: string; name: string }
 ): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
   const timestamp = now();
@@ -378,7 +378,7 @@ export async function createBoard(
  */
 export async function deleteBoard(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   boardId: string
 ): Promise<{ ok: boolean; message: string }> {
   // Prevent deleting the main board
@@ -409,7 +409,7 @@ export async function deleteBoard(
  */
 export async function createTag(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   const timestamp = now();
@@ -441,7 +441,7 @@ export async function createTag(
  */
 export async function deleteTag(
   storage: Storage,
-  auth: AuthContext & { userId?: string },
+  auth: AuthContext,
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   const timestamp = now();
@@ -453,7 +453,7 @@ export async function deleteTag(
   
   const updatedBoard = {
     ...board,
-    tags: existingTags.filter(t => t !== input.tag)
+    tags: existingTags.filter((t: string) => t !== input.tag)
   };
   
   const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
@@ -462,3 +462,5 @@ export async function deleteTag(
   
   return { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` };
 }
+
+

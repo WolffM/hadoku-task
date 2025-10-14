@@ -2,7 +2,7 @@
  * Tag parsing and filtering utilities
  */
 
-import type { Task } from './types'
+import type { Task } from '../types'
 
 /**
  * Parse task input and extract title and tags

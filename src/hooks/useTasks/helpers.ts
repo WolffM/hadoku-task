@@ -3,7 +3,7 @@
  * Extracts common patterns to reduce duplication
  */
 
-import { SESSION_ID } from '../lib/session'
+import { SESSION_ID } from '../../api/session'
 
 /**
  * Broadcast a tasks-updated message with a delay to ensure localStorage propagation

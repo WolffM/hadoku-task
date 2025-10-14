@@ -12,7 +12,7 @@ import type {
   Board,
   BoardsFile,
   ULID
-} from './types.js';
+} from '../types.js';
 
 /**
  * Find task by ID or throw error

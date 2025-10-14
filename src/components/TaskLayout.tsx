@@ -3,11 +3,11 @@
  */
 
 import React from 'react'
-import type { Task } from '@hadoku/task/api/types'
+import type { Task } from '../domain/types'
 import type { SortDirection } from '../hooks/useTaskSort'
 import { TaskItem } from './TaskItem'
-import { getLayoutConfig } from '../lib/layoutUtils'
-import { getTasksByTag, getRemainingTasks } from '../lib/tagUtils'
+import { getLayoutConfig } from '../utils/layout'
+import { getTasksByTag, getRemainingTasks } from '../domain/utils/tags'
 
 interface TaskLayoutProps {
   tasks: Task[]

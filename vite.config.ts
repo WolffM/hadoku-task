@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: 'src/entry.tsx',
+      entry: 'src/app/entry.tsx',
       formats: ['es'],
       fileName: () => 'index.js',
     },

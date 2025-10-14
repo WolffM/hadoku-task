@@ -7,8 +7,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import process from 'process'
-import type { TasksFile, StatsFile, BoardsFile, Board, DataType, UserType, RouterConfig } from './types.js'
-import { now } from './utils.js'
+import type { TasksFile, StatsFile, BoardsFile, Board, DataType, UserType, RouterConfig } from '../domain/types.js'
+import { now } from '../domain/utils/shared.js'
 import type { SyncQueue } from './sync-queue.js'
 
 /**

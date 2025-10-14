@@ -6,7 +6,7 @@
 import { Router, type Request, type Response } from 'express'
 import { TaskHandlers } from './index.js'
 import type { Storage as TaskStorage } from './storage.js'
-import type { UserType } from './types.js'
+import type { UserType } from '../domain/types.js'
 
 /**
  * Create Express router using the framework-agnostic handlers

@@ -1,4 +1,4 @@
-import type { TasksFile, StatsFile, BoardsFile } from './types'
+import type { TasksFile, StatsFile, BoardsFile } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 
 /**
@@ -222,7 +222,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       return await localStorage.getPreferences()
     },
 
-    async savePreferences(prefs: Partial<import('./types').UserPreferences>) {
+    async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>) {
       await localStorage.savePreferences(prefs)
       // Background server sync
       fetch('/task/api/preferences', {
