@@ -100,10 +100,6 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       }
     },
     
-    async getStats(boardId: string = 'main'): Promise<StatsFile> {
-      return await localStorage.getStats(boardId)
-    },
-    
     async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
       // Create task optimistically with client-generated ID
       const localTask = await localStorage.createTask(data, boardId, suppressBroadcast)
@@ -219,10 +215,6 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         .then(() => console.log('[api] Background sync: deleteBoard completed'))
         .catch(err => console.error('[api] Failed to sync deleteBoard:', err))
       return result
-    },
-
-    async getTasks(boardId: string = 'main') {
-      return await localStorage.getTasks(boardId)
     },
 
     // User preferences

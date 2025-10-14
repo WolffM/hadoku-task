@@ -356,39 +356,6 @@ export async function deleteTask(
   return { ok: true, message: `Task ${taskId} deleted` };
 }
 
-/**
- * Clear all tasks (public users only, resets localStorage-style behavior)
- * This is only for public mode compatibility
- */
-export async function clearTasks(
-  storage: Storage,
-  auth: AuthContext
-): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType !== 'public') {
-    throw new Error('Forbidden: Only public users can clear tasks');
-  }
-
-  const timestamp = now();
-  const emptyTasks: TasksFile = {
-    version: 1,
-    updatedAt: timestamp,
-    tasks: []
-  };
-
-  const emptyStats: StatsFile = {
-    version: 2,
-    updatedAt: timestamp,
-    counters: { created: 0, completed: 0, edited: 0, deleted: 0 },
-    timeline: [],
-    tasks: {}
-  };
-
-  await storage.saveTasks(auth.userType, undefined, undefined, emptyTasks);
-  await storage.saveStats(auth.userType, undefined, undefined, emptyStats);
-
-  return { ok: true, message: 'Public tasks cleared' };
-}
-
 // --- Board Operations ---
 
 /**

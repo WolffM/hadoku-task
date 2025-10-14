@@ -5,9 +5,7 @@
 
 import { ulid } from './ulid'
 import type { TasksFile, StatsFile, Task, BoardsFile, Board } from './types'
-
-// Import SESSION_ID from useTasks to include in broadcasts
-import { SESSION_ID } from '../hooks/useTasks'
+import { SESSION_ID } from './session'
 
 // Helper to broadcast with delay to ensure localStorage propagation across tabs
 function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, delayMs: number = 50) {
@@ -144,7 +142,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
         const tasksFile = getTasks(userType, userId, b.id)
         const statsFile = getStats(userType, userId, b.id)
         // propagate persisted tags from the index entry if present
-        const boardEntry = { id: b.id, name: b.name, tasks: tasksFile.tasks, stats: statsFile, tags: (b as any).tags || [] }
+        const boardEntry = { id: b.id, name: b.name, tasks: tasksFile.tasks, stats: statsFile, tags: b.tags || [] }
         populated.boards.push(boardEntry)
       }
       return populated
@@ -207,10 +205,10 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
         const index = getBoardsIndex(userType, userId)
         const b = index.boards.find(bb => bb.id === boardId)
         if (b) {
-          const existing = (b as any).tags || []
+          const existing = b.tags || []
           const toAdd = data.tag.split(' ').filter(Boolean).filter(t => !existing.includes(t))
           if (toAdd.length) {
-            (b as any).tags = [...existing, ...toAdd]
+            b.tags = [...existing, ...toAdd]
             saveBoardsIndex(index, userType, userId)
           }
         }
@@ -240,10 +238,10 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
         const index = getBoardsIndex(userType, userId)
         const b = index.boards.find(bb => bb.id === boardId)
         if (b) {
-          const existing = (b as any).tags || []
+          const existing = b.tags || []
           const toAdd = (updates.tag || '').split(' ').filter(Boolean).filter(t => !existing.includes(t))
           if (toAdd.length) {
-            (b as any).tags = [...existing, ...toAdd]
+            b.tags = [...existing, ...toAdd]
             saveBoardsIndex(index, userType, userId)
           }
         }
@@ -311,9 +309,9 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       const index = getBoardsIndex(userType, userId)
       const b = index.boards.find(bb => bb.id === boardId)
       if (!b) throw new Error('Board not found')
-      const existing = (b as any).tags || []
+      const existing = b.tags || []
       if (!existing.includes(tag)) {
-        (b as any).tags = [...existing, tag]
+        b.tags = [...existing, tag]
         saveBoardsIndex(index, userType, userId)
         deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
       }
@@ -323,9 +321,9 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       const index = getBoardsIndex(userType, userId)
       const b = index.boards.find(bb => bb.id === boardId)
       if (!b) throw new Error('Board not found')
-      const existing = ((b as any).tags || []) as string[]
+      const existing = b.tags || []
       // Filter out the tag to delete
-      (b as any).tags = existing.filter(t => t !== tag)
+      b.tags = existing.filter(t => t !== tag)
       saveBoardsIndex(index, userType, userId)
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     },

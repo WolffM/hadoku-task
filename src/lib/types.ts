@@ -33,7 +33,7 @@ export interface Board {
   name: string; // display name
   tasks: Task[];
   // persistent list of known tags for this board (allows empty tag lists to remain)
-  tags?: string[];
+  tags: string[];
   stats?: StatsFile;
 }
 

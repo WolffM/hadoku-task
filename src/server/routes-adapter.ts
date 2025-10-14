@@ -83,18 +83,5 @@ export function createTaskRoutes(storage: TaskStorage): Router {
     }
   })
 
-  // POST /clear - Clear tasks (public only)
-  router.post('/clear', async (req: Request, res: Response) => {
-    const userType = (req.headers['x-user-type'] as UserType) || 'public'
-    const auth = { userType }
-
-    try {
-      const result = await TaskHandlers.clearTasks(storage, auth)
-      res.json(result)
-    } catch (error: any) {
-      res.status(403).json({ error: error.message })
-    }
-  })
-
   return router
 }

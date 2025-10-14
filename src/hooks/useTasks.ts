@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { createApi } from '../lib/api'
 import type { Task, TasksFile, BoardsFile } from '../lib/types'
 import { parseTaskInput } from '../lib/tagUtils'
+import { SESSION_ID } from '../lib/session'
 
 interface UseTasksProps {
   userType: string
@@ -13,8 +14,8 @@ interface UseTasksProps {
   sessionId?: string
 }
 
-// Generate a unique session ID to identify this tab's broadcasts
-export const SESSION_ID = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+// Re-export SESSION_ID for backwards compatibility
+export { SESSION_ID }
 
 // Helper to broadcast with delay to ensure localStorage propagation across tabs
 function deferredBroadcast(sessionId: string, userType: string, userId?: string, delayMs: number = 50) {
