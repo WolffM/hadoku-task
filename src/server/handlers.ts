@@ -116,8 +116,29 @@ export async function getBoards(
   storage: Storage,
   auth: AuthContext & { userId?: string }
 ): Promise<BoardsFile> {
-  // Public users can use boards with in-memory storage
-  return await storage.getBoards(auth.userType, auth.userId);
+  // Get board metadata (id, name, tags only in v2 architecture)
+  const boardsFile = await storage.getBoards(auth.userType, auth.userId);
+  
+  // Populate each board with its tasks and stats from separate storage
+  const populatedBoards = await Promise.all(
+    boardsFile.boards.map(async (board) => {
+      // Fetch tasks for this board
+      const tasksFile = await storage.getTasks(auth.userType, auth.userId, board.id);
+      // Fetch stats for this board
+      const statsFile = await storage.getStats(auth.userType, auth.userId, board.id);
+      
+      return {
+        ...board,
+        tasks: tasksFile.tasks,
+        stats: statsFile
+      };
+    })
+  );
+  
+  return {
+    ...boardsFile,
+    boards: populatedBoards
+  };
 }
 
 /**
