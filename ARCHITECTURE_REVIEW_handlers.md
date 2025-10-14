@@ -1,9 +1,16 @@
 # Architecture Review: handlers.ts
 
-## Status: ✅ CLEAN - No changes needed
+## Status: ⚠️ MOSTLY CLEAN - Minor unused handlers remain
 
 ## Purpose
-Pure business logic handlers for task operations. Framework-agnostic server-side logic.
+Pure business logic handlers for task operations. Framework-agnostic, used by BOTH server and client (single source of truth).
+
+## Recent Changes (October 14, 2025)
+✅ **Refactor Complete**: handlers.ts is now the single source of truth for ALL business logic
+- Used by server (via storage.ts)
+- Used by client (via LocalStorageStorage → localStorageApi)
+- Eliminated ~200 lines of duplication in localStorageApi.ts
+- **This file is CRITICAL to the architecture**
 
 ## Analysis
 
@@ -16,28 +23,14 @@ Pure business logic handlers for task operations. Framework-agnostic server-side
 
 ### ⚠️ Issues Found
 
-#### 1. Legacy `clearTasks()` Handler
-**Location:** Lines 367-390
-```typescript
-export async function clearTasks(
-  storage: Storage,
-  auth: AuthContext
-): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType !== 'public') {
-    throw new Error('Forbidden: Only public users can clear tasks');
-  }
-  // ... localStorage-style reset behavior
-}
-```
+#### 1. ~~Legacy `clearTasks()` Handler~~ ✅ RESOLVED
+**Status:** Already deleted (was dead code)
 
-**Problem:** 
-- Comment says "only for public mode compatibility"
-- But public users can't create tasks anyway (line 181: `if (auth.userType === 'public') throw`)
-- This handler is **dead code** - it can never be used
-- Public users: can't create tasks → nothing to clear
-- Other users: forbidden from using clearTasks
+**Previous issue:** Handler existed but could never be used
+- Public users couldn't create tasks → nothing to clear
+- Other users forbidden from using clearTasks
 
-**Recommendation:** DELETE this entire handler and remove from exports
+**Resolution:** Removed during refactor cleanup
 
 #### 2. Unused Handlers
 **Location:** Lines 138-166
@@ -64,7 +57,7 @@ export async function getBoardStats() { ... }
 | `updateTask()` | Client API | ✅ Active |
 | `completeTask()` | Client API | ✅ Active |
 | `deleteTask()` | Client API | ✅ Active |
-| `clearTasks()` | None | ❌ Dead code |
+| ~~`clearTasks()`~~ | None | ✅ Deleted |
 | `createBoard()` | Client API | ✅ Active |
 | `deleteBoard()` | Client API | ✅ Active |
 | `createTag()` | Client API | ✅ Active |
@@ -72,45 +65,22 @@ export async function getBoardStats() { ... }
 
 ## Recommendations
 
-### HIGH PRIORITY
-1. **Delete `clearTasks()` handler** - Dead code, can never be used
+### ✅ COMPLETED
+1. ~~**Delete `clearTasks()` handler**~~ - Already removed
 
-### MEDIUM PRIORITY
+### MEDIUM PRIORITY (Optional Cleanup)
 2. **Consider removing `getBoardTasks()` and `getBoardStats()`** - Currently unused
-3. If keeping them, add JSDoc comments explaining they're for future direct board/stats queries
+   - Not causing any problems
+   - Might be useful for future direct API endpoints
+   - **Decision:** Keep for now OR add JSDoc explaining they're reserved for future use
 
-## Code to Remove
+## Summary
 
-```typescript
-// DELETE lines 367-390
-export async function clearTasks(
-  storage: Storage,
-  auth: AuthContext
-): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType !== 'public') {
-    throw new Error('Forbidden: Only public users can clear tasks');
-  }
+**handlers.ts is in excellent shape!** 
 
-  const timestamp = now();
-  const emptyTasks: TasksFile = {
-    version: 1,
-    updatedAt: timestamp,
-    tasks: []
-  };
+- ✅ Core business logic handlers all actively used
+- ✅ Clean separation of concerns
+- ✅ Single source of truth achieved (both client and server use these handlers)
+- ⚠️ Two unused helpers (getBoardTasks, getBoardStats) - not problematic, might be useful later
 
-  const emptyStats: StatsFile = {
-    version: 2,
-    updatedAt: timestamp,
-    counters: { created: 0, completed: 0, edited: 0, deleted: 0 },
-    timeline: [],
-    tasks: {}
-  };
-
-  await storage.saveTasks(auth.userType, undefined, undefined, emptyTasks);
-  await storage.saveStats(auth.userType, undefined, undefined, emptyStats);
-
-  return { ok: true, message: 'Public tasks cleared' };
-}
-```
-
-Also remove from index.ts exports and any route definitions.
+**No urgent changes needed.** This file is critical to the architecture.
