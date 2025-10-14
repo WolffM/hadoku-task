@@ -328,6 +328,32 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       (b as any).tags = existing.filter(t => t !== tag)
       saveBoardsIndex(index, userType, userId)
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+    },
+
+    // User preferences
+    async getPreferences(): Promise<import('./types').UserPreferences> {
+      const key = `${userType}-${userId}-preferences`
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        return JSON.parse(stored)
+      }
+      // Default preferences
+      return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        theme: 'light'
+      }
+    },
+
+    async savePreferences(prefs: Partial<import('./types').UserPreferences>): Promise<void> {
+      const key = `${userType}-${userId}-preferences`
+      const current = await this.getPreferences()
+      const updated = {
+        ...current,
+        ...prefs,
+        updatedAt: new Date().toISOString()
+      }
+      localStorage.setItem(key, JSON.stringify(updated))
     }
   }
 }

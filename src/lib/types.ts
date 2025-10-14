@@ -43,6 +43,15 @@ export interface BoardsFile {
   boards: Board[];
 }
 
+// User preferences
+export type ThemeName = 'light' | 'dark' | 'strawberry' | 'ocean' | 'cyberpunk' | 'coffee' | 'lavender';
+
+export interface UserPreferences {
+  version: 1;
+  updatedAt: string;
+  theme: ThemeName;
+}
+
 export interface StatsTaskRecord {
   id: ULID;
   title: string;

@@ -8,6 +8,8 @@ import { Modal } from './components/Modal'
 import { ContextMenu } from './components/ContextMenu'
 import { getTopTags, getAllTags } from './lib/tagUtils'
 import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
+import { createApi } from './lib/api'
+import type { ThemeName } from './lib/types'
 
 export default function App(props: TaskAppProps = {}) {
   const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public', sessionId } = props;
@@ -17,7 +19,7 @@ export default function App(props: TaskAppProps = {}) {
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [theme, setTheme] = useState<'light' | 'dark' | 'strawberry' | 'ocean' | 'cyberpunk' | 'coffee' | 'lavender'>('light')
+  const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
@@ -60,6 +62,20 @@ export default function App(props: TaskAppProps = {}) {
 
   // Sort hook
   const sortHook = useTaskSort()
+
+  // Load user preferences (theme) on mount
+  useEffect(() => {
+    const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+    void api.getPreferences().then(prefs => {
+      setTheme(prefs.theme)
+    })
+  }, [userType, userId, sessionId])
+
+  // Save theme preference when it changes
+  useEffect(() => {
+    const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+    void api.savePreferences({ theme })
+  }, [theme, userType, userId, sessionId])
 
   // Initialize and reload when user context changes
   useEffect(() => {

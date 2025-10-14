@@ -202,7 +202,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       fetch('/task/api/boards', {
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
-        body: JSON.stringify({ boardId })
+        body: JSON.stringify({ id: boardId, name: boardId })
       })
         .then(() => console.log('[api] Background sync: createBoard completed'))
         .catch(err => console.error('[api] Failed to sync createBoard:', err))
@@ -223,6 +223,23 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
 
     async getTasks(boardId: string = 'main') {
       return await localStorage.getTasks(boardId)
+    },
+
+    // User preferences
+    async getPreferences() {
+      return await localStorage.getPreferences()
+    },
+
+    async savePreferences(prefs: Partial<import('./types').UserPreferences>) {
+      await localStorage.savePreferences(prefs)
+      // Background server sync
+      fetch('/task/api/preferences', {
+        method: 'PUT',
+        headers: adminHeaders(userType, userId, sessionId),
+        body: JSON.stringify(prefs)
+      })
+        .then(() => console.log('[api] Background sync: savePreferences completed'))
+        .catch(err => console.error('[api] Failed to sync savePreferences:', err))
     }
   }
 }
