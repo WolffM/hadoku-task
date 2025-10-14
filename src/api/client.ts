@@ -33,7 +33,7 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
   const boardsIndex = {
     version: 1,
     updatedAt: apiData.updatedAt || new Date().toISOString(),
-    boards: apiData.boards.map(b => ({
+    boards: (apiData.boards || []).map(b => ({
       id: b.id,
       name: b.name,
       tags: b.tags || []
@@ -91,7 +91,14 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         }
         
         const apiData: BoardsFile = await response.json()
-        console.log('[api] Synced from API:', { boards: apiData.boards?.length || 0, totalTasks: apiData.boards?.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) || 0 })
+        
+        // Validate response structure
+        if (!apiData || !apiData.boards || !Array.isArray(apiData.boards)) {
+          console.error('[api] Invalid response structure:', apiData)
+          return
+        }
+        
+        console.log('[api] Synced from API:', { boards: apiData.boards.length, totalTasks: apiData.boards.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) })
         
         // Update localStorage with server state
         await syncBoardsToLocalStorage(localStorage, apiData, userType, userId)
