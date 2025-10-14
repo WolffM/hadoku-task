@@ -13,13 +13,23 @@ import type { SyncQueue } from './sync-queue.js'
 
 /**
  * Storage interface - defines the contract for data persistence
+ * 
+ * NOTE: This interface supports BOTH legacy (v1) and board-scoped (v2) storage:
+ * - Legacy: getTasks(userType) - for backwards compatibility
+ * - V2: getTasks(userType, userId, boardId) - board-scoped storage
+ * 
+ * Implementations can support either or both patterns.
  */
 export interface Storage {
-  getTasks(userType: UserType): Promise<TasksFile>;
-  saveTasks(userType: UserType, tasks: TasksFile): Promise<void>;
-  getStats(userType: UserType): Promise<StatsFile>;
-  saveStats(userType: UserType, stats: StatsFile): Promise<void>;
-  // Board operations
+  // Legacy task operations (v1 - flat storage)
+  getTasks(userType: UserType, userId?: string, boardId?: string): Promise<TasksFile>;
+  saveTasks(userType: UserType, tasks: TasksFile, userId?: string, boardId?: string): Promise<void>;
+  
+  // Stats operations (can be legacy or board-scoped)
+  getStats(userType: UserType, userId?: string, boardId?: string): Promise<StatsFile>;
+  saveStats(userType: UserType, stats: StatsFile, userId?: string, boardId?: string): Promise<void>;
+  
+  // Board operations (v2)
   getBoards(userType: UserType, userId?: string): Promise<BoardsFile>;
   saveBoards(userType: UserType, boards: BoardsFile, userId?: string): Promise<void>;
 }

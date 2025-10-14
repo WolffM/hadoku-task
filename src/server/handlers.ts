@@ -121,34 +121,26 @@ export async function getBoards(
 }
 
 /**
- * Get tasks for a specific board
+ * Get tasks for a specific board (board-scoped storage v2)
  */
 export async function getBoardTasks(
   storage: Storage,
   auth: AuthContext & { userId?: string },
   boardId: string
 ): Promise<Task[]> {
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  const board = boards.boards.find(b => b.id === boardId);
-  
-  if (!board) {
-    throw new Error(`Board ${boardId} not found`);
-  }
-  
-  return board.tasks;
+  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  return tasks.tasks;
 }
 
 /**
- * Get stats for a specific board
+ * Get stats for a specific board (board-scoped storage v2)
  */
 export async function getBoardStats(
   storage: Storage,
   auth: AuthContext & { userId?: string },
   boardId: string
 ): Promise<StatsFile> {
-  // For now, we'll use the legacy stats system
-  // TODO: Migrate to board-specific stats
-  const stats = await getStats(storage, auth.userType);
+  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
   return stats;
 }
 
@@ -177,7 +169,7 @@ async function getStats(
 // --- Write Operations ---
 
 /**
- * Create a new task (board-based)
+ * Create a new task (board-scoped storage v2)
  * Public users cannot create tasks
  */
 export async function createTask(
@@ -191,13 +183,10 @@ export async function createTask(
   }
 
   const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  const stats = await getStats(storage, auth.userType);
-
-  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${boardId} not found`);
-  }
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
   const id = generateULID();
   const newTask: Task = {
@@ -208,32 +197,22 @@ export async function createTask(
     createdAt: timestamp
   };
 
-  const board = boards.boards[boardIndex];
-  const updatedBoard = {
-    ...board,
-    tasks: [newTask, ...board.tasks]
-  };
-
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
+  const updatedTasks: TasksFile = {
+    ...tasks,
+    tasks: [newTask, ...tasks.tasks],
+    updatedAt: timestamp
   };
 
   const updatedStats = recordCreation(stats, newTask, timestamp);
 
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  await storage.saveStats(auth.userType, updatedStats);
+  await storage.saveTasks(auth.userType, updatedTasks, auth.userId, boardId);
+  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
 
   return { ok: true, id };
 }
 
 /**
- * Update an existing task (board-based)
+ * Update an existing task (board-scoped storage v2)
  * Public users cannot update tasks
  */
 export async function updateTask(
@@ -248,55 +227,42 @@ export async function updateTask(
   }
 
   const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  const stats = await getStats(storage, auth.userType);
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${boardId} not found`);
-  }
-
-  const board = boards.boards[boardIndex];
-  const taskIndex = board.tasks.findIndex(t => t.id === taskId);
+  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {
     throw new Error('Task not found');
   }
 
-  const task = board.tasks[taskIndex];
+  const task = tasks.tasks[taskIndex];
   const updatedTask: Task = {
     ...task,
     ...input,
     updatedAt: timestamp
   };
 
-  const updatedTasks = [...board.tasks];
-  updatedTasks[taskIndex] = updatedTask;
+  const newTasks = [...tasks.tasks];
+  newTasks[taskIndex] = updatedTask;
 
-  const updatedBoard = {
-    ...board,
-    tasks: updatedTasks
-  };
-
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
+  const updatedTasksFile: TasksFile = {
+    ...tasks,
+    tasks: newTasks,
+    updatedAt: timestamp
   };
 
   const updatedStats = recordUpdate(stats, updatedTask, timestamp);
 
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  await storage.saveStats(auth.userType, updatedStats);
+  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
+  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
 
   return { ok: true, message: `Task ${taskId} updated` };
 }
 
 /**
- * Complete a task (removes from active tasks, records in stats) - board-based
+ * Complete a task (removes from active tasks, records in stats) - board-scoped storage v2
  * Public users cannot complete tasks
  */
 export async function completeTask(
@@ -310,21 +276,17 @@ export async function completeTask(
   }
 
   const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  const stats = await getStats(storage, auth.userType);
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${boardId} not found`);
-  }
-
-  const board = boards.boards[boardIndex];
-  const taskIndex = board.tasks.findIndex(t => t.id === taskId);
+  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {
     throw new Error('Task not found');
   }
 
-  const task = board.tasks[taskIndex];
+  const task = tasks.tasks[taskIndex];
   const completedTask: Task = {
     ...task,
     state: 'Completed',
@@ -332,34 +294,25 @@ export async function completeTask(
     updatedAt: timestamp
   };
 
-  const updatedTasks = [...board.tasks];
-  updatedTasks.splice(taskIndex, 1); // Remove from active tasks
+  const newTasks = [...tasks.tasks];
+  newTasks.splice(taskIndex, 1); // Remove from active tasks
 
-  const updatedBoard = {
-    ...board,
-    tasks: updatedTasks
-  };
-
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
+  const updatedTasksFile: TasksFile = {
+    ...tasks,
+    tasks: newTasks,
+    updatedAt: timestamp
   };
 
   const updatedStats = recordCompletion(stats, completedTask, timestamp);
 
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  await storage.saveStats(auth.userType, updatedStats);
+  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
+  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
 
   return { ok: true, message: `Task ${taskId} completed` };
 }
 
 /**
- * Delete a task (removes from active tasks, records in stats) - board-based
+ * Delete a task (removes from active tasks, records in stats) - board-scoped storage v2
  */
 export async function deleteTask(
   storage: Storage,
@@ -368,21 +321,17 @@ export async function deleteTask(
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
   const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  const stats = await getStats(storage, auth.userType);
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${boardId} not found`);
-  }
-
-  const board = boards.boards[boardIndex];
-  const taskIndex = board.tasks.findIndex(t => t.id === taskId);
+  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
   if (taskIndex < 0) {
     throw new Error('Task not found');
   }
 
-  const task = board.tasks[taskIndex];
+  const task = tasks.tasks[taskIndex];
   const deletedTask: Task = {
     ...task,
     state: 'Deleted',
@@ -390,28 +339,19 @@ export async function deleteTask(
     updatedAt: timestamp
   };
 
-  const updatedTasks = [...board.tasks];
-  updatedTasks.splice(taskIndex, 1); // Remove from active tasks
+  const newTasks = [...tasks.tasks];
+  newTasks.splice(taskIndex, 1); // Remove from active tasks
 
-  const updatedBoard = {
-    ...board,
-    tasks: updatedTasks
-  };
-
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
+  const updatedTasksFile: TasksFile = {
+    ...tasks,
+    tasks: newTasks,
+    updatedAt: timestamp
   };
 
   const updatedStats = recordDeletion(stats, deletedTask, timestamp);
 
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  await storage.saveStats(auth.userType, updatedStats);
+  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
+  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
 
   return { ok: true, message: `Task ${taskId} deleted` };
 }
