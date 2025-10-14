@@ -54,28 +54,31 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     
     async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
       // Create task optimistically with client-generated ID
-      const tempTask = await localStorage.createTask(data, boardId, suppressBroadcast)
+      const localTask = await localStorage.createTask(data, boardId, suppressBroadcast)
       
-      // Sync to server and replace temp ID with server ID
+      // Send task to server WITH the client-generated ID so server uses same ID
       fetch('/task/api', {
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
-        body: JSON.stringify({ ...data, boardId })
+        body: JSON.stringify({ 
+          id: localTask.id,  // Send client ID to server
+          ...data, 
+          boardId 
+        })
       })
         .then(r => r.json())
-        .then(async (serverResponse: { ok: boolean; id: string }) => {
-          if (serverResponse.ok && serverResponse.id !== tempTask.id) {
-            // Server generated different ID - sync localStorage to match
-            console.log('[api] Syncing task ID: client=' + tempTask.id + ' → server=' + serverResponse.id)
-            await localStorage.updateTaskId(tempTask.id, serverResponse.id, boardId, true)
-            console.log('[api] Background sync: createTask ID updated')
-          } else {
-            console.log('[api] Background sync: createTask completed')
+        .then((serverResponse: { ok: boolean; id: string }) => {
+          if (serverResponse.ok) {
+            if (serverResponse.id === localTask.id) {
+              console.log('[api] Background sync: createTask completed (ID matched)')
+            } else {
+              console.warn('[api] Server returned different ID (unexpected):', { client: localTask.id, server: serverResponse.id })
+            }
           }
         })
         .catch(err => console.error('[api] Failed to sync createTask:', err))
       
-      return tempTask
+      return localTask
     },
     async createTag(tag: string, boardId: string = 'main') {
       const result = await localStorage.createTag(tag, boardId)

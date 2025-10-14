@@ -166,7 +166,8 @@ export async function createTask(
   const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
   const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const id = generateULID();
+  // Use client-provided ID if available, otherwise generate server-side
+  const id = input.id || generateULID();
   const newTask: Task = {
     id,
     title: input.title,

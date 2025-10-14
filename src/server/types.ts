@@ -73,6 +73,7 @@ export interface AuthContext {
 }
 
 export interface CreateTaskInput {
+  id?: string;  // Client-generated ID (optional, server will generate if not provided)
   title: string;
   tag?: string;
 }

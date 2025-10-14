@@ -328,30 +328,6 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       (b as any).tags = existing.filter(t => t !== tag)
       saveBoardsIndex(index, userType, userId)
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-    },
-
-    /**
-     * Update a task's ID (used when syncing client-generated ID with server-generated ID)
-     * @internal This is for API sync purposes only
-     */
-    async updateTaskId(oldId: string, newId: string, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<void> {
-      const tasksFile = getTasks(userType, userId, boardId)
-      const taskIndex = tasksFile.tasks.findIndex(t => t.id === oldId)
-      
-      if (taskIndex < 0) {
-        console.warn('[localStorageApi] updateTaskId: old task not found', { oldId, newId, boardId })
-        return
-      }
-      
-      // Update the task ID
-      tasksFile.tasks[taskIndex].id = newId
-      saveTasks(tasksFile, userType, userId, boardId)
-      
-      if (!suppressBroadcast) {
-        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-      }
-      
-      console.log('[localStorageApi] updateTaskId: synced client ID → server ID', { oldId, newId, boardId })
     }
   }
 }
