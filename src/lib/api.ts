@@ -18,13 +18,13 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
         updatedAt: apiData.updatedAt || new Date().toISOString(),
         tasks: board.tasks
       }
-      localStorage.setItem(tasksKey, JSON.stringify(tasksFile))
+      window.localStorage.setItem(tasksKey, JSON.stringify(tasksFile))
     }
     
     // Update stats for this board if present
     if (board.stats) {
       const statsKey = `${userType}-${userId}-${boardId}-stats`
-      localStorage.setItem(statsKey, JSON.stringify(board.stats))
+      window.localStorage.setItem(statsKey, JSON.stringify(board.stats))
     }
   }
   
@@ -39,7 +39,7 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
       tags: b.tags || []
     }))
   }
-  localStorage.setItem(boardsKey, JSON.stringify(boardsIndex))
+  window.localStorage.setItem(boardsKey, JSON.stringify(boardsIndex))
   
   console.log('[api] Synced API data to localStorage:', { 
     boards: apiData.boards?.length || 0,
@@ -71,12 +71,17 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     return localStorage
   }
   
-  // All other modes: API-first with localStorage fallback
+  // All other modes: Optimistic localStorage with explicit API sync on initial load only
   return {
-    // Fetch boards from API, sync to localStorage, return fresh data
+    // Get boards - returns localStorage immediately (optimistic)
     async getBoards(): Promise<BoardsFile> {
+      return await localStorage.getBoards()
+    },
+    
+    // Sync from API - called once on initial page load to get server state
+    async syncFromApi(): Promise<void> {
       try {
-        // ✅ Fetch from API FIRST
+        console.log('[api] Syncing from API...')
         const response = await fetch(`/task/api/boards?userType=${userType}&userId=${encodeURIComponent(userId)}`, {
           headers: adminHeaders(userType, userId, sessionId)
         })
@@ -86,42 +91,17 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         }
         
         const apiData: BoardsFile = await response.json()
-        console.log('[api] Fetched from API:', { boards: apiData.boards?.length || 0 })
+        console.log('[api] Synced from API:', { boards: apiData.boards?.length || 0, totalTasks: apiData.boards?.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) || 0 })
         
-        // ✅ Sync API data to localStorage for offline access and cross-tab consistency
+        // Update localStorage with server state
         await syncBoardsToLocalStorage(localStorage, apiData, userType, userId)
-        
-        return apiData
       } catch (error) {
-        console.warn('[api] API fetch failed, falling back to localStorage:', error)
-        // ✅ Fallback to localStorage if API fails
-        return await localStorage.getBoards()
+        console.error('[api] Sync from API failed:', error)
       }
     },
     
     async getStats(boardId: string = 'main'): Promise<StatsFile> {
-      try {
-        // ✅ Fetch from API FIRST
-        const response = await fetch(`/task/api/stats?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`, {
-          headers: adminHeaders(userType, userId, sessionId)
-        })
-        
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`)
-        }
-        
-        const apiStats: StatsFile = await response.json()
-        console.log('[api] Fetched stats from API:', { boardId, counters: apiStats.counters })
-        
-        // ✅ Sync to localStorage
-        const statsKey = `${userType}-${userId}-${boardId}-stats`
-        localStorage.setItem(statsKey, JSON.stringify(apiStats))
-        
-        return apiStats
-      } catch (error) {
-        console.warn('[api] API fetch failed, falling back to localStorage:', error)
-        return await localStorage.getStats(boardId)
-      }
+      return await localStorage.getStats(boardId)
     },
     
     async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
@@ -242,28 +222,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
 
     async getTasks(boardId: string = 'main') {
-      try {
-        // ✅ Fetch from API FIRST
-        const response = await fetch(`/task/api/tasks?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`, {
-          headers: adminHeaders(userType, userId, sessionId)
-        })
-        
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`)
-        }
-        
-        const apiTasks: TasksFile = await response.json()
-        console.log('[api] Fetched tasks from API:', { boardId, tasks: apiTasks.tasks?.length || 0 })
-        
-        // ✅ Sync to localStorage
-        const tasksKey = `${userType}-${userId}-${boardId}-tasks`
-        localStorage.setItem(tasksKey, JSON.stringify(apiTasks))
-        
-        return apiTasks
-      } catch (error) {
-        console.warn('[api] API fetch failed, falling back to localStorage:', error)
-        return await localStorage.getTasks(boardId)
-      }
+      return await localStorage.getTasks(boardId)
     }
   }
 }
