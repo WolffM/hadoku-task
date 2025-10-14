@@ -11,6 +11,20 @@ import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
 import { createApi } from './lib/api'
 import type { ThemeName } from './lib/types'
 
+// Theme configuration
+const THEMES: Array<{ name: ThemeName; emoji: string; label: string }> = [
+  { name: 'light', emoji: '☀️', label: 'Light theme' },
+  { name: 'dark', emoji: '🌙', label: 'Dark theme' },
+  { name: 'strawberry', emoji: '🍓', label: 'Strawberry theme' },
+  { name: 'ocean', emoji: '🌊', label: 'Ocean theme' },
+  { name: 'cyberpunk', emoji: '🤖', label: 'Cyberpunk theme' },
+  { name: 'coffee', emoji: '☕', label: 'Coffee theme' },
+  { name: 'lavender', emoji: '🪻', label: 'Lavender theme' },
+]
+
+const getThemeEmoji = (themeName: ThemeName): string => 
+  THEMES.find(t => t.name === themeName)?.emoji || '🌙'
+
 export default function App(props: TaskAppProps = {}) {
   const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public', sessionId } = props;
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
@@ -225,65 +239,20 @@ export default function App(props: TaskAppProps = {}) {
             aria-label="Choose theme"
             title="Choose theme"
           >
-            {theme === 'light' ? '☀️' : 
-             theme === 'dark' ? '🌙' : 
-             theme === 'strawberry' ? '🍓' :
-             theme === 'ocean' ? '🌊' :
-             theme === 'cyberpunk' ? '🤖' :
-             theme === 'coffee' ? '☕' :
-             '🪻'}
+            {getThemeEmoji(theme)}
           </button>
           {showThemePicker && (
             <div className="theme-picker__dropdown">
-              <button 
-                className={`theme-picker__option ${theme === 'light' ? 'active' : ''}`}
-                onClick={() => { setTheme('light'); setShowThemePicker(false); }}
-                title="Light theme"
-              >
-                ☀️
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'dark' ? 'active' : ''}`}
-                onClick={() => { setTheme('dark'); setShowThemePicker(false); }}
-                title="Dark theme"
-              >
-                🌙
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'strawberry' ? 'active' : ''}`}
-                onClick={() => { setTheme('strawberry'); setShowThemePicker(false); }}
-                title="Strawberry theme"
-              >
-                🍓
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'ocean' ? 'active' : ''}`}
-                onClick={() => { setTheme('ocean'); setShowThemePicker(false); }}
-                title="Ocean theme"
-              >
-                🌊
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'cyberpunk' ? 'active' : ''}`}
-                onClick={() => { setTheme('cyberpunk'); setShowThemePicker(false); }}
-                title="Cyberpunk theme"
-              >
-                🤖
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'coffee' ? 'active' : ''}`}
-                onClick={() => { setTheme('coffee'); setShowThemePicker(false); }}
-                title="Coffee theme"
-              >
-                ☕
-              </button>
-              <button 
-                className={`theme-picker__option ${theme === 'lavender' ? 'active' : ''}`}
-                onClick={() => { setTheme('lavender'); setShowThemePicker(false); }}
-                title="Lavender theme"
-              >
-                🪻
-              </button>
+              {THEMES.map(({ name, emoji, label }) => (
+                <button
+                  key={name}
+                  className={`theme-picker__option ${theme === name ? 'active' : ''}`}
+                  onClick={() => { setTheme(name); setShowThemePicker(false); }}
+                  title={label}
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
           )}
         </div>
