@@ -121,6 +121,38 @@ export async function getBoards(
 }
 
 /**
+ * Get tasks for a specific board
+ */
+export async function getBoardTasks(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  boardId: string
+): Promise<Task[]> {
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  const board = boards.boards.find(b => b.id === boardId);
+  
+  if (!board) {
+    throw new Error(`Board ${boardId} not found`);
+  }
+  
+  return board.tasks;
+}
+
+/**
+ * Get stats for a specific board
+ */
+export async function getBoardStats(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  boardId: string
+): Promise<StatsFile> {
+  // For now, we'll use the legacy stats system
+  // TODO: Migrate to board-specific stats
+  const stats = await getStats(storage, auth.userType);
+  return stats;
+}
+
+/**
  * Get all tasks for a user
  * Internal use only - used by write operations that haven't been migrated to boards yet
  */
@@ -351,4 +383,173 @@ export async function clearTasks(
   await storage.saveStats(auth.userType, emptyStats);
 
   return { ok: true, message: 'Public tasks cleared' };
+}
+
+// --- Board Operations ---
+
+/**
+ * Create a new board
+ */
+export async function createBoard(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  input: { id: string; name: string }
+): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
+  if (auth.userType === 'public') {
+    throw new Error('Forbidden: Public users cannot create boards');
+  }
+
+  const timestamp = now();
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  // Check if board already exists
+  if (boards.boards.find(b => b.id === input.id)) {
+    throw new Error(`Board ${input.id} already exists`);
+  }
+  
+  const newBoard = {
+    id: input.id,
+    name: input.name,
+    tasks: [],
+    tags: []
+  };
+  
+  const updatedBoards: BoardsFile = {
+    ...boards,
+    updatedAt: timestamp,
+    boards: [...boards.boards, newBoard]
+  };
+  
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return { ok: true, board: newBoard };
+}
+
+/**
+ * Delete a board
+ */
+export async function deleteBoard(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  boardId: string
+): Promise<{ ok: boolean; message: string }> {
+  if (auth.userType === 'public') {
+    throw new Error('Forbidden: Public users cannot delete boards');
+  }
+
+  // Prevent deleting the main board
+  if (boardId === 'main') {
+    throw new Error('Cannot delete the main board');
+  }
+
+  const timestamp = now();
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
+  if (boardIndex < 0) {
+    throw new Error(`Board ${boardId} not found`);
+  }
+  
+  const updatedBoards: BoardsFile = {
+    ...boards,
+    updatedAt: timestamp,
+    boards: boards.boards.filter(b => b.id !== boardId)
+  };
+  
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return { ok: true, message: `Board ${boardId} deleted` };
+}
+
+// --- Tag Operations ---
+
+/**
+ * Add a tag to a board
+ */
+export async function createTag(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  input: { boardId: string; tag: string }
+): Promise<{ ok: boolean; message: string }> {
+  if (auth.userType === 'public') {
+    throw new Error('Forbidden: Public users cannot create tags');
+  }
+
+  const timestamp = now();
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  const boardIndex = boards.boards.findIndex(b => b.id === input.boardId);
+  if (boardIndex < 0) {
+    throw new Error(`Board ${input.boardId} not found`);
+  }
+  
+  const board = boards.boards[boardIndex];
+  const existingTags = board.tags || [];
+  
+  // Check if tag already exists
+  if (existingTags.includes(input.tag)) {
+    return { ok: true, message: `Tag ${input.tag} already exists` };
+  }
+  
+  const updatedBoard = {
+    ...board,
+    tags: [...existingTags, input.tag]
+  };
+  
+  const updatedBoards: BoardsFile = {
+    ...boards,
+    updatedAt: timestamp,
+    boards: [
+      ...boards.boards.slice(0, boardIndex),
+      updatedBoard,
+      ...boards.boards.slice(boardIndex + 1)
+    ]
+  };
+  
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return { ok: true, message: `Tag ${input.tag} added to board ${input.boardId}` };
+}
+
+/**
+ * Remove a tag from a board
+ */
+export async function deleteTag(
+  storage: Storage,
+  auth: AuthContext & { userId?: string },
+  input: { boardId: string; tag: string }
+): Promise<{ ok: boolean; message: string }> {
+  if (auth.userType === 'public') {
+    throw new Error('Forbidden: Public users cannot delete tags');
+  }
+
+  const timestamp = now();
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  const boardIndex = boards.boards.findIndex(b => b.id === input.boardId);
+  if (boardIndex < 0) {
+    throw new Error(`Board ${input.boardId} not found`);
+  }
+  
+  const board = boards.boards[boardIndex];
+  const existingTags = board.tags || [];
+  
+  const updatedBoard = {
+    ...board,
+    tags: existingTags.filter(t => t !== input.tag)
+  };
+  
+  const updatedBoards: BoardsFile = {
+    ...boards,
+    updatedAt: timestamp,
+    boards: [
+      ...boards.boards.slice(0, boardIndex),
+      updatedBoard,
+      ...boards.boards.slice(boardIndex + 1)
+    ]
+  };
+  
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` };
 }
