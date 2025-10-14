@@ -3,7 +3,7 @@
   "compilerOptions": {
     "module": "ESNext",
     "target": "ES2022",
-    "outDir": "./dist/server",
+    "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,

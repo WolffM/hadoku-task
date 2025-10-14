@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "2.2.33",
+  "version": "3.0.1",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -11,9 +11,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "files": [
-    "dist/server",
-    "dist/index.js",
-    "dist/style.css",
+    "dist",
     "API.md",
     "README.md",
     "docs/PARENT_API_REFERENCE.md",
