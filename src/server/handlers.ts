@@ -144,28 +144,6 @@ export async function getBoardStats(
   return stats;
 }
 
-/**
- * Get all tasks for a user
- * Internal use only - used by write operations that haven't been migrated to boards yet
- */
-async function getTasks(
-  storage: Storage,
-  userType: UserType
-): Promise<TasksFile> {
-  return await storage.getTasks(userType);
-}
-
-/**
- * Get stats for a user
- * Internal use only - used by write operations that haven't been migrated to boards yet
- */
-async function getStats(
-  storage: Storage,
-  userType: UserType
-): Promise<StatsFile> {
-  return await storage.getStats(userType);
-}
-
 // --- Write Operations ---
 
 /**
@@ -205,8 +183,8 @@ export async function createTask(
 
   const updatedStats = recordCreation(stats, newTask, timestamp);
 
-  await storage.saveTasks(auth.userType, updatedTasks, auth.userId, boardId);
-  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
+  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasks);
+  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
 
   return { ok: true, id };
 }
@@ -255,8 +233,8 @@ export async function updateTask(
 
   const updatedStats = recordUpdate(stats, updatedTask, timestamp);
 
-  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
-  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
+  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
 
   return { ok: true, message: `Task ${taskId} updated` };
 }
@@ -305,8 +283,8 @@ export async function completeTask(
 
   const updatedStats = recordCompletion(stats, completedTask, timestamp);
 
-  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
-  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
+  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
 
   return { ok: true, message: `Task ${taskId} completed` };
 }
@@ -350,8 +328,8 @@ export async function deleteTask(
 
   const updatedStats = recordDeletion(stats, deletedTask, timestamp);
 
-  await storage.saveTasks(auth.userType, updatedTasksFile, auth.userId, boardId);
-  await storage.saveStats(auth.userType, updatedStats, auth.userId, boardId);
+  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
 
   return { ok: true, message: `Task ${taskId} deleted` };
 }
@@ -383,8 +361,8 @@ export async function clearTasks(
     tasks: {}
   };
 
-  await storage.saveTasks(auth.userType, emptyTasks);
-  await storage.saveStats(auth.userType, emptyStats);
+  await storage.saveTasks(auth.userType, undefined, undefined, emptyTasks);
+  await storage.saveStats(auth.userType, undefined, undefined, emptyStats);
 
   return { ok: true, message: 'Public tasks cleared' };
 }

@@ -19,15 +19,19 @@ import type { SyncQueue } from './sync-queue.js'
  * - V2: getTasks(userType, userId, boardId) - board-scoped storage
  * 
  * Implementations can support either or both patterns.
+ * 
+ * PARAMETER ORDER MATTERS:
+ * - V2 board-scoped: (userType, userId, boardId, data)
+ * - All userId and boardId params are optional for backwards compatibility
  */
 export interface Storage {
-  // Legacy task operations (v1 - flat storage)
+  // Task operations (v1 legacy or v2 board-scoped)
   getTasks(userType: UserType, userId?: string, boardId?: string): Promise<TasksFile>;
-  saveTasks(userType: UserType, tasks: TasksFile, userId?: string, boardId?: string): Promise<void>;
+  saveTasks(userType: UserType, userId: string | undefined, boardId: string | undefined, tasks: TasksFile): Promise<void>;
   
-  // Stats operations (can be legacy or board-scoped)
+  // Stats operations (v1 legacy or v2 board-scoped)
   getStats(userType: UserType, userId?: string, boardId?: string): Promise<StatsFile>;
-  saveStats(userType: UserType, stats: StatsFile, userId?: string, boardId?: string): Promise<void>;
+  saveStats(userType: UserType, userId: string | undefined, boardId: string | undefined, stats: StatsFile): Promise<void>;
   
   // Board operations (v2)
   getBoards(userType: UserType, userId?: string): Promise<BoardsFile>;
@@ -90,19 +94,8 @@ const publicData: {
   boards: createEmptyBoardsFile()
 }
 
-/**
- * Get in-memory data for public users
- */
-export function getPublicData(dataType: DataType): TasksFile | StatsFile {
-  return publicData[dataType]
-}
-
-/**
- * Set in-memory data for public users
- */
-export function setPublicData(dataType: DataType, data: TasksFile | StatsFile): void {
-  publicData[dataType] = data as any
-}
+// Note: getPublicData() and setPublicData() removed - they were never used
+// publicData is only accessed internally by createStorage()
 
 /**
  * Ensure user data directory exists
@@ -181,44 +174,52 @@ export function createStorage(config: RouterConfig, syncQueue: SyncQueue): Stora
   const basePath = config.dataPath
 
   return {
-    async getTasks(userType: UserType): Promise<TasksFile> {
+    async getTasks(userType: UserType, userId?: string, boardId?: string): Promise<TasksFile> {
       if (userType === 'public') {
         return publicData.tasks
       }
       
+      // V2 board-scoped storage not implemented in file-based storage
+      // This is a legacy implementation for backwards compatibility
       ensureUserDataExists(userType, basePath)
       return readUserData(userType, 'tasks', basePath) as TasksFile
     },
 
-    async saveTasks(userType: UserType, data: TasksFile): Promise<void> {
+    async saveTasks(userType: UserType, userId: string | undefined, boardId: string | undefined, tasks: TasksFile): Promise<void> {
       if (userType === 'public') {
-        publicData.tasks = data
+        publicData.tasks = tasks
         return
       }
 
-      writeUserData(userType, 'tasks', data, basePath)
+      // V2 board-scoped storage not implemented in file-based storage
+      // This is a legacy implementation for backwards compatibility
+      writeUserData(userType, 'tasks', tasks, basePath)
       
       if (config.githubConfig && syncQueue) {
         syncQueue.add(userType, 'tasks')
       }
     },
 
-    async getStats(userType: UserType): Promise<StatsFile> {
+    async getStats(userType: UserType, userId?: string, boardId?: string): Promise<StatsFile> {
       if (userType === 'public') {
         return publicData.stats
       }
       
+      // V2 board-scoped storage not implemented in file-based storage
+      // This is a legacy implementation for backwards compatibility
       ensureUserDataExists(userType, basePath)
       return readUserData(userType, 'stats', basePath) as StatsFile
     },
 
-    async saveStats(userType: UserType, data: StatsFile): Promise<void> {
+    async saveStats(userType: UserType, userId: string | undefined, boardId: string | undefined, stats: StatsFile): Promise<void> {
       if (userType === 'public') {
-        publicData.stats = data
+        publicData.stats = stats
         return
       }
 
-      writeUserData(userType, 'stats', data, basePath)
+      // V2 board-scoped storage not implemented in file-based storage
+      // This is a legacy implementation for backwards compatibility
+      writeUserData(userType, 'stats', stats, basePath)
       
       if (config.githubConfig && syncQueue) {
         syncQueue.add(userType, 'stats')
