@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 npm run version:patch
 npm run build:all
-git add package.json package-lock.json dist/
+git add package.json package-lock.json
