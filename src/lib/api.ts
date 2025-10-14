@@ -1,12 +1,13 @@
 import type { TasksFile, StatsFile, BoardsFile } from './types'
 import { createLocalStorageApi } from './localStorageApi'
 
-function adminHeaders(userType: string, userId?: string) {
+function adminHeaders(userType: string, userId?: string, sessionId?: string) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-User-Type': userType
   }
   if (userId) headers['X-User-Id'] = userId
+  if (sessionId) headers['X-Session-Id'] = sessionId
   return headers
 }
 
@@ -16,7 +17,7 @@ function adminHeaders(userType: string, userId?: string) {
  * - "public" is localStorage-only, no server sync
  * - All other user types (friend, admin, custom names) sync to server in background
  */
-export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', userId: string = 'public') {
+export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', userId: string = 'public', sessionId?: string) {
   const localStorage = createLocalStorageApi(userType, userId)
   
   // Public mode: localStorage only, no server sync
@@ -30,7 +31,9 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     async getBoards(): Promise<BoardsFile> {
       const local = await localStorage.getBoards()
       // Background sync
-      fetch(`/task/api/boards?userType=${userType}&userId=${encodeURIComponent(userId)}`)
+      fetch(`/task/api/boards?userType=${userType}&userId=${encodeURIComponent(userId)}`, {
+        headers: adminHeaders(userType, userId, sessionId)
+      })
         .then(r => r.json())
         .then(() => console.log('[api] Background sync: getBoards completed'))
         .catch(err => console.error('[api] Background sync failed (getBoards):', err))
@@ -40,7 +43,9 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     async getStats(boardId: string = 'main'): Promise<StatsFile> {
       const localStats = await localStorage.getStats(boardId)
       // Background sync
-      fetch(`/task/api/stats?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`)
+      fetch(`/task/api/stats?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`, {
+        headers: adminHeaders(userType, userId, sessionId)
+      })
         .then(r => r.json())
         .then(() => console.log('[api] Background sync: getStats completed'))
         .catch(err => console.error('[api] Background sync failed (getStats):', err))
@@ -52,7 +57,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch('/task/api', {
         method: 'POST',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ ...data, boardId })
       })
         .then(() => console.log('[api] Background sync: createTask completed'))
@@ -64,7 +69,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/tags`, {
         method: 'POST',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => console.log('[api] Background sync: createTag completed'))
@@ -76,7 +81,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/tags`, {
         method: 'DELETE',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => console.log('[api] Background sync: deleteTag completed'))
@@ -89,7 +94,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}`, {
         method: 'PATCH',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ ...patch, boardId })
       })
         .then(() => console.log('[api] Background sync: patchTask completed'))
@@ -102,7 +107,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}/complete`, {
         method: 'POST',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId })
       })
         .then(() => console.log('[api] Background sync: completeTask completed'))
@@ -115,7 +120,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}`, {
         method: 'DELETE',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId })
       })
         .then(() => console.log('[api] Background sync: deleteTask completed'))
@@ -128,7 +133,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch('/task/api/boards', {
         method: 'POST',
-        headers: adminHeaders(userType, userId),
+        headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId })
       })
         .then(() => console.log('[api] Background sync: createBoard completed'))
@@ -141,7 +146,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/boards/${encodeURIComponent(boardId)}`, {
         method: 'DELETE',
-        headers: adminHeaders(userType, userId)
+        headers: adminHeaders(userType, userId, sessionId)
       })
         .then(() => console.log('[api] Background sync: deleteBoard completed'))
         .catch(err => console.error('[api] Failed to sync deleteBoard:', err))
@@ -151,7 +156,9 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     async getTasks(boardId: string = 'main') {
       const local = await localStorage.getTasks(boardId)
       // Background sync
-      fetch(`/task/api/tasks?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`)
+      fetch(`/task/api/tasks?userType=${userType}&userId=${encodeURIComponent(userId)}&boardId=${encodeURIComponent(boardId)}`, {
+        headers: adminHeaders(userType, userId, sessionId)
+      })
         .then(r => r.json())
         .then(() => console.log('[api] Background sync: getTasks completed'))
         .catch(err => console.error('[api] Background sync failed (getTasks):', err))

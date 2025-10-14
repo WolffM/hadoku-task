@@ -10,6 +10,7 @@ import { parseTaskInput } from '../lib/tagUtils'
 interface UseTasksProps {
   userType: string
   userId?: string
+  sessionId?: string
 }
 
 // Generate a unique session ID to identify this tab's broadcasts
@@ -28,13 +29,13 @@ function deferredBroadcast(sessionId: string, userType: string, userId?: string,
   }, delayMs)
 }
 
-export function useTasks({ userType, userId }: UseTasksProps) {
+export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
-  // ✅ FIX: Recreate API when userType or userId changes
+  // ✅ FIX: Recreate API when userType, userId, or sessionId changes
   const api = useMemo(
-    () => createApi(userType as 'public' | 'friend' | 'admin', userId || 'public'),
-    [userType, userId]
+    () => createApi(userType as 'public' | 'friend' | 'admin', userId || 'public', sessionId),
+    [userType, userId, sessionId]
   )
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')

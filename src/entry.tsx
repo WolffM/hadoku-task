@@ -12,6 +12,7 @@ export interface TaskAppProps {
   environment?: string;
   userType?: 'public' | 'friend' | 'admin';
   userId?: string;
+  sessionId?: string;
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
@@ -19,8 +20,9 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   const urlParams = new URLSearchParams(window.location.search)
   const userType = props.userType || (urlParams.get('userType') as ('public' | 'friend' | 'admin')) || 'public'
   const userId = props.userId || urlParams.get('userId') || 'public'
+  const sessionId = props.sessionId // Session ID from parent (for authenticated requests)
   
-  const finalProps = { ...props, userType, userId }
+  const finalProps = { ...props, userType, userId, sessionId }
   const root = createRoot(el)
   root.render(<App {...finalProps} />)
   ;(el as any).__root = root

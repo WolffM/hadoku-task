@@ -10,7 +10,7 @@ import { getTopTags, getAllTags } from './lib/tagUtils'
 import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
 
 export default function App(props: TaskAppProps = {}) {
-  const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public' } = props;
+  const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public', sessionId } = props;
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [customTags, setCustomTags] = useState<string[]>([])
   const [confirmClearTag, setConfirmClearTag] = useState<{tag: string, count: number} | null>(null)
@@ -49,7 +49,7 @@ export default function App(props: TaskAppProps = {}) {
     switchBoard
     , moveTasksToBoard
   , createTagOnBoard, deleteTagOnBoard
-  } = useTasks({ userType, userId })
+  } = useTasks({ userType, userId, sessionId })
 
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({ 
