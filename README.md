@@ -2,7 +2,7 @@
 
 **A minimalist task tracking micro-frontend for hadoku.me**
 
-Fast, focused task management with tags, filtering, and multi-user support. Built as a portable micro-frontend with framework-agnostic API handlers.
+Fast, focused task management with tags, filtering, and multi-user support. Built as a portable micro-frontend with framework-agnostic API handlers and session-based authentication.
 
 ---
 
