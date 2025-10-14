@@ -42,6 +42,11 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
 
   async function initialLoad() {
     console.log('[useTasks] initialLoad called')
+    // ✅ Sync from API first (only on initial load, if not public mode)
+    if ('syncFromApi' in api) {
+      await api.syncFromApi()
+    }
+    // Then reload from localStorage
     await reload()
   }
 
