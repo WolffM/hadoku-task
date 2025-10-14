@@ -53,16 +53,29 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
     
     async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
-      const result = await localStorage.createTask(data, boardId, suppressBroadcast)
-      // Background server sync
+      // Create task optimistically with client-generated ID
+      const tempTask = await localStorage.createTask(data, boardId, suppressBroadcast)
+      
+      // Sync to server and replace temp ID with server ID
       fetch('/task/api', {
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ ...data, boardId })
       })
-        .then(() => console.log('[api] Background sync: createTask completed'))
+        .then(r => r.json())
+        .then(async (serverResponse: { ok: boolean; id: string }) => {
+          if (serverResponse.ok && serverResponse.id !== tempTask.id) {
+            // Server generated different ID - sync localStorage to match
+            console.log('[api] Syncing task ID: client=' + tempTask.id + ' → server=' + serverResponse.id)
+            await localStorage.updateTaskId(tempTask.id, serverResponse.id, boardId, true)
+            console.log('[api] Background sync: createTask ID updated')
+          } else {
+            console.log('[api] Background sync: createTask completed')
+          }
+        })
         .catch(err => console.error('[api] Failed to sync createTask:', err))
-      return result
+      
+      return tempTask
     },
     async createTag(tag: string, boardId: string = 'main') {
       const result = await localStorage.createTag(tag, boardId)
