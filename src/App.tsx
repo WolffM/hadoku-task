@@ -18,6 +18,10 @@ export default function App(props: TaskAppProps = {}) {
   const [confirmClearTag, setConfirmClearTag] = useState<{tag: string, count: number} | null>(null)
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
+  const [pendingTaskOperation, setPendingTaskOperation] = useState<{
+    type: 'move-to-board' | 'apply-tag'
+    taskIds: string[]
+  } | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
@@ -134,10 +138,9 @@ export default function App(props: TaskAppProps = {}) {
       await createTagOnBoard(normalized)
       
       // Check if we have pending task IDs to tag (from drag-and-drop)
-      const pendingIds = (window as any).__pendingTagTaskIds as string[] | undefined
-      if (pendingIds && pendingIds.length > 0) {
+      if (pendingTaskOperation?.type === 'apply-tag' && pendingTaskOperation.taskIds.length > 0) {
         // Build updates array - add the new tag to existing tags for each task
-        const updates = pendingIds.map(taskId => {
+        const updates = pendingTaskOperation.taskIds.map(taskId => {
           const task = tasks.find(t => t.id === taskId)
           const existingTags = task?.tag?.split(' ').filter(Boolean) || []
           const newTags = [...new Set([...existingTags, normalized])]
@@ -148,9 +151,10 @@ export default function App(props: TaskAppProps = {}) {
         await bulkUpdateTaskTags(updates)
         // Clear selection after tagging
         dragAndDrop.clearSelection()
-        // Clear the pending IDs
-        delete (window as any).__pendingTagTaskIds
       }
+      
+      // Clear the pending operation
+      setPendingTaskOperation(null)
     } catch (err) {
       console.error('[App] Failed to create tag:', err)
       throw err
@@ -161,24 +165,22 @@ export default function App(props: TaskAppProps = {}) {
   async function handleCreateBoard(boardName: string) {
     const name = boardName.trim()
     try {
-      // Check if we have pending task IDs to move (from drag-and-drop)
-      const pendingIds = (window as any).__pendingBoardTaskIds as string[] | undefined
-      
       // Always create the board first
       await createBoard(name)
       
-      if (pendingIds && pendingIds.length > 0) {
+      // Check if we have pending task IDs to move (from drag-and-drop)
+      if (pendingTaskOperation?.type === 'move-to-board' && pendingTaskOperation.taskIds.length > 0) {
         // Move all the dragged tasks to the new board
         // Note: at this point we're already on the new board (createBoard switched us)
         // but it's empty. moveTasksToBoard will move tasks and reload.
-        await moveTasksToBoard(name, pendingIds)
+        await moveTasksToBoard(name, pendingTaskOperation.taskIds)
         
         // Clear selection after moving
         dragAndDrop.clearSelection()
-        
-        // Clear the pending IDs
-        delete (window as any).__pendingBoardTaskIds
       }
+      
+      // Clear the pending operation
+      setPendingTaskOperation(null)
     } catch (err) {
       console.error('[App] Failed to create board:', err)
       throw err
@@ -379,7 +381,7 @@ export default function App(props: TaskAppProps = {}) {
                 if (ids.length > 0) {
                   // Open dialog and store the task IDs to move after creation
                   setInputValue('')
-                  ;(window as any).__pendingBoardTaskIds = ids
+                  setPendingTaskOperation({ type: 'move-to-board', taskIds: ids })
                   setShowNewBoardDialog(true)
                 }
               }}
@@ -479,7 +481,7 @@ export default function App(props: TaskAppProps = {}) {
             if (ids.length > 0) {
               // Open dialog and store the task IDs to tag after creation
               setInputValue('')
-              ;(window as any).__pendingTagTaskIds = ids
+              setPendingTaskOperation({ type: 'apply-tag', taskIds: ids })
               setShowNewTagDialog(true)
             }
           }}
@@ -552,7 +554,7 @@ export default function App(props: TaskAppProps = {}) {
         title="Create New Board"
         onClose={() => {
           setShowNewBoardDialog(false)
-          delete (window as any).__pendingBoardTaskIds
+          setPendingTaskOperation(null)
         }}
         onConfirm={async () => {
           if (!inputValue.trim()) return
@@ -569,17 +571,11 @@ export default function App(props: TaskAppProps = {}) {
         confirmLabel="Create"
         confirmDisabled={!inputValue.trim()}
       >
-        {(() => {
-          const pendingIds = (window as any).__pendingBoardTaskIds as string[] | undefined
-          if (pendingIds && pendingIds.length > 0) {
-            return (
-              <p className="modal-hint">
-                {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''} will be moved to this board
-              </p>
-            )
-          }
-          return null
-        })()}
+        {pendingTaskOperation?.type === 'move-to-board' && pendingTaskOperation.taskIds.length > 0 && (
+          <p className="modal-hint">
+            {pendingTaskOperation.taskIds.length} task{pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
+          </p>
+        )}
       </Modal>
 
       <Modal
@@ -587,7 +583,7 @@ export default function App(props: TaskAppProps = {}) {
         title="Create New Tag"
         onClose={() => {
           setShowNewTagDialog(false)
-          delete (window as any).__pendingTagTaskIds
+          setPendingTaskOperation(null)
         }}
         onConfirm={async () => {
           if (!inputValue.trim()) return
@@ -604,17 +600,11 @@ export default function App(props: TaskAppProps = {}) {
         confirmLabel="Create"
         confirmDisabled={!inputValue.trim()}
       >
-        {(() => {
-          const pendingIds = (window as any).__pendingTagTaskIds as string[] | undefined
-          if (pendingIds && pendingIds.length > 0) {
-            return (
-              <p className="modal-hint">
-                This tag will be applied to {pendingIds.length} task{pendingIds.length > 1 ? 's' : ''}
-              </p>
-            )
-          }
-          return null
-        })()}
+        {pendingTaskOperation?.type === 'apply-tag' && pendingTaskOperation.taskIds.length > 0 && (
+          <p className="modal-hint">
+            This tag will be applied to {pendingTaskOperation.taskIds.length} task{pendingTaskOperation.taskIds.length > 1 ? 's' : ''}
+          </p>
+        )}
         
         {getAllTags(tasks).length > 0 && (
           <div className="modal-section">
