@@ -12,6 +12,9 @@ import { getTaskIdsFromDragEvent } from './lib/dragDropUtils'
 import { createApi } from './lib/api'
 import type { ThemeName } from './lib/types'
 
+// UI Configuration
+const MAX_BOARDS = 5 // Maximum number of boards to display in the board list
+
 // Theme configuration
 const THEMES: Array<{ name: ThemeName; emoji: string; label: string }> = [
   { name: 'light', emoji: '☀️', label: 'Light theme' },
@@ -27,9 +30,8 @@ const getThemeEmoji = (themeName: ThemeName): string =>
   THEMES.find(t => t.name === themeName)?.emoji || '🌙'
 
 export default function App(props: TaskAppProps = {}) {
-  const { basename = '/task', apiUrl, environment, userType = 'public', userId = 'public', sessionId } = props;
+  const { userType = 'public', userId = 'public', sessionId } = props;
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
-  const [customTags, setCustomTags] = useState<string[]>([])
   const [confirmClearTag, setConfirmClearTag] = useState<{tag: string, count: number} | null>(null)
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
@@ -44,8 +46,6 @@ export default function App(props: TaskAppProps = {}) {
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  // "public" is special: localStorage-only, no server. All other types sync to server.
-  const isPublic = userType === 'public'
 
   // Task operations hook
   const {
@@ -259,9 +259,9 @@ export default function App(props: TaskAppProps = {}) {
         </div>
       </div>
       <div className="task-app__boards">
-        {/* Render up to 5 board buttons, highlight active */}
+        {/* Render up to MAX_BOARDS board buttons, highlight active */}
         <div className="task-app__board-list">
-          {(boards && boards.boards ? boards.boards.slice(0, 5) : [{ id: 'main', name: 'main' }]).map(b => (
+          {(boards && boards.boards ? boards.boards.slice(0, MAX_BOARDS) : [{ id: 'main', name: 'main' }]).map(b => (
             <button
               key={b.id}
               className={`board-btn ${currentBoardId === b.id ? 'board-btn--active' : ''} ${dragAndDrop.dragOverFilter === `board:${b.id}` ? 'board-btn--drag-over' : ''}`}
@@ -305,8 +305,8 @@ export default function App(props: TaskAppProps = {}) {
         </div>
 
         <div className="task-app__board-actions">
-          {/* Only show + if we have fewer than 5 boards */}
-          {(!boards || (boards.boards && boards.boards.length < 5)) && (
+          {/* Only show + if we have fewer than MAX_BOARDS boards */}
+          {(!boards || (boards.boards && boards.boards.length < MAX_BOARDS)) && (
             <button 
               className={`board-add-btn ${dragAndDrop.dragOverFilter === 'add-board' ? 'board-btn--drag-over' : ''}`}
               onClick={() => {
@@ -359,7 +359,7 @@ export default function App(props: TaskAppProps = {}) {
         {(() => {
           const derived = getAllTags(tasks)
           // Persisted tags should appear in the filters even if there are no matching tasks
-          const all = Array.from(new Set([...persistedTags, ...derived, ...customTags]))
+          const all = Array.from(new Set([...persistedTags, ...derived]))
           return all.map(tag => {
           const on = selectedFilters.has(tag)
           
