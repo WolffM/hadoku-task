@@ -7,6 +7,12 @@ import { createApi } from '../lib/api'
 import type { Task, TasksFile, BoardsFile } from '../lib/types'
 import { parseTaskInput } from '../lib/tagUtils'
 import { SESSION_ID } from '../lib/session'
+import {
+  deferredBroadcast,
+  withPendingOperation,
+  withBulkOperation,
+  extractBoardTasks,
+} from './useTasksHelpers'
 
 interface UseTasksProps {
   userType: string
@@ -16,19 +22,6 @@ interface UseTasksProps {
 
 // Re-export SESSION_ID for backwards compatibility
 export { SESSION_ID }
-
-// Helper to broadcast with delay to ensure localStorage propagation across tabs
-function deferredBroadcast(sessionId: string, userType: string, userId?: string, delayMs: number = 50) {
-  setTimeout(() => {
-    try {
-      const bc = new BroadcastChannel('tasks')
-      bc.postMessage({ type: 'tasks-updated', sessionId, userType, userId })
-      bc.close()
-    } catch (err) {
-      console.error('[useTasks] Broadcast failed:', err)
-    }
-  }, delayMs)
-}
 
 export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -55,14 +48,8 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     console.log('[useTasks] reload called', { currentBoardId, stack: new Error().stack?.split('\n').slice(1, 4).join('\n') })
     const bf = await api.getBoards()
     setBoards(bf)
-    const board = bf.boards.find(b => b.id === currentBoardId)
-    if (board) {
-      console.log('[useTasks] reload: found current board', { boardId: board.id, taskCount: board.tasks?.length || 0 })
-      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
-    } else {
-      console.log('[useTasks] reload: board not found', { currentBoardId })
-      setTasks([])
-    }
+    const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardId)
+    setTasks(boardTasks)
   }
 
   // ✅ FIX: Clear state and reload when user context changes
@@ -129,66 +116,37 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
   }
 
   async function completeTask(taskId: string) {
-    const operationKey = `complete-${taskId}`
-    
-    // Prevent duplicate requests
-    if (pendingOperations.has(operationKey)) {
-      return
-    }
-    
-    // Add to pending operations
-    setPendingOperations(prev => new Set([...prev, operationKey]))
-    
-    try {
-      await api.completeTask(taskId, currentBoardId)
-      await reload()
-    } catch (error) {
-      // Only show error if it's not a 404 (task already processed)
-      if (!(error as any)?.message?.includes('404')) {
-        alert((error as Error).message || 'Failed to complete task')
+    await withPendingOperation(
+      `complete-${taskId}`,
+      pendingOperations,
+      setPendingOperations,
+      async () => {
+        await api.completeTask(taskId, currentBoardId)
+        await reload()
+      },
+      {
+        onError: (error) => alert(error.message || 'Failed to complete task'),
       }
-    } finally {
-      // Remove from pending operations
-      setPendingOperations(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(operationKey)
-        return newSet
-      })
-    }
+    )
   }
 
   async function deleteTask(taskId: string) {
     console.log('[useTasks] deleteTask START', { taskId, currentBoardId })
-    const operationKey = `delete-${taskId}`
-    
-    // Prevent duplicate requests
-    if (pendingOperations.has(operationKey)) {
-      console.log('[useTasks] deleteTask: already pending, skipping', { operationKey })
-      return
-    }
-    
-    // Add to pending operations
-    setPendingOperations(prev => new Set([...prev, operationKey]))
-    
-    try {
-      console.log('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
-      await api.deleteTask(taskId, currentBoardId)
-      console.log('[useTasks] deleteTask: calling reload')
-      await reload()
-      console.log('[useTasks] deleteTask END')
-    } catch (error) {
-      // Only show error if it's not a 404 (task already processed)
-      if (!(error as any)?.message?.includes('404')) {
-        alert((error as Error).message || 'Failed to delete task')
+    await withPendingOperation(
+      `delete-${taskId}`,
+      pendingOperations,
+      setPendingOperations,
+      async () => {
+        console.log('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
+        await api.deleteTask(taskId, currentBoardId)
+        console.log('[useTasks] deleteTask: calling reload')
+        await reload()
+        console.log('[useTasks] deleteTask END')
+      },
+      {
+        onError: (error) => alert(error.message || 'Failed to delete task'),
       }
-    } finally {
-      // Remove from pending operations
-      setPendingOperations(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(operationKey)
-        return newSet
-      })
-    }
+    )
   }
 
   async function addTagToTask(taskId: string) {
@@ -231,14 +189,12 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
   async function bulkUpdateTaskTags(updates: Array<{ taskId: string, tag: string }>) {
     console.log('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
     try {
-      // Suppress broadcasts during bulk operation
-      for (const { taskId, tag } of updates) {
-        await api.patchTask(taskId, { tag }, currentBoardId, true)
-      }
-      
-      // Manually broadcast after bulk operation completes
-      console.log('[useTasks] bulkUpdateTaskTags: broadcasting bulk update with delay')
-      deferredBroadcast(SESSION_ID, userType, userId)
+      await withBulkOperation(async () => {
+        // Suppress broadcasts during bulk operation
+        for (const { taskId, tag } of updates) {
+          await api.patchTask(taskId, { tag }, currentBoardId, true)
+        }
+      }, userType, userId)
       
       console.log('[useTasks] bulkUpdateTaskTags: calling reload')
       await reload()
@@ -277,21 +233,19 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     try {
       console.log('[useTasks] clearTasksByTag: starting to patch tasks')
       
-      // Suppress individual broadcasts during bulk operation
-      for (const task of tagTasks) {
-        const existingTags = task.tag?.split(' ') || []
-        const updatedTags = existingTags.filter(tg => tg !== tag)
-        const tagValue = updatedTags.length > 0 ? updatedTags.join(' ') : null
-        console.log('[useTasks] clearTasksByTag: patching task', { taskId: task.id, oldTags: existingTags, newTags: updatedTags })
-        await api.patchTask(task.id, { tag: tagValue }, currentBoardId, true)
-      }
-      
-      console.log('[useTasks] clearTasksByTag: deleting tag from board', { tag, currentBoardId })
-      await api.deleteTag(tag, currentBoardId)
-      
-      // Manually broadcast after bulk operation completes
-      console.log('[useTasks] clearTasksByTag: broadcasting bulk update with delay')
-      deferredBroadcast(SESSION_ID, userType, userId)
+      await withBulkOperation(async () => {
+        // Suppress individual broadcasts during bulk operation
+        for (const task of tagTasks) {
+          const existingTags = task.tag?.split(' ') || []
+          const updatedTags = existingTags.filter(tg => tg !== tag)
+          const tagValue = updatedTags.length > 0 ? updatedTags.join(' ') : null
+          console.log('[useTasks] clearTasksByTag: patching task', { taskId: task.id, oldTags: existingTags, newTags: updatedTags })
+          await api.patchTask(task.id, { tag: tagValue }, currentBoardId, true)
+        }
+        
+        console.log('[useTasks] clearTasksByTag: deleting tag from board', { tag, currentBoardId })
+        await api.deleteTag(tag, currentBoardId)
+      }, userType, userId)
       
       console.log('[useTasks] clearTasksByTag: calling reload')
       await reload()
@@ -324,14 +278,8 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     // Fetch the boards and set tasks for the new board
     const bf = await api.getBoards()
     setBoards(bf)
-    const board = bf.boards.find(b => b.id === boardId)
-    if (board) {
-      console.log('[useTasks] createBoard: switched to new board', { boardId, taskCount: board.tasks?.length || 0 })
-      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
-    } else {
-      console.log('[useTasks] createBoard: new board not found (should be empty)', { boardId })
-      setTasks([])
-    }
+    const { tasks: boardTasks } = extractBoardTasks(bf, boardId)
+    setTasks(boardTasks)
   }
 
   // Move multiple tasks to another board
@@ -348,26 +296,21 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     }
     console.log('[useTasks] moveTasksToBoard: found tasks to move', { count: tasksToMove.length })
 
-    // Suppress individual broadcasts during bulk operation
-    for (const t of tasksToMove) {
-      await api.createTask({ title: t.title, tag: t.tag }, targetBoardId, true)
-      await api.deleteTask(t.id, t.boardId, true)
-    }
-    
-    // Manually broadcast after bulk operation completes
-    console.log('[useTasks] moveTasksToBoard: broadcasting bulk update with delay')
-    deferredBroadcast(SESSION_ID, userType, userId)
+    await withBulkOperation(async () => {
+      // Suppress individual broadcasts during bulk operation
+      for (const t of tasksToMove) {
+        await api.createTask({ title: t.title, tag: t.tag }, targetBoardId, true)
+        await api.deleteTask(t.id, t.boardId, true)
+      }
+    }, userType, userId)
     
     // Switch to the target board and reload it
     console.log('[useTasks] moveTasksToBoard: switching to target board', { targetBoardId })
     setCurrentBoardId(targetBoardId)
     const bf = await api.getBoards()
     setBoards(bf)
-    const targetBoard = bf.boards.find(b => b.id === targetBoardId)
-    if (targetBoard) {
-      console.log('[useTasks] moveTasksToBoard: loaded target board tasks', { count: targetBoard.tasks?.length || 0 })
-      setTasks((targetBoard.tasks || []).filter((t: Task) => t.state === 'Active'))
-    }
+    const { tasks: boardTasks } = extractBoardTasks(bf, targetBoardId)
+    setTasks(boardTasks)
     console.log('[useTasks] moveTasksToBoard END')
   }
 
@@ -379,14 +322,8 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
       // Fetch boards and explicitly load main board's tasks
       const bf = await api.getBoards()
       setBoards(bf)
-      const mainBoard = bf.boards.find(b => b.id === 'main')
-      if (mainBoard) {
-        console.log('[useTasks] deleteBoard: switched to main board', { taskCount: mainBoard.tasks?.length || 0 })
-        setTasks((mainBoard.tasks || []).filter((t: Task) => t.state === 'Active'))
-      } else {
-        console.log('[useTasks] deleteBoard: main board not found')
-        setTasks([])
-      }
+      const { tasks: boardTasks } = extractBoardTasks(bf, 'main')
+      setTasks(boardTasks)
     } else {
       // If we're not on the deleted board, just reload normally
       await reload()
@@ -405,9 +342,9 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
 
   function switchBoard(boardId: string) {
     setCurrentBoardId(boardId)
-    const board = boards?.boards.find(b => b.id === boardId)
-    if (board) {
-      setTasks((board.tasks || []).filter((t: Task) => t.state === 'Active'))
+    const { tasks: boardTasks, foundBoard } = extractBoardTasks(boards, boardId)
+    if (foundBoard) {
+      setTasks(boardTasks)
     } else {
       // Board not present in memory (race) - reload from API
       void reload()
