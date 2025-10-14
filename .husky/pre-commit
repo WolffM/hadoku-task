@@ -1,2 +1,3 @@
 npm run version:patch
-git add package.json package-lock.json
+npm run build:all
+git add package.json package-lock.json dist/
