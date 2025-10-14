@@ -6,6 +6,8 @@
 import { ulid } from './ulid'
 import type { TasksFile, StatsFile, Task, BoardsFile, Board } from './types'
 import { SESSION_ID } from './session'
+import { LocalStorageStorage } from './storage/LocalStorageStorage'
+import * as TaskHandlers from '../server/handlers'
 
 // Helper to broadcast with delay to ensure localStorage propagation across tabs
 function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, delayMs: number = 50) {
@@ -20,311 +22,240 @@ function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, 
   }, delayMs)
 }
 
-// Generate storage keys based on user type and board
-const getTasksKey = (userType: string, userId: string, boardId: string) => `${userType}-${userId}-${boardId}-tasks`
-const getStatsKey = (userType: string, userId: string, boardId: string) => `${userType}-${userId}-${boardId}-stats`
-const getBoardsIndexKey = (userType: string, userId: string) => `${userType}-${userId}-boards`
-
-// Helper to get tasks from localStorage
-function getTasks(userType: string = 'public', userId: string = 'public', boardId: string = 'main'): TasksFile {
-  const stored = localStorage.getItem(getTasksKey(userType, userId, boardId))
-  if (stored) {
-    return JSON.parse(stored)
-  }
-  // Initialize empty tasks file
-  return {
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    tasks: []
-  }
-}
-
-// Helper to save tasks to localStorage
-function saveTasks(tasksFile: TasksFile, userType: string = 'public', userId: string = 'public', boardId: string = 'main'): void {
-  tasksFile.updatedAt = new Date().toISOString()
-  localStorage.setItem(getTasksKey(userType, userId, boardId), JSON.stringify(tasksFile))
-}
-
-// Helper to get stats from localStorage
-function getStats(userType: string = 'public', userId: string = 'public', boardId: string = 'main'): StatsFile {
-  const stored = localStorage.getItem(getStatsKey(userType, userId, boardId))
-  if (stored) {
-    return JSON.parse(stored)
-  }
-  // Initialize empty stats file
-  return {
-    version: 2,
-    updatedAt: new Date().toISOString(),
-    counters: {
-      created: 0,
-      completed: 0,
-      edited: 0,
-      deleted: 0
-    },
-    timeline: [],
-    tasks: {}
-  }
-}
-
-// Helper to save stats to localStorage
-function saveStats(statsFile: StatsFile, userType: string = 'public', userId: string = 'public', boardId: string = 'main'): void {
-  statsFile.updatedAt = new Date().toISOString()
-  localStorage.setItem(getStatsKey(userType, userId, boardId), JSON.stringify(statsFile))
-}
-
-// Helper to update stats for an event
-function recordEvent(
-  event: 'created' | 'completed' | 'edited' | 'deleted',
-  task: Task,
-  userType: string = 'public',
-  userId: string = 'public',
-  boardId: string = 'main'
-): void {
-  const stats = getStats(userType, userId, boardId)
-  
-  // Update counters
-  stats.counters[event]++
-  
-  // Add to timeline
-  stats.timeline.push({
-    t: new Date().toISOString(),
-    event,
-    id: task.id
-  })
-  
-  // Update task snapshot
-  stats.tasks[task.id] = {
-    id: task.id,
-    title: task.title,
-    tag: task.tag,
-    state: task.state,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    closedAt: task.closedAt
-  }
-  
-  saveStats(stats, userType, userId, boardId)
-}
-
-// Boards index helpers
-function getBoardsIndex(userType: string = 'public', userId: string = 'public'): BoardsFile {
-  const stored = localStorage.getItem(getBoardsIndexKey(userType, userId))
-  if (stored) return JSON.parse(stored)
-  return { version: 1, updatedAt: new Date().toISOString(), boards: [] }
-}
-
-function saveBoardsIndex(index: BoardsFile, userType: string = 'public', userId: string = 'public') {
-  index.updatedAt = new Date().toISOString()
-  localStorage.setItem(getBoardsIndexKey(userType, userId), JSON.stringify(index))
-}
-
 /**
  * Create a localStorage-based API client that mirrors the server API interface
  */
 export function createLocalStorageApi(userType: string = 'public', userId: string = 'public') {
+  const storage = new LocalStorageStorage(userType, userId)
+  
+  // For localStorage operations, treat all users as 'registered' to bypass server auth checks
+  // Public users CAN create tasks locally, the auth checks are only for server-side API calls
+  const authContext = { userType: 'registered' as any, userId }
+  
   return {
     async getBoards(): Promise<BoardsFile> {
-      // Read the boards index, auto-create main if missing, and populate tasks/stats for each board
-      const index = getBoardsIndex(userType, userId)
-      if (!index.boards || index.boards.length === 0) {
-        // create default main board
-        const mainBoard = { id: 'main', name: 'main', tasks: [], stats: undefined, tags: [] }
-        index.boards = [mainBoard]
-        saveBoardsIndex(index, userType, userId)
-        // initialize storage
-        saveTasks({ version: 1, updatedAt: new Date().toISOString(), tasks: [] }, userType, userId, 'main')
-        saveStats({ version: 2, updatedAt: new Date().toISOString(), counters: { created: 0, completed: 0, edited: 0, deleted: 0 }, timeline: [], tasks: {} }, userType, userId, 'main')
+      // Use handler to get boards
+      const boardsFile = await TaskHandlers.getBoards(storage, authContext)
+      
+      // Populate each board with tasks and stats
+      const populated: BoardsFile = { 
+        version: boardsFile.version, 
+        updatedAt: boardsFile.updatedAt, 
+        boards: [] 
       }
-
-      // Populate each board with its tasks and stats
-      const populated: BoardsFile = { version: index.version, updatedAt: index.updatedAt, boards: [] }
-      for (const b of index.boards) {
-        const tasksFile = getTasks(userType, userId, b.id)
-        const statsFile = getStats(userType, userId, b.id)
-        // propagate persisted tags from the index entry if present
-        const boardEntry = { id: b.id, name: b.name, tasks: tasksFile.tasks, stats: statsFile, tags: b.tags || [] }
-        populated.boards.push(boardEntry)
+      
+      for (const b of boardsFile.boards) {
+        const tasksFile = await storage.getTasks(userType, userId, b.id)
+        const statsFile = await storage.getStats(userType, userId, b.id)
+        populated.boards.push({
+          id: b.id,
+          name: b.name,
+          tasks: tasksFile.tasks,
+          stats: statsFile,
+          tags: b.tags || []
+        })
       }
+      
       return populated
     },
 
     async createBoard(boardId: string): Promise<Board> {
-      const index = getBoardsIndex(userType, userId)
-      console.debug('[localStorageApi] createBoard', { userType, userId, boardId, existing: index.boards.map(b=>b.id) })
-      if (index.boards.find(b => b.id === boardId)) {
-        throw new Error('Board already exists')
-      }
-  const board: Board = { id: boardId, name: boardId, tasks: [], stats: undefined, tags: [] }
-      index.boards.push(board)
-      saveBoardsIndex(index, userType, userId)
-      // Initialize empty tasks/stats for the new board
-      saveTasks({ version: 1, updatedAt: new Date().toISOString(), tasks: [] }, userType, userId, boardId)
-      saveStats({ version: 2, updatedAt: new Date().toISOString(), counters: { created: 0, completed: 0, edited: 0, deleted: 0 }, timeline: [], tasks: {} }, userType, userId, boardId)
+      console.debug('[localStorageApi] createBoard (using handler)', { userType, userId, boardId })
+      
+      // Use handler
+      const result = await TaskHandlers.createBoard(
+        storage,
+        authContext,
+        { id: boardId, name: boardId }
+      )
+      
+      // Initialize empty tasks/stats for new board
+      await storage.saveTasks(userType, userId, boardId, {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        tasks: []
+      })
+      
+      await storage.saveStats(userType, userId, boardId, {
+        version: 2,
+        updatedAt: new Date().toISOString(),
+        counters: { created: 0, completed: 0, edited: 0, deleted: 0 },
+        timeline: [],
+        tasks: {}
+      })
+      
+      // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
-      return board
+      
+      return result.board
     },
 
     async deleteBoard(boardId: string): Promise<void> {
-      const index = getBoardsIndex(userType, userId)
-      const i = index.boards.findIndex(b => b.id === boardId)
-      if (i === -1) throw new Error('Board not found')
-      index.boards.splice(i, 1)
-      saveBoardsIndex(index, userType, userId)
-      // Remove data
-      localStorage.removeItem(getTasksKey(userType, userId, boardId))
-      localStorage.removeItem(getStatsKey(userType, userId, boardId))
+      // Use handler
+      await TaskHandlers.deleteBoard(
+        storage,
+        authContext,
+        boardId
+      )
+      
+      // Cleanup board data
+      await storage.deleteBoardData(userType, userId, boardId)
+      
+      // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
     },
 
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
-      return getTasks(userType, userId, boardId)
+      return storage.getTasks(userType, userId, boardId)
     },
 
     async getStats(boardId: string = 'main'): Promise<StatsFile> {
-      return getStats(userType, userId, boardId)
+      return storage.getStats(userType, userId, boardId)
     },
 
     async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      const tasksFile = getTasks(userType, userId, boardId)
-      const now = new Date().toISOString()
+      console.log('[localStorageApi] createTask (using handler)', { data, boardId, suppressBroadcast })
       
-      const newTask: Task = {
-        id: ulid(),
-        title: data.title,
-        tag: data.tag || null,
-        state: 'Active',
-        createdAt: now,
-        updatedAt: now,
-        closedAt: null
+      // Use handler - it handles stats, validation, everything
+      const result = await TaskHandlers.createTask(
+        storage,
+        authContext,
+        data,
+        boardId
+      )
+      
+      // Get the created task from storage
+      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const createdTask = tasksFile.tasks.find(t => t.id === result.id)
+      
+      if (!createdTask) {
+        throw new Error('Task creation failed - task not found after creation')
       }
       
-  tasksFile.tasks.push(newTask)
-  saveTasks(tasksFile, userType, userId, boardId)
-      // If tag provided, ensure it's in the persisted boards index for this board
-      if (data.tag) {
-        const index = getBoardsIndex(userType, userId)
-        const b = index.boards.find(bb => bb.id === boardId)
-        if (b) {
-          const existing = b.tags || []
-          const toAdd = data.tag.split(' ').filter(Boolean).filter(t => !existing.includes(t))
-          if (toAdd.length) {
-            b.tags = [...existing, ...toAdd]
-            saveBoardsIndex(index, userType, userId)
-          }
-        }
+      // Broadcast update unless suppressed
+      if (!suppressBroadcast) {
+        console.log('[localStorageApi] createTask: broadcasting', { 
+          sessionId: SESSION_ID, 
+          boardId, 
+          taskId: result.id 
+        })
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      } else {
+        console.log('[localStorageApi] createTask: broadcast suppressed')
       }
-   recordEvent('created', newTask, userType, userId, boardId)
-   if (!suppressBroadcast) {
-     console.log('[localStorageApi] createTask: broadcasting update', { sessionId: SESSION_ID, boardId, taskId: newTask.id })
-     deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-   } else {
-     console.log('[localStorageApi] createTask: broadcast suppressed')
-   }
       
-      return newTask
+      return createdTask
     },    async patchTask(id: string, updates: Partial<Pick<Task, 'title' | 'tag'>>, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      const tasksFile = getTasks(userType, userId, boardId)
-      const task = tasksFile.tasks.find(t => t.id === id)
+      // Filter out null values - handler expects string | undefined, not null
+      const cleanUpdates: { title?: string; tag?: string } = {}
+      if (updates.title !== undefined) cleanUpdates.title = updates.title
+      if (updates.tag !== undefined && updates.tag !== null) cleanUpdates.tag = updates.tag
       
-      if (!task) {
-        throw new Error('Task not found')
+      // Use handler
+      const result = await TaskHandlers.updateTask(
+        storage,
+        authContext,
+        id,
+        cleanUpdates,
+        boardId
+      )
+      
+      // Broadcast update unless suppressed
+      if (!suppressBroadcast) {
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
       }
       
-      // Update task
-      if (updates.title !== undefined) task.title = updates.title
-      if (updates.tag !== undefined) task.tag = updates.tag
-      // If updating tag, persist any new tags into the boards index so tags survive even if tasks are removed
-      if (updates.tag !== undefined) {
-        const index = getBoardsIndex(userType, userId)
-        const b = index.boards.find(bb => bb.id === boardId)
-        if (b) {
-          const existing = b.tags || []
-          const toAdd = (updates.tag || '').split(' ').filter(Boolean).filter(t => !existing.includes(t))
-          if (toAdd.length) {
-            b.tags = [...existing, ...toAdd]
-            saveBoardsIndex(index, userType, userId)
-          }
-        }
+      // Get updated task from storage
+      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const updatedTask = tasksFile.tasks.find(t => t.id === id)
+      
+      if (!updatedTask) {
+        throw new Error('Task not found after update')
       }
-      task.updatedAt = new Date().toISOString()
       
-  saveTasks(tasksFile, userType, userId, boardId)
-  recordEvent('edited', task, userType, userId, boardId)
-  
-  // Broadcast update to other tabs unless suppressed
-  if (!suppressBroadcast) {
-    deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-  }
-      
-      return task
+      return updatedTask
     },
 
     async completeTask(id: string, boardId: string = 'main'): Promise<Task> {
-      const tasksFile = getTasks(userType, userId, boardId)
-      const task = tasksFile.tasks.find(t => t.id === id)
+      // Use handler
+      const result = await TaskHandlers.completeTask(
+        storage,
+        authContext,
+        id,
+        boardId
+      )
       
-      if (!task) {
-        throw new Error('Task not found')
+      // Broadcast update
+      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      
+      // Get completed task from storage
+      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const completedTask = tasksFile.tasks.find(t => t.id === id)
+      
+      if (!completedTask) {
+        throw new Error('Task not found after completion')
       }
       
-      const now = new Date().toISOString()
-      task.state = 'Completed'
-      task.updatedAt = now
-      task.closedAt = now
-      
-  saveTasks(tasksFile, userType, userId, boardId)
-  recordEvent('completed', task, userType, userId, boardId)
-  deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-      
-      return task
+      return completedTask
     },
 
     async deleteTask(id: string, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      console.log('[localStorageApi] deleteTask START', { id, boardId, suppressBroadcast, sessionId: SESSION_ID })
-      const tasksFile = getTasks(userType, userId, boardId)
-      const task = tasksFile.tasks.find(t => t.id === id)
+      console.log('[localStorageApi] deleteTask (using handler)', { id, boardId, suppressBroadcast })
       
-      if (!task) {
+      // Get the task BEFORE deletion so we can return it
+      const tasksFileBefore = await storage.getTasks(userType, userId, boardId)
+      const taskToDelete = tasksFileBefore.tasks.find(t => t.id === id)
+      
+      if (!taskToDelete) {
         throw new Error('Task not found')
       }
       
-      const now = new Date().toISOString()
-      task.state = 'Deleted'
-      task.updatedAt = now
-      task.closedAt = now
+      // Use handler to delete the task
+      await TaskHandlers.deleteTask(
+        storage,
+        authContext,
+        id,
+        boardId
+      )
       
-  saveTasks(tasksFile, userType, userId, boardId)
-  recordEvent('deleted', task, userType, userId, boardId)
-  if (!suppressBroadcast) {
-    console.log('[localStorageApi] deleteTask: broadcasting', { sessionId: SESSION_ID })
-    deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
-  } else {
-    console.log('[localStorageApi] deleteTask: broadcast suppressed')
-  }
-      console.log('[localStorageApi] deleteTask END')
-      return task
-    },
-
-    async createTag(tag: string, boardId: string = 'main'): Promise<void> {
-      const index = getBoardsIndex(userType, userId)
-      const b = index.boards.find(bb => bb.id === boardId)
-      if (!b) throw new Error('Board not found')
-      const existing = b.tags || []
-      if (!existing.includes(tag)) {
-        b.tags = [...existing, tag]
-        saveBoardsIndex(index, userType, userId)
-        deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      // Broadcast update unless suppressed
+      if (!suppressBroadcast) {
+        console.log('[localStorageApi] deleteTask: broadcasting', { sessionId: SESSION_ID })
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      } else {
+        console.log('[localStorageApi] deleteTask: broadcast suppressed')
+      }
+      
+      // Return the task as it was before deletion (with state updated to 'Deleted')
+      return {
+        ...taskToDelete,
+        state: 'Deleted',
+        closedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
     },
 
+    async createTag(tag: string, boardId: string = 'main'): Promise<void> {
+      // Use handler - expects { boardId, tag } input
+      await TaskHandlers.createTag(
+        storage,
+        authContext,
+        { boardId, tag }
+      )
+      
+      // Broadcast update
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+    },
+
     async deleteTag(tag: string, boardId: string = 'main'): Promise<void> {
-      const index = getBoardsIndex(userType, userId)
-      const b = index.boards.find(bb => bb.id === boardId)
-      if (!b) throw new Error('Board not found')
-      const existing = b.tags || []
-      // Filter out the tag to delete
-      b.tags = existing.filter(t => t !== tag)
-      saveBoardsIndex(index, userType, userId)
+      // Use handler - expects { boardId, tag } input
+      await TaskHandlers.deleteTag(
+        storage,
+        authContext,
+        { boardId, tag }
+      )
+      
+      // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     },
 
