@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -33,7 +33,6 @@
     "preview": "vite preview",
     "test:server": "tsx test-server.ts",
     "version:patch": "npm version patch --no-git-tag-version",
-    "prepublishOnly": "npm run version:patch && npm run build:all",
     "prepare": "husky"
   },
   "dependencies": {
