@@ -1,12 +1,15 @@
 /**
- * Server-side TypeScript types for Task Router
- * Contains both core domain types and server-infrastructure types
+ * Shared TypeScript types for Task application
+ * Single source of truth for ALL domain types (used by both client and server)
  */
 
 // Core domain types
 export type ULID = string;
 
-export type UserType = 'public' | 'friend' | 'admin';
+// UserType is any string identifier
+// "public" is special: localStorage-only, no server sync
+// All others (friend, admin, custom names) sync to server
+export type UserType = string;
 
 export interface Task {
   id: ULID;
@@ -30,7 +33,7 @@ export interface Board {
   name: string; // display name
   tasks: Task[];
   // persistent list of known tags for this board (allows empty tag lists to remain)
-  tags?: string[];
+  tags: string[];
   stats?: StatsFile;
 }
 
@@ -70,6 +73,7 @@ export interface StatsFile {
 
 export interface AuthContext {
   userType: UserType;
+  userId?: string;
 }
 
 export interface CreateTaskInput {
