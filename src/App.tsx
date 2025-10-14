@@ -189,7 +189,7 @@ export default function App(props: TaskAppProps = {}) {
 
   // Get top tags for layout, including any persisted tags on the current board so empty-but-known tags remain available
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
-  const persistedTags: string[] = (currentBoard as any)?.tags || []
+  const persistedTags: string[] = currentBoard?.tags || []
   // For layout we only want tags derived from tasks so the layout collapses when empty
   const topTags = getTopTags(tasks, 6)
 
@@ -207,12 +207,9 @@ export default function App(props: TaskAppProps = {}) {
           const tgt = e.target as HTMLElement
           if (!tgt.closest || !tgt.closest('.task-app__item')) {
             // If a marquee just ended very recently, don't immediately clear selection
-            try {
-              const justEnded = (dragAndDrop as any).selectionJustEndedAt as number | null
-              if (justEnded && Date.now() - justEnded < 300) {
-                return
-              }
-            } catch {}
+            if (dragAndDrop.selectionJustEndedAt && Date.now() - dragAndDrop.selectionJustEndedAt < 300) {
+              return
+            }
             dragAndDrop.clearSelection()
           }
         } catch {}
@@ -332,14 +329,14 @@ export default function App(props: TaskAppProps = {}) {
                   e.preventDefault()
                   e.dataTransfer.dropEffect = 'move'
                   // set a temporary state by using dragOverFilter semantic to indicate board hover
-                  try { (dragAndDrop as any).setDragOverFilter?.(`board:${b.id}`) } catch {}
+                  dragAndDrop.setDragOverFilter(`board:${b.id}`)
                 }}
                 onDragLeave={(e) => {
-                  try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                  dragAndDrop.setDragOverFilter(null)
                 }}
                 onDrop={async (e) => {
                   e.preventDefault()
-                  try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                  dragAndDrop.setDragOverFilter(null)
                   const ids = getTaskIdsFromDragEvent(e.dataTransfer)
                   if (ids.length === 0) return
                   try {
@@ -368,14 +365,14 @@ export default function App(props: TaskAppProps = {}) {
               onDragOver={(e) => {
                 e.preventDefault()
                 e.dataTransfer.dropEffect = 'move'
-                try { (dragAndDrop as any).setDragOverFilter?.('add-board') } catch {}
+                dragAndDrop.setDragOverFilter('add-board')
               }}
               onDragLeave={(e) => {
-                try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                dragAndDrop.setDragOverFilter(null)
               }}
               onDrop={async (e) => {
                 e.preventDefault()
-                try { (dragAndDrop as any).setDragOverFilter?.(null) } catch {}
+                dragAndDrop.setDragOverFilter(null)
                 
                 const ids = getTaskIdsFromDragEvent(e.dataTransfer)
                 if (ids.length > 0) {
