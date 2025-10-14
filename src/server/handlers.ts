@@ -16,6 +16,11 @@ import type {
   ULID
 } from './types.js';
 import { generateULID, now } from './utils.js';
+import {
+  findTaskOrThrow,
+  findBoardOrThrow,
+  updateBoardAtIndex
+} from './handlers-utils.js';
 
 /**
  * Update stats after a task creation
@@ -177,10 +182,6 @@ export async function createTask(
   input: CreateTaskInput,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; id: ULID }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot create tasks');
-  }
-
   const timestamp = now();
   
   // Get board-scoped tasks and stats
@@ -222,22 +223,14 @@ export async function updateTask(
   input: UpdateTaskInput,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot update tasks');
-  }
-
   const timestamp = now();
   
   // Get board-scoped tasks and stats
   const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
   const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
-  if (taskIndex < 0) {
-    throw new Error('Task not found');
-  }
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const task = tasks.tasks[taskIndex];
   const updatedTask: Task = {
     ...task,
     ...input,
@@ -271,22 +264,14 @@ export async function completeTask(
   taskId: ULID,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot complete tasks');
-  }
-
   const timestamp = now();
   
   // Get board-scoped tasks and stats
   const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
   const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
-  if (taskIndex < 0) {
-    throw new Error('Task not found');
-  }
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const task = tasks.tasks[taskIndex];
   const completedTask: Task = {
     ...task,
     state: 'Completed',
@@ -326,12 +311,8 @@ export async function deleteTask(
   const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
   const stats = await storage.getStats(auth.userType, auth.userId, boardId);
 
-  const taskIndex = tasks.tasks.findIndex(t => t.id === taskId);
-  if (taskIndex < 0) {
-    throw new Error('Task not found');
-  }
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const task = tasks.tasks[taskIndex];
   const deletedTask: Task = {
     ...task,
     state: 'Deleted',
@@ -366,10 +347,6 @@ export async function createBoard(
   auth: AuthContext & { userId?: string },
   input: { id: string; name: string }
 ): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot create boards');
-  }
-
   const timestamp = now();
   const boards = await storage.getBoards(auth.userType, auth.userId);
   
@@ -404,10 +381,6 @@ export async function deleteBoard(
   auth: AuthContext & { userId?: string },
   boardId: string
 ): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot delete boards');
-  }
-
   // Prevent deleting the main board
   if (boardId === 'main') {
     throw new Error('Cannot delete the main board');
@@ -416,10 +389,7 @@ export async function deleteBoard(
   const timestamp = now();
   const boards = await storage.getBoards(auth.userType, auth.userId);
   
-  const boardIndex = boards.boards.findIndex(b => b.id === boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${boardId} not found`);
-  }
+  const { index: boardIndex } = findBoardOrThrow(boards, boardId);
   
   const updatedBoards: BoardsFile = {
     ...boards,
@@ -442,19 +412,11 @@ export async function createTag(
   auth: AuthContext & { userId?: string },
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot create tags');
-  }
-
   const timestamp = now();
   const boards = await storage.getBoards(auth.userType, auth.userId);
   
-  const boardIndex = boards.boards.findIndex(b => b.id === input.boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${input.boardId} not found`);
-  }
+  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
   
-  const board = boards.boards[boardIndex];
   const existingTags = board.tags || [];
   
   // Check if tag already exists
@@ -467,15 +429,7 @@ export async function createTag(
     tags: [...existingTags, input.tag]
   };
   
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
-  };
+  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
   
   await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
   
@@ -490,19 +444,11 @@ export async function deleteTag(
   auth: AuthContext & { userId?: string },
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
-  if (auth.userType === 'public') {
-    throw new Error('Forbidden: Public users cannot delete tags');
-  }
-
   const timestamp = now();
   const boards = await storage.getBoards(auth.userType, auth.userId);
   
-  const boardIndex = boards.boards.findIndex(b => b.id === input.boardId);
-  if (boardIndex < 0) {
-    throw new Error(`Board ${input.boardId} not found`);
-  }
+  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
   
-  const board = boards.boards[boardIndex];
   const existingTags = board.tags || [];
   
   const updatedBoard = {
@@ -510,15 +456,7 @@ export async function deleteTag(
     tags: existingTags.filter(t => t !== input.tag)
   };
   
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [
-      ...boards.boards.slice(0, boardIndex),
-      updatedBoard,
-      ...boards.boards.slice(boardIndex + 1)
-    ]
-  };
+  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
   
   await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
   
