@@ -259,22 +259,19 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
 
     async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]) {
-      // Apply moves to localStorage first (optimistic)
-      // Note: This is complex so we'll let the reload handle it
+      // 1. OPTIMISTIC: Move each task in localStorage by calling the handler directly
+      const result = await localStorage.batchMoveTasks(sourceBoardId, targetBoardId, taskIds)
       
-      // Server sync (synchronous for this one since we need the result)
-      const response = await fetch('/task/api/batch-move', {
+      // 2. BACKGROUND: Sync to server (fire-and-forget)
+      fetch('/task/api/batch-move', {
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
       })
+        .then(() => console.log('[api] Background sync: batchMoveTasks completed'))
+        .catch(err => console.error('[api] Failed to sync batchMoveTasks:', err))
       
-      if (!response.ok) {
-        throw new Error(`Batch move failed: ${response.status}`)
-      }
-      
-      console.log('[api] Batch move completed')
-      return await response.json()
+      return result
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]) {

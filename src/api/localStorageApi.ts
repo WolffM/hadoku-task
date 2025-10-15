@@ -178,7 +178,15 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     async completeTask(id: string, boardId: string = 'main'): Promise<Task> {
-      // Use handler
+      // Get the task BEFORE completing it (since handler removes it from active list)
+      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const taskToComplete = tasksFile.tasks.find(t => t.id === id)
+      
+      if (!taskToComplete) {
+        throw new Error('Task not found')
+      }
+      
+      // Use handler to complete the task (removes from active, updates stats)
       const result = await TaskHandlers.completeTask(
         storage,
         authContext,
@@ -189,15 +197,13 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       // Broadcast update
       deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
       
-      // Get completed task from storage
-      const tasksFile = await storage.getTasks(userType, userId, boardId)
-      const completedTask = tasksFile.tasks.find(t => t.id === id)
-      
-      if (!completedTask) {
-        throw new Error('Task not found after completion')
+      // Return the completed task with updated state
+      return {
+        ...taskToComplete,
+        state: 'Completed',
+        closedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
-      
-      return completedTask
     },
 
     async deleteTask(id: string, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
@@ -284,6 +290,58 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
         updatedAt: new Date().toISOString()
       }
       localStorage.setItem(key, JSON.stringify(updated))
+    },
+
+    // Batch operations
+    async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]): Promise<{ ok: boolean; moved: number }> {
+      const boards = await this.getBoards()
+      
+      const sourceBoard = boards.boards.find(b => b.id === sourceBoardId)
+      const targetBoard = boards.boards.find(b => b.id === targetBoardId)
+      
+      if (!sourceBoard) {
+        throw new Error(`Source board ${sourceBoardId} not found`)
+      }
+      if (!targetBoard) {
+        throw new Error(`Target board ${targetBoardId} not found`)
+      }
+      
+      // Find tasks to move
+      const tasksToMove = sourceBoard.tasks.filter(t => taskIds.includes(t.id))
+      
+      // Remove from source
+      sourceBoard.tasks = sourceBoard.tasks.filter(t => !taskIds.includes(t.id))
+      
+      // Add to target
+      targetBoard.tasks = [...targetBoard.tasks, ...tasksToMove]
+      
+      // Update timestamp
+      boards.updatedAt = new Date().toISOString()
+      
+      // Save back to localStorage
+      const boardsKey = `${userType}-${userId}-boards`
+      localStorage.setItem(boardsKey, JSON.stringify(boards))
+      
+      // Update individual board storage
+      const sourceBoardKey = `${userType}-${userId}-${sourceBoardId}-tasks`
+      const targetBoardKey = `${userType}-${userId}-${targetBoardId}-tasks`
+      
+      localStorage.setItem(sourceBoardKey, JSON.stringify({
+        version: 1,
+        updatedAt: boards.updatedAt,
+        tasks: sourceBoard.tasks
+      }))
+      
+      localStorage.setItem(targetBoardKey, JSON.stringify({
+        version: 1,
+        updatedAt: boards.updatedAt,
+        tasks: targetBoard.tasks
+      }))
+      
+      // Broadcast change
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
+      
+      return { ok: true, moved: tasksToMove.length }
     }
   }
 }
