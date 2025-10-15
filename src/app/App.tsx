@@ -337,9 +337,11 @@ export default function App(props: TaskAppProps = {}) {
           {userType !== 'public' && (
             <button
               className="sync-btn"
-              onClick={async () => {
+              onClick={async (e) => {
                 console.log('[App] Manual refresh triggered')
                 await initialLoad()
+                // Remove focus after sync completes
+                ;(e.currentTarget as HTMLButtonElement).blur()
               }}
               title="Sync from server"
               aria-label="Sync from server"
