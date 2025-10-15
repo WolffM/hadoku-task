@@ -113,10 +113,11 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       return storage.getStats(userType, userId, boardId)
     },
 
-    async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
+    async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
       console.log('[localStorageApi] createTask (using handler)', { data, boardId, suppressBroadcast })
       
       // Use handler - it handles stats, validation, everything
+      // Pass through id and createdAt if provided (for preserving IDs during moves)
       const result = await TaskHandlers.createTask(
         storage,
         authContext,

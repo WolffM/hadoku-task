@@ -80,6 +80,7 @@ export interface CreateTaskInput {
   id?: string;  // Client-generated ID (optional, server will generate if not provided)
   title: string;
   tag?: string;
+  createdAt?: string;  // Original creation timestamp (optional, for preserving when moving tasks)
 }
 
 export interface UpdateTaskInput {

@@ -121,7 +121,7 @@ export async function getBoards(
   storage: Storage,
   auth: AuthContext
 ): Promise<BoardsFile> {
-  // Get board metadata (id, name, tags only in v2 architecture)
+  // Get board metadata (id, name, tags only in board-scoped architecture)
   const boardsFile = await storage.getBoards(auth.userType, auth.userId);
   
   // Populate each board with its tasks and stats from separate storage
@@ -147,7 +147,7 @@ export async function getBoards(
 }
 
 /**
- * Get tasks for a specific board (board-scoped storage v2)
+ * Get tasks for a specific board (board-scoped storage)
  */
 export async function getBoardTasks(
   storage: Storage,
@@ -159,7 +159,7 @@ export async function getBoardTasks(
 }
 
 /**
- * Get stats for a specific board (board-scoped storage v2)
+ * Get stats for a specific board (board-scoped storage)
  */
 export async function getBoardStats(
   storage: Storage,
@@ -173,7 +173,7 @@ export async function getBoardStats(
 // --- Write Operations ---
 
 /**
- * Create a new task (board-scoped storage v2)
+ * Create a new task (board-scoped storage)
  * Public users cannot create tasks
  */
 export async function createTask(
@@ -190,12 +190,14 @@ export async function createTask(
 
   // Use client-provided ID if available, otherwise generate server-side
   const id = input.id || generateULID();
+  // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
+  const createdAt = input.createdAt || timestamp;
   const newTask: Task = {
     id,
     title: input.title,
     tag: input.tag ?? null,
     state: 'Active',
-    createdAt: timestamp
+    createdAt
   };
 
   const updatedTasks: TasksFile = {
@@ -213,7 +215,7 @@ export async function createTask(
 }
 
 /**
- * Update an existing task (board-scoped storage v2)
+ * Update an existing task (board-scoped storage)
  * Public users cannot update tasks
  */
 export async function updateTask(
@@ -255,7 +257,7 @@ export async function updateTask(
 }
 
 /**
- * Complete a task (removes from active tasks, records in stats) - board-scoped storage v2
+ * Complete a task (removes from active tasks, records in stats) - board-scoped storage
  * Public users cannot complete tasks
  */
 export async function completeTask(
@@ -297,7 +299,7 @@ export async function completeTask(
 }
 
 /**
- * Delete a task (removes from active tasks, records in stats) - board-scoped storage v2
+ * Delete a task (removes from active tasks, records in stats) - board-scoped storage
  */
 export async function deleteTask(
   storage: Storage,
@@ -461,6 +463,218 @@ export async function deleteTag(
   await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
   
   return { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` };
+}
+
+// --- Batch Operations ---
+
+/**
+ * Batch update tags on multiple tasks (board-scoped storage)
+ * Performs a single read-modify-write cycle to avoid race conditions
+ */
+export async function batchUpdateTags(
+  storage: Storage,
+  auth: AuthContext,
+  input: {
+    boardId: string;
+    updates: Array<{ taskId: string; tag: string | null }>;
+  }
+): Promise<{ ok: boolean; message: string; updated: number }> {
+  const timestamp = now();
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, input.boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, input.boardId);
+  
+  // Apply all updates in one pass
+  let updatedCount = 0;
+  const updatedTasksList = tasks.tasks.map(task => {
+    const update = input.updates.find(u => u.taskId === task.id);
+    if (update) {
+      updatedCount++;
+      return {
+        ...task,
+        tag: update.tag || undefined,
+        updatedAt: timestamp
+      };
+    }
+    return task;
+  });
+  
+  const updatedTasksFile: TasksFile = {
+    ...tasks,
+    tasks: updatedTasksList,
+    updatedAt: timestamp
+  };
+  
+  // Record all updates in stats
+  let updatedStats = stats;
+  for (const task of updatedTasksList) {
+    if (input.updates.find(u => u.taskId === task.id)) {
+      updatedStats = recordUpdate(updatedStats, task, timestamp);
+    }
+  }
+  
+  await storage.saveTasks(auth.userType, auth.userId, input.boardId, updatedTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, input.boardId, updatedStats);
+  
+  return {
+    ok: true,
+    message: `Updated ${updatedCount} task(s) on board ${input.boardId}`,
+    updated: updatedCount
+  };
+}
+
+/**
+ * Batch move tasks from one board to another (board-scoped storage)
+ * Performs read-modify-write on both boards to avoid race conditions
+ * Note: Preserves task IDs and createdAt timestamps across board moves
+ * Moving tasks = completing them on source board + creating them on target board (with same IDs)
+ */
+export async function batchMoveTasks(
+  storage: Storage,
+  auth: AuthContext,
+  input: {
+    sourceBoardId: string;
+    targetBoardId: string;
+    taskIds: string[];
+  }
+): Promise<{ ok: boolean; message: string; moved: number }> {
+  const timestamp = now();
+  
+  // Get source board tasks and stats
+  const sourceTasks = await storage.getTasks(auth.userType, auth.userId, input.sourceBoardId);
+  const sourceStats = await storage.getStats(auth.userType, auth.userId, input.sourceBoardId);
+  
+  // Get target board tasks and stats
+  const targetTasks = await storage.getTasks(auth.userType, auth.userId, input.targetBoardId);
+  const targetStats = await storage.getStats(auth.userType, auth.userId, input.targetBoardId);
+  
+  // Find tasks to move from source
+  const tasksToMove = sourceTasks.tasks.filter(task => input.taskIds.includes(task.id));
+  
+  if (tasksToMove.length === 0) {
+    return { ok: true, message: 'No tasks to move', moved: 0 };
+  }
+  
+  // Remove tasks from source (mark as completed, not deleted)
+  const updatedSourceTasks = sourceTasks.tasks.filter(task => !input.taskIds.includes(task.id));
+  const updatedSourceTasksFile: TasksFile = {
+    ...sourceTasks,
+    tasks: updatedSourceTasks,
+    updatedAt: timestamp
+  };
+  
+  // Create tasks on target board (preserve original IDs, title, tags, and createdAt)
+  const newTasksForTarget: Task[] = tasksToMove.map(task => ({
+    id: task.id, // Preserve original task ID
+    title: task.title,
+    tag: task.tag,
+    state: 'Active',
+    createdAt: task.createdAt, // Preserve original creation timestamp
+    updatedAt: timestamp
+  }));
+  
+  const updatedTargetTasksFile: TasksFile = {
+    ...targetTasks,
+    tasks: [...newTasksForTarget, ...targetTasks.tasks],
+    updatedAt: timestamp
+  };
+  
+  // Update stats: record completions on source, creations on target
+  let updatedSourceStats = sourceStats;
+  let updatedTargetStats = targetStats;
+  
+  for (const task of tasksToMove) {
+    const completedTask: Task = { ...task, state: 'Completed', closedAt: timestamp, updatedAt: timestamp };
+    updatedSourceStats = recordCompletion(updatedSourceStats, completedTask, timestamp);
+  }
+  
+  for (const task of newTasksForTarget) {
+    updatedTargetStats = recordCreation(updatedTargetStats, task, timestamp);
+  }
+  
+  // Save all changes (atomic per board, both boards updated in sequence)
+  await storage.saveTasks(auth.userType, auth.userId, input.sourceBoardId, updatedSourceTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, input.sourceBoardId, updatedSourceStats);
+  await storage.saveTasks(auth.userType, auth.userId, input.targetBoardId, updatedTargetTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, input.targetBoardId, updatedTargetStats);
+  
+  return {
+    ok: true,
+    message: `Moved ${tasksToMove.length} task(s) from ${input.sourceBoardId} to ${input.targetBoardId}`,
+    moved: tasksToMove.length
+  };
+}
+
+/**
+ * Batch clear a tag from multiple tasks and remove the tag from the board (board-scoped storage)
+ * Performs a single read-modify-write cycle to avoid race conditions
+ */
+export async function batchClearTag(
+  storage: Storage,
+  auth: AuthContext,
+  input: {
+    boardId: string;
+    tag: string;
+    taskIds: string[];
+  }
+): Promise<{ ok: boolean; message: string; cleared: number }> {
+  const timestamp = now();
+  
+  // Get board-scoped tasks and stats
+  const tasks = await storage.getTasks(auth.userType, auth.userId, input.boardId);
+  const stats = await storage.getStats(auth.userType, auth.userId, input.boardId);
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  // Clear tag from tasks
+  let clearedCount = 0;
+  const updatedTasksList = tasks.tasks.map(task => {
+    if (input.taskIds.includes(task.id) && task.tag) {
+      const existingTags = task.tag.split(' ').filter(Boolean);
+      const updatedTags = existingTags.filter(t => t !== input.tag);
+      clearedCount++;
+      return {
+        ...task,
+        tag: updatedTags.length > 0 ? updatedTags.join(' ') : undefined,
+        updatedAt: timestamp
+      };
+    }
+    return task;
+  });
+  
+  const updatedTasksFile: TasksFile = {
+    ...tasks,
+    tasks: updatedTasksList,
+    updatedAt: timestamp
+  };
+  
+  // Record updates in stats
+  let updatedStats = stats;
+  for (const task of updatedTasksList) {
+    if (input.taskIds.includes(task.id)) {
+      updatedStats = recordUpdate(updatedStats, task, timestamp);
+    }
+  }
+  
+  // Remove tag from board metadata
+  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
+  const existingBoardTags = board.tags || [];
+  const updatedBoard = {
+    ...board,
+    tags: existingBoardTags.filter(t => t !== input.tag)
+  };
+  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
+  
+  // Save all changes
+  await storage.saveTasks(auth.userType, auth.userId, input.boardId, updatedTasksFile);
+  await storage.saveStats(auth.userType, auth.userId, input.boardId, updatedStats);
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return {
+    ok: true,
+    message: `Cleared tag ${input.tag} from ${clearedCount} task(s) on board ${input.boardId}`,
+    cleared: clearedCount
+  };
 }
 
 

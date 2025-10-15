@@ -107,8 +107,8 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       }
     },
     
-    async createTask(data: { title: string; tag?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
-      // Create task optimistically with client-generated ID
+    async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
+      // Create task optimistically with client-generated ID (or use provided ID for moves)
       const localTask = await localStorage.createTask(data, boardId, suppressBroadcast)
       
       // Send task to server WITH the client-generated ID so server uses same ID
@@ -116,7 +116,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ 
-          id: localTask.id,  // Send client ID to server
+          id: data.id || localTask.id,  // Use provided ID (for moves) or client-generated ID
           ...data, 
           boardId 
         })
@@ -239,6 +239,74 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       })
         .then(() => console.log('[api] Background sync: savePreferences completed'))
         .catch(err => console.error('[api] Failed to sync savePreferences:', err))
+    },
+
+    // Batch operations
+    async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>) {
+      // Apply updates to localStorage first (optimistic)
+      for (const update of updates) {
+        await localStorage.patchTask(update.taskId, { tag: update.tag || undefined }, boardId, true)
+      }
+      
+      // Background server sync
+      fetch('/task/api/batch-tag', {
+        method: 'PATCH',
+        headers: adminHeaders(userType, userId, sessionId),
+        body: JSON.stringify({ boardId, updates })
+      })
+        .then(() => console.log('[api] Background sync: batchUpdateTags completed'))
+        .catch(err => console.error('[api] Failed to sync batchUpdateTags:', err))
+    },
+
+    async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]) {
+      // Apply moves to localStorage first (optimistic)
+      // Note: This is complex so we'll let the reload handle it
+      
+      // Server sync (synchronous for this one since we need the result)
+      const response = await fetch('/task/api/batch-move', {
+        method: 'POST',
+        headers: adminHeaders(userType, userId, sessionId),
+        body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Batch move failed: ${response.status}`)
+      }
+      
+      console.log('[api] Batch move completed')
+      return await response.json()
+    },
+
+    async batchClearTag(boardId: string, tag: string, taskIds: string[]) {
+      // Apply clears to localStorage first (optimistic)
+      for (const taskId of taskIds) {
+        const task = await localStorage.getBoards().then(boards => {
+          const board = boards.boards.find(b => b.id === boardId)
+          return board?.tasks?.find(t => t.id === taskId)
+        })
+        if (task?.tag) {
+          const existingTags = task.tag.split(' ').filter(Boolean)
+          const updatedTags = existingTags.filter(t => t !== tag)
+          await localStorage.patchTask(
+            taskId,
+            { tag: updatedTags.length > 0 ? updatedTags.join(' ') : undefined },
+            boardId,
+            true
+          )
+        }
+      }
+      
+      // Also delete the tag from the board
+      await localStorage.deleteTag(tag, boardId)
+      
+      // Background server sync
+      fetch('/task/api/batch-clear-tag', {
+        method: 'POST',
+        headers: adminHeaders(userType, userId, sessionId),
+        body: JSON.stringify({ boardId, tag, taskIds })
+      })
+        .then(() => console.log('[api] Background sync: batchClearTag completed'))
+        .catch(err => console.error('[api] Failed to sync batchClearTag:', err))
     }
   }
 }
