@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.0.24",
+  "version": "3.0.25",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -27,7 +27,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:server": "tsc -p tsconfig.json",
+    "build:server": "tsc -p tsconfig.server.json",
     "build:all": "npm run build && npm run build:server",
     "preview": "vite preview",
     "version:patch": "npm version patch --no-git-tag-version",
