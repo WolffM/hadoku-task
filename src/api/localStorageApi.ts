@@ -342,6 +342,34 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
       
       return { ok: true, moved: tasksToMove.length }
+    },
+
+    async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>): Promise<void> {
+      console.log('[localStorageApi] batchUpdateTags', { boardId, updates })
+      
+      // Use handler
+      await TaskHandlers.batchUpdateTags(
+        storage,
+        authContext,
+        { boardId, updates }
+      )
+      
+      // Broadcast update
+      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+    },
+
+    async batchClearTag(boardId: string, tag: string, taskIds: string[]): Promise<void> {
+      console.log('[localStorageApi] batchClearTag', { boardId, tag, taskIds })
+      
+      // Use handler
+      await TaskHandlers.batchClearTag(
+        storage,
+        authContext,
+        { boardId, tag, taskIds }
+      )
+      
+      // Broadcast update
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     }
   }
 }

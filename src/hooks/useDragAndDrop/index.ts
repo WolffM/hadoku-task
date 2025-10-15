@@ -22,6 +22,28 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
   // no placeholder - we align the drag-image exactly to the click point
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null)
 
+  /**
+   * Extract dragged task IDs from drag event
+   * Supports multi-task drag via custom data format, falls back to single ID
+   */
+  function extractDraggedTaskIds(e: React.DragEvent): string[] {
+    let ids: string[] = []
+    
+    // Try to read multi-task IDs first
+    try {
+      const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
+      if (raw) ids = JSON.parse(raw)
+    } catch {}
+
+    // Fallback to single task ID
+    if (ids.length === 0) {
+      const taskId = e.dataTransfer.getData('text/plain')
+      if (taskId) ids = [taskId]
+    }
+
+    return ids
+  }
+
   function onDragStart(e: React.DragEvent, taskId: string) {
     const idsToDrag = selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
     console.log('[useDragAndDrop] onDragStart', { taskId, idsToDrag, selectedCount: selectedIds.size })
@@ -228,18 +250,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     e.preventDefault()
     setDragOverTag(null)
     console.log('[useDragAndDrop] onDrop START', { targetTag })
-    // Support multi-task drops: try to read our custom data first
-    let ids: string[] = []
-    try {
-      const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
-      if (raw) ids = JSON.parse(raw)
-    } catch {}
-
-    if (ids.length === 0) {
-      const taskId = e.dataTransfer.getData('text/plain')
-      if (taskId) ids = [taskId]
-    }
-
+    
+    // Extract dragged task IDs (supports multi-task drag)
+    const ids = extractDraggedTaskIds(e)
     if (ids.length === 0) return
 
     // read source tag if provided
@@ -308,21 +321,37 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     e.preventDefault()
     setDragOverFilter(null)
     
-    const taskId = e.dataTransfer.getData('text/plain')
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
+    // Extract dragged task IDs (supports multi-task drag)
+    const ids = extractDraggedTaskIds(e)
+    if (ids.length === 0) return
     
-    const existingTags = task.tag?.split(' ') || []
-    if (existingTags.includes(filterTag)) {
-      console.log(`Task already has tag: ${filterTag}`)
-      return // Tag already exists
+    console.log('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
+    
+    // Build list of tag updates
+    const updates: Array<{ taskId: string, tag: string }> = []
+    for (const id of ids) {
+      const task = tasks.find(t => t.id === id)
+      if (!task) continue
+      
+      const existingTags = task.tag?.split(' ').filter(Boolean) || []
+      if (existingTags.includes(filterTag)) {
+        console.log(`Task ${id} already has tag: ${filterTag}`)
+        continue // Tag already exists
+      }
+      
+      const updatedTags = [...existingTags, filterTag].join(' ')
+      updates.push({ taskId: id, tag: updatedTags })
     }
     
-    const updatedTags = [...existingTags, filterTag].join(' ')
-    console.log(`Adding tag "${filterTag}" to task "${task.title}" via filter drop. New tags: "${updatedTags}"`)
+    if (updates.length === 0) {
+      console.log('No updates needed - all tasks already have this tag')
+      return
+    }
+    
+    console.log(`Adding tag "${filterTag}" to ${updates.length} task(s) via filter drop`)
     
     try {
-      await onTaskUpdate(taskId, { tag: updatedTags })
+      await onBulkUpdate(updates)
       try { clearSelection() } catch {}
     } catch (error) {
       console.error('Failed to add tag via filter drop:', error)

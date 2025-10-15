@@ -243,12 +243,10 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
 
     // Batch operations
     async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>) {
-      // Apply updates to localStorage first (optimistic)
-      for (const update of updates) {
-        await localStorage.patchTask(update.taskId, { tag: update.tag || undefined }, boardId, true)
-      }
+      // 1. OPTIMISTIC: Update tags in localStorage
+      await localStorage.batchUpdateTags(boardId, updates)
       
-      // Background server sync
+      // 2. BACKGROUND: Sync to server (fire-and-forget)
       fetch('/task/api/batch-tag', {
         method: 'PATCH',
         headers: adminHeaders(userType, userId, sessionId),
@@ -259,7 +257,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
 
     async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]) {
-      // 1. OPTIMISTIC: Move each task in localStorage by calling the handler directly
+      // 1. OPTIMISTIC: Move tasks in localStorage
       const result = await localStorage.batchMoveTasks(sourceBoardId, targetBoardId, taskIds)
       
       // 2. BACKGROUND: Sync to server (fire-and-forget)
@@ -275,28 +273,10 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]) {
-      // Apply clears to localStorage first (optimistic)
-      for (const taskId of taskIds) {
-        const task = await localStorage.getBoards().then(boards => {
-          const board = boards.boards.find(b => b.id === boardId)
-          return board?.tasks?.find(t => t.id === taskId)
-        })
-        if (task?.tag) {
-          const existingTags = task.tag.split(' ').filter(Boolean)
-          const updatedTags = existingTags.filter(t => t !== tag)
-          await localStorage.patchTask(
-            taskId,
-            { tag: updatedTags.length > 0 ? updatedTags.join(' ') : undefined },
-            boardId,
-            true
-          )
-        }
-      }
+      // 1. OPTIMISTIC: Clear tag in localStorage
+      await localStorage.batchClearTag(boardId, tag, taskIds)
       
-      // Also delete the tag from the board
-      await localStorage.deleteTag(tag, boardId)
-      
-      // Background server sync
+      // 2. BACKGROUND: Sync to server (fire-and-forget)
       fetch('/task/api/batch-clear-tag', {
         method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
