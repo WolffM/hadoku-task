@@ -19,7 +19,6 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
   const [isSelecting, setIsSelecting] = useState(false)
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [selectionJustEndedAt, setSelectionJustEndedAt] = useState<number | null>(null)
-  // no placeholder - we align the drag-image exactly to the click point
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null)
 
   /**

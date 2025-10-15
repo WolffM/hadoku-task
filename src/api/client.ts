@@ -181,7 +181,10 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId })
       })
-        .then(() => console.log('[api] Background sync: completeTask completed'))
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          console.log('[api] Background sync: completeTask completed')
+        })
         .catch(err => console.error('[api] Failed to sync completeTask:', err))
       return result
     },
@@ -194,7 +197,10 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId })
       })
-        .then(() => console.log('[api] Background sync: deleteTask completed'))
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          console.log('[api] Background sync: deleteTask completed')
+        })
         .catch(err => console.error('[api] Failed to sync deleteTask:', err))
     },
 

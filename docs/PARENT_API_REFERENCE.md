@@ -209,6 +209,22 @@ export default {
       return Response.json(result)
     }
     
+    // Complete task - IMPORTANT: Extract boardId from body!
+    if (url.pathname.match(/^\/api\/([^\/]+)\/complete$/) && request.method === 'POST') {
+      const taskId = url.pathname.split('/')[2]
+      const body = await request.json()
+      const result = await TaskHandlers.completeTask(storage, auth, taskId, body.boardId)
+      return Response.json(result)
+    }
+    
+    // Delete task - IMPORTANT: Extract boardId from body!
+    if (url.pathname.match(/^\/api\/([^\/]+)$/) && request.method === 'DELETE') {
+      const taskId = url.pathname.split('/')[2]
+      const body = await request.json()
+      const result = await TaskHandlers.deleteTask(storage, auth, taskId, body.boardId)
+      return Response.json(result)
+    }
+    
     // ... other routes
   }
 }

@@ -88,7 +88,9 @@ export default function App(props: TaskAppProps = {}) {
   useEffect(() => {
     const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
     void api.getPreferences().then(prefs => {
-      setTheme(prefs.theme)
+      if (prefs.theme) {
+        setTheme(prefs.theme as ThemeName)
+      }
     })
   }, [userType, userId, sessionId])
 

@@ -189,20 +189,11 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
   async function bulkUpdateTaskTags(updates: Array<{ taskId: string, tag: string }>) {
     console.log('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
     try {
-      // Use batch API if available
-      if ('batchUpdateTags' in api) {
-        await api.batchUpdateTags(
-          currentBoardId,
-          updates.map(u => ({ taskId: u.taskId, tag: u.tag || null }))
-        )
-      } else {
-        // Fallback to old method for public mode
-        await withBulkOperation(async () => {
-          for (const { taskId, tag } of updates) {
-            await api.patchTask(taskId, { tag }, currentBoardId, true)
-          }
-        }, userType, userId)
-      }
+      // Use batch API (available in all modes - localStorage and friend/admin)
+      await api.batchUpdateTags(
+        currentBoardId,
+        updates.map(u => ({ taskId: u.taskId, tag: u.tag || null }))
+      )
       
       console.log('[useTasks] bulkUpdateTaskTags: calling reload')
       await reload()
@@ -237,28 +228,12 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     try {
       console.log('[useTasks] clearTasksByTag: starting batch clear')
       
-      // Use batch API if available
-      if ('batchClearTag' in api) {
-        await api.batchClearTag(
-          currentBoardId,
-          tag,
-          tagTasks.map(t => t.id)
-        )
-      } else {
-        // Fallback to old method for public mode
-        await withBulkOperation(async () => {
-          for (const task of tagTasks) {
-            const existingTags = task.tag?.split(' ') || []
-            const updatedTags = existingTags.filter(tg => tg !== tag)
-            const tagValue = updatedTags.length > 0 ? updatedTags.join(' ') : null
-            console.log('[useTasks] clearTasksByTag: patching task', { taskId: task.id, oldTags: existingTags, newTags: updatedTags })
-            await api.patchTask(task.id, { tag: tagValue }, currentBoardId, true)
-          }
-          
-          console.log('[useTasks] clearTasksByTag: deleting tag from board', { tag, currentBoardId })
-          await api.deleteTag(tag, currentBoardId)
-        }, userType, userId)
-      }
+      // Use batch API (available in all modes - localStorage and friend/admin)
+      await api.batchClearTag(
+        currentBoardId,
+        tag,
+        tagTasks.map(t => t.id)
+      )
       
       console.log('[useTasks] clearTasksByTag: calling reload')
       await reload()
@@ -313,30 +288,14 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     console.log('[useTasks] moveTasksToBoard: source boards', { sourceBoardIds: Array.from(sourceBoardIds) })
 
     try {
-      // Use batch API if available and all tasks are from the same board
-      if ('batchMoveTasks' in api && sourceBoardIds.size === 1) {
+      // Use batch API (available in all modes) if all tasks are from the same board
+      if (sourceBoardIds.size === 1) {
         const sourceBoardId = Array.from(sourceBoardIds)[0]
         console.log('[useTasks] moveTasksToBoard: using batch API')
         await api.batchMoveTasks(sourceBoardId, targetBoardId, ids)
       } else {
-        // Fallback: collect tasks to move
-        const tasksToMove: { id: string; title: string; tag?: string; boardId: string; createdAt: string }[] = []
-        for (const b of boards.boards) {
-          for (const t of b.tasks || []) {
-            if (ids.includes(t.id)) {
-              tasksToMove.push({ id: t.id, title: t.title, tag: t.tag || undefined, boardId: b.id, createdAt: t.createdAt })
-            }
-          }
-        }
-        console.log('[useTasks] moveTasksToBoard: using old method, found tasks', { count: tasksToMove.length })
-        
-        await withBulkOperation(async () => {
-          for (const t of tasksToMove) {
-            // Preserve original task ID and createdAt timestamp when moving
-            await api.createTask({ id: t.id, title: t.title, tag: t.tag, createdAt: t.createdAt }, targetBoardId, true)
-            await api.deleteTask(t.id, t.boardId, true)
-          }
-        }, userType, userId)
+        console.error('[useTasks] moveTasksToBoard: Cannot move tasks from multiple boards at once')
+        throw new Error('Cannot move tasks from multiple boards at once')
       }
       
       // Switch to the target board and reload it

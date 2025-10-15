@@ -98,15 +98,18 @@ Mark a task as completed.
 **URL Parameters:**
 - `id`: Task ID
 
-**Query Parameters:**
-- `boardId` (optional): Board ID
+**Body:**
+```json
+{
+  "boardId": "main"  // Optional, defaults to 'main'
+}
+```
 
 **Response:**
 ```json
 {
-  "id": "TASK_ID",
-  "state": "Completed",
-  "completedAt": 1234567890
+  "ok": true,
+  "message": "Task TASK_ID completed"
 }
 ```
 
@@ -150,13 +153,18 @@ Delete a task permanently.
 **URL Parameters:**
 - `id`: Task ID
 
-**Query Parameters:**
-- `boardId` (optional): Board ID
+**Body:**
+```json
+{
+  "boardId": "main"  // Optional, defaults to 'main'
+}
+```
 
 **Response:**
 ```json
 {
-  "success": true
+  "ok": true,
+  "message": "Task deleted"
 }
 ```
 
