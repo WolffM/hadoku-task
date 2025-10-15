@@ -362,7 +362,7 @@ app.post('/api/boards/:boardId/tasks/batch/clear-tag', async (c) => {
 
 ---
 
-**Package:** `@wolffm/task@3.0.12`  
+**Package:** `@wolffm/task@3.0.13`  
 **Compliance:** 98% (storage interface is domain-specific)  
-**Breaking Changes:** v3.0.12 adds batch operations and preserves task IDs across moves  
-**Updated:** October 14, 2025
+**Breaking Changes:** v3.0.13 adds batch operations and preserves task IDs across moves  
+**Updated:** October 14, 2025 🎯
