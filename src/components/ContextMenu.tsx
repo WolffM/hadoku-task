@@ -11,14 +11,15 @@ interface ContextMenuProps {
   x: number
   y: number
   items: ContextMenuItem[]
+  className?: string
 }
 
-export function ContextMenu({ isOpen, x, y, items }: ContextMenuProps) {
+export function ContextMenu({ isOpen, x, y, items, className = 'board-context-menu' }: ContextMenuProps) {
   if (!isOpen) return null
 
   return (
     <div 
-      className="board-context-menu"
+      className={className}
       style={{
         left: `${x}px`,
         top: `${y}px`,

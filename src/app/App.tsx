@@ -599,21 +599,25 @@ export default function App(props: TaskAppProps = {}) {
         isOpen={!!tagContextMenu}
         x={tagContextMenu?.x || 0}
         y={tagContextMenu?.y || 0}
+        className="tag-context-menu"
         items={[
           {
             label: '🗑️ Delete Tag',
             isDanger: true,
             onClick: async () => {
-              if (!tagContextMenu) return
-              const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tagContextMenu.tag))
-              if (confirm(`Delete tag "${tagContextMenu.tag}" and remove it from ${tagTasks.length} task(s)?`)) {
-                try {
-                  await clearTasksByTag(tagContextMenu.tag)
-                  setTagContextMenu(null)
-                } catch (err) {
-                  console.error('[App] Failed to delete tag:', err)
-                  alert((err as Error).message || 'Failed to delete tag')
-                }
+              console.log('[App] Delete Tag clicked!', { tagContextMenu })
+              if (!tagContextMenu) {
+                console.error('[App] No tagContextMenu when Delete Tag clicked!')
+                return
+              }
+              try {
+                console.log('[App] Calling clearTasksByTag for tag:', tagContextMenu.tag)
+                await clearTasksByTag(tagContextMenu.tag)
+                console.log('[App] clearTasksByTag completed successfully')
+                setTagContextMenu(null)
+              } catch (err) {
+                console.error('[App] Failed to delete tag:', err)
+                alert((err as Error).message || 'Failed to delete tag')
               }
             }
           }

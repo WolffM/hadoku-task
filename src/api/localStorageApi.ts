@@ -359,17 +359,21 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]): Promise<void> {
-      console.log('[localStorageApi] batchClearTag', { boardId, tag, taskIds })
+      console.log('[localStorageApi] batchClearTag START', { boardId, tag, taskIds, taskCount: taskIds.length })
       
       // Use handler
-      await TaskHandlers.batchClearTag(
+      const result = await TaskHandlers.batchClearTag(
         storage,
         authContext,
         { boardId, tag, taskIds }
       )
       
+      console.log('[localStorageApi] batchClearTag result:', result)
+      
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      
+      console.log('[localStorageApi] batchClearTag END')
     }
   }
 }

@@ -233,10 +233,6 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
       }
       return
     }
-    
-    // NOTE: Browser dialogs (confirm/prompt/alert) are being blocked by browser/extension
-    // Proceeding without confirmation - TODO: implement custom React modal for confirmation
-    console.log('[useTasks] clearTasksByTag: proceeding without confirmation (dialogs blocked)', { taskCount: tagTasks.length })
 
     try {
       console.log('[useTasks] clearTasksByTag: starting batch clear')
