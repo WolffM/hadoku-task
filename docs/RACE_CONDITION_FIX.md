@@ -86,17 +86,28 @@ Time 320ms:  PATCH #3 writes → [task1: {tag: 'work'}, task2: {tag: 'work'}, ta
 
 **Result:** Only task3 has tag removed. Task1 and task2 still have 'work' tag.
 
-### Observed Behavior
+### Observed Behavior (Verified in Production Logs)
 
-From logs at 10/14/2025, 6:27:52 PM:
-- All requests (PATCH/POST/DELETE) report "SUCCESS"
+**From logs at 10/14/2025, 6:27:52 PM - Race condition confirmed:**
+
+```
+Time 0ms:   PATCH #1 reads tasks: [task1: {tag: null}, task2: {tag: null}]
+Time 5ms:   PATCH #2 reads tasks: [task1: {tag: null}, task2: {tag: null}]  ← Same stale data!
+Time 100ms: PATCH #1 writes: [task1: {tag: 'both-tagged'}, task2: {tag: null}]
+Time 150ms: PATCH #2 writes: [task1: {tag: null}, task2: {tag: 'both-tagged'}]  ← Overwrites #1!
+```
+
+**Symptoms:**
+- All requests (PATCH/POST/DELETE) report "SUCCESS" with 200 status codes
 - All write operations complete without errors
 - But on refresh, only partial updates are applied
-- No errors or failures logged
-- Affects all three scenarios:
-  - Multi-tag: Only last-written task gets the tag
-  - Multi-board move: Tasks may duplicate or disappear
-  - Clear tag: Only last-written task has tag removed
+- No errors or failures logged in application code
+- Race condition visible only by comparing request timestamps and final state
+
+**Affects all three scenarios:**
+- Multi-tag: Only last-written task gets the tag
+- Multi-board move: Tasks may duplicate or disappear
+- Clear tag: Only last-written task has tag removed
 
 ### Affected Code Locations
 
@@ -150,16 +161,22 @@ Proposed: task:admin:main:TASK_ID_1 → task1
 
 ---
 
-### Option 2: Batch Update Endpoints (Frontend Fix)
+### Option 2: Batch Update Endpoints (RECOMMENDED)
 
 **Design:** Change frontend to send one request with all updates instead of multiple individual requests.
+
+**Why this fixes the race condition:**
+- Instead of N separate HTTP requests (each doing READ → MODIFY → WRITE)
+- We send ONE HTTP request that does a single READ → MODIFY ALL → WRITE
+- No race condition possible because there's only one read and one write
 
 **API Patterns:**
 
 **A. Batch Tag Update:**
 ```
-Current:  PATCH /task/api/TASK_ID_1 {tag: 'work'}
-          PATCH /task/api/TASK_ID_2 {tag: 'work'}
+Current:  PATCH /task/api/TASK_ID_1 {tag: 'work'}  ← Separate read/write
+          PATCH /task/api/TASK_ID_2 {tag: 'work'}  ← Separate read/write
+          (Race condition: writes can overwrite each other)
 
 Proposed: PATCH /task/api/batch-tag {
             boardId: 'main',
@@ -168,48 +185,53 @@ Proposed: PATCH /task/api/batch-tag {
               {id: 'TASK_ID_2', tag: 'work'}
             ]
           }
+          ✅ Single read, modify both tasks, single write
 ```
 
 **B. Batch Board Move:**
 ```
-Current:  POST /task/api {title: 'task1', boardId: 'target'}  (create)
-          DELETE /task/api/TASK1?boardId=source               (delete)
-          POST /task/api {title: 'task2', boardId: 'target'}  (create)
-          DELETE /task/api/TASK2?boardId=source               (delete)
+Current:  POST /task/api {title: 'task1', boardId: 'target'}  ← Separate read/write
+          DELETE /task/api/TASK1?boardId=source               ← Separate read/write
+          POST /task/api {title: 'task2', boardId: 'target'}  ← Separate read/write
+          DELETE /task/api/TASK2?boardId=source               ← Separate read/write
+          (Race condition: 4 separate operations on 2 boards = 4 chances to conflict)
 
 Proposed: POST /task/api/batch-move {
             sourceBoardId: 'source',
             targetBoardId: 'target',
             taskIds: ['TASK1', 'TASK2']
           }
+          ✅ Read both boards once, modify both, write both once
 ```
 
 **C. Batch Tag Clear:**
 ```
-Current:  PATCH /task/api/TASK_ID_1 {tag: null}
-          PATCH /task/api/TASK_ID_2 {tag: null}
-          PATCH /task/api/TASK_ID_3 {tag: null}
+Current:  PATCH /task/api/TASK_ID_1 {tag: null}  ← Separate read/write
+          PATCH /task/api/TASK_ID_2 {tag: null}  ← Separate read/write
+          PATCH /task/api/TASK_ID_3 {tag: null}  ← Separate read/write
           DELETE /task/api/tags {boardId: 'main', tag: 'work'}
+          (Race condition: N tasks = N chances to overwrite)
 
 Proposed: POST /task/api/batch-clear-tag {
             boardId: 'main',
             tag: 'work',
             taskIds: ['TASK_ID_1', 'TASK_ID_2', 'TASK_ID_3']
           }
+          ✅ Single read, modify all tasks + delete tag, single write
 ```
 
 **Pros:**
-- Naturally avoids race condition (single request per operation)
-- More efficient (one network round-trip instead of N)
-- Simpler backend logic (one read-modify-write cycle)
-- Can be added alongside existing endpoints (non-breaking)
-- Atomic operations (all succeed or all fail)
+- ✅ **Completely eliminates race condition** (single read-modify-write per operation)
+- ✅ More efficient (one network round-trip instead of N)
+- ✅ Atomic operations (all succeed or all fail together)
+- ✅ Can be added alongside existing endpoints (non-breaking)
+- ✅ Easy to implement - we already have all task IDs at multi-drag time
 
 **Cons:**
 - Requires frontend changes in three places
 - Need three new API endpoints
 - Batch endpoints need error handling for partial failures
-- Doesn't fix race conditions for independent operations (though those are rare)
+- Doesn't fix race conditions from truly independent operations (but those don't happen in practice)
 
 **Implementation Steps:**
 
@@ -298,22 +320,31 @@ async function withBoardLock(boardKey, operation) {
 
 ## Recommendation
 
-**Short-term:** Deploy Option 4 (lock) to fix the immediate issue.
+**✅ Implement Option 2 (Batch Endpoints) - BEST SOLUTION**
 
-**Long-term:** Choose between:
-- **Option 1** if you want proper KV design (best for scale)
-- **Option 2** if you want quick win with frontend change (easiest to implement well)
+Reasons:
+- **Completely fixes the race condition** by reducing N operations to 1
+- **Easy to implement** - we already have all task IDs at the time of multi-drag
+- **More efficient** - reduces network round-trips from N to 1
+- **Atomic** - operations succeed or fail as a unit
+- **Non-breaking** - old endpoints can remain for backward compatibility
+- **Medium effort** - estimated 4-6 hours total (2 hours per endpoint)
 
 **Not recommended:**
-- Option 3 (optimistic locking) - adds complexity without solving fundamental issue
+- Option 1 (Individual KV entries) - Major refactor, breaks existing storage model
+- Option 3 (Optimistic locking) - Still requires multiple requests, just adds retry logic
+- Option 4 (Locks) - Only works on single worker, doesn't scale to edge
 
-## Current Workaround
+## Current Workaround (Insufficient)
 
 The `withBulkOperation()` helper in `src/hooks/useTasks/helpers.ts`:
 - Suppresses individual BroadcastChannel messages during loops
 - Broadcasts once after all operations complete
-- **Does NOT prevent the race condition** (broadcasts are separate from storage writes)
+- **Does NOT prevent the race condition at all**
 - Only prevents excessive UI re-renders
+- **The race condition still happens because multiple HTTP requests are still being sent**
+
+The problem: Even though we loop and send requests sequentially in the frontend, each request still does a separate read-modify-write cycle on the server, causing the race condition shown in the timelines above.
 
 ## Related Files
 
