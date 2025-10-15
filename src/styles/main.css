@@ -118,6 +118,59 @@
   background-color: var(--color-primary-light);
 }
 
+/* Sync bar - above controls */
+.task-app__sync-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sync-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast);
+}
+
+.sync-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+}
+
+.sync-btn:hover {
+  color: var(--color-text);
+  background-color: var(--color-bg-hover);
+}
+
+.sync-btn:active svg {
+  animation: spin 0.6s ease-in-out;
+}
+
+.sync-btn:focus {
+  outline: none;
+  color: var(--color-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Controls section */
 .task-app__controls {
   display: flex;
