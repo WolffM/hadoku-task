@@ -42,7 +42,7 @@ deleteBoard(storage, auth, boardId)
 
 ```typescript
 // POST /api/boards/:boardId/tasks
-createTask(storage, auth, { id?, title, tag? }, boardId = 'main')
+createTask(storage, auth, { id?, title, tag?, createdAt? }, boardId = 'main')
 → { ok: boolean, id: ULID }
 
 // PATCH /api/boards/:boardId/tasks/:taskId
@@ -56,6 +56,22 @@ completeTask(storage, auth, taskId, boardId = 'main')
 // DELETE /api/boards/:boardId/tasks/:taskId
 deleteTask(storage, auth, taskId, boardId = 'main')
 → { ok: boolean, message: string }
+```
+
+### **Batch Operations**
+
+```typescript
+// POST /api/boards/:boardId/tasks/batch/update-tags
+batchUpdateTags(storage, auth, { boardId, updates: [{ taskId, tag }] })
+→ { ok: boolean, message: string, updated: number }
+
+// POST /api/batch/move-tasks
+batchMoveTasks(storage, auth, { sourceBoardId, targetBoardId, taskIds: string[] })
+→ { ok: boolean, message: string, moved: number }
+
+// POST /api/boards/:boardId/tasks/batch/clear-tag
+batchClearTag(storage, auth, { boardId, tag, taskIds: string[] })
+→ { ok: boolean, message: string, cleared: number }
 ```
 
 ### **Tags**
@@ -128,13 +144,26 @@ _Note: Public users use in-memory storage (not persisted)_
 type ULID = string
 type UserType = string
 
+// Input Types
+interface CreateTaskInput {
+  id?: string           // Optional: Client-generated ID (for preserving IDs during moves)
+  title: string
+  tag?: string
+  createdAt?: string    // Optional: Preserve original creation timestamp (for moves)
+}
+
+interface UpdateTaskInput {
+  title?: string
+  tag?: string
+}
+
 // Task
 interface Task {
   id: ULID
   title: string
   tag?: string | null
   state: 'Active' | 'Completed' | 'Deleted'
-  createdAt: string  // ISO 8601
+  createdAt: string  // ISO 8601 - preserved across board moves
   updatedAt?: string | null
   closedAt?: string | null
 }
@@ -249,6 +278,45 @@ app.delete('/api/boards/:boardId/tasks/:taskId', async (c) => {
     return c.json({ error: err.message }, 500)
   }
 })
+
+// POST /api/boards/:boardId/tasks/batch/update-tags
+app.post('/api/boards/:boardId/tasks/batch/update-tags', async (c) => {
+  const auth = c.get('auth') as AuthContext
+  const input = await c.req.json()
+  
+  try {
+    const result = await TaskHandlers.batchUpdateTags(storage, auth, input)
+    return c.json(result)
+  } catch (err) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+// POST /api/batch/move-tasks
+app.post('/api/batch/move-tasks', async (c) => {
+  const auth = c.get('auth') as AuthContext
+  const input = await c.req.json()
+  
+  try {
+    const result = await TaskHandlers.batchMoveTasks(storage, auth, input)
+    return c.json(result)
+  } catch (err) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+// POST /api/boards/:boardId/tasks/batch/clear-tag
+app.post('/api/boards/:boardId/tasks/batch/clear-tag', async (c) => {
+  const auth = c.get('auth') as AuthContext
+  const input = await c.req.json()
+  
+  try {
+    const result = await TaskHandlers.batchClearTag(storage, auth, input)
+    return c.json(result)
+  } catch (err) {
+    return c.json({ error: err.message }, 500)
+  }
+})
 ```
 
 ---
@@ -262,10 +330,31 @@ app.delete('/api/boards/:boardId/tasks/:taskId', async (c) => {
 
 ---
 
+## Batch Operations Details
+
+**Why Batch Operations?**
+- Eliminate race conditions when updating multiple tasks
+- Single read-modify-write cycle per board
+- Atomic operations prevent data loss
+
+**ID Preservation:**
+- Task IDs are **only generated during `createTask`**
+- All other operations (update, complete, delete, move) **preserve the original task ID**
+- When moving tasks between boards, both `id` and `createdAt` are preserved
+- This maintains task identity and history across all operations
+
+**Batch Endpoints:**
+1. **`batchUpdateTags`** - Update tags on multiple tasks in one operation
+2. **`batchMoveTasks`** - Move tasks between boards (preserves IDs and createdAt)
+3. **`batchClearTag`** - Clear a tag from multiple tasks and remove from board
+
+---
+
 ## Quick Notes
 
 - **Default boardId:** `'main'` (used when not specified)
-- **ULID Generation:** Client can provide `input.id`, server generates if missing
+- **ULID Generation:** Only happens in `createTask` (unless `id` provided)
+- **ID Preservation:** Task IDs are preserved across all operations including moves
 - **Public Users:** In-memory only (not persisted to storage)
 - **Multi-Board:** All operations are board-scoped except board management
 - **Stats Tracking:** Automatically updated on all task operations
@@ -273,6 +362,7 @@ app.delete('/api/boards/:boardId/tasks/:taskId', async (c) => {
 
 ---
 
-**Package:** `@hadoku/task@2.2.28`  
+**Package:** `@wolffm/task@3.0.12`  
 **Compliance:** 98% (storage interface is domain-specific)  
+**Breaking Changes:** v3.0.12 adds batch operations and preserves task IDs across moves  
 **Updated:** October 14, 2025
