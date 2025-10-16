@@ -100,6 +100,11 @@ export default function App(props: TaskAppProps = {}) {
     void api.savePreferences({ theme })
   }, [theme, userType, userId, sessionId])
 
+  // Clear tag filters when switching boards
+  useEffect(() => {
+    setSelectedFilters(new Set())
+  }, [currentBoardId])
+
   // Initialize and reload when user context changes
   useEffect(() => {
     console.log('[App] User context changed, initializing...', { userType, userId })
