@@ -280,15 +280,19 @@ Create a persisted tag on a board.
 
 ---
 
-### DELETE `/boards/:id/tags/:tag`
+### POST `/tags/delete`
 Delete a persisted tag from a board.
 
 **Headers:**
 - `x-user-type`: `public` | `admin` | `friend`
 
-**URL Parameters:**
-- `id`: Board ID
-- `tag`: Tag name to delete
+**Body:**
+```json
+{
+  "boardId": "main",
+  "tag": "tag-to-delete"
+}
+```
 
 **Response:**
 ```json

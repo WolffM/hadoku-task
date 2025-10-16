@@ -150,8 +150,8 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     async deleteTag(tag: string, boardId: string = 'main') {
       const result = await localStorage.deleteTag(tag, boardId)
       // Background server sync
-      fetch(`/task/api/tags`, {
-        method: 'DELETE',
+      fetch(`/task/api/tags/delete`, {
+        method: 'POST',
         headers: adminHeaders(userType, userId, sessionId),
         body: JSON.stringify({ boardId, tag })
       })

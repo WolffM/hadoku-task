@@ -2,7 +2,11 @@
 
 **Quick reference for integrating task handlers into parent worker**
 
-Version: 3.0.19 | Last Updated: October 15, 2025
+Version: 3.0.25+ | Last Updated: October 15, 2025
+
+**⚠️ Breaking Change in v3.0.25:**
+- Tag deletion endpoint changed from `DELETE /task/api/tags` to `POST /task/api/tags/delete`
+- Body now required: `{ boardId: string, tag: string }`
 
 ---
 
@@ -225,10 +229,42 @@ export default {
       return Response.json(result)
     }
     
+    // Create tag
+    if (url.pathname === '/api/tags' && request.method === 'POST') {
+      const body = await request.json()
+      const result = await TaskHandlers.createTag(storage, auth, body)
+      return Response.json(result)
+    }
+    
+    // Delete tag (Breaking Change v3.0.25+)
+    if (url.pathname === '/api/tags/delete' && request.method === 'POST') {
+      const body = await request.json()
+      const result = await TaskHandlers.deleteTag(storage, auth, body)
+      return Response.json(result)
+    }
+    
     // ... other routes
   }
 }
 ```
+
+---
+
+## API Endpoint Mapping
+
+When implementing HTTP routes in your worker, map to these paths:
+
+### Tag Operations
+```typescript
+// Create tag
+POST /task/api/tags → TaskHandlers.createTag(storage, auth, body)
+
+// Delete tag (Breaking Change v3.0.25+)
+POST /task/api/tags/delete → TaskHandlers.deleteTag(storage, auth, body)
+// Body: { boardId: string, tag: string }
+```
+
+**Breaking Change:** The delete tag endpoint changed from `DELETE /task/api/tags` to `POST /task/api/tags/delete` in v3.0.25 to align with parent API routing conventions.
 
 ---
 
