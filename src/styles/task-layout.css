@@ -29,6 +29,10 @@
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.task-app__tag-grid--1col {
+  grid-template-columns: 1fr;
+}
+
 /* Tag column */
 
 .task-app__tag-column {

@@ -12,6 +12,7 @@ import { getTasksByTag, getRemainingTasks } from '../domain/utils/tags'
 interface TaskLayoutProps {
   tasks: Task[]
   topTags: string[]
+  isMobile?: boolean
   filters?: string[]
   selectedIds?: Set<string>
   // selection handlers (marquee)
@@ -41,6 +42,7 @@ interface TaskLayoutProps {
 export function TaskLayout({
   tasks,
   topTags,
+  isMobile = false,
   filters,
   sortDirections,
   dragOverTag,
@@ -127,7 +129,7 @@ export function TaskLayout({
   })
 
   // Multiple tags: dynamic layout
-  const layoutConfig = getLayoutConfig(tagCount)
+  const layoutConfig = getLayoutConfig(tagCount, isMobile)
 
   // Decide which top tags are visible. When a filter is active, only show
   // columns that have tasks matching the selected filters. This allows the
@@ -169,7 +171,7 @@ export function TaskLayout({
   })
 
   // Recalculate layout based on visible columns
-  const visibleLayoutConfig = getLayoutConfig(visibleTopTags.length)
+  const visibleLayoutConfig = getLayoutConfig(visibleTopTags.length, isMobile)
 
   return (
     <div className="task-app__dynamic-layout">

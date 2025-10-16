@@ -10,18 +10,36 @@ export interface LayoutConfig {
 
 /**
  * Get the layout configuration based on the number of tags
- * 1 tag: 1 row × 1 column (full width)
- * 2 tags: 1 row × 2 columns (half split)
- * 3 tags: 1 row × 3 columns (thirds)
- * 4 tags: Row 1: 3 columns, Row 2: 1 column
- * 5 tags: Row 1: 3 columns, Row 2: 2 columns
- * 6+ tags: 2 rows × 3 columns (thirds on both rows) - show top 6
+ * 
+ * Mobile (isMobile=true): Always single-column stacked layout
+ * Desktop (isMobile=false):
+ *   1 tag: 1 row × 1 column (full width)
+ *   2 tags: 1 row × 2 columns (half split)
+ *   3 tags: 1 row × 3 columns (thirds)
+ *   4 tags: Row 1: 3 columns, Row 2: 1 column
+ *   5 tags: Row 1: 3 columns, Row 2: 2 columns
+ *   6+ tags: 2 rows × 3 columns (thirds on both rows) - show top 6
  */
-export function getLayoutConfig(tagCount: number): LayoutConfig {
+export function getLayoutConfig(tagCount: number, isMobile = false): LayoutConfig {
   if (tagCount === 0) {
     return { useTags: 0, maxPerColumn: Infinity, rows: [] }
   }
   
+  // Mobile: always single-column stacked layout
+  if (isMobile) {
+    const rows = Array.from({ length: tagCount }, (_, i) => ({
+      columns: 1,
+      tagIndices: [i]
+    }))
+    
+    return {
+      useTags: tagCount,
+      maxPerColumn: Infinity,
+      rows
+    }
+  }
+  
+  // Desktop layouts
   if (tagCount === 1) {
     return { 
       useTags: 1, 

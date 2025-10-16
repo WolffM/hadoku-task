@@ -11,6 +11,8 @@ import { ContextMenu } from '../components/ContextMenu'
 import { getTopTags, getAllTags } from '../domain/utils/tags'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import { createApi } from '../api/client'
+import { getRandomPlaceholder } from '../utils/placeholders'
+import { useIsMobile } from '../hooks/useIsMobile'
 import type { ThemeName } from './types'
 
 // UI Configuration
@@ -32,6 +34,8 @@ const getThemeEmoji = (themeName: ThemeName): string =>
 
 export default function App(props: TaskAppProps = {}) {
   const { userType = 'public', userId = 'public', sessionId } = props;
+  const isMobile = useIsMobile()
+  const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [confirmClearTag, setConfirmClearTag] = useState<{tag: string, count: number} | null>(null)
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
@@ -237,7 +241,8 @@ export default function App(props: TaskAppProps = {}) {
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
   const persistedTags: string[] = currentBoard?.tags || []
   // For layout we only want tags derived from tasks so the layout collapses when empty
-  const topTags = getTopTags(tasks, 6)
+  // On mobile, show only top 3 tags; on desktop, show top 6
+  const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
   return (
     <div
@@ -366,7 +371,7 @@ export default function App(props: TaskAppProps = {}) {
         <input
           ref={inputRef}
           className="task-app__input"
-          placeholder="Type a task and press Enter…"
+          placeholder={placeholder}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -435,6 +440,7 @@ export default function App(props: TaskAppProps = {}) {
       <TaskLayout
         tasks={tasks}
         topTags={topTags}
+        isMobile={isMobile}
         filters={Array.from(selectedFilters)}
         selectedIds={dragAndDrop.selectedIds}
         onSelectionStart={dragAndDrop.selectionStartHandler}
