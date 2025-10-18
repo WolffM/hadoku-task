@@ -232,6 +232,22 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
 
     // User preferences
     async getPreferences() {
+      // Try to sync from server (we're in non-public mode here)
+      try {
+        const response = await fetch('/task/api/preferences', {
+          headers: adminHeaders(userType, userId, sessionId)
+        })
+        if (response.ok) {
+          const serverPrefs = await response.json()
+          // Update localStorage with server preferences
+          await localStorage.savePreferences(serverPrefs)
+          console.log('[api] Synced preferences from server')
+          return serverPrefs
+        }
+      } catch (err) {
+        console.warn('[api] Failed to fetch preferences from server, using localStorage:', err)
+      }
+      // Fallback to localStorage
       return await localStorage.getPreferences()
     },
 
@@ -290,6 +306,40 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       })
         .then(() => console.log('[api] Background sync: batchClearTag completed'))
         .catch(err => console.error('[api] Failed to sync batchClearTag:', err))
+    },
+
+    // User Management
+    async validateKey(key: string): Promise<boolean> {
+      try {
+        const response = await fetch('/task/api/validate-key', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Type': userType,
+            'X-User-Id': userId,
+            'X-Session-Id': key
+          }
+        })
+        return response.ok
+      } catch (err) {
+        console.error('[api] Failed to validate key:', err)
+        return false
+      }
+    },
+
+    async setUserId(newUserId: string): Promise<{ ok: boolean; message?: string }> {
+      try {
+        const response = await fetch('/task/api/user/set-id', {
+          method: 'POST',
+          headers: adminHeaders(userType, userId, sessionId),
+          body: JSON.stringify({ newUserId })
+        })
+        const result = await response.json()
+        return result
+      } catch (err) {
+        console.error('[api] Failed to set userId:', err)
+        return { ok: false, message: 'Failed to set userId' }
+      }
     }
   }
 }

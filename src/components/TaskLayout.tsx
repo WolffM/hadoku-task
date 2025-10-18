@@ -34,8 +34,7 @@ interface TaskLayoutProps {
   sortTasksByAge: (tasks: Task[], direction: SortDirection) => Task[]
   getSortIcon: (direction: SortDirection) => string
   getSortTitle: (direction: SortDirection) => string
-  clearTasksByTag: (tag: string) => void
-  clearRemainingTasks: (tasks: Task[]) => void
+  deleteTag: (tag: string) => void
   onDeletePersistedTag?: (tag: string) => void
 }
 
@@ -63,9 +62,8 @@ export function TaskLayout({
   sortTasksByAge,
   getSortIcon,
   getSortTitle,
-  clearTasksByTag,
-  clearRemainingTasks
-  , onDeletePersistedTag
+  deleteTag,
+  onDeletePersistedTag
 }: TaskLayoutProps) {
   // Helper function to render a tag column with header and tasks
   const renderTagColumn = (tag: string, tagTasks: Task[]) => (

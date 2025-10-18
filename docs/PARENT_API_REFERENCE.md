@@ -84,6 +84,35 @@ batchMoveTasks(storage, auth, { sourceBoardId, targetBoardId, taskIds: string[] 
 // Clear tag from tasks and remove from board
 batchClearTag(storage, auth, { boardId, tag, taskIds: string[] })
 → Promise<{ ok: boolean, message: string, cleared: number }>
+
+// NOTE: This operation removes the tag from all specified tasks,
+// then deletes the tag from the board's persisted tags list.
+```
+
+### **Preferences**
+
+```typescript
+// Get user preferences
+getPreferences(storage, auth)
+→ Promise<UserPreferences>
+
+// Save user preferences
+savePreferences(storage, auth, prefs: Partial<UserPreferences>)
+→ Promise<{ ok: boolean }>
+```
+
+**Note:** Theme is NOT stored in preferences - it's per-device in sessionStorage.
+
+### **User Management**
+
+```typescript
+// Validate session key
+validateKey(storage, auth, { key: string })
+→ Promise<{ valid: boolean }>
+
+// Update user ID
+setUserId(storage, auth, { newUserId: string })
+→ Promise<{ ok: boolean, message: string }>
 ```
 
 ---

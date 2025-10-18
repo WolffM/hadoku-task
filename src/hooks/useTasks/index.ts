@@ -204,29 +204,29 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     }
   }
 
-  async function clearTasksByTag(tag: string) {
-    console.log('[useTasks] clearTasksByTag START', { tag, currentBoardId, taskCount: tasks.length })
+  async function deleteTag(tag: string) {
+    console.log('[useTasks] deleteTag START', { tag, currentBoardId, taskCount: tasks.length })
     
     // Check if we have tasks with this tag
     const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
-    console.log('[useTasks] clearTasksByTag: found tasks with tag', { tag, count: tagTasks.length })
+    console.log('[useTasks] deleteTag: found tasks with tag', { tag, count: tagTasks.length })
     
     if (tagTasks.length === 0) {
-      console.log('[useTasks] clearTasksByTag: no tasks found with this tag, just deleting tag')
+      console.log('[useTasks] deleteTag: no tasks found with this tag, just deleting tag')
       try {
         await api.deleteTag(tag, currentBoardId)
         await reload()
-        console.log('[useTasks] clearTasksByTag END (no tasks to clear)')
+        console.log('[useTasks] deleteTag END (no tasks to clear)')
       } catch (error) {
-        console.error('[useTasks] clearTasksByTag ERROR', error)
+        console.error('[useTasks] deleteTag ERROR', error)
         // Note: alert() may also be blocked - log instead
-        console.error('[useTasks] clearTasksByTag: Please fix this error:', (error as Error).message)
+        console.error('[useTasks] deleteTag: Please fix this error:', (error as Error).message)
       }
       return
     }
 
     try {
-      console.log('[useTasks] clearTasksByTag: starting batch clear')
+      console.log('[useTasks] deleteTag: starting batch clear')
       
       // Use batch API (available in all modes - localStorage and friend/admin)
       await api.batchClearTag(
@@ -235,26 +235,13 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
         tagTasks.map(t => t.id)
       )
       
-      console.log('[useTasks] clearTasksByTag: calling reload')
+      console.log('[useTasks] deleteTag: calling reload')
       await reload()
       
-      console.log('[useTasks] clearTasksByTag END')
+      console.log('[useTasks] deleteTag END')
     } catch (error) {
-      console.error('[useTasks] clearTasksByTag ERROR', error)
+      console.error('[useTasks] deleteTag ERROR', error)
       alert((error as Error).message || 'Failed to remove tag from tasks')
-    }
-  }
-
-  async function clearRemainingTasks(tasksToDelete: Task[]) {
-    if (!confirm('Clear all remaining tasks?')) return
-    
-    try {
-      for (const task of tasksToDelete) {
-        await api.deleteTask(task.id, currentBoardId)
-      }
-      await reload()
-    } catch (error) {
-      alert((error as Error).message || 'Failed to clear remaining tasks')
     }
   }
 
@@ -361,8 +348,7 @@ export function useTasks({ userType, userId, sessionId }: UseTasksProps) {
     addTagToTask,
     updateTaskTags,
     bulkUpdateTaskTags,
-    clearTasksByTag,
-    clearRemainingTasks,
+    deleteTag,
     
     // Board state
     boards,

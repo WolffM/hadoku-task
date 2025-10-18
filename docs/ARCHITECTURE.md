@@ -42,18 +42,18 @@ See **[Universal Adapter Pattern](UNIVERSAL_ADAPTER_PATTERN.md)** for complete i
 ## Client Architecture (React Frontend)
 
 **Key Files**:
-- `App.tsx` - Main orchestrator with theme state and custom hooks
+- `App.tsx` - Main orchestrator with theme state, user management, and custom hooks
 - `entry.tsx` - Micro-frontend mount/unmount exports
-- `components/` - TaskItem (card), TaskLayout (grid)
-- `hooks/` - useTasks (CRUD), useDragAndDrop, useTaskSort
+- `components/` - TaskItem (card), TaskLayout (grid), Modal (dialogs), ContextMenu, BoardButton, TagFilterButton
+- `hooks/` - useTasks (CRUD + user management), useDragAndDrop, useTaskSort, useLongPress, useIsMobile
 - `lib/` - Utilities (api, formatters, tagUtils, ulid)
 - `styles/` - Modular CSS system with comprehensive theming
 
 **Styling System**:
-- `variables.css` - Design tokens and 8 complete theme definitions
+- `variables.css` - Design tokens and 7 complete theme definitions
 - `main.css` - Layout, header, theme picker, task app structure
 - `buttons.css` - All button variants with theme-aware colors
-- `modal.css` - Reusable modal components
+- `modal.css` - Reusable modal components (settings, confirmations)
 - `filters.css` - Tag filter buttons
 - `boards.css` - Board navigation and management
 - `tasks.css` - Task item cards and layout
@@ -63,8 +63,12 @@ See **[Development Guide](DEVELOPMENT.md#project-structure)** for complete direc
 ### Component Hierarchy
 
 ```
-App (131 lines)
-├── useTasks() hook - Task operations & API calls
+App
+├── Settings Modal (User Management + Preferences)
+│   ├── User ID input (disabled for public users)
+│   ├── Session Key input with validation
+│   └── Preferences toggles (experimental themes, vertical layout)
+├── useTasks() hook - Task operations, board management, & user management API calls
 ├── useDragAndDrop() hook - Drag-and-drop logic
 ├── useTaskSort() hook - Sort state
 └── TaskLayout
@@ -73,6 +77,20 @@ App (131 lines)
     └── Remaining tasks section
         └── TaskItem (for each untagged/remaining task)
 ```
+
+### User Management Flow
+
+**Session Key Validation:**
+1. User enters new key in settings modal
+2. App calls `api.validateKey(key)` 
+3. If valid: Reload page with `?key=newkey` in URL
+4. Parent app validates `?key=` param and sets `userType` accordingly
+5. Child remounts with new `sessionId` from parent props
+
+**Architecture:**
+- **Parent Responsibility:** Validate `?key=` URL param and provide `userType` + `sessionId` to child
+- **Child Responsibility:** Provide UI for entering key, validate via API, reload with key in URL
+- **Storage:** Theme stored in `sessionStorage` (per-tab), preferences synced to server
 
 ### Theming System
 
@@ -103,8 +121,8 @@ App (131 lines)
 
 ### Build Output
 
-- **Client bundle**: `dist/index.js` (~21KB)
-- **Styles**: `dist/style.css` (~11KB with 7 complete themes)
+- **Client bundle**: `dist/index.js` (~95KB / ~22KB gzipped)
+- **Styles**: `dist/style.css` (~40KB / ~7KB gzipped with 7 complete themes)
 - **Deploy target**: `hadoku_site/public/mf/task/`
 
 **Note**: CSS includes all 7 themes (~45 variables × 7 themes = ~315 theme variables), plus shared tokens and component styles.
@@ -534,8 +552,8 @@ type UserType = 'public' | 'friend' | 'admin'
 ## Performance Characteristics
 
 ### Client
-- **Bundle size**: ~21KB
-- **CSS size**: ~11KB (includes 7 complete themes)
+- **Bundle size**: ~95KB (~22KB gzipped)
+- **CSS size**: ~40KB (~7KB gzipped, includes 7 complete themes)
 - **Initial load**: ~50-100ms
 - **Task operations**: Instant UI updates (optimistic)
 - **Theme switching**: Instant (CSS custom property override)

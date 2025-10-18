@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import type { TaskAppProps } from './entry'
-import { useTasks, SESSION_ID } from '../hooks/useTasks'
+import { useTasks } from '../hooks/useTasks'
 import { useDragAndDrop } from '../hooks/useDragAndDrop'
 import { useTaskSort } from '../hooks/useTaskSort'
 import { BoardButton } from '../components/BoardButton'
@@ -8,33 +8,21 @@ import { TagFilterButton } from '../components/TagFilterButton'
 import { TaskLayout } from '../components/TaskLayout'
 import { Modal } from '../components/Modal'
 import { ContextMenu } from '../components/ContextMenu'
+import { SettingsIcon } from '../components/ThemeIcons'
 import { getTopTags, getAllTags } from '../domain/utils/tags'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import { createApi } from '../api/client'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { useIsMobile } from '../hooks/useIsMobile'
-import type { ThemeName } from './types'
+import type { ThemeName, UserPreferences } from './types'
+import { getThemeFamilies, getThemeIcon } from './themeConfig'
 
 // UI Configuration
 const MAX_BOARDS = 5 // Maximum number of boards to display in the board list
 
-// Theme configuration
-const THEMES: Array<{ name: ThemeName; emoji: string; label: string }> = [
-  { name: 'light', emoji: '☀️', label: 'Light theme' },
-  { name: 'dark', emoji: '🌙', label: 'Dark theme' },
-  { name: 'strawberry', emoji: '🍓', label: 'Strawberry theme' },
-  { name: 'ocean', emoji: '🌊', label: 'Ocean theme' },
-  { name: 'cyberpunk', emoji: '🤖', label: 'Cyberpunk theme' },
-  { name: 'coffee', emoji: '☕', label: 'Coffee theme' },
-  { name: 'lavender', emoji: '🪻', label: 'Lavender theme' },
-]
-
-const getThemeEmoji = (themeName: ThemeName): string => 
-  THEMES.find(t => t.name === themeName)?.emoji || '🌙'
-
 export default function App(props: TaskAppProps = {}) {
   const { userType = 'public', userId = 'public', sessionId } = props;
-  const isMobile = useIsMobile()
+  const isMobileDevice = useIsMobile()
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [confirmClearTag, setConfirmClearTag] = useState<{tag: string, count: number} | null>(null)
@@ -48,10 +36,26 @@ export default function App(props: TaskAppProps = {}) {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    experimentalThemes: false,
+    alwaysVerticalLayout: false
+  })
+  const [newUserId, setNewUserId] = useState('')
+  const [newKey, setNewKey] = useState('')
+  const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
+  const [isChangingUserId, setIsChangingUserId] = useState(false)
+  const [isValidatingKey, setIsValidatingKey] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const themePickerRef = useRef<HTMLDivElement>(null)
+
+  // Apply vertical layout preference
+  const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
 
   // Task operations hook
   const {
@@ -65,9 +69,8 @@ export default function App(props: TaskAppProps = {}) {
     addTagToTask,
     updateTaskTags,
     bulkUpdateTaskTags,
-    clearTasksByTag,
-    clearRemainingTasks
-    ,
+    deleteTag,
+    
     // board API
     boards,
     currentBoardId,
@@ -88,21 +91,138 @@ export default function App(props: TaskAppProps = {}) {
   // Sort hook
   const sortHook = useTaskSort()
 
-  // Load user preferences (theme) on mount
+  // Compute theme families based on experimental preferences
+  const THEME_FAMILIES = useMemo(() => 
+    getThemeFamilies(preferences.experimentalThemes || false),
+    [preferences.experimentalThemes]
+  )
+
+  // Load user preferences on mount (before anything else)
   useEffect(() => {
-    const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
-    void api.getPreferences().then(prefs => {
-      if (prefs.theme) {
-        setTheme(prefs.theme as ThemeName)
+    const loadPreferences = async () => {
+      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+      const prefs = await api.getPreferences()
+      if (prefs) {
+        setPreferences(prefs)
       }
-    })
+    }
+    void loadPreferences()
   }, [userType, userId, sessionId])
 
-  // Save theme preference when it changes
-  useEffect(() => {
+  // Save user preferences when they change
+  const savePreferences = async (updates: Partial<UserPreferences>) => {
+    const newPrefs = { ...preferences, ...updates, updatedAt: new Date().toISOString() }
+    setPreferences(newPrefs)
     const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
-    void api.savePreferences({ theme })
-  }, [theme, userType, userId, sessionId])
+    await api.savePreferences(newPrefs)
+  }
+
+  // Handle userId change
+  const handleUserIdChange = async () => {
+    if (!newUserId.trim() || isChangingUserId) return
+    
+    setIsChangingUserId(true)
+    
+    // Small delay to show spinner
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Reload page with new userId in URL
+    const url = new URL(window.location.href)
+    url.searchParams.set('userId', newUserId.trim())
+    window.location.href = url.toString()
+  }
+
+  // Handle key validation and change
+  const handleKeyChange = async () => {
+    if (!newKey.trim() || isValidatingKey) return
+    
+    setIsValidatingKey(true)
+    setKeyValidationError(null)
+    
+    try {
+      // Use the API client to validate the key
+      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+      const isValid = await api.validateKey(newKey.trim())
+      
+      if (isValid) {
+        // Valid key - reload page with new key parameter
+        const url = new URL(window.location.href)
+        url.searchParams.set('key', newKey.trim())
+        window.location.href = url.toString()
+      } else {
+        setKeyValidationError('Invalid key')
+        setIsValidatingKey(false)
+      }
+    } catch (err) {
+      setKeyValidationError('Failed to validate key')
+      setIsValidatingKey(false)
+    }
+  }
+
+  // Theme is stored in sessionStorage only (per-browser/device preference)
+  useEffect(() => {
+    const stored = sessionStorage.getItem('theme')
+    if (stored) {
+      setTheme(stored as ThemeName)
+    }
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem('theme', theme)
+  }, [theme])
+
+  // Close theme picker when clicking outside
+  useEffect(() => {
+    if (!showThemePicker) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themePickerRef.current && !themePickerRef.current.contains(e.target as Node)) {
+        setShowThemePicker(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showThemePicker])
+
+  // Auto-switch theme variant when Dark Reader / system preference changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    
+    const handleColorSchemeChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      const prefersDark = e.matches
+      
+      // Extract theme family and current mode
+      const themeFamily = theme.replace(/-light$|-dark$/, '') as string
+      const currentMode = theme.endsWith('-dark') ? 'dark' : theme.endsWith('-light') ? 'light' : null
+      
+      // Only auto-switch if we have a themed family (not base light/dark)
+      if (currentMode && themeFamily !== 'light' && themeFamily !== 'dark') {
+        const targetMode = prefersDark ? 'dark' : 'light'
+        
+        if (currentMode !== targetMode) {
+          const newTheme = `${themeFamily}-${targetMode}` as ThemeName
+          console.log(`[Theme] Auto-switching from ${theme} to ${newTheme} (Dark Reader/system preference)`)
+          setTheme(newTheme)
+        }
+      }
+    }
+    
+    // Listen for changes
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleColorSchemeChange)
+    } else {
+      mediaQuery.addListener(handleColorSchemeChange)
+    }
+    
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleColorSchemeChange)
+      } else {
+        mediaQuery.removeListener(handleColorSchemeChange)
+      }
+    }
+  }, [theme])
 
   // Clear tag filters when switching boards
   useEffect(() => {
@@ -153,8 +273,8 @@ export default function App(props: TaskAppProps = {}) {
     }
   }
 
-  // Wrapper for clearTasksByTag that shows confirmation dialog
-  function handleClearTasksByTag(tag: string) {
+  // Wrapper for deleteTag that shows confirmation dialog
+  function handleDeleteTag(tag: string) {
     const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
     setConfirmClearTag({ tag, count: tagTasks.length })
   }
@@ -244,10 +364,14 @@ export default function App(props: TaskAppProps = {}) {
   // On mobile, show only top 3 tags; on desktop, show top 6
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
+  // Determine if current theme is dark variant
+  const isDarkTheme = theme.endsWith('-dark') || theme === 'dark'
+
   return (
     <div
       ref={containerRef}
       className="task-app-container"
+      data-dark-theme={isDarkTheme ? 'true' : 'false'}
       onMouseDown={dragAndDrop.selectionStartHandler}
       onMouseMove={dragAndDrop.selectionMoveHandler}
       onMouseUp={dragAndDrop.selectionEndHandler}
@@ -268,28 +392,66 @@ export default function App(props: TaskAppProps = {}) {
     >
       <div className="task-app">
       <div className="task-app__header-container">
-        <h1 className="task-app__header">Tasks</h1>
-        <div className="theme-picker">
+        <h1 
+          className="task-app__header" 
+          onClick={() => setShowSettingsModal(true)}
+          style={{ cursor: 'pointer' }}
+          title="Settings"
+        >
+          Tasks{userType !== 'public' && userId !== 'public' ? ` - ${userId}` : ''}
+        </h1>
+        <div className="theme-picker" ref={themePickerRef}>
           <button 
             className="theme-toggle-btn" 
             onClick={() => setShowThemePicker(!showThemePicker)}
             aria-label="Choose theme"
             title="Choose theme"
           >
-            {getThemeEmoji(theme)}
+            {getThemeIcon(theme, preferences.experimentalThemes || false)}
           </button>
           {showThemePicker && (
             <div className="theme-picker__dropdown">
-              {THEMES.map(({ name, emoji, label }) => (
-                <button
-                  key={name}
-                  className={`theme-picker__option ${theme === name ? 'active' : ''}`}
-                  onClick={() => { setTheme(name); setShowThemePicker(false); }}
-                  title={label}
-                >
-                  {emoji}
-                </button>
-              ))}
+              <div className="theme-picker__pills">
+                {THEME_FAMILIES.map((family, idx) => (
+                  <div key={idx} className="theme-pill">
+                    {/* Light variant button */}
+                    <button
+                      className={`theme-pill__btn theme-pill__btn--light ${theme === family.lightTheme ? 'active' : ''}`}
+                      onClick={() => setTheme(family.lightTheme)}
+                      title={family.lightLabel}
+                      aria-label={family.lightLabel}
+                    >
+                      <div className="theme-pill__icon">
+                        {family.lightIcon}
+                      </div>
+                    </button>
+                    
+                    {/* Dark variant button */}
+                    <button
+                      className={`theme-pill__btn theme-pill__btn--dark ${theme === family.darkTheme ? 'active' : ''}`}
+                      onClick={() => setTheme(family.darkTheme)}
+                      title={family.darkLabel}
+                      aria-label={family.darkLabel}
+                    >
+                      <div className="theme-pill__icon">
+                        {family.darkIcon}
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {/* Settings button - separate column on the right */}
+              <button
+                className="theme-picker__settings-icon"
+                onClick={() => {
+                  setShowSettingsModal(true)
+                  setShowThemePicker(false)
+                }}
+                aria-label="Settings"
+                title="Settings"
+              >
+                <SettingsIcon />
+              </button>
             </div>
           )}
         </div>
@@ -453,7 +615,7 @@ export default function App(props: TaskAppProps = {}) {
         onDelete={deleteTask}
         onAddTag={addTagToTask}
         onDragStart={dragAndDrop.onDragStart}
-  onDragEnd={dragAndDrop.onDragEnd}
+        onDragEnd={dragAndDrop.onDragEnd}
         onDragOver={dragAndDrop.onDragOver}
         onDragLeave={dragAndDrop.onDragLeave}
         onDrop={dragAndDrop.onDrop}
@@ -461,8 +623,7 @@ export default function App(props: TaskAppProps = {}) {
         sortTasksByAge={sortHook.sortTasksByAge}
         getSortIcon={sortHook.getSortIcon}
         getSortTitle={sortHook.getSortTitle}
-        clearTasksByTag={handleClearTasksByTag}
-        clearRemainingTasks={clearRemainingTasks}
+        deleteTag={handleDeleteTag}
         onDeletePersistedTag={deleteTagOnBoard}
       />
 
@@ -486,7 +647,7 @@ export default function App(props: TaskAppProps = {}) {
           if (!confirmClearTag) return
           const tag = confirmClearTag.tag
           setConfirmClearTag(null)
-          await clearTasksByTag(tag)
+          await deleteTag(tag)
         }}
         confirmLabel="Clear Tag"
         confirmDanger={true}
@@ -583,6 +744,126 @@ export default function App(props: TaskAppProps = {}) {
         )}
       </Modal>
 
+      {/* Settings Modal */}
+      <Modal
+        isOpen={showSettingsModal}
+        title="Settings"
+        onClose={() => setShowSettingsModal(false)}
+        onConfirm={() => setShowSettingsModal(false)}
+        confirmLabel="Close"
+        cancelLabel="Close"
+      >
+        {/* User Management Section */}
+        <div className="settings-section">
+          <h4 className="settings-section-title">User Management</h4>
+          
+          <div className="settings-field">
+            <label className="settings-field-label">Current User ID</label>
+            <div className="settings-field-input-group">
+              <input
+                type="text"
+                className="settings-text-input"
+                value={newUserId || userId}
+                onChange={(e) => setNewUserId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newUserId && newUserId !== userId && userType !== 'public' && !isChangingUserId) {
+                    handleUserIdChange()
+                  }
+                }}
+                placeholder={userType === 'public' ? 'public' : userId}
+                disabled={userType === 'public' || isChangingUserId}
+              />
+              {newUserId && newUserId !== userId && userType !== 'public' && (
+                <button 
+                  className="settings-field-button"
+                  onClick={handleUserIdChange}
+                  disabled={isChangingUserId}
+                >
+                  {isChangingUserId ? (
+                    <span className="spinner"></span>
+                  ) : (
+                    '↵'
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="settings-field">
+            <label className="settings-field-label">Enter New Key</label>
+            <div className="settings-field-input-group">
+              <input
+                type="password"
+                name="key"
+                autoComplete="key"
+                className="settings-text-input"
+                value={newKey}
+                onChange={(e) => {
+                  setNewKey(e.target.value)
+                  setKeyValidationError(null)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newKey && !isValidatingKey) {
+                    handleKeyChange()
+                  }
+                }}
+                placeholder="Enter authentication key"
+                disabled={isValidatingKey}
+              />
+              {newKey && (
+                <button 
+                  className="settings-field-button"
+                  onClick={handleKeyChange}
+                  disabled={isValidatingKey}
+                >
+                  {isValidatingKey ? (
+                    <span className="spinner"></span>
+                  ) : (
+                    '↵'
+                  )}
+                </button>
+              )}
+            </div>
+            {keyValidationError && (
+              <span className="settings-error">{keyValidationError}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Preferences Section */}
+        <div className="settings-section">
+          <h4 className="settings-section-title">Preferences</h4>
+          
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={preferences.experimentalThemes || false}
+              onChange={(e) => {
+                savePreferences({ experimentalThemes: e.target.checked })
+              }}
+            />
+            <span className="settings-label">
+              <strong>Experimental Themes</strong>
+              <span className="settings-description">Enable access to experimental theme options</span>
+            </span>
+          </label>
+
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={preferences.alwaysVerticalLayout || false}
+              onChange={(e) => {
+                savePreferences({ alwaysVerticalLayout: e.target.checked })
+              }}
+            />
+            <span className="settings-label">
+              <strong>Always Use Vertical Layout</strong>
+              <span className="settings-description">Use mobile-style vertical task layout on all devices</span>
+            </span>
+          </label>
+        </div>
+      </Modal>
+
       <ContextMenu
         isOpen={!!boardContextMenu}
         x={boardContextMenu?.x || 0}
@@ -624,9 +905,9 @@ export default function App(props: TaskAppProps = {}) {
                 return
               }
               try {
-                console.log('[App] Calling clearTasksByTag for tag:', tagContextMenu.tag)
-                await clearTasksByTag(tagContextMenu.tag)
-                console.log('[App] clearTasksByTag completed successfully')
+                console.log('[App] Calling deleteTag for tag:', tagContextMenu.tag)
+                await deleteTag(tagContextMenu.tag)
+                console.log('[App] deleteTag completed successfully')
                 setTagContextMenu(null)
               } catch (err) {
                 console.error('[App] Failed to delete tag:', err)

@@ -110,8 +110,10 @@ export interface SyncQueueItem {
 export type DataType = 'tasks' | 'stats'
 
 // User preferences (synced to server)
+// Theme is NOT here - it's stored per-device in sessionStorage
 export interface UserPreferences {
   version: 1
   updatedAt: string
-  theme?: string
+  experimentalThemes?: boolean
+  alwaysVerticalLayout?: boolean
 }

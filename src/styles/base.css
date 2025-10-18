@@ -19,15 +19,45 @@ body {
   font-weight: var(--font-weight-normal);
   color: var(--color-text);
   background-color: var(--color-bg);
+  color-scheme: light dark; /* Support both light and dark color schemes */
+  
+  /* Tell Dark Reader to respect our dark themes */
+  --darkreader-bg--color-bg: var(--color-bg);
+  --darkreader-text--color-text: var(--color-text);
+}
+
+/* Light themes explicitly use light color scheme */
+.task-app-container[data-theme="light"],
+.task-app-container[data-theme="strawberry-light"],
+.task-app-container[data-theme="ocean-light"],
+.task-app-container[data-theme="cyberpunk-light"],
+.task-app-container[data-theme="coffee-light"],
+.task-app-container[data-theme="lavender-light"],
+.task-app-container[data-theme="pink-light"] {
   color-scheme: light;
 }
 
-/* Dark themes should use dark color scheme */
+/* Dark themes explicitly use dark color scheme - tell Dark Reader not to invert */
 .task-app-container[data-theme="dark"],
-.task-app-container[data-theme="ocean"],
-.task-app-container[data-theme="cyberpunk"],
-.task-app-container[data-theme="coffee"] {
-  color-scheme: dark;
+.task-app-container[data-theme="strawberry-dark"],
+.task-app-container[data-theme="ocean-dark"],
+.task-app-container[data-theme="cyberpunk-dark"],
+.task-app-container[data-theme="coffee-dark"],
+.task-app-container[data-theme="lavender-dark"],
+.task-app-container[data-theme="pink-dark"] {
+  color-scheme: dark only; /* "only" tells Dark Reader to leave it alone */
+}
+
+/* Additional Dark Reader hints - tell it our dark themes are already dark */
+.task-app-container[data-dark-theme="true"] {
+  /* Dark Reader detection hints */
+  --is-dark-theme: 1;
+}
+
+/* Ensure Dark Reader doesn't modify our carefully crafted colors */
+.task-app-container * {
+  /* Prevent Dark Reader from inverting images, svgs, etc */
+  color-scheme: inherit;
 }
 
 .task-app-container a {

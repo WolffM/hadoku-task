@@ -141,8 +141,8 @@
   --shadow-focus-alt: 0 0 0 2px rgba(251, 113, 133, 0.2);
 }
 
-/* Strawberry Theme - Sweet pink and red palette */
-.task-app-container[data-theme="strawberry"] {
+/* Strawberry Theme - Light variant - Sweet pink and red palette */
+.task-app-container[data-theme="strawberry-light"] {
   /* Primary - Strawberry red */
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff477a;
@@ -192,8 +192,59 @@
   --shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.15);
 }
 
-/* Ocean Theme - Deep sea blues (dark) */
-.task-app-container[data-theme="ocean"] {
+/* Strawberry Theme - Dark variant - Sweet pink on dark */
+.task-app-container[data-theme="strawberry-dark"] {
+  /* Primary - Bright strawberry pink */
+  --color-primary: #ff6b9d;
+  --color-primary-dark: #ff8fb3;
+  --color-primary-light: #7c1d3b;
+  --color-primary-bg: #2d1620;
+  --color-primary-hover: rgba(255, 107, 157, 0.15);
+  
+  /* Success - Bright green for contrast */
+  --color-success: #4ade80;
+  --color-success-dark: #22c55e;
+  --color-success-text: #0f172a;
+  
+  /* Danger - Hot pink */
+  --color-danger: #f472b6;
+  --color-danger-dark: #ec4899;
+  --color-danger-darker: #db2777;
+  --color-danger-light: #3d1328;
+  --color-danger-text: #0f172a;
+  
+  /* Neutral - Muted pink-gray */
+  --color-neutral: #94a3b8;
+  --color-neutral-light: #3d1e2b;
+  --color-neutral-lighter: #2d1620;
+  
+  /* Text - Light on dark backgrounds */
+  --color-text: #fce7f3;
+  --color-text-secondary: #f9a8d4;
+  --color-text-tertiary: #f472b6;
+  --color-text-muted: #be185d;
+  
+  /* Borders - Dark pink */
+  --color-border: #7c1d3b;
+  --color-border-light: #5c1429;
+  
+  /* Backgrounds - Dark with pink tint */
+  --color-bg: #1a0d14;
+  --color-bg-card: #2d1620;
+  --color-bg-alt: #150a10;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  
+  /* Shadows - Deep for depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.3);
+  --shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.3);
+  --shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.2);
+}
+
+/* Ocean Theme - Dark variant - Deep sea blues */
+.task-app-container[data-theme="ocean-dark"] {
   /* Primary - Bright aqua for accents */
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
@@ -243,8 +294,59 @@
   --shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
 }
 
-/* Cyberpunk Theme - Neon dystopia (dark) */
-.task-app-container[data-theme="cyberpunk"] {
+/* Ocean Theme - Light variant - Tropical aqua and coral */
+.task-app-container[data-theme="ocean-light"] {
+  /* Primary - Vibrant aqua */
+  --color-primary: #06b6d4;
+  --color-primary-dark: #0891b2;
+  --color-primary-light: #cffafe;
+  --color-primary-bg: #ecfeff;
+  --color-primary-hover: rgba(6, 182, 212, 0.08);
+  
+  /* Success - Tropical coral */
+  --color-success: #f97316;
+  --color-success-dark: #ea580c;
+  --color-success-text: white;
+  
+  /* Danger - Deep sea pink */
+  --color-danger: #ec4899;
+  --color-danger-dark: #db2777;
+  --color-danger-darker: #be185d;
+  --color-danger-light: #fce7f3;
+  --color-danger-text: white;
+  
+  /* Neutral - Sandy beige */
+  --color-neutral: #64748b;
+  --color-neutral-light: #f0f9ff;
+  --color-neutral-lighter: #f8fafc;
+  
+  /* Text - Deep ocean blue */
+  --color-text: #0c4a6e;
+  --color-text-secondary: #075985;
+  --color-text-tertiary: #0ea5e9;
+  --color-text-muted: #38bdf8;
+  
+  /* Borders - Light aqua */
+  --color-border: #a5f3fc;
+  --color-border-light: #cffafe;
+  
+  /* Backgrounds - Tropical waters */
+  --color-bg: #f0f9ff;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #e0f2fe;
+  --color-bg-overlay: rgba(8, 47, 73, 0.3);
+  
+  /* Shadows - Soft aqua tint */
+  --shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
+  --shadow-md: 0 2px 4px rgba(6, 182, 212, 0.12);
+  --shadow-modal: 0 8px 24px rgba(6, 182, 212, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
+  --shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
+  --shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
+}
+
+/* Cyberpunk Theme - Dark variant - Neon dystopia */
+.task-app-container[data-theme="cyberpunk-dark"] {
   /* Primary - Electric cyan */
   --color-primary: #22d3ee;
   --color-primary-dark: #06b6d4;
@@ -294,8 +396,59 @@
   --shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
 }
 
-/* Coffee Theme - Rich espresso tones (dark) */
-.task-app-container[data-theme="coffee"] {
+/* Cyberpunk Theme - Light variant - Neon pastels */
+.task-app-container[data-theme="cyberpunk-light"] {
+  /* Primary - Soft electric blue */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #dbeafe;
+  --color-primary-bg: #eff6ff;
+  --color-primary-hover: rgba(59, 130, 246, 0.08);
+  
+  /* Success - Vibrant teal */
+  --color-success: #14b8a6;
+  --color-success-dark: #0d9488;
+  --color-success-text: white;
+  
+  /* Danger - Bright magenta */
+  --color-danger: #d946ef;
+  --color-danger-dark: #c026d3;
+  --color-danger-darker: #a21caf;
+  --color-danger-light: #fae8ff;
+  --color-danger-text: white;
+  
+  /* Neutral - Cool slate */
+  --color-neutral: #64748b;
+  --color-neutral-light: #f1f5f9;
+  --color-neutral-lighter: #f8fafc;
+  
+  /* Text - Deep blue-gray */
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
+  
+  /* Borders - Soft blue */
+  --color-border: #bfdbfe;
+  --color-border-light: #dbeafe;
+  
+  /* Backgrounds - Clean white with blue tint */
+  --color-bg: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #f1f5f9;
+  --color-bg-overlay: rgba(15, 23, 42, 0.3);
+  
+  /* Shadows - Soft blue glow */
+  --shadow-sm: 0 1px 2px rgba(59, 130, 246, 0.08);
+  --shadow-md: 0 2px 4px rgba(59, 130, 246, 0.12);
+  --shadow-modal: 0 8px 24px rgba(59, 130, 246, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  --shadow-focus-sm: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  --shadow-focus-alt: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* Coffee Theme - Dark variant - Rich espresso tones */
+.task-app-container[data-theme="coffee-dark"] {
   /* Primary - Warm terracotta/burnt orange */
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
@@ -345,8 +498,59 @@
   --shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
 }
 
-/* Lavender Theme - Soft purple elegance (light) */
-.task-app-container[data-theme="lavender"] {
+/* Coffee Theme - Light variant - Latte and cream */
+.task-app-container[data-theme="coffee-light"] {
+  /* Primary - Warm terracotta */
+  --color-primary: #ea580c;
+  --color-primary-dark: #c2410c;
+  --color-primary-light: #fed7aa;
+  --color-primary-bg: #fffbeb;
+  --color-primary-hover: rgba(234, 88, 12, 0.08);
+  
+  /* Success - Golden yellow */
+  --color-success: #eab308;
+  --color-success-dark: #ca8a04;
+  --color-success-text: white;
+  
+  /* Danger - Deep brown */
+  --color-danger: #78350f;
+  --color-danger-dark: #92400e;
+  --color-danger-darker: #451a03;
+  --color-danger-light: #fef3c7;
+  --color-danger-text: white;
+  
+  /* Neutral - Warm tan */
+  --color-neutral: #78716c;
+  --color-neutral-light: #fef3c7;
+  --color-neutral-lighter: #fffbeb;
+  
+  /* Text - Dark brown */
+  --color-text: #1c1917;
+  --color-text-secondary: #44403c;
+  --color-text-tertiary: #78716c;
+  --color-text-muted: #a8a29e;
+  
+  /* Borders - Light tan */
+  --color-border: #fde68a;
+  --color-border-light: #fef3c7;
+  
+  /* Backgrounds - Creamy latte */
+  --color-bg: #fffbeb;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #fef3c7;
+  --color-bg-overlay: rgba(28, 25, 23, 0.3);
+  
+  /* Shadows - Warm brown tint */
+  --shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
+  --shadow-md: 0 2px 4px rgba(234, 88, 12, 0.12);
+  --shadow-modal: 0 8px 24px rgba(234, 88, 12, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
+  --shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
+  --shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
+}
+
+/* Lavender Theme - Light variant - Soft purple elegance */
+.task-app-container[data-theme="lavender-light"] {
   /* Primary - Soft lavender purple */
   --color-primary: #c084fc;
   --color-primary-dark: #a855f7;
@@ -394,4 +598,157 @@
   --shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
   --shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
   --shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
+}
+
+/* Lavender Theme - Dark variant - Deep purple nights */
+.task-app-container[data-theme="lavender-dark"] {
+  /* Primary - Bright lavender */
+  --color-primary: #c084fc;
+  --color-primary-dark: #d8b4fe;
+  --color-primary-light: #581c87;
+  --color-primary-bg: #2d1b3d;
+  --color-primary-hover: rgba(192, 132, 252, 0.15);
+  
+  /* Success - Bright lime */
+  --color-success: #a3e635;
+  --color-success-dark: #84cc16;
+  --color-success-text: #1a1a1a;
+  
+  /* Danger - Bright indigo */
+  --color-danger: #818cf8;
+  --color-danger-dark: #6366f1;
+  --color-danger-darker: #4f46e5;
+  --color-danger-light: #312e81;
+  --color-danger-text: #1a1a1a;
+  
+  /* Neutral - Cool purple-gray */
+  --color-neutral: #a1a1aa;
+  --color-neutral-light: #27272a;
+  --color-neutral-lighter: #18181b;
+  
+  /* Text - Soft lavender white */
+  --color-text: #f5f3ff;
+  --color-text-secondary: #e9d5ff;
+  --color-text-tertiary: #d8b4fe;
+  --color-text-muted: #a855f7;
+  
+  /* Borders - Deep purple */
+  --color-border: #581c87;
+  --color-border-light: #6b21a8;
+  
+  /* Backgrounds - Deep purple-black */
+  --color-bg: #1a0f1e;
+  --color-bg-card: #2d1b3d;
+  --color-bg-alt: #3f2551;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  
+  /* Shadows - Purple glow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.3);
+  --shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.3);
+  --shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.2);
+}
+
+/* Pink Theme - Light variant - Cute girly pink and white */
+.task-app-container[data-theme="pink-light"] {
+  /* Primary - Bubblegum pink */
+  --color-primary: #ff69b4;
+  --color-primary-dark: #ff1493;
+  --color-primary-light: #ffc0cb;
+  --color-primary-bg: #fff0f5;
+  --color-primary-hover: rgba(255, 105, 180, 0.08);
+  
+  /* Success - Light pastel pink */
+  --color-success: #ffb3d9;
+  --color-success-dark: #ff8fcc;
+  --color-success-text: white;
+  
+  /* Danger - Darker purple */
+  --color-danger: #9b59b6;
+  --color-danger-dark: #8e44ad;
+  --color-danger-darker: #6c3483;
+  --color-danger-light: #e8daef;
+  --color-danger-text: white;
+  
+  /* Neutral - Soft gray */
+  --color-neutral: #d4a5a5;
+  --color-neutral-light: #fff0f5;
+  --color-neutral-lighter: #fffafc;
+  
+  /* Text - Soft dark pink */
+  --color-text: #4a2a3a;
+  --color-text-secondary: #8b5a6f;
+  --color-text-tertiary: #c48ca0;
+  --color-text-muted: #e5b3c8;
+  
+  /* Borders - Soft pink */
+  --color-border: #ffc0cb;
+  --color-border-light: #ffd9e0;
+  
+  /* Backgrounds - White and pink pastels */
+  --color-bg: #fffafc;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #fff0f5;
+  --color-bg-overlay: rgba(255, 105, 180, 0.2);
+  
+  /* Shadows - Soft pink glow */
+  --shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
+  --shadow-md: 0 2px 4px rgba(255, 105, 180, 0.12);
+  --shadow-modal: 0 8px 24px rgba(255, 105, 180, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
+  --shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
+  --shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
+}
+
+/* Pink Theme - Dark variant - Blackpink with neon pink glow */
+.task-app-container[data-theme="pink-dark"] {
+  /* Primary - Hot neon pink */
+  --color-primary: #ff10f0;
+  --color-primary-dark: #ff69b4;
+  --color-primary-light: #4a0e47;
+  --color-primary-bg: #1a0a18;
+  --color-primary-hover: rgba(255, 16, 240, 0.15);
+  
+  /* Success - Light pastel pink (high contrast on dark) */
+  --color-success: #ffb3e6;
+  --color-success-dark: #ff8fcc;
+  --color-success-text: #000000;
+  
+  /* Danger - Darker purple */
+  --color-danger: #9b59b6;
+  --color-danger-dark: #8e44ad;
+  --color-danger-darker: #6c3483;
+  --color-danger-light: #2d1b33;
+  --color-danger-text: white;
+  
+  /* Neutral - Dark purple-gray */
+  --color-neutral: #8b7894;
+  --color-neutral-light: #2a1828;
+  --color-neutral-lighter: #1a0a18;
+  
+  /* Text - Bright pink tinted white */
+  --color-text: #ffe5f5;
+  --color-text-secondary: #ffb3e6;
+  --color-text-tertiary: #ff69b4;
+  --color-text-muted: #ff10f0;
+  
+  /* Borders - Neon pink */
+  --color-border: #8b0077;
+  --color-border-light: #a3008a;
+  
+  /* Backgrounds - Deep black with pink tint */
+  --color-bg: #0d0012;
+  --color-bg-card: #1a0a18;
+  --color-bg-alt: #2a1828;
+  --color-bg-overlay: rgba(0, 0, 0, 0.8);
+  
+  /* Shadows - Neon pink glow */
+  --shadow-sm: 0 1px 2px rgba(255, 16, 240, 0.3);
+  --shadow-md: 0 2px 4px rgba(255, 16, 240, 0.4);
+  --shadow-modal: 0 8px 24px rgba(255, 16, 240, 0.5);
+  --shadow-focus: 0 0 0 3px rgba(255, 16, 240, 0.4);
+  --shadow-focus-sm: 0 0 0 2px rgba(255, 16, 240, 0.4);
+  --shadow-focus-alt: 0 0 0 2px rgba(255, 16, 240, 0.3);
 }

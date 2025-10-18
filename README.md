@@ -19,14 +19,16 @@ npm run dev
 
 ## Features
 
--  **Quick Task Entry** - Type and press Enter
--  **Tag Support** - Organize with `#tags`
--  **Smart Filtering** - Filter by tag or view all
--  **Drag & Drop** - Move tasks between columns
--  **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
--  **Optimistic Updates** - Instant UI response, background sync to Cloudflare Workers KV
--  **Multi-User** - Public (localStorage only), Friend/Admin (localStorage + KV persistence)
--  **Framework Agnostic** - Pure handlers work with Express, Hono, Cloudflare Workers
+- ⚡ **Quick Task Entry** - Type and press Enter
+- 🏷️ **Tag Support** - Organize with `#tags`
+- 🔍 **Smart Filtering** - Filter by tag or view all
+- 🎯 **Drag & Drop** - Move tasks between columns and boards
+- 🎨 **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
+- ⚙️ **User Management** - Settings modal with userId and session key management
+- 📋 **Multi-Board** - Organize tasks across multiple boards
+- ⚡ **Optimistic Updates** - Instant UI response, background sync
+- 👥 **Multi-User** - Public (localStorage only), Friend/Admin (server sync)
+- 🔌 **Framework Agnostic** - Pure handlers work with any backend framework
 
 ---
 
@@ -63,11 +65,13 @@ Each theme includes distinct button colors for visual interest and proper contra
 
 ## Documentation
 
- **[Architecture](docs/ARCHITECTURE.md)** - System design and Universal Adapter Pattern  
- **[API Reference](docs/API.md)** - Complete endpoint documentation  
- **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines  
- **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps  
- **[Universal Adapter Pattern](docs/UNIVERSAL_ADAPTER_PATTERN.md)** - Framework-agnostic API handlers
+📖 **[Architecture](docs/ARCHITECTURE.md)** - System design and Universal Adapter Pattern  
+📚 **[API Reference](docs/API.md)** - Complete endpoint documentation  
+📋 **[Parent API Reference](docs/PARENT_API_REFERENCE.md)** - Parent integration guide  
+📝 **[Changelog](docs/CHANGELOG.md)** - Version history and changes  
+🚀 **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines  
+📦 **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps  
+🔌 **[Universal Adapter Pattern](docs/UNIVERSAL_ADAPTER_PATTERN.md)** - Framework-agnostic API handlers
 
 ---
 
@@ -80,8 +84,8 @@ npm run build:all      # Both
 ```
 
 **Output**: 
-- **Client bundle**: `dist/index.js` (~21KB), `dist/style.css` (~11KB with 7 themes)
-- Handlers: `dist/server/` (TypeScript compiled to JavaScript)
+- **Client bundle**: `dist/index.js` (~95KB / ~22KB gzipped), `dist/style.css` (~40KB / ~7KB gzipped)
+- **Handlers**: `dist/server/` (TypeScript compiled to JavaScript)
 
 **Deploy to**: 
 - Client → `hadoku_site/public/mf/task/`
@@ -265,4 +269,4 @@ See **[Development docs](docs/DEVELOPMENT.md)** for detailed workflow.
 
 ---
 
-**Version**: 0.1.0 | **License**: MIT | **Author**: WolffM
+**Version**: 3.0.29 | **License**: MIT | **Author**: WolffM

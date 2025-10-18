@@ -20,4 +20,18 @@ export type {
 } from '../domain/types'
 
 // Client-only types
-export type ThemeName = 'light' | 'dark' | 'strawberry' | 'ocean' | 'cyberpunk' | 'coffee' | 'lavender'
+export type ThemeName = 
+  | 'light' 
+  | 'dark'
+  | 'strawberry-light' 
+  | 'strawberry-dark'
+  | 'ocean-light' 
+  | 'ocean-dark'
+  | 'cyberpunk-light' 
+  | 'cyberpunk-dark'
+  | 'coffee-light' 
+  | 'coffee-dark'
+  | 'lavender-light' 
+  | 'lavender-dark'
+  | 'pink-light'
+  | 'pink-dark'

@@ -371,6 +371,98 @@ const storage = new MemoryStorage()
 
 ---
 
+## Preferences Endpoints
+
+### GET `/preferences`
+Get user preferences (synced from server for non-public users).
+
+**Headers:**
+- `x-user-type`: `public` | `admin` | `friend`
+- `x-user-id`: User ID
+- `x-session-id`: Session key (for non-public users)
+
+**Response:**
+```json
+{
+  "version": 1,
+  "updatedAt": "2025-10-18T12:00:00Z",
+  "experimentalThemes": false,
+  "alwaysVerticalLayout": false
+}
+```
+
+**Note:** Theme is NOT included in preferences - it's stored per-device in sessionStorage.
+
+---
+
+### PUT `/preferences`
+Save user preferences (syncs to server for non-public users).
+
+**Headers:**
+- `x-user-type`: `public` | `admin` | `friend`
+- `x-user-id`: User ID
+- `x-session-id`: Session key (for non-public users)
+
+**Body:**
+```json
+{
+  "experimentalThemes": true,
+  "alwaysVerticalLayout": false
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true
+}
+```
+
+---
+
+## User Management Endpoints
+
+### POST `/validate-key`
+Validate a session key without changing the current session.
+
+**Headers:**
+- `x-user-type`: `public` | `admin` | `friend`
+- `x-user-id`: User ID
+- `x-session-id`: The key to validate
+
+**Response:**
+```json
+{
+  "valid": true
+}
+```
+
+---
+
+### POST `/user/set-id`
+Update the user ID for the current session.
+
+**Headers:**
+- `x-user-type`: `public` | `admin` | `friend`
+- `x-session-id`: Session key
+
+**Body:**
+```json
+{
+  "newUserId": "new-user-id"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "message": "User ID updated"
+}
+```
+
+---
+
 ## Error Responses
 
 All endpoints return errors in this format:

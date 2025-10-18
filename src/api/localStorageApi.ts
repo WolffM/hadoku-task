@@ -266,18 +266,20 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     },
 
-    // User preferences
+    // User preferences (server-synced settings only, NOT theme)
     async getPreferences(): Promise<import('../domain/types').UserPreferences> {
       const key = `${userType}-${userId}-preferences`
       const stored = localStorage.getItem(key)
       if (stored) {
-        return JSON.parse(stored)
+        const parsed = JSON.parse(stored)
+        // Remove theme field if it exists (legacy data)
+        const { theme, ...prefs } = parsed
+        return prefs
       }
-      // Default preferences
+      // Default preferences (no theme)
       return {
         version: 1,
-        updatedAt: new Date().toISOString(),
-        theme: 'light'
+        updatedAt: new Date().toISOString()
       }
     },
 
@@ -287,6 +289,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       const updated = {
         ...current,
         ...prefs,
+        version: 1,
         updatedAt: new Date().toISOString()
       }
       localStorage.setItem(key, JSON.stringify(updated))
@@ -374,6 +377,23 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
       
       console.log('[localStorageApi] batchClearTag END')
+    },
+
+    // User Management (localStorage only - no-op for validation)
+    async validateKey(key: string): Promise<boolean> {
+      // For localStorage/public mode, keys are not validated
+      // In development, reject obviously invalid keys for better UX
+      if (!key || key.length < 10) {
+        console.warn('[localStorageApi] validateKey: Key too short (must be at least 10 characters)')
+        return false
+      }
+      // Accept any key that's long enough (no real validation in public mode)
+      return true
+    },
+
+    async setUserId(_newUserId: string): Promise<{ ok: boolean; message?: string }> {
+      // For localStorage/public mode, userId changes are handled by URL params
+      return { ok: true }
     }
   }
 }
