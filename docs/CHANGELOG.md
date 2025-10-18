@@ -7,6 +7,198 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.31] - 2025-10-18
+
+### ✨ Added - Edit Tag Button & Modal
+
+#### **New Edit Tag Button on Task Items**
+- Added 🏷️ tag button to task items (between task and complete button)
+- Opens modal dialog for editing tags on a task
+- Button uses theme-aware SVG icon (proper tag shape with hole)
+- Styled to match Complete and Delete buttons (gradient background)
+- Uses primary theme color for consistency
+
+**Button Design:**
+```tsx
+<TagIcon /> // SVG icon with sideways rectangular tag shape
+background: linear-gradient(--color-primary → --color-primary-dark)
+```
+
+#### **Edit Tags Modal Dialog**
+
+**Features:**
+- **Tag Pills:** Clickable pills showing all board tags
+  - Active pills highlighted (tags currently on task)
+  - Click to toggle tags on/off
+  - Sorted alphabetically
+- **New Tag Input:** Text field for creating new tags
+  - Auto-normalizes: "one tag" → #one-tag
+  - Supports multiple: "#two #tags" → #two #tags
+  - New tags automatically added to board's persisted tags
+- **Clear Instructions:** Two-line hint showing both syntax options
+
+**Modal Structure:**
+```
+Edit Tags
+─────────────────
+
+Select Tags
+┌─────────────────┐
+│ #new  #ok  #tag │  ← Pills toggle existing
+└─────────────────┘
+
+Add New Tag
+┌─────────────────┐
+│ [input field]   │  ← Only for NEW tags
+└─────────────────┘
+
+"one tag" → #one-tag
+"#two #tags" → #two #tags
+
+[Cancel] [Save]
+```
+
+**Key Behaviors:**
+- Tags always display alphabetically (both in pills and on tasks)
+- Pills show current task tags as active on open
+- Input field separate from pills (only for new tags)
+- New tags added to board's tag list immediately
+- Modal closes without page reload
+
+### 🎛️ Added - Button Visibility Preferences
+
+#### **Three New Preferences (sessionStorage)**
+- **Disable Complete Button:** Hide ✓ button on task items
+- **Disable Delete Button:** Hide × button on task items
+- **Enable Tag Button:** Show 🏷️ button on desktop
+
+**Default Behavior:**
+- Complete Button: ✅ Visible
+- Delete Button: ✅ Visible
+- Tag Button: ❌ Hidden on desktop, ✅ Always visible on mobile
+
+**Storage:**
+```typescript
+sessionStorage.setItem('showCompleteButton', 'true')
+sessionStorage.setItem('showDeleteButton', 'true')
+sessionStorage.setItem('showTagButton', 'false')
+```
+
+**Conditional Rendering:**
+```tsx
+{showCompleteButton && <CompleteButton />}
+{showDeleteButton && <DeleteButton />}
+{(showTagButton || isMobile) && <TagButton />}
+```
+
+### 🎨 Updated - Settings Modal UI
+
+**Preferences Section Now Includes:**
+- Experimental Themes
+- Always Use Vertical Layout
+- Disable Complete Button ← NEW
+- Disable Delete Button ← NEW
+- Enable Tag Button ← NEW
+
+**All in one unified section** (no separate "Button Visibility" section)
+
+### 🎨 Updated - Icons
+
+#### **SettingsIcon Redesign**
+- Changed from abstract design to proper gear wheel
+- Circle center with 8 gear teeth around edge
+- Standard settings icon appearance
+- Clean, recognizable design
+
+#### **TagIcon Design**
+- Sideways rectangular shape with pointed right end
+- Circular hole on left side (classic price tag)
+- 16×16 size matching other action buttons
+- Proper vertical alignment
+
+### 🐛 Fixed - Tag Ordering & Management
+
+#### **Alphabetical Tag Display**
+- Tags now always display in alphabetical order everywhere
+- Applied in: TaskItem display, Edit modal pills, Save operations
+- Consistent ordering regardless of application order
+
+#### **Tag Pills Update After Creation**
+- New tags immediately appear in pill list when reopening modal
+- Fixed: Pills now refresh with board's updated tag list
+- Implementation: `createTagOnBoard()` called before applying tags
+
+#### **Clear Tag Input Instructions**
+- Updated hint text to show both scenarios clearly
+- Two-line display with proper spacing
+- Examples: "one tag" → #one-tag | "#two #tags" → #two #tags
+
+### 📦 Build Output
+```
+dist/style.css   41.98 kB │ gzip:  6.79 kB
+dist/index.js   104.11 kB │ gzip: 23.10 kB
+```
+
+---
+
+## [3.0.30] - 2025-10-18
+
+### 🔧 Fixed - UserId Management
+
+#### **Removed Page Reload on UserId Change**
+- **Before:** Changing userId added it to URL params and reloaded the entire page
+- **After:** UserId change is API-only, no reload, updates sessionStorage for display
+
+**Why:** userId is primarily for display and validation. If you see your userId, your key loaded correctly and is mapped to both a sessionId and userId. The parent app manages the backend mapping (key → sessionId + userId).
+
+**Changes:**
+```typescript
+// entry.tsx
+const userId = props.userId || 'test-admin'  // From parent only, not URL params
+
+// App.tsx - handleUserIdChange
+const result = await api.setUserId(newUserId.trim())
+if (result.ok) {
+  sessionStorage.setItem('displayUserId', newUserId.trim())
+  setShowSettingsModal(false)  // No page reload
+}
+```
+
+#### **Sync Button Animation & Timeout**
+- Added spinning animation that continues while syncing
+- 5-second timeout protection prevents infinite spinning
+- Button disables during sync operation
+- Hover animation (single rotation) on idle state
+- Proper error handling for 4xx/5xx responses and network failures
+
+**Implementation:**
+```typescript
+// Hover: Single rotation
+.sync-btn:hover svg {
+  animation: spin 0.6s ease-in-out;
+}
+
+// Active syncing: Continuous rotation
+.sync-btn.spinning svg {
+  animation: spin 1s linear infinite;
+}
+
+// Timeout protection (5 seconds)
+await Promise.race([initialLoad(), timeoutPromise])
+```
+
+### 📝 Documentation Updates
+
+**API.md:**
+- Clarified userId is for display/validation, not security
+- Added note that `setUserId` does NOT reload the page
+
+**PARENT_API_REFERENCE.md:**
+- Added purpose statement for User Management endpoints
+- Explained userId is primarily for display and key validation
+
+---
+
 ## [3.0.29] - 2025-10-18
 
 ### 🎨 Added - User Management UI

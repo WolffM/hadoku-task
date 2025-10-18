@@ -465,8 +465,17 @@
   opacity: 1;
 }
 
-.sync-btn:active svg {
+.sync-btn:hover svg {
   animation: spin 0.6s ease-in-out;
+}
+
+.sync-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.sync-btn.spinning svg {
+  animation: spin 1s linear infinite;
 }
 
 .sync-btn:focus {

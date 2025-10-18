@@ -379,7 +379,7 @@ Get user preferences (synced from server for non-public users).
 **Headers:**
 - `x-user-type`: `public` | `admin` | `friend`
 - `x-user-id`: User ID
-- `x-session-id`: Session key (for non-public users)
+- `x-session-id`: Session ID (for non-public users)
 
 **Response:**
 ```json
@@ -401,7 +401,7 @@ Save user preferences (syncs to server for non-public users).
 **Headers:**
 - `x-user-type`: `public` | `admin` | `friend`
 - `x-user-id`: User ID
-- `x-session-id`: Session key (for non-public users)
+- `x-session-id`: Session ID (for non-public users)
 
 **Body:**
 ```json
@@ -423,7 +423,7 @@ Save user preferences (syncs to server for non-public users).
 ## User Management Endpoints
 
 ### POST `/validate-key`
-Validate a session key without changing the current session.
+Validate a key without changing the current session.
 
 **Headers:**
 - `x-user-type`: `public` | `admin` | `friend`
@@ -442,9 +442,11 @@ Validate a session key without changing the current session.
 ### POST `/user/set-id`
 Update the user ID for the current session.
 
+**Purpose:** Changes which userId is associated with the current sessionId in the backend. This is primarily for display and validation - if you see your userId, your key loaded correctly and is mapped to both a sessionId and userId.
+
 **Headers:**
 - `x-user-type`: `public` | `admin` | `friend`
-- `x-session-id`: Session key
+- `x-session-id`: Session ID
 
 **Body:**
 ```json
@@ -460,6 +462,8 @@ Update the user ID for the current session.
   "message": "User ID updated"
 }
 ```
+
+**Note:** This does NOT reload the page. The parent app handles the backend mapping (key → sessionId + userId), and the child app updates sessionStorage for display only.
 
 ---
 

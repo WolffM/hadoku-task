@@ -106,14 +106,20 @@ savePreferences(storage, auth, prefs: Partial<UserPreferences>)
 ### **User Management**
 
 ```typescript
-// Validate session key
+// Validate key
 validateKey(storage, auth, { key: string })
 → Promise<{ valid: boolean }>
 
-// Update user ID
+// Update user ID for current session
 setUserId(storage, auth, { newUserId: string })
 → Promise<{ ok: boolean, message: string }>
 ```
+
+**Purpose:** These endpoints manage the relationship between keys, sessionIds, and userIds:
+- `validateKey`: Checks if a key is valid and can be mapped to sessionId + userId
+- `setUserId`: Updates which userId is mapped to the current sessionId (backend-only operation)
+
+**Note:** userId is primarily for display and validation. If the user sees their userId in the app, their key loaded correctly and is mapped to both a sessionId and userId.
 
 ---
 

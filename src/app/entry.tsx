@@ -18,8 +18,8 @@ export interface TaskAppProps {
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   // Extract userType from URL params if not provided in props
   const urlParams = new URLSearchParams(window.location.search)
-  const userType = props.userType || (urlParams.get('userType') as ('public' | 'friend' | 'admin')) || 'public'
-  const userId = props.userId || urlParams.get('userId') || 'public'
+  const userType = props.userType || (urlParams.get('userType') as ('public' | 'friend' | 'admin')) || 'admin' // TEMPORARY: Testing as admin
+  const userId = props.userId || 'test-admin' // userId comes from parent only, not URL
   const sessionId = props.sessionId  // Session ID from parent (for authenticated requests)
   
   const finalProps = { ...props, userType, userId, sessionId }

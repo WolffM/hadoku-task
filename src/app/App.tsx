@@ -37,19 +37,27 @@ export default function App(props: TaskAppProps = {}) {
   const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [preferences, setPreferences] = useState<UserPreferences>({
     version: 1,
     updatedAt: new Date().toISOString(),
     experimentalThemes: false,
     alwaysVerticalLayout: false
   })
+  // Button visibility preferences (stored in sessionStorage only, like theme)
+  const [showCompleteButton, setShowCompleteButton] = useState(true)
+  const [showDeleteButton, setShowDeleteButton] = useState(true)
+  const [showTagButton, setShowTagButton] = useState(false)
   const [newUserId, setNewUserId] = useState('')
   const [newKey, setNewKey] = useState('')
   const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
   const [isChangingUserId, setIsChangingUserId] = useState(false)
+  const [userIdError, setUserIdError] = useState<string | null>(null)
   const [isValidatingKey, setIsValidatingKey] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
+  const [editTagModal, setEditTagModal] = useState<{ taskId: string; currentTag: string | null } | null>(null)
+  const [editTagInput, setEditTagInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const themePickerRef = useRef<HTMLDivElement>(null)
@@ -122,14 +130,26 @@ export default function App(props: TaskAppProps = {}) {
     if (!newUserId.trim() || isChangingUserId) return
     
     setIsChangingUserId(true)
+    setUserIdError(null)
     
-    // Small delay to show spinner
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // Reload page with new userId in URL
-    const url = new URL(window.location.href)
-    url.searchParams.set('userId', newUserId.trim())
-    window.location.href = url.toString()
+    try {
+      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+      const result = await api.setUserId(newUserId.trim())
+      
+      if (result.ok) {
+        // Success - store in sessionStorage for display
+        sessionStorage.setItem('displayUserId', newUserId.trim())
+        setUserIdError(null)
+        setShowSettingsModal(false)
+        setNewUserId('')
+      } else {
+        setUserIdError(result.message || 'Failed to update user ID')
+      }
+    } catch (err) {
+      setUserIdError('Failed to update user ID')
+    } finally {
+      setIsChangingUserId(false)
+    }
   }
 
   // Handle key validation and change
@@ -170,6 +190,29 @@ export default function App(props: TaskAppProps = {}) {
   useEffect(() => {
     sessionStorage.setItem('theme', theme)
   }, [theme])
+
+  // Button visibility preferences (stored in sessionStorage only)
+  useEffect(() => {
+    const storedComplete = sessionStorage.getItem('showCompleteButton')
+    const storedDelete = sessionStorage.getItem('showDeleteButton')
+    const storedTag = sessionStorage.getItem('showTagButton')
+    
+    if (storedComplete !== null) setShowCompleteButton(storedComplete === 'true')
+    if (storedDelete !== null) setShowDeleteButton(storedDelete === 'true')
+    if (storedTag !== null) setShowTagButton(storedTag === 'true')
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem('showCompleteButton', String(showCompleteButton))
+  }, [showCompleteButton])
+
+  useEffect(() => {
+    sessionStorage.setItem('showDeleteButton', String(showDeleteButton))
+  }, [showDeleteButton])
+
+  useEffect(() => {
+    sessionStorage.setItem('showTagButton', String(showTagButton))
+  }, [showTagButton])
 
   // Close theme picker when clicking outside
   useEffect(() => {
@@ -306,6 +349,65 @@ export default function App(props: TaskAppProps = {}) {
     } catch (err) {
       console.error('[App] Failed to create tag:', err)
       throw err
+    }
+  }
+
+  // Handle edit tag modal open
+  function handleEditTag(taskId: string) {
+    const task = tasks.find(t => t.id === taskId)
+    if (task) {
+      setEditTagModal({ taskId, currentTag: task.tag || null })
+      setEditTagInput('') // Input is only for NEW tags, not existing ones
+    }
+  }
+
+  // Handle tag update from edit modal
+  async function handleUpdateTag() {
+    if (!editTagModal) return
+    
+    const { taskId, currentTag } = editTagModal
+    
+    // Get current tags from the task
+    const currentTags = currentTag?.split(' ').filter(Boolean) || []
+    
+    // Get new tags from input (normalize like handleCreateTag does)
+    const newTagsFromInput = editTagInput.trim()
+      ? editTagInput.trim().replace(/\s+/g, '-').split('#').filter(Boolean).map(t => t.trim())
+      : []
+    
+    // Create new tags on the board first (so they appear in pills next time)
+    for (const newTag of newTagsFromInput) {
+      await createTagOnBoard(newTag)
+    }
+    
+    // Combine current tags with new tags from input, sort alphabetically
+    const allTags = [...new Set([...currentTags, ...newTagsFromInput])].sort()
+    const finalTag = allTags.join(' ')
+    
+    // Update task with combined tags
+    await updateTaskTags(taskId, { tag: finalTag })
+    
+    // Close modal
+    setEditTagModal(null)
+    setEditTagInput('')
+  }
+
+  // Toggle tag pill in edit modal
+  function toggleTagPill(tag: string) {
+    if (!editTagModal) return
+    
+    const { taskId, currentTag } = editTagModal
+    const currentTags = currentTag?.split(' ').filter(Boolean) || []
+    const tagExists = currentTags.includes(tag)
+    
+    if (tagExists) {
+      // Remove tag, keep sorted
+      const newTags = currentTags.filter(t => t !== tag).sort().join(' ')
+      setEditTagModal({ taskId, currentTag: newTags })
+    } else {
+      // Add tag, keep sorted
+      const newTags = [...currentTags, tag].sort().join(' ')
+      setEditTagModal({ taskId, currentTag: newTags })
     }
   }
 
@@ -510,13 +612,31 @@ export default function App(props: TaskAppProps = {}) {
           
           {userType !== 'public' && (
             <button
-              className="sync-btn"
+              className={`sync-btn ${isSyncing ? 'spinning' : ''}`}
               onClick={async (e) => {
+                if (isSyncing) return
                 console.log('[App] Manual refresh triggered')
-                await initialLoad()
-                // Remove focus after sync completes
-                ;(e.currentTarget as HTMLButtonElement).blur()
+                setIsSyncing(true)
+                
+                // Create a timeout promise (5 seconds)
+                const timeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('Sync timeout')), 5000)
+                })
+                
+                try {
+                  // Race between initialLoad and timeout
+                  await Promise.race([initialLoad(), timeoutPromise])
+                  console.log('[App] Sync completed successfully')
+                } catch (error) {
+                  console.error('[App] Sync failed:', error)
+                  // Error is handled, just log it
+                } finally {
+                  setIsSyncing(false)
+                  // Remove focus after sync completes
+                  ;(e.currentTarget as HTMLButtonElement).blur()
+                }
               }}
+              disabled={isSyncing}
               title="Sync from server"
               aria-label="Sync from server"
             >
@@ -614,6 +734,7 @@ export default function App(props: TaskAppProps = {}) {
         onComplete={completeTask}
         onDelete={deleteTask}
         onAddTag={addTagToTask}
+        onEditTag={handleEditTag}
         onDragStart={dragAndDrop.onDragStart}
         onDragEnd={dragAndDrop.onDragEnd}
         onDragOver={dragAndDrop.onDragOver}
@@ -625,6 +746,9 @@ export default function App(props: TaskAppProps = {}) {
         getSortTitle={sortHook.getSortTitle}
         deleteTag={handleDeleteTag}
         onDeletePersistedTag={deleteTagOnBoard}
+        showCompleteButton={showCompleteButton}
+        showDeleteButton={showDeleteButton}
+        showTagButton={showTagButton}
       />
 
       {dragAndDrop.isSelecting && dragAndDrop.marqueeRect && (
@@ -787,6 +911,9 @@ export default function App(props: TaskAppProps = {}) {
                 </button>
               )}
             </div>
+            {userIdError && (
+              <div className="settings-error-message">{userIdError}</div>
+            )}
           </div>
 
           <div className="settings-field">
@@ -861,6 +988,111 @@ export default function App(props: TaskAppProps = {}) {
               <span className="settings-description">Use mobile-style vertical task layout on all devices</span>
             </span>
           </label>
+
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={!showCompleteButton}
+              onChange={(e) => {
+                setShowCompleteButton(!e.target.checked)
+              }}
+            />
+            <span className="settings-label">
+              <strong>Disable Complete Button</strong>
+              <span className="settings-description">Hide the checkmark (✓) button on task items</span>
+            </span>
+          </label>
+
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={!showDeleteButton}
+              onChange={(e) => {
+                setShowDeleteButton(!e.target.checked)
+              }}
+            />
+            <span className="settings-label">
+              <strong>Disable Delete Button</strong>
+              <span className="settings-description">Hide the delete (×) button on task items</span>
+            </span>
+          </label>
+
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={showTagButton}
+              onChange={(e) => {
+                setShowTagButton(e.target.checked)
+              }}
+            />
+            <span className="settings-label">
+              <strong>Enable Tag Button</strong>
+              <span className="settings-description">Show tag button on desktop (always visible on mobile)</span>
+            </span>
+          </label>
+        </div>
+      </Modal>
+
+      {/* Edit Tag Modal */}
+      <Modal
+        isOpen={!!editTagModal}
+        title="Edit Tags"
+        onClose={() => {
+          setEditTagModal(null)
+          setEditTagInput('')
+        }}
+        onConfirm={handleUpdateTag}
+        confirmLabel="Save"
+        cancelLabel="Cancel"
+      >
+        <div className="edit-tag-modal">
+          {/* Show existing board tags as clickable pills */}
+          {boards?.boards?.find(b => b.id === currentBoardId)?.tags && boards.boards.find(b => b.id === currentBoardId)!.tags!.length > 0 && (
+            <div className="edit-tag-pills">
+              <label className="edit-tag-label">Select Tags</label>
+              <div className="edit-tag-pills-container">
+                {[...boards.boards.find(b => b.id === currentBoardId)!.tags!].sort().map(tag => {
+                  const currentTags = editTagModal?.currentTag?.split(' ').filter(Boolean) || []
+                  const isActive = currentTags.includes(tag)
+                  return (
+                    <button
+                      key={tag}
+                      className={`edit-tag-pill ${isActive ? 'active' : ''}`}
+                      onClick={() => toggleTagPill(tag)}
+                      type="button"
+                    >
+                      #{tag}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="edit-tag-field">
+            <label className="edit-tag-label">Add New Tag</label>
+            <input
+              type="text"
+              className="edit-tag-input"
+              value={editTagInput}
+              onChange={(e) => {
+                // Just store raw input, normalization happens on save
+                setEditTagInput(e.target.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleUpdateTag()
+                }
+              }}
+              placeholder="Enter a tag"
+              autoFocus
+            />
+            <div className="edit-tag-hint">
+              <div>"one tag" → #one-tag</div>
+              <div>"#two #tags" → #two #tags</div>
+            </div>
+          </div>
         </div>
       </Modal>
 

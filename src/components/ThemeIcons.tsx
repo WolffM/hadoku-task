@@ -100,7 +100,32 @@ export const HeartIcon = () => (
 
 export const SettingsIcon = () => (
   <svg {...iconProps}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v6m0 6v6M4.2 4.2l4.2 4.2m5.6 5.6l4.2 4.2M1 12h6m6 0h6M4.2 19.8l4.2-4.2m5.6-5.6l4.2-4.2" />
+    {/* Gear teeth as rectangles */}
+    <rect x="11" y="1" width="2" height="3" fill="currentColor" />
+    <rect x="16.5" y="3.5" width="3" height="2" fill="currentColor" transform="rotate(45 18 4.5)" />
+    <rect x="19" y="11" width="3" height="2" fill="currentColor" />
+    <rect x="16.5" y="18.5" width="3" height="2" fill="currentColor" transform="rotate(-45 18 19.5)" />
+    <rect x="11" y="20" width="2" height="3" fill="currentColor" />
+    <rect x="4.5" y="18.5" width="3" height="2" fill="currentColor" transform="rotate(45 6 19.5)" />
+    <rect x="2" y="11" width="3" height="2" fill="currentColor" />
+    <rect x="4.5" y="3.5" width="3" height="2" fill="currentColor" transform="rotate(-45 6 4.5)" />
+    
+    {/* Outer ring */}
+    <circle cx="12" cy="12" r="7" fill="currentColor" />
+    
+    {/* Center hole */}
+    <circle cx="12" cy="12" r="4" fill="var(--color-bg-card)" />
+  </svg>
+)
+
+export const TagIcon = () => (
+  <svg {...iconProps} width={16} height={16} viewBox="0 0 20 20">
+    {/* Tag body - rectangular shape pointing right */}
+    <path 
+      d="M2 4 L12 4 L16 10 L12 16 L2 16 Z" 
+      fill="currentColor"
+    />
+    {/* Hole in tag */}
+    <circle cx="6" cy="10" r="1.5" fill="white" />
   </svg>
 )

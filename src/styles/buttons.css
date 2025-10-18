@@ -70,6 +70,18 @@
   transform: none !important;
 }
 
+/* Edit Tag button */
+.task-app__action-btn.task-app__edit-tag-btn {
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white;
+  border: none;
+}
+
+.task-app__edit-tag-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Complete button */
 .task-app__action-btn.task-app__complete-btn {
   background: linear-gradient(180deg, var(--color-success) 0%, var(--color-success-dark) 100%);

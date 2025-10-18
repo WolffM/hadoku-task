@@ -25,6 +25,7 @@ interface TaskLayoutProps {
   onComplete: (taskId: string) => void
   onDelete: (taskId: string) => void
   onAddTag: (taskId: string) => void
+  onEditTag: (taskId: string) => void
   onDragStart: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent, targetTag: string) => void
@@ -36,6 +37,9 @@ interface TaskLayoutProps {
   getSortTitle: (direction: SortDirection) => string
   deleteTag: (tag: string) => void
   onDeletePersistedTag?: (tag: string) => void
+  showCompleteButton?: boolean
+  showDeleteButton?: boolean
+  showTagButton?: boolean
 }
 
 export function TaskLayout({
@@ -49,6 +53,7 @@ export function TaskLayout({
   onComplete,
   onDelete,
   onAddTag,
+  onEditTag,
   onDragStart,
   onDragEnd,
   selectedIds,
@@ -63,7 +68,10 @@ export function TaskLayout({
   getSortIcon,
   getSortTitle,
   deleteTag,
-  onDeletePersistedTag
+  onDeletePersistedTag,
+  showCompleteButton = true,
+  showDeleteButton = true,
+  showTagButton = false
 }: TaskLayoutProps) {
   // Helper function to render a tag column with header and tasks
   const renderTagColumn = (tag: string, tagTasks: Task[]) => (
@@ -94,9 +102,14 @@ export function TaskLayout({
             onComplete={onComplete}
             onDelete={onDelete}
             onAddTag={onAddTag}
+            onEditTag={onEditTag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             selected={selectedIds ? selectedIds.has(task.id) : false}
+            showCompleteButton={showCompleteButton}
+            showDeleteButton={showDeleteButton}
+            showTagButton={showTagButton}
+            isMobile={isMobile}
           />
         ))}
       </ul>
@@ -154,9 +167,14 @@ export function TaskLayout({
             onComplete={onComplete}
             onDelete={onDelete}
             onAddTag={onAddTag}
+            onEditTag={onEditTag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             selected={selectedIds ? selectedIds.has(task.id) : false}
+            showCompleteButton={showCompleteButton}
+            showDeleteButton={showDeleteButton}
+            showTagButton={showTagButton}
+            isMobile={isMobile}
           />
         ))}
       </ul>
@@ -212,9 +230,14 @@ export function TaskLayout({
                 onComplete={onComplete}
                 onDelete={onDelete}
                 onAddTag={onAddTag}
+                onEditTag={onEditTag}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 selected={selectedIds ? selectedIds.has(task.id) : false}
+                showCompleteButton={showCompleteButton}
+                showDeleteButton={showDeleteButton}
+                showTagButton={showTagButton}
+                isMobile={isMobile}
               />
             ))}
           </ul>

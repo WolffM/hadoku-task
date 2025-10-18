@@ -5,6 +5,7 @@
 import React from 'react'
 import type { Task } from '../domain/types'
 import { formatAge } from '../utils/formatters'
+import { TagIcon } from './ThemeIcons'
 
 interface TaskItemProps {
   task: Task
@@ -13,9 +14,14 @@ interface TaskItemProps {
   onComplete: (taskId: string) => void
   onDelete: (taskId: string) => void
   onAddTag: (taskId: string) => void
+  onEditTag: (taskId: string) => void
   onDragStart?: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   selected?: boolean
+  showCompleteButton?: boolean
+  showDeleteButton?: boolean
+  showTagButton?: boolean
+  isMobile?: boolean
 }
 
 export function TaskItem({
@@ -25,9 +31,14 @@ export function TaskItem({
   onComplete,
   onDelete,
   onAddTag,
+  onEditTag,
   onDragStart,
   onDragEnd,
-  selected = false
+  selected = false,
+  showCompleteButton = true,
+  showDeleteButton = true,
+  showTagButton = false,
+  isMobile = false
 }: TaskItemProps) {
   const isCompleting = pendingOperations.has(`complete-${task.id}`)
   const isDeleting = pendingOperations.has(`delete-${task.id}`)
@@ -54,30 +65,43 @@ export function TaskItem({
         <div className="task-app__item-meta-row">
           {task.tag ? (
             <div className="task-app__item-tag">
-              {task.tag.split(' ').map((tag: string) => `#${tag}`).join(' ')}
+              {task.tag.split(' ').sort().map((tag: string) => `#${tag}`).join(' ')}
             </div>
           ) : <div />}
           <div className="task-app__item-age">{formatAge(task.createdAt)}</div>
         </div>
       </div>
       <div className="task-app__item-actions">
-        <button 
-          className="task-app__action-btn task-app__complete-btn"
-          onClick={() => onComplete(task.id)}
-          title="Complete task"
-          disabled={isCompleting || isDeleting}
-        >
-          {isCompleting ? '⏳' : '✓'}
-        </button>
-        <button 
-          className="task-app__action-btn task-app__delete-btn"
-          onClick={() => onDelete(task.id)}
-          title="Delete task"
-          disabled={isCompleting || isDeleting}
-        >
-          {isDeleting ? '⏳' : '×'}
-        </button>
-        {/* tag button removed per UI decision - only complete and delete remain */}
+        {(showTagButton || isMobile) && (
+          <button 
+            className="task-app__action-btn task-app__edit-tag-btn"
+            onClick={() => onEditTag(task.id)}
+            title="Edit tags"
+            disabled={isCompleting || isDeleting}
+          >
+            <TagIcon />
+          </button>
+        )}
+        {showCompleteButton && (
+          <button 
+            className="task-app__action-btn task-app__complete-btn"
+            onClick={() => onComplete(task.id)}
+            title="Complete task"
+            disabled={isCompleting || isDeleting}
+          >
+            {isCompleting ? '⏳' : '✓'}
+          </button>
+        )}
+        {showDeleteButton && (
+          <button 
+            className="task-app__action-btn task-app__delete-btn"
+            onClick={() => onDelete(task.id)}
+            title="Delete task"
+            disabled={isCompleting || isDeleting}
+          >
+            {isDeleting ? '⏳' : '×'}
+          </button>
+        )}
       </div>
     </li>
   )

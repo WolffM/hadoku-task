@@ -160,3 +160,82 @@
   white-space: nowrap;
 }
 
+/* Edit Tag Modal */
+.edit-tag-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.edit-tag-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.edit-tag-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.edit-tag-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  background-color: var(--color-bg-input);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.edit-tag-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.edit-tag-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.edit-tag-pills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.edit-tag-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.edit-tag-pill {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.edit-tag-pill:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.edit-tag-pill.active {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: var(--font-weight-semibold);
+}
+
