@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.0.31",
+  "version": "3.0.32",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -32,6 +32,7 @@
     "build:all": "npm run build && npm run build:server",
     "preview": "vite preview",
     "version:patch": "npm version patch --no-git-tag-version",
+    "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky"
   },
   "dependencies": {

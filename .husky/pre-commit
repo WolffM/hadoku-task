@@ -1,3 +1,4 @@
 npm run version:patch
 npm run build:all
-git add package.json package-lock.json
+node scripts/trim-changelog.js
+git add package.json package-lock.json docs/CHANGELOG.md

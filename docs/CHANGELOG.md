@@ -7,6 +7,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.32] - 2025-10-21
+
+### 🐛 Fixed - Button Logic & Display Issues
+
+#### **Fixed Tag Button Visibility Logic**
+- **Issue:** "Always Use Vertical Layout" preference was incorrectly enabling the Tag button
+- **Root Cause:** `isMobile` included `preferences.alwaysVerticalLayout`, and tag button used `(showTagButton || isMobile)` condition
+- **Solution:** Tag button now only controlled by "Enable Tag Button" preference
+
+**Before:**
+```typescript
+const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
+{(showTagButton || isMobile) && <TagButton />}  // ❌ Wrong logic
+```
+
+**After:**
+```typescript
+{showTagButton && <TagButton />}  // ✅ Only controlled by preference
+```
+
+**Behavior Changes:**
+- ✅ Tag button only appears when "Enable Tag Button" is checked
+- ✅ "Always Use Vertical Layout" no longer affects tag button visibility
+- ✅ Cleaner, more predictable behavior
+
+#### **Fixed Header Display for Empty UserId**
+- **Issue:** Non-public users with empty/null userId showed just "Tasks -" 
+- **Solution:** Added fallback to show "user" when userId is missing
+
+**Before:**
+```typescript
+Tasks{userType !== 'public' && userId !== 'public' ? ` - ${userId}` : ''}
+// Result: "Tasks -" when userId was empty
+```
+
+**After:**
+```typescript
+Tasks{userType !== 'public' ? ` - ${userId || 'user'}` : ''}
+// Result: "Tasks - user" when userId is empty
+```
+
+#### **Fixed Sync Button Null Reference Error**
+- **Issue:** `TypeError: can't access property "blur", currentTarget is null`
+- **Root Cause:** `e.currentTarget` becomes null in async operations
+- **Solution:** Store button reference before async operations
+
+**Before:**
+```typescript
+onClick={async (e) => {
+  // ... async operations ...
+  finally {
+    ;(e.currentTarget as HTMLButtonElement).blur()  // ❌ Can be null
+  }
+}}
+```
+
+**After:**
+```typescript
+onClick={async (e) => {
+  const button = e.currentTarget as HTMLButtonElement  // ✅ Store reference
+  // ... async operations ...
+  finally {
+    if (button) button.blur()  // ✅ Safe check
+  }
+}}
+```
+
+### 🔧 Added - Development Tooling
+
+#### **Automatic CHANGELOG.md Trimming**
+- **Feature:** Keep only the last 5 version entries automatically
+- **Integration:** Runs on every commit via pre-commit hook
+- **Script:** `scripts/trim-changelog.js` with ES module support
+
+**Algorithm:**
+1. Find all version blocks (`## [x.x.x] - YYYY-MM-DD`)
+2. If ≤ 5 versions → keep all
+3. If > 5 versions → keep first 5, trim the rest
+4. Add version history footer with git reference
+
+**Pre-commit Hook Updated:**
+```bash
+npm run version:patch
+npm run build:all
+node scripts/trim-changelog.js        # ← NEW
+git add package.json package-lock.json docs/CHANGELOG.md
+```
+
+**NPM Scripts:**
+```json
+"trim-changelog": "node scripts/trim-changelog.js"
+```
+
+**Current Status:**
+```
+Found 4 version blocks in CHANGELOG.md
+Keeping all 4 versions (≤ 5)
+```
+
+### 🎨 Updated - Settings Descriptions
+
+#### **Simplified Tag Button Description**
+**Before:**
+```
+"Show tag button on desktop (always visible on mobile)"
+```
+
+**After:**
+```
+"Show tag button on task items"
+```
+
+**Reason:** Removed mobile reference since tag button is now only controlled by the explicit preference.
+
+### 🧹 Code Cleanup
+
+#### **Removed Mobile Dependency from TaskItem**
+- ❌ Removed `isMobile` prop from `TaskItemProps` interface
+- ❌ Removed `isMobile={isMobile}` from all TaskLayout → TaskItem calls
+- ✅ Simplified conditional rendering logic
+- ✅ Cleaner component architecture
+
+#### **Props Flow Simplification**
+```
+App.tsx (showTagButton state)
+  ↓
+TaskLayout.tsx (pass-through)
+  ↓
+TaskItem.tsx (showTagButton only)
+```
+
+### 📦 Build Output
+```
+dist/style.css   41.98 kB │ gzip:  6.79 kB
+dist/index.js   104.00 kB │ gzip: 23.07 kB
+```
+
+---
+
 ## [3.0.31] - 2025-10-18
 
 ### ✨ Added - Edit Tag Button & Modal

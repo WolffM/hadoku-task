@@ -109,7 +109,6 @@ export function TaskLayout({
             showCompleteButton={showCompleteButton}
             showDeleteButton={showDeleteButton}
             showTagButton={showTagButton}
-            isMobile={isMobile}
           />
         ))}
       </ul>
@@ -174,7 +173,6 @@ export function TaskLayout({
             showCompleteButton={showCompleteButton}
             showDeleteButton={showDeleteButton}
             showTagButton={showTagButton}
-            isMobile={isMobile}
           />
         ))}
       </ul>
@@ -237,7 +235,6 @@ export function TaskLayout({
                 showCompleteButton={showCompleteButton}
                 showDeleteButton={showDeleteButton}
                 showTagButton={showTagButton}
-                isMobile={isMobile}
               />
             ))}
           </ul>

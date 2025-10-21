@@ -500,7 +500,7 @@ export default function App(props: TaskAppProps = {}) {
           style={{ cursor: 'pointer' }}
           title="Settings"
         >
-          Tasks{userType !== 'public' && userId !== 'public' ? ` - ${userId}` : ''}
+          Tasks{userType !== 'public' ? ` - ${userId || 'user'}` : ''}
         </h1>
         <div className="theme-picker" ref={themePickerRef}>
           <button 
@@ -618,6 +618,9 @@ export default function App(props: TaskAppProps = {}) {
                 console.log('[App] Manual refresh triggered')
                 setIsSyncing(true)
                 
+                // Store button reference before async operation
+                const button = e.currentTarget as HTMLButtonElement
+                
                 // Create a timeout promise (5 seconds)
                 const timeoutPromise = new Promise((_, reject) => {
                   setTimeout(() => reject(new Error('Sync timeout')), 5000)
@@ -632,8 +635,10 @@ export default function App(props: TaskAppProps = {}) {
                   // Error is handled, just log it
                 } finally {
                   setIsSyncing(false)
-                  // Remove focus after sync completes
-                  ;(e.currentTarget as HTMLButtonElement).blur()
+                  // Remove focus after sync completes (check if button still exists)
+                  if (button) {
+                    button.blur()
+                  }
                 }
               }}
               disabled={isSyncing}
@@ -1027,7 +1032,7 @@ export default function App(props: TaskAppProps = {}) {
             />
             <span className="settings-label">
               <strong>Enable Tag Button</strong>
-              <span className="settings-description">Show tag button on desktop (always visible on mobile)</span>
+              <span className="settings-description">Show tag button on task items</span>
             </span>
           </label>
         </div>

@@ -21,7 +21,6 @@ interface TaskItemProps {
   showCompleteButton?: boolean
   showDeleteButton?: boolean
   showTagButton?: boolean
-  isMobile?: boolean
 }
 
 export function TaskItem({
@@ -37,8 +36,7 @@ export function TaskItem({
   selected = false,
   showCompleteButton = true,
   showDeleteButton = true,
-  showTagButton = false,
-  isMobile = false
+  showTagButton = false
 }: TaskItemProps) {
   const isCompleting = pendingOperations.has(`complete-${task.id}`)
   const isDeleting = pendingOperations.has(`delete-${task.id}`)
@@ -72,7 +70,7 @@ export function TaskItem({
         </div>
       </div>
       <div className="task-app__item-actions">
-        {(showTagButton || isMobile) && (
+        {showTagButton && (
           <button 
             className="task-app__action-btn task-app__edit-tag-btn"
             onClick={() => onEditTag(task.id)}
