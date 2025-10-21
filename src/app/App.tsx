@@ -34,7 +34,6 @@ export default function App(props: TaskAppProps = {}) {
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
-  const [theme, setTheme] = useState<ThemeName>('light')
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -42,12 +41,26 @@ export default function App(props: TaskAppProps = {}) {
     version: 1,
     updatedAt: new Date().toISOString(),
     experimentalThemes: false,
-    alwaysVerticalLayout: false
+    alwaysVerticalLayout: false,
+    // Device-specific defaults
+    theme: 'light',
+    showCompleteButton: true,
+    showDeleteButton: true,
+    showTagButton: false
   })
-  // Button visibility preferences (stored in sessionStorage only, like theme)
-  const [showCompleteButton, setShowCompleteButton] = useState(true)
-  const [showDeleteButton, setShowDeleteButton] = useState(true)
-  const [showTagButton, setShowTagButton] = useState(false)
+  
+  // Convenience getters for device-specific preferences
+  const theme = (preferences.theme || 'light') as ThemeName
+  const showCompleteButton = preferences.showCompleteButton ?? true
+  const showDeleteButton = preferences.showDeleteButton ?? true
+  const showTagButton = preferences.showTagButton ?? false
+  
+  // Convenience setters for device-specific preferences
+  const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
+  const setShowCompleteButton = (show: boolean) => savePreferences({ showCompleteButton: show })
+  const setShowDeleteButton = (show: boolean) => savePreferences({ showDeleteButton: show })
+  const setShowTagButton = (show: boolean) => savePreferences({ showTagButton: show })
+  
   const [newUserId, setNewUserId] = useState('')
   const [newKey, setNewKey] = useState('')
   const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
@@ -179,40 +192,48 @@ export default function App(props: TaskAppProps = {}) {
     }
   }
 
-  // Theme is stored in sessionStorage only (per-browser/device preference)
+  // Migration: Move theme and button settings from sessionStorage to localStorage (one-time)
   useEffect(() => {
-    const stored = sessionStorage.getItem('theme')
-    if (stored) {
-      setTheme(stored as ThemeName)
+    const migrateFromSessionStorage = () => {
+      try {
+        const sessionTheme = sessionStorage.getItem('theme')
+        const sessionComplete = sessionStorage.getItem('showCompleteButton')
+        const sessionDelete = sessionStorage.getItem('showDeleteButton')
+        const sessionTag = sessionStorage.getItem('showTagButton')
+        
+        const migrations: Partial<UserPreferences> = {}
+        
+        if (sessionTheme && !preferences.theme) {
+          migrations.theme = sessionTheme
+        }
+        if (sessionComplete !== null && preferences.showCompleteButton === undefined) {
+          migrations.showCompleteButton = sessionComplete === 'true'
+        }
+        if (sessionDelete !== null && preferences.showDeleteButton === undefined) {
+          migrations.showDeleteButton = sessionDelete === 'true'
+        }
+        if (sessionTag !== null && preferences.showTagButton === undefined) {
+          migrations.showTagButton = sessionTag === 'true'
+        }
+        
+        if (Object.keys(migrations).length > 0) {
+          console.log('[App] Migrating settings from sessionStorage to localStorage:', migrations)
+          const newPrefs = { ...preferences, ...migrations, updatedAt: new Date().toISOString() }
+          setPreferences(newPrefs)
+          
+          // Clean up old sessionStorage values
+          sessionStorage.removeItem('theme')
+          sessionStorage.removeItem('showCompleteButton')
+          sessionStorage.removeItem('showDeleteButton')
+          sessionStorage.removeItem('showTagButton')
+        }
+      } catch (error) {
+        console.warn('[App] Failed to migrate settings:', error)
+      }
     }
-  }, [])
-
-  useEffect(() => {
-    sessionStorage.setItem('theme', theme)
-  }, [theme])
-
-  // Button visibility preferences (stored in sessionStorage only)
-  useEffect(() => {
-    const storedComplete = sessionStorage.getItem('showCompleteButton')
-    const storedDelete = sessionStorage.getItem('showDeleteButton')
-    const storedTag = sessionStorage.getItem('showTagButton')
     
-    if (storedComplete !== null) setShowCompleteButton(storedComplete === 'true')
-    if (storedDelete !== null) setShowDeleteButton(storedDelete === 'true')
-    if (storedTag !== null) setShowTagButton(storedTag === 'true')
-  }, [])
-
-  useEffect(() => {
-    sessionStorage.setItem('showCompleteButton', String(showCompleteButton))
-  }, [showCompleteButton])
-
-  useEffect(() => {
-    sessionStorage.setItem('showDeleteButton', String(showDeleteButton))
-  }, [showDeleteButton])
-
-  useEffect(() => {
-    sessionStorage.setItem('showTagButton', String(showTagButton))
-  }, [showTagButton])
+    migrateFromSessionStorage()
+  }, [preferences.theme, preferences.showCompleteButton, preferences.showDeleteButton, preferences.showTagButton])
 
   // Close theme picker when clicking outside
   useEffect(() => {
@@ -999,7 +1020,7 @@ export default function App(props: TaskAppProps = {}) {
               type="checkbox"
               checked={!showCompleteButton}
               onChange={(e) => {
-                setShowCompleteButton(!e.target.checked)
+                savePreferences({ showCompleteButton: !e.target.checked })
               }}
             />
             <span className="settings-label">
@@ -1013,7 +1034,7 @@ export default function App(props: TaskAppProps = {}) {
               type="checkbox"
               checked={!showDeleteButton}
               onChange={(e) => {
-                setShowDeleteButton(!e.target.checked)
+                savePreferences({ showDeleteButton: !e.target.checked })
               }}
             />
             <span className="settings-label">
@@ -1027,7 +1048,7 @@ export default function App(props: TaskAppProps = {}) {
               type="checkbox"
               checked={showTagButton}
               onChange={(e) => {
-                setShowTagButton(e.target.checked)
+                savePreferences({ showTagButton: e.target.checked })
               }}
             />
             <span className="settings-label">

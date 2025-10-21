@@ -252,15 +252,22 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     },
 
     async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>) {
+      // Always save to localStorage (includes device-specific settings)
       await localStorage.savePreferences(prefs)
-      // Background server sync
-      fetch('/task/api/preferences', {
-        method: 'PUT',
-        headers: adminHeaders(userType, userId, sessionId),
-        body: JSON.stringify(prefs)
-      })
-        .then(() => console.log('[api] Background sync: savePreferences completed'))
-        .catch(err => console.error('[api] Failed to sync savePreferences:', err))
+      
+      // Extract server-syncable preferences (exclude device-specific ones)
+      const { theme, showCompleteButton, showDeleteButton, showTagButton, ...serverPrefs } = prefs
+      
+      // Only sync non-device-specific preferences to server
+      if (Object.keys(serverPrefs).length > 0) {
+        fetch('/task/api/preferences', {
+          method: 'PUT',
+          headers: adminHeaders(userType, userId, sessionId),
+          body: JSON.stringify(serverPrefs)
+        })
+          .then(() => console.log('[api] Background sync: savePreferences completed (server-only)'))
+          .catch(err => console.error('[api] Failed to sync savePreferences:', err))
+      }
     },
 
     // Batch operations

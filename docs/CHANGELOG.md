@@ -7,6 +7,160 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.33] - 2025-10-21
+
+### 🐛 Fixed - Settings Persistence Issue
+
+#### **Fixed Theme & Button Settings Lost on Browser Restart**
+- **Issue:** Users reported that theme and button visibility settings were reverted when reopening the app
+- **Root Cause:** These settings were stored in `sessionStorage` which is cleared when browser/tab closes
+- **Impact:** Only `experimentalThemes` and `alwaysVerticalLayout` persisted (stored in localStorage + server)
+
+**Problem Analysis:**
+```typescript
+// ❌ Lost on browser close
+sessionStorage.setItem('theme', theme)
+sessionStorage.setItem('showCompleteButton', 'true')
+sessionStorage.setItem('showDeleteButton', 'true') 
+sessionStorage.setItem('showTagButton', 'false')
+
+// ✅ Persisted across sessions
+localStorage + server sync (experimentalThemes, alwaysVerticalLayout)
+```
+
+#### **Solution: Moved to Device-Specific localStorage**
+- **Choice:** Moved theme & button settings to `localStorage` while keeping them device-specific
+- **Rationale:** These settings should be device-specific (mobile vs desktop) but persistent across sessions
+- **Architecture:** Device-specific settings in localStorage, cross-device settings sync to server
+
+### 🏗️ Updated - Storage Architecture
+
+#### **New Unified Preferences System**
+**Enhanced UserPreferences Interface:**
+```typescript
+export interface UserPreferences {
+  version: 1
+  updatedAt: string
+  // Cross-device settings (localStorage + server sync)
+  experimentalThemes?: boolean
+  alwaysVerticalLayout?: boolean
+  // Device-specific settings (localStorage only)
+  theme?: string
+  showCompleteButton?: boolean
+  showDeleteButton?: boolean
+  showTagButton?: boolean
+}
+```
+
+**Storage Strategy:**
+| Setting | Storage | Persistence | Cross-Device |
+|---------|---------|-------------|--------------|
+| **Theme** | `localStorage` | ✅ **Fixed** | ❌ Device-specific |
+| **Button Visibility** | `localStorage` | ✅ **Fixed** | ❌ Device-specific |
+| **Experimental Themes** | `localStorage + server` | ✅ Persists | ✅ Syncs |
+| **Always Vertical Layout** | `localStorage + server` | ✅ Persists | ✅ Syncs |
+
+#### **Smart Server Sync Filtering**
+- **Device-specific settings:** Stay local, don't sync to server
+- **Cross-device settings:** Sync to server for consistency across devices
+
+**Implementation:**
+```typescript
+async savePreferences(prefs) {
+  // Always save locally (includes device-specific)
+  await localStorage.savePreferences(prefs)
+  
+  // Filter out device-specific settings for server sync
+  const { theme, showCompleteButton, showDeleteButton, showTagButton, ...serverPrefs } = prefs
+  
+  // Only sync cross-device settings to server
+  if (Object.keys(serverPrefs).length > 0) {
+    fetch('/task/api/preferences', { body: JSON.stringify(serverPrefs) })
+  }
+}
+```
+
+### 🔄 Added - Migration System
+
+#### **Automatic sessionStorage → localStorage Migration**
+- **Feature:** One-time migration of existing settings from sessionStorage
+- **Safety:** Only migrates if localStorage doesn't already have the setting
+- **Cleanup:** Removes old sessionStorage entries after successful migration
+
+**Migration Logic:**
+```typescript
+useEffect(() => {
+  const migrateFromSessionStorage = () => {
+    const sessionTheme = sessionStorage.getItem('theme')
+    const sessionComplete = sessionStorage.getItem('showCompleteButton')
+    const sessionDelete = sessionStorage.getItem('showDeleteButton')
+    const sessionTag = sessionStorage.getItem('showTagButton')
+    
+    const migrations = {}
+    if (sessionTheme && !preferences.theme) migrations.theme = sessionTheme
+    if (sessionComplete !== null && preferences.showCompleteButton === undefined) {
+      migrations.showCompleteButton = sessionComplete === 'true'
+    }
+    // ... migrate other settings
+    
+    if (Object.keys(migrations).length > 0) {
+      console.log('[App] Migrating settings from sessionStorage to localStorage')
+      setPreferences({ ...preferences, ...migrations })
+      // Clean up old sessionStorage
+      sessionStorage.removeItem('theme')
+      sessionStorage.removeItem('showCompleteButton')
+      // ...
+    }
+  }
+  migrateFromSessionStorage()
+}, [preferences.theme, preferences.showCompleteButton, ...])
+```
+
+### 🎯 Updated - Settings UI Integration
+
+#### **Unified Settings Handlers**
+- **Before:** Direct state setters + sessionStorage writes
+- **After:** All settings use `savePreferences()` for consistency
+
+**Theme Picker:**
+```typescript
+// ✅ Now uses unified system
+const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
+onClick={() => setTheme(family.lightTheme)}
+```
+
+**Button Visibility Settings:**
+```typescript
+// ✅ Now uses unified system
+onChange={(e) => savePreferences({ showCompleteButton: !e.target.checked })}
+onChange={(e) => savePreferences({ showDeleteButton: !e.target.checked })}
+onChange={(e) => savePreferences({ showTagButton: e.target.checked })}
+```
+
+### ✅ Result - User Experience Fixed
+
+**What Users Experience Now:**
+1. ✅ Open app
+2. ✅ Change theme color (e.g., light → dark)
+3. ✅ Disable complete button
+4. ✅ Enable tag button  
+5. ✅ Close browser completely
+6. ✅ **Reopen app → all settings preserved!** 🎉
+
+**Benefits:**
+- ✅ **Persistent:** Settings survive browser restarts
+- ✅ **Device-specific:** Different settings on mobile vs desktop
+- ✅ **Consistent:** All settings use same unified system
+- ✅ **Backwards compatible:** Automatic migration from old system
+
+### 📦 Build Output
+```
+dist/style.css   41.98 kB │ gzip:  6.79 kB
+dist/index.js   104.87 kB │ gzip: 23.31 kB
+```
+
+---
+
 ## [3.0.32] - 2025-10-21
 
 ### 🐛 Fixed - Button Logic & Display Issues
@@ -554,18 +708,9 @@ dist/index.js   94.56 kB │ gzip: 21.53 kB
 
 ---
 
-## [3.0.25] - 2025-10-15
-
-### ⚠️ Breaking Changes
-
-- Tag deletion endpoint changed from `DELETE /task/api/tags` to `POST /task/api/tags/delete`
-- Body now required: `{ boardId: string, tag: string }`
-
----
-
 ## Version History
 
-For versions prior to 3.0.25, please refer to git commit history.
+For versions prior to 3.0.29, please refer to git commit history.
 
 ---
 

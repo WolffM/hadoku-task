@@ -109,11 +109,16 @@ export interface SyncQueueItem {
 
 export type DataType = 'tasks' | 'stats'
 
-// User preferences (synced to server)
-// Theme is NOT here - it's stored per-device in sessionStorage
+// User preferences (device-specific, stored in localStorage)
+// These settings are device-specific (mobile vs desktop) and don't sync to server
 export interface UserPreferences {
   version: 1
   updatedAt: string
   experimentalThemes?: boolean
   alwaysVerticalLayout?: boolean
+  // Device-specific settings (localStorage only)
+  theme?: string
+  showCompleteButton?: boolean
+  showDeleteButton?: boolean
+  showTagButton?: boolean
 }
