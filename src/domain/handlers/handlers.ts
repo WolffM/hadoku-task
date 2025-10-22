@@ -24,7 +24,8 @@ import {
   extractTasksFromBoard,
   prepareTasksForBoard,
   updateBatchMoveStats,
-  withTaskOperation
+  withTaskOperation,
+  withBoardOperation
 } from './handlers-utils.js';
 
 // --- Read Operations ---
@@ -239,30 +240,30 @@ export async function createBoard(
   auth: AuthContext,
   input: { id: string; name: string }
 ): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
-  const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  
-  // Check if board already exists
-  if (boards.boards.find(b => b.id === input.id)) {
-    throw new Error(`Board ${input.id} already exists`);
-  }
-  
-  const newBoard = {
-    id: input.id,
-    name: input.name,
-    tasks: [],
-    tags: []
-  };
-  
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: [...boards.boards, newBoard]
-  };
-  
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  
-  return { ok: true, board: newBoard };
+  return withBoardOperation(storage, auth, (boards, timestamp) => {
+    // Check if board already exists
+    if (boards.boards.find(b => b.id === input.id)) {
+      throw new Error(`Board ${input.id} already exists`);
+    }
+    
+    const newBoard = {
+      id: input.id,
+      name: input.name,
+      tasks: [],
+      tags: []
+    };
+    
+    const updatedBoards: BoardsFile = {
+      ...boards,
+      updatedAt: timestamp,
+      boards: [...boards.boards, newBoard]
+    };
+    
+    return {
+      updatedBoards,
+      result: { ok: true, board: newBoard }
+    };
+  });
 }
 
 /**
@@ -278,20 +279,21 @@ export async function deleteBoard(
     throw new Error('Cannot delete the main board');
   }
 
-  const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  
-  const { index: boardIndex } = findBoardOrThrow(boards, boardId);
-  
-  const updatedBoards: BoardsFile = {
-    ...boards,
-    updatedAt: timestamp,
-    boards: boards.boards.filter(b => b.id !== boardId)
-  };
-  
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  
-  return { ok: true, message: `Board ${boardId} deleted` };
+  return withBoardOperation(storage, auth, (boards, timestamp) => {
+    // Validate board exists
+    findBoardOrThrow(boards, boardId);
+    
+    const updatedBoards: BoardsFile = {
+      ...boards,
+      updatedAt: timestamp,
+      boards: boards.boards.filter(b => b.id !== boardId)
+    };
+    
+    return {
+      updatedBoards,
+      result: { ok: true, message: `Board ${boardId} deleted` }
+    };
+  });
 }
 
 // --- Tag Operations ---
@@ -304,28 +306,29 @@ export async function createTag(
   auth: AuthContext,
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
-  const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  
-  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
-  
-  const existingTags = board.tags || [];
-  
-  // Check if tag already exists
-  if (existingTags.includes(input.tag)) {
-    return { ok: true, message: `Tag ${input.tag} already exists` };
-  }
-  
-  const updatedBoard = {
-    ...board,
-    tags: [...existingTags, input.tag]
-  };
-  
-  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
-  
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  
-  return { ok: true, message: `Tag ${input.tag} added to board ${input.boardId}` };
+  return withBoardOperation(storage, auth, (boards, timestamp) => {
+    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
+    
+    const existingTags = board.tags || [];
+    
+    // Check if tag already exists
+    if (existingTags.includes(input.tag)) {
+      return {
+        updatedBoards: boards, // No changes needed
+        result: { ok: true, message: `Tag ${input.tag} already exists` }
+      };
+    }
+    
+    const updatedBoard = {
+      ...board,
+      tags: [...existingTags, input.tag]
+    };
+    
+    return {
+      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      result: { ok: true, message: `Tag ${input.tag} added to board ${input.boardId}` }
+    };
+  });
 }
 
 /**
@@ -336,23 +339,21 @@ export async function deleteTag(
   auth: AuthContext,
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
-  const timestamp = now();
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  
-  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
-  
-  const existingTags = board.tags || [];
-  
-  const updatedBoard = {
-    ...board,
-    tags: existingTags.filter((t: string) => t !== input.tag)
-  };
-  
-  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
-  
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
-  
-  return { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` };
+  return withBoardOperation(storage, auth, (boards, timestamp) => {
+    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
+    
+    const existingTags = board.tags || [];
+    
+    const updatedBoard = {
+      ...board,
+      tags: existingTags.filter((t: string) => t !== input.tag)
+    };
+    
+    return {
+      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      result: { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` }
+    };
+  });
 }
 
 // --- Batch Operations ---

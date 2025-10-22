@@ -215,3 +215,36 @@ export async function withTaskOperation<T>(
   
   return result;
 }
+
+// --- Board Operation Pattern Helper ---
+
+/**
+ * Generic wrapper for board operations that follow the load→modify→save pattern
+ * Handles loading boards, applying transformation, and saving
+ * 
+ * @param storage - Storage instance
+ * @param auth - Auth context
+ * @param operation - Function that transforms boards and returns result
+ * @returns Result from the operation
+ */
+export async function withBoardOperation<T>(
+  storage: any,
+  auth: any,
+  operation: (boards: BoardsFile, timestamp: string) => {
+    updatedBoards: BoardsFile;
+    result: T;
+  }
+): Promise<T> {
+  const timestamp = new Date().toISOString();
+  
+  // Load current boards
+  const boards = await storage.getBoards(auth.userType, auth.userId);
+  
+  // Execute operation
+  const { updatedBoards, result } = operation(boards, timestamp);
+  
+  // Save updated boards
+  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  
+  return result;
+}
