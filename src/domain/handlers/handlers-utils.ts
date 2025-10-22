@@ -167,6 +167,41 @@ export function updateBatchMoveStats(
 // --- Task Operation Pattern Helper ---
 
 /**
+ * Helper for closing tasks (completing or deleting)
+ * Consolidates the duplicate logic between completeTask and deleteTask
+ */
+export function closeTask(
+  tasks: TasksFile,
+  taskId: string,
+  state: 'Completed' | 'Deleted',
+  timestamp: string
+): {
+  updatedTasks: TasksFile;
+  closedTask: Task;
+} {
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
+  
+  const closedTask: Task = {
+    ...task,
+    state,
+    closedAt: timestamp,
+    updatedAt: timestamp
+  };
+  
+  const newTasks = [...tasks.tasks];
+  newTasks.splice(taskIndex, 1); // Remove from active tasks
+  
+  return {
+    updatedTasks: {
+      ...tasks,
+      tasks: newTasks,
+      updatedAt: timestamp
+    },
+    closedTask
+  };
+}
+
+/**
  * Generic wrapper for task operations that follow the load→modify→save pattern
  * Handles loading tasks/stats, applying transformation, updating stats, and saving
  * 

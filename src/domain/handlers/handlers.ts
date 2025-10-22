@@ -24,6 +24,7 @@ import {
   extractTasksFromBoard,
   prepareTasksForBoard,
   updateBatchMoveStats,
+  closeTask,
   withTaskOperation,
   withBoardOperation
 } from './handlers-utils.js';
@@ -172,25 +173,11 @@ export async function completeTask(
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
   return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
-
-    const completedTask: Task = {
-      ...task,
-      state: 'Completed',
-      closedAt: timestamp,
-      updatedAt: timestamp
-    };
-
-    const newTasks = [...tasks.tasks];
-    newTasks.splice(taskIndex, 1); // Remove from active tasks
-
+    const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp);
+    
     return {
-      updatedTasks: {
-        ...tasks,
-        tasks: newTasks,
-        updatedAt: timestamp
-      },
-      statsEvents: [{ task: completedTask, eventType: 'completed' }],
+      updatedTasks,
+      statsEvents: [{ task: closedTask, eventType: 'completed' }],
       result: { ok: true, message: `Task ${taskId} completed` }
     };
   });
@@ -206,25 +193,11 @@ export async function deleteTask(
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
   return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
-
-    const deletedTask: Task = {
-      ...task,
-      state: 'Deleted',
-      closedAt: timestamp,
-      updatedAt: timestamp
-    };
-
-    const newTasks = [...tasks.tasks];
-    newTasks.splice(taskIndex, 1); // Remove from active tasks
-
+    const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Deleted', timestamp);
+    
     return {
-      updatedTasks: {
-        ...tasks,
-        tasks: newTasks,
-        updatedAt: timestamp
-      },
-      statsEvents: [{ task: deletedTask, eventType: 'deleted' }],
+      updatedTasks,
+      statsEvents: [{ task: closedTask, eventType: 'deleted' }],
       result: { ok: true, message: `Task ${taskId} deleted` }
     };
   });
