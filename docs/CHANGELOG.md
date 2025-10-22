@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.40] - 2025-10-22
+
+### 🐛 Bug Fix - Theme Picker Click-Outside Detection
+
+#### **Problem: Theme Picker Wouldn't Close When Clicking Outside**
+- **Issue:** Clicking outside the theme picker didn't close it properly
+- **Root Cause:** Drag selection functionality was capturing mouse events before click-outside detection
+- **User Impact:** Theme picker would stay open, requiring manual closing
+
+#### **Solution: Implemented Modal-Style Overlay Pattern**
+```typescript
+// NEW: Clean overlay approach like other modals
+{showThemePicker && (
+  <div className="theme-picker__dropdown">
+    {/* Theme content */}
+  </div>
+)}
+{showThemePicker && (
+  <div 
+    className="theme-picker__overlay"    // Full-screen transparent overlay
+    onClick={onThemePickerToggle}        // Closes on any outside click
+  />
+)}
+```
+
+#### **Implementation Details**
+- **Removed hacky approach:** No more special mouseDown handling in main container
+- **Removed useClickOutside:** No longer needed, direct overlay click handling
+- **Added overlay CSS:** Full-screen transparent overlay for reliable click detection
+- **Proper positioning:** Dropdown positioned relative to button, overlay separate
+- **Consistent pattern:** Same click-outside approach as SettingsModal
+
+### ✅ Benefits
+
+1. **Reliable click-outside:** Works regardless of drag selection or other event handlers
+2. **Consistent UX:** Same behavior as settings modal and other dropdowns
+3. **Cleaner code:** Removed complex event detection logic
+4. **Better performance:** Direct click handling instead of document listeners
+5. **Proper separation:** Theme picker content and click detection are separate concerns
+
+### 📊 Files Modified (4 files)
+
+- `src/components/AppHeader.tsx` - Implemented overlay pattern
+- `src/hooks/useTheme.ts` - Removed themePickerRef (no longer needed)
+- `src/app/App.tsx` - Updated props and removed useClickOutside usage
+- `src/styles/main.css` - Added overlay CSS styling
+
+### 🔧 Technical Changes
+
+**Removed:**
+- ❌ `useClickOutside` hook usage for theme picker
+- ❌ `themePickerRef` parameter and ref handling
+- ❌ Complex document event listener setup
+
+**Added:**
+- ✅ `.theme-picker__overlay` CSS class (fixed positioning)
+- ✅ Overlay click handler for reliable outside click detection
+- ✅ Proper event stopPropagation on theme picker content
+
+**Build Output:**
+```
+dist/style.css   43.15 kB │ gzip:  7.08 kB (+0.08 kB)
+dist/index.js   108.55 kB │ gzip: 24.71 kB (-0.02 kB)
+```
+
+---
+
 ## [3.0.39] - 2025-10-22
 
 ### 🔧 Refactor - Remove userId, Use sessionId for localStorage Keys
@@ -468,64 +535,9 @@ JS:  106.82 kB (+1.17 kB) │ gzip: 23.64 kB
 
 ---
 
-## [3.0.35] - 2025-10-21
-
-### 🐛 Fixed - Theme Flash on Page Load
-
-#### **Eliminated White Flash Before Theme Loads**
-- **Issue:** Unpleasant flash of light theme before correct theme (e.g., pink-dark) was applied
-- **User Experience:** Users briefly saw light theme on every page load, even with dark theme selected
-- **Root Cause:** Component rendered immediately with default theme while preferences loaded asynchronously
-
-**Problem Timeline:**
-```typescript
-1. Component renders with default theme: 'light' ⚡ (visible flash!)
-2. API call starts (async)
-3. User sees light theme for ~50-100ms
-4. Preferences load: theme: 'pink-dark'
-5. Component re-renders with correct theme
-```
-
-#### **Solution: Wait for Preferences Before Rendering**
-
-**Implementation:**
-```typescript
-// Added loading state to prevent premature render
-const [preferencesLoaded, setPreferencesLoaded] = useState(false)
-
-// Mark as loaded after preferences are fetched
-useEffect(() => {
-  const loadPreferences = async () => {
-    const prefs = await api.getPreferences()
-    if (prefs) setPreferences(prefs)
-    setPreferencesLoaded(true)  // ✅ Ready to render
-  }
-  void loadPreferences()
-}, [userType, userId, sessionId])
-
-// Don't render until preferences are loaded
-if (!preferencesLoaded) {
-  return null  // Prevents theme flash
-}
-```
-
-**Benefits:**
-- ✅ **No theme flash** - component waits for correct theme before rendering
-- ✅ **Fast loading** - preferences load from localStorage (nearly instant)
-- ✅ **Smooth UX** - user sees correct theme immediately on first render
-- ✅ **Works with all themes** - light, dark, pink, green, etc.
-
-### 📦 Build Output
-```
-dist/style.css   41.98 kB │ gzip:  6.79 kB
-dist/index.js   105.65 kB │ gzip: 23.53 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.35, please refer to git commit history.
+For versions prior to 3.0.36, please refer to git commit history.
 
 ---
 

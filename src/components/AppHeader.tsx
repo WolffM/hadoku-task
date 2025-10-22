@@ -15,7 +15,6 @@ export interface AppHeaderProps {
   onThemePickerToggle: () => void
   onThemeChange: (theme: ThemeName) => void
   onSettingsClick: () => void
-  themePickerRef: RefObject<HTMLDivElement>
   THEME_FAMILIES: ThemeFamily[]
 }
 
@@ -26,7 +25,6 @@ export function AppHeader({
   onThemePickerToggle,
   onThemeChange,
   onSettingsClick,
-  themePickerRef,
   THEME_FAMILIES
 }: AppHeaderProps) {
   return (
@@ -39,7 +37,7 @@ export function AppHeader({
       >
         Tasks
       </h1>
-      <div className="theme-picker" ref={themePickerRef}>
+      <div className="theme-picker">
         <button 
           className="theme-toggle-btn" 
           onClick={onThemePickerToggle}
@@ -49,7 +47,10 @@ export function AppHeader({
           {getThemeIcon(theme, experimentalThemes)}
         </button>
         {showThemePicker && (
-          <div className="theme-picker__dropdown">
+          <div 
+            className="theme-picker__dropdown"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="theme-picker__pills">
               {THEME_FAMILIES.map((family, idx) => (
                 <div key={idx} className="theme-pill">
@@ -94,6 +95,12 @@ export function AppHeader({
           </div>
         )}
       </div>
+      {showThemePicker && (
+        <div 
+          className="theme-picker__overlay"
+          onClick={onThemePickerToggle}
+        />
+      )}
     </div>
   )
 }

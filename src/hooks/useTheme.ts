@@ -3,7 +3,7 @@
  * Manages theme state, auto-switching on system preference changes, and theme picker UI
  */
 
-import { useState, useEffect, useRef, useMemo, type RefObject } from 'react'
+import { useState, useEffect, useMemo, type RefObject } from 'react'
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
 import { getThemeFamilies, type ThemeFamily } from '../app/themeConfig'
@@ -12,7 +12,6 @@ export interface UseThemeReturn {
   theme: ThemeName
   showThemePicker: boolean
   setShowThemePicker: (show: boolean) => void
-  themePickerRef: RefObject<HTMLDivElement>
   THEME_FAMILIES: ThemeFamily[]
   setTheme: (theme: ThemeName) => void
 }
@@ -28,7 +27,6 @@ export function useTheme(
   containerRef: RefObject<HTMLDivElement>
 ): UseThemeReturn {
   const [showThemePicker, setShowThemePicker] = useState(false)
-  const themePickerRef = useRef<HTMLDivElement>(null)
 
   const theme = (preferences.theme || 'light') as ThemeName
   const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
@@ -90,7 +88,6 @@ export function useTheme(
     theme,
     showThemePicker,
     setShowThemePicker,
-    themePickerRef,
     THEME_FAMILIES,
     setTheme
   }

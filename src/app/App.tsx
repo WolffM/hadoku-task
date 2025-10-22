@@ -47,7 +47,7 @@ export default function App(props: TaskAppProps = {}) {
 
   // Hooks for preferences and theme
   const { preferences, savePreferences, preferencesLoaded, isDarkTheme } = usePreferences(userType, sessionId)
-  const { theme, showThemePicker, setShowThemePicker, themePickerRef, THEME_FAMILIES, setTheme } = useTheme(preferences, savePreferences, containerRef)
+  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme } = useTheme(preferences, savePreferences, containerRef)
 
   // Compute mobile layout  
   const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
@@ -91,8 +91,7 @@ export default function App(props: TaskAppProps = {}) {
   // Modal state hook
   const modals = useModalState()
 
-  // Click outside handlers
-  useClickOutside(themePickerRef, showThemePicker, () => setShowThemePicker(false))
+  // Note: Theme picker now uses overlay approach like modals instead of useClickOutside
   useClickOutside(
     { current: null }, // Board context menu doesn't need a ref
     !!modals.boardContextMenu,
@@ -261,6 +260,12 @@ export default function App(props: TaskAppProps = {}) {
       onClick={(e) => {
         try {
           const tgt = e.target as HTMLElement
+          
+          // Don't interfere with theme picker clicks
+          if (tgt.closest && tgt.closest('.theme-picker')) {
+            return
+          }
+          
           if (!tgt.closest || !tgt.closest('.task-app__item')) {
             if (dragAndDrop.selectionJustEndedAt && Date.now() - dragAndDrop.selectionJustEndedAt < MARQUEE_CLICK_GRACE_PERIOD) {
               return
@@ -278,7 +283,6 @@ export default function App(props: TaskAppProps = {}) {
           onThemePickerToggle={() => setShowThemePicker(!showThemePicker)}
           onThemeChange={setTheme}
           onSettingsClick={() => modals.setShowSettingsModal(true)}
-          themePickerRef={themePickerRef}
           THEME_FAMILIES={THEME_FAMILIES}
         />
 
