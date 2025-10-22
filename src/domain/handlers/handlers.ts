@@ -370,49 +370,43 @@ export async function batchUpdateTags(
     updates: Array<{ taskId: string; tag: string | null }>;
   }
 ): Promise<{ ok: boolean; message: string; updated: number }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, input.boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, input.boardId);
-  
-  // Apply all updates in one pass
-  let updatedCount = 0;
-  const updatedTasksList = tasks.tasks.map(task => {
-    const update = input.updates.find(u => u.taskId === task.id);
-    if (update) {
-      updatedCount++;
-      return {
-        ...task,
-        tag: update.tag || undefined,
-        updatedAt: timestamp
-      };
-    }
-    return task;
+  return withTaskOperation(storage, auth, input.boardId, (tasks, stats, timestamp) => {
+    // Apply all updates in one pass
+    let updatedCount = 0;
+    const updatedTasksList = tasks.tasks.map(task => {
+      const update = input.updates.find(u => u.taskId === task.id);
+      if (update) {
+        updatedCount++;
+        return {
+          ...task,
+          tag: update.tag || undefined,
+          updatedAt: timestamp
+        };
+      }
+      return task;
+    });
+    
+    const updatedTasksFile: TasksFile = {
+      ...tasks,
+      tasks: updatedTasksList,
+      updatedAt: timestamp
+    };
+    
+    // Collect all edited tasks for stats
+    const statsEvents = updatedTasksList
+      .filter(task => input.updates.find(u => u.taskId === task.id))
+      .map(task => ({ task, eventType: 'edited' as const }));
+    
+    return {
+      updatedTasks: updatedTasksFile,
+      statsEvents,
+      result: {
+        ok: true,
+        message: `Updated ${updatedCount} task(s) on board ${input.boardId}`,
+        updated: updatedCount
+      }
+    };
   });
-  
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: updatedTasksList,
-    updatedAt: timestamp
-  };
-  
-  // Record all updates in stats
-  let updatedStats = stats;
-  for (const task of updatedTasksList) {
-    if (input.updates.find(u => u.taskId === task.id)) {
-      updatedStats = recordStatsEvent(updatedStats, task, 'edited', timestamp);
-    }
-  }
-  
-  await storage.saveTasks(auth.userType, auth.userId, input.boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, input.boardId, updatedStats);
-  
-  return {
-    ok: true,
-    message: `Updated ${updatedCount} task(s) on board ${input.boardId}`,
-    updated: updatedCount
-  };
 }
 
 /**
@@ -503,61 +497,61 @@ export async function batchClearTag(
     taskIds: string[];
   }
 ): Promise<{ ok: boolean; message: string; cleared: number }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, input.boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, input.boardId);
-  const boards = await storage.getBoards(auth.userType, auth.userId);
-  
-  // Clear tag from tasks
-  let clearedCount = 0;
-  const updatedTasksList = tasks.tasks.map(task => {
-    if (input.taskIds.includes(task.id) && task.tag) {
-      const existingTags = task.tag.split(' ').filter(Boolean);
-      const updatedTags = existingTags.filter(t => t !== input.tag);
-      clearedCount++;
-      return {
-        ...task,
-        tag: updatedTags.length > 0 ? updatedTags.join(' ') : undefined,
-        updatedAt: timestamp
-      };
-    }
-    return task;
+  // First, clear tag from tasks using task operation pattern
+  const taskResult = await withTaskOperation(storage, auth, input.boardId, (tasks, stats, timestamp) => {
+    // Clear tag from tasks
+    let clearedCount = 0;
+    const updatedTasksList = tasks.tasks.map(task => {
+      if (input.taskIds.includes(task.id) && task.tag) {
+        const existingTags = task.tag.split(' ').filter(Boolean);
+        const updatedTags = existingTags.filter(t => t !== input.tag);
+        clearedCount++;
+        return {
+          ...task,
+          tag: updatedTags.length > 0 ? updatedTags.join(' ') : undefined,
+          updatedAt: timestamp
+        };
+      }
+      return task;
+    });
+    
+    const updatedTasksFile: TasksFile = {
+      ...tasks,
+      tasks: updatedTasksList,
+      updatedAt: timestamp
+    };
+    
+    // Collect edited tasks for stats
+    const statsEvents = updatedTasksList
+      .filter(task => input.taskIds.includes(task.id))
+      .map(task => ({ task, eventType: 'edited' as const }));
+    
+    return {
+      updatedTasks: updatedTasksFile,
+      statsEvents,
+      result: { clearedCount }
+    };
   });
   
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: updatedTasksList,
-    updatedAt: timestamp
-  };
-  
-  // Record updates in stats
-  let updatedStats = stats;
-  for (const task of updatedTasksList) {
-    if (input.taskIds.includes(task.id)) {
-      updatedStats = recordStatsEvent(updatedStats, task, 'edited', timestamp);
-    }
-  }
-  
-  // Remove tag from board metadata
-  const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
-  const existingBoardTags = board.tags || [];
-  const updatedBoard = {
-    ...board,
-    tags: existingBoardTags.filter(t => t !== input.tag)
-  };
-  const updatedBoards = updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp);
-  
-  // Save all changes
-  await storage.saveTasks(auth.userType, auth.userId, input.boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, input.boardId, updatedStats);
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  // Then, remove tag from board metadata using board operation pattern
+  await withBoardOperation(storage, auth, (boards, timestamp) => {
+    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId);
+    const existingBoardTags = board.tags || [];
+    const updatedBoard = {
+      ...board,
+      tags: existingBoardTags.filter(t => t !== input.tag)
+    };
+    
+    return {
+      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      result: { ok: true }
+    };
+  });
   
   return {
     ok: true,
-    message: `Cleared tag ${input.tag} from ${clearedCount} task(s) on board ${input.boardId}`,
-    cleared: clearedCount
+    message: `Cleared tag ${input.tag} from ${taskResult.clearedCount} task(s) on board ${input.boardId}`,
+    cleared: taskResult.clearedCount
   };
 }
 
