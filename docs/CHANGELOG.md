@@ -7,6 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.36] - 2025-10-21
+
+### ✨ Added - Loading Skeleton & Smooth Animations
+
+#### **Modern Loading Experience with Shimmer Effect**
+- **Feature:** Professional loading skeleton with shimmer animation
+- **User Experience:** Smooth fade-in transition when content loads
+- **Visual Polish:** No more jarring pop-in, just elegant transitions
+
+**Implementation:**
+```tsx
+// Loading skeleton shown while preferences load
+if (!preferencesLoaded) {
+  return (
+    <div className="task-app-loading">
+      <div className="task-app-loading__skeleton">
+        <div className="skeleton-header"></div>      // Header placeholder
+        <div className="skeleton-boards">...</div>   // Board tabs
+        <div className="skeleton-input"></div>       // Input field
+        <div className="skeleton-filters">...</div>  // Tag filters
+        <div className="skeleton-tasks">...</div>    // Task items
+      </div>
+    </div>
+  )
+}
+
+// Smooth fade-in when content ready
+<div className="task-app-container task-app-fade-in">
+```
+
+#### **Shimmer Animation**
+```css
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+/* Gradient effect for shimmer */
+background: linear-gradient(
+  90deg,
+  var(--color-bg-alt) 0%,
+  var(--color-neutral-light) 50%,
+  var(--color-bg-alt) 100%
+);
+animation: shimmer 2s infinite;
+```
+
+#### **Fade-In Transition**
+```css
+.task-app-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+```
+
+### 🎨 Loading Skeleton Components
+
+**Layout Structure:**
+- **Header Block:** 3rem × 200px - "Tasks - user" placeholder
+- **Board Buttons:** 3 tabs, 2.5rem × 100px each
+- **Input Field:** Full-width, 2.5rem height
+- **Filter Pills:** 3 pills, 2rem × 80px each
+- **Task Items:** 3 rows, 3rem × full-width
+
+**Design Features:**
+- ✅ **Theme-aware:** Uses theme colors for dark/light modes
+- ✅ **Layout-matching:** Mirrors actual UI structure
+- ✅ **Smooth shimmer:** Professional sliding gradient effect
+- ✅ **Responsive:** Adapts to mobile/desktop layouts
+- ✅ **Seamless transition:** Skeleton → content fade is smooth
+
+### 🎯 User Experience Timeline
+
+```
+1. Page loads → Loading skeleton appears immediately ✨
+2. Shimmer animation starts (2s loop) 
+3. Preferences load from localStorage (~10-50ms)
+4. Content fades in smoothly (300ms fade) ✨
+5. No jarring transitions - just smooth loading! 🎉
+```
+
+**Before:**
+```
+Page load → White screen → Sudden content pop-in ❌
+```
+
+**After:**
+```
+Page load → Skeleton shimmer → Smooth fade to content ✅
+```
+
+### 📦 Build Output
+```
+CSS: 43.04 kB (+1.06 kB) │ gzip:  7.06 kB
+JS:  106.82 kB (+1.17 kB) │ gzip: 23.64 kB
+```
+
+---
+
 ## [3.0.35] - 2025-10-21
 
 ### 🐛 Fixed - Theme Flash on Page Load
@@ -525,143 +628,9 @@ dist/index.js   104.00 kB │ gzip: 23.07 kB
 
 ---
 
-## [3.0.31] - 2025-10-18
-
-### ✨ Added - Edit Tag Button & Modal
-
-#### **New Edit Tag Button on Task Items**
-- Added 🏷️ tag button to task items (between task and complete button)
-- Opens modal dialog for editing tags on a task
-- Button uses theme-aware SVG icon (proper tag shape with hole)
-- Styled to match Complete and Delete buttons (gradient background)
-- Uses primary theme color for consistency
-
-**Button Design:**
-```tsx
-<TagIcon /> // SVG icon with sideways rectangular tag shape
-background: linear-gradient(--color-primary → --color-primary-dark)
-```
-
-#### **Edit Tags Modal Dialog**
-
-**Features:**
-- **Tag Pills:** Clickable pills showing all board tags
-  - Active pills highlighted (tags currently on task)
-  - Click to toggle tags on/off
-  - Sorted alphabetically
-- **New Tag Input:** Text field for creating new tags
-  - Auto-normalizes: "one tag" → #one-tag
-  - Supports multiple: "#two #tags" → #two #tags
-  - New tags automatically added to board's persisted tags
-- **Clear Instructions:** Two-line hint showing both syntax options
-
-**Modal Structure:**
-```
-Edit Tags
-─────────────────
-
-Select Tags
-┌─────────────────┐
-│ #new  #ok  #tag │  ← Pills toggle existing
-└─────────────────┘
-
-Add New Tag
-┌─────────────────┐
-│ [input field]   │  ← Only for NEW tags
-└─────────────────┘
-
-"one tag" → #one-tag
-"#two #tags" → #two #tags
-
-[Cancel] [Save]
-```
-
-**Key Behaviors:**
-- Tags always display alphabetically (both in pills and on tasks)
-- Pills show current task tags as active on open
-- Input field separate from pills (only for new tags)
-- New tags added to board's tag list immediately
-- Modal closes without page reload
-
-### 🎛️ Added - Button Visibility Preferences
-
-#### **Three New Preferences (sessionStorage)**
-- **Disable Complete Button:** Hide ✓ button on task items
-- **Disable Delete Button:** Hide × button on task items
-- **Enable Tag Button:** Show 🏷️ button on desktop
-
-**Default Behavior:**
-- Complete Button: ✅ Visible
-- Delete Button: ✅ Visible
-- Tag Button: ❌ Hidden on desktop, ✅ Always visible on mobile
-
-**Storage:**
-```typescript
-sessionStorage.setItem('showCompleteButton', 'true')
-sessionStorage.setItem('showDeleteButton', 'true')
-sessionStorage.setItem('showTagButton', 'false')
-```
-
-**Conditional Rendering:**
-```tsx
-{showCompleteButton && <CompleteButton />}
-{showDeleteButton && <DeleteButton />}
-{(showTagButton || isMobile) && <TagButton />}
-```
-
-### 🎨 Updated - Settings Modal UI
-
-**Preferences Section Now Includes:**
-- Experimental Themes
-- Always Use Vertical Layout
-- Disable Complete Button ← NEW
-- Disable Delete Button ← NEW
-- Enable Tag Button ← NEW
-
-**All in one unified section** (no separate "Button Visibility" section)
-
-### 🎨 Updated - Icons
-
-#### **SettingsIcon Redesign**
-- Changed from abstract design to proper gear wheel
-- Circle center with 8 gear teeth around edge
-- Standard settings icon appearance
-- Clean, recognizable design
-
-#### **TagIcon Design**
-- Sideways rectangular shape with pointed right end
-- Circular hole on left side (classic price tag)
-- 16×16 size matching other action buttons
-- Proper vertical alignment
-
-### 🐛 Fixed - Tag Ordering & Management
-
-#### **Alphabetical Tag Display**
-- Tags now always display in alphabetical order everywhere
-- Applied in: TaskItem display, Edit modal pills, Save operations
-- Consistent ordering regardless of application order
-
-#### **Tag Pills Update After Creation**
-- New tags immediately appear in pill list when reopening modal
-- Fixed: Pills now refresh with board's updated tag list
-- Implementation: `createTagOnBoard()` called before applying tags
-
-#### **Clear Tag Input Instructions**
-- Updated hint text to show both scenarios clearly
-- Two-line display with proper spacing
-- Examples: "one tag" → #one-tag | "#two #tags" → #two #tags
-
-### 📦 Build Output
-```
-dist/style.css   41.98 kB │ gzip:  6.79 kB
-dist/index.js   104.11 kB │ gzip: 23.10 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.31, please refer to git commit history.
+For versions prior to 3.0.32, please refer to git commit history.
 
 ---
 

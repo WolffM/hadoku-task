@@ -495,15 +495,37 @@ export default function App(props: TaskAppProps = {}) {
   // Determine if current theme is dark variant
   const isDarkTheme = theme.endsWith('-dark') || theme === 'dark'
 
-  // Don't render until preferences are loaded to avoid theme flash
+  // Show loading skeleton until preferences are loaded
   if (!preferencesLoaded) {
-    return null
+    return (
+      <div className="task-app-loading" data-dark-theme={isDarkTheme ? 'true' : 'false'}>
+        <div className="task-app-loading__skeleton">
+          <div className="skeleton-header"></div>
+          <div className="skeleton-boards">
+            <div className="skeleton-board"></div>
+            <div className="skeleton-board"></div>
+            <div className="skeleton-board"></div>
+          </div>
+          <div className="skeleton-input"></div>
+          <div className="skeleton-filters">
+            <div className="skeleton-filter"></div>
+            <div className="skeleton-filter"></div>
+            <div className="skeleton-filter"></div>
+          </div>
+          <div className="skeleton-tasks">
+            <div className="skeleton-task"></div>
+            <div className="skeleton-task"></div>
+            <div className="skeleton-task"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div
       ref={containerRef}
-      className="task-app-container"
+      className="task-app-container task-app-fade-in"
       data-dark-theme={isDarkTheme ? 'true' : 'false'}
       onMouseDown={dragAndDrop.selectionStartHandler}
       onMouseMove={dragAndDrop.selectionMoveHandler}

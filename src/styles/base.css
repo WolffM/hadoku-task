@@ -81,3 +81,112 @@ body {
   color: var(--color-bg-card);
   border-color: var(--color-primary-dark);
 }
+
+/* ============================================
+   LOADING SKELETON & ANIMATIONS
+   ============================================ */
+
+/* Smooth fade-in animation when content loads */
+.task-app-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading skeleton container */
+.task-app-loading {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.task-app-loading__skeleton {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Shimmer animation for skeleton elements */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton-header,
+.skeleton-board,
+.skeleton-input,
+.skeleton-filter,
+.skeleton-task {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-alt) 0%,
+    var(--color-neutral-light) 50%,
+    var(--color-bg-alt) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Skeleton header */
+.skeleton-header {
+  height: 3rem;
+  width: 200px;
+  margin-bottom: 1.5rem;
+}
+
+/* Skeleton boards */
+.skeleton-boards {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-board {
+  height: 2.5rem;
+  width: 100px;
+}
+
+/* Skeleton input */
+.skeleton-input {
+  height: 2.5rem;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+/* Skeleton filters */
+.skeleton-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.skeleton-filter {
+  height: 2rem;
+  width: 80px;
+}
+
+/* Skeleton tasks */
+.skeleton-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-task {
+  height: 3rem;
+  width: 100%;
+}
