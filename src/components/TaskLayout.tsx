@@ -24,7 +24,6 @@ interface TaskLayoutProps {
   pendingOperations: Set<string>
   onComplete: (taskId: string) => void
   onDelete: (taskId: string) => void
-  onAddTag: (taskId: string) => void
   onEditTag: (taskId: string) => void
   onDragStart: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
@@ -52,7 +51,6 @@ export function TaskLayout({
   pendingOperations,
   onComplete,
   onDelete,
-  onAddTag,
   onEditTag,
   onDragStart,
   onDragEnd,
@@ -101,7 +99,6 @@ export function TaskLayout({
             pendingOperations={pendingOperations}
             onComplete={onComplete}
             onDelete={onDelete}
-            onAddTag={onAddTag}
             onEditTag={onEditTag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
@@ -165,7 +162,6 @@ export function TaskLayout({
             pendingOperations={pendingOperations}
             onComplete={onComplete}
             onDelete={onDelete}
-            onAddTag={onAddTag}
             onEditTag={onEditTag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
@@ -227,7 +223,6 @@ export function TaskLayout({
                 pendingOperations={pendingOperations}
                 onComplete={onComplete}
                 onDelete={onDelete}
-                onAddTag={onAddTag}
                 onEditTag={onEditTag}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}

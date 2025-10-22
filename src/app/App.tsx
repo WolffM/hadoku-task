@@ -355,7 +355,6 @@ export default function App(props: TaskAppProps = {}) {
           pendingOperations={pendingOperations}
           onComplete={completeTask}
           onDelete={deleteTask}
-          onAddTag={() => {}} // Not used
           onEditTag={handleEditTag}
           onDragStart={dragAndDrop.onDragStart}
           onDragEnd={dragAndDrop.onDragEnd}

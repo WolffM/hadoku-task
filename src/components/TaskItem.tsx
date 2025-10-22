@@ -13,7 +13,6 @@ interface TaskItemProps {
   pendingOperations: Set<string>
   onComplete: (taskId: string) => void
   onDelete: (taskId: string) => void
-  onAddTag: (taskId: string) => void
   onEditTag: (taskId: string) => void
   onDragStart?: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
@@ -29,7 +28,6 @@ export function TaskItem({
   pendingOperations,
   onComplete,
   onDelete,
-  onAddTag,
   onEditTag,
   onDragStart,
   onDragEnd,
