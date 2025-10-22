@@ -266,20 +266,22 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
     },
 
-    // User preferences (server-synced settings only, NOT theme)
+    // User preferences (includes device-specific settings like theme)
     async getPreferences(): Promise<import('../domain/types').UserPreferences> {
       const key = `${userType}-${userId}-preferences`
       const stored = localStorage.getItem(key)
       if (stored) {
         const parsed = JSON.parse(stored)
-        // Remove theme field if it exists (legacy data)
-        const { theme, ...prefs } = parsed
-        return prefs
+        return parsed  // Return all preferences including theme and button settings
       }
-      // Default preferences (no theme)
+      // Default preferences with device-specific defaults
       return {
         version: 1,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        theme: 'light',
+        showCompleteButton: true,
+        showDeleteButton: true,
+        showTagButton: false
       }
     },
 

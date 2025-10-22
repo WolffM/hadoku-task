@@ -232,23 +232,36 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
 
     // User preferences
     async getPreferences() {
-      // Try to sync from server (we're in non-public mode here)
+      // Always start with local preferences (includes device-specific settings)
+      const localPrefs = await localStorage.getPreferences()
+      
+      // Try to sync server preferences (cross-device settings only)
       try {
         const response = await fetch('/task/api/preferences', {
           headers: adminHeaders(userType, userId, sessionId)
         })
         if (response.ok) {
           const serverPrefs = await response.json()
-          // Update localStorage with server preferences
-          await localStorage.savePreferences(serverPrefs)
-          console.log('[api] Synced preferences from server')
-          return serverPrefs
+          // Merge server preferences with local (preserve device-specific settings)
+          const mergedPrefs = {
+            ...localPrefs,  // Keep device-specific settings (theme, buttons)
+            ...serverPrefs, // Override with server preferences (experimentalThemes, alwaysVerticalLayout)
+            // Ensure device-specific settings are never overwritten by server
+            theme: localPrefs.theme,
+            showCompleteButton: localPrefs.showCompleteButton,
+            showDeleteButton: localPrefs.showDeleteButton,
+            showTagButton: localPrefs.showTagButton
+          }
+          // Save merged preferences to localStorage
+          await localStorage.savePreferences(mergedPrefs)
+          console.log('[api] Synced server preferences, preserved device-specific settings')
+          return mergedPrefs
         }
       } catch (err) {
         console.warn('[api] Failed to fetch preferences from server, using localStorage:', err)
       }
-      // Fallback to localStorage
-      return await localStorage.getPreferences()
+      // Fallback to localStorage only
+      return localPrefs
     },
 
     async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>) {

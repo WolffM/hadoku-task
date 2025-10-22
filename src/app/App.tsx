@@ -121,10 +121,13 @@ export default function App(props: TaskAppProps = {}) {
   // Load user preferences on mount (before anything else)
   useEffect(() => {
     const loadPreferences = async () => {
+      console.log('[App] Loading preferences...', { userType, userId, sessionId })
       const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
       const prefs = await api.getPreferences()
+      console.log('[App] Loaded preferences:', prefs)
       if (prefs) {
         setPreferences(prefs)
+        console.log('[App] Applied preferences to state')
       }
     }
     void loadPreferences()
