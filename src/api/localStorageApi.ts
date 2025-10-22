@@ -3,7 +3,7 @@
  * Provides the same interface as the server API but stores data locally
  */
 
-import { ulid } from '../domain/utils/ulid'
+import { generateULID } from '../domain/utils/shared'
 import type { TasksFile, StatsFile, Task, BoardsFile, Board } from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
