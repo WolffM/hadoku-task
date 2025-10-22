@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.41] - 2025-10-22
+
+### ⚙️ DevOps - Smart Version Management System
+
+#### **Added Automatic Minor Version Rollover**
+- **Feature:** Husky pre-commit hook now uses smart versioning
+- **Logic:** When patch version reaches `.20`, automatically rolls over to next minor version `.0`
+- **Example:** `3.1.20` → `3.2.0` (instead of `3.1.21`)
+
+#### **Implementation**
+```javascript
+// scripts/version-manager.js
+if (patch === 20) {
+  newVersion = `${major}.${minor + 1}.0`  // Roll over
+} else {
+  newVersion = `${major}.${minor}.${patch + 1}`  // Regular increment
+}
+```
+
+#### **Benefits**
+1. **Prevents excessive patch numbers** - No more versions like `3.1.47`
+2. **Cleaner version progression** - Logical minor version increments
+3. **Automated management** - No manual intervention needed
+4. **Consistent releases** - Every 20 patches becomes a minor release
+
+#### **New NPM Scripts**
+- `npm run version:smart` - Smart version increment with rollover logic
+- `npm run version:patch` - Original patch increment (preserved for manual use)
+
+#### **Husky Integration**
+- **Updated:** `.husky/pre-commit` now uses `version:smart` instead of `version:patch`
+- **Files modified:** `package.json`, `scripts/version-manager.js`, `.husky/pre-commit`
+
+### 📊 Version History Impact
+
+**Old System:**
+```
+3.0.38 → 3.0.39 → 3.0.40 → 3.0.41 → ... → 3.0.63 → 3.0.64 ...
+```
+
+**New System (from this point forward):**
+```
+3.0.38 → 3.0.39 → 3.0.40 → ... → 3.0.20 → 3.1.0 → 3.1.1 → ... → 3.1.20 → 3.2.0
+```
+
+**Note:** This change applies to future versions only. Existing version history remains unchanged.
+
+---
+
 ## [3.0.40] - 2025-10-22
 
 ### 🐛 Bug Fix - Theme Picker Click-Outside Detection
@@ -432,112 +481,9 @@ CSS: 43.15 kB (+0.11 kB) │ gzip: 7.09 kB
 
 ---
 
-## [3.0.36] - 2025-10-21
-
-### ✨ Added - Loading Skeleton & Smooth Animations
-
-#### **Modern Loading Experience with Shimmer Effect**
-- **Feature:** Professional loading skeleton with shimmer animation
-- **User Experience:** Smooth fade-in transition when content loads
-- **Visual Polish:** No more jarring pop-in, just elegant transitions
-
-**Implementation:**
-```tsx
-// Loading skeleton shown while preferences load
-if (!preferencesLoaded) {
-  return (
-    <div className="task-app-loading">
-      <div className="task-app-loading__skeleton">
-        <div className="skeleton-header"></div>      // Header placeholder
-        <div className="skeleton-boards">...</div>   // Board tabs
-        <div className="skeleton-input"></div>       // Input field
-        <div className="skeleton-filters">...</div>  // Tag filters
-        <div className="skeleton-tasks">...</div>    // Task items
-      </div>
-    </div>
-  )
-}
-
-// Smooth fade-in when content ready
-<div className="task-app-container task-app-fade-in">
-```
-
-#### **Shimmer Animation**
-```css
-@keyframes shimmer {
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-}
-
-/* Gradient effect for shimmer */
-background: linear-gradient(
-  90deg,
-  var(--color-bg-alt) 0%,
-  var(--color-neutral-light) 50%,
-  var(--color-bg-alt) 100%
-);
-animation: shimmer 2s infinite;
-```
-
-#### **Fade-In Transition**
-```css
-.task-app-fade-in {
-  animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-```
-
-### 🎨 Loading Skeleton Components
-
-**Layout Structure:**
-- **Header Block:** 3rem × 200px - "Tasks - user" placeholder
-- **Board Buttons:** 3 tabs, 2.5rem × 100px each
-- **Input Field:** Full-width, 2.5rem height
-- **Filter Pills:** 3 pills, 2rem × 80px each
-- **Task Items:** 3 rows, 3rem × full-width
-
-**Design Features:**
-- ✅ **Theme-aware:** Uses theme colors for dark/light modes
-- ✅ **Layout-matching:** Mirrors actual UI structure
-- ✅ **Smooth shimmer:** Professional sliding gradient effect
-- ✅ **Responsive:** Adapts to mobile/desktop layouts
-- ✅ **Seamless transition:** Skeleton → content fade is smooth
-
-### 🎯 User Experience Timeline
-
-```
-1. Page loads → Loading skeleton appears immediately ✨
-2. Shimmer animation starts (2s loop) 
-3. Preferences load from localStorage (~10-50ms)
-4. Content fades in smoothly (300ms fade) ✨
-5. No jarring transitions - just smooth loading! 🎉
-```
-
-**Before:**
-```
-Page load → White screen → Sudden content pop-in ❌
-```
-
-**After:**
-```
-Page load → Skeleton shimmer → Smooth fade to content ✅
-```
-
-### 📦 Build Output
-```
-CSS: 43.04 kB (+1.06 kB) │ gzip:  7.06 kB
-JS:  106.82 kB (+1.17 kB) │ gzip: 23.64 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.36, please refer to git commit history.
+For versions prior to 3.0.37, please refer to git commit history.
 
 ---
 
