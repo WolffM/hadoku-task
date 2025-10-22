@@ -88,27 +88,6 @@ export interface UpdateTaskInput {
   tag?: string;
 }
 
-// Server-infrastructure specific types
-export interface RouterConfig {
-  dataPath: string
-  githubConfig?: GitHubConfig
-}
-
-export interface GitHubConfig {
-  owner: string
-  repo: string
-  branch: string
-  token: string
-}
-
-export interface SyncQueueItem {
-  userType: string
-  dataType: 'tasks' | 'stats'
-  timestamp: number
-}
-
-export type DataType = 'tasks' | 'stats'
-
 // User preferences (device-specific, stored in localStorage)
 // These settings are device-specific (mobile vs desktop) and don't sync to server
 export interface UserPreferences {

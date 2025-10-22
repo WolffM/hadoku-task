@@ -527,5 +527,3 @@ export async function batchClearTag(
     cleared: taskResult.clearedCount
   };
 }
-
-

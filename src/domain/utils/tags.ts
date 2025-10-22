@@ -61,20 +61,6 @@ export function getTasksByTag(tasks: Task[], tag: string): Task[] {
 }
 
 /**
- * Get tasks that have a specific tag (exclusive to first matching top tag)
- */
-export function getTasksByTagExclusive(tasks: Task[], tag: string, topTags: string[]): Task[] {
-  return tasks.filter(t => {
-    const taskTags = t.tag?.split(' ') || []
-    if (!taskTags.includes(tag)) return false
-    
-    // Only show in the first matching top tag column
-    const firstMatchingTag = topTags.find(topTag => taskTags.includes(topTag))
-    return firstMatchingTag === tag
-  })
-}
-
-/**
  * Get tasks that don't have any of the excluded tags
  */
 export function getRemainingTasks(tasks: Task[], excludeTags: string[], filters?: string[] | undefined): Task[] {
