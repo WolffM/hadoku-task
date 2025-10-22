@@ -9,6 +9,7 @@
 import type {
   Task,
   TasksFile,
+  StatsFile,
   Board,
   BoardsFile,
   ULID
@@ -61,5 +62,38 @@ export function updateBoardAtIndex(
       updatedBoard,
       ...boards.boards.slice(boardIndex + 1)
     ]
+  };
+}
+
+/**
+ * Record a stats event (creation, completion, update, or deletion)
+ * Consolidates the 4 separate recordXXX functions into one
+ * @param stats - Current stats file
+ * @param task - Task being recorded
+ * @param eventType - Type of event ('created' | 'completed' | 'edited' | 'deleted')
+ * @param timestamp - ISO timestamp string
+ * @returns Updated StatsFile
+ */
+export function recordStatsEvent(
+  stats: StatsFile,
+  task: Task,
+  eventType: 'created' | 'completed' | 'edited' | 'deleted',
+  timestamp: string
+): StatsFile {
+  return {
+    ...stats,
+    updatedAt: timestamp,
+    counters: {
+      ...stats.counters,
+      [eventType]: stats.counters[eventType] + 1
+    },
+    timeline: [
+      ...stats.timeline,
+      { t: timestamp, event: eventType, id: task.id }
+    ],
+    tasks: {
+      ...stats.tasks,
+      [task.id]: { ...task }
+    }
   };
 }

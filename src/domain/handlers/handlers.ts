@@ -19,96 +19,9 @@ import { generateULID, now } from '../utils/shared.js';
 import {
   findTaskOrThrow,
   findBoardOrThrow,
-  updateBoardAtIndex
+  updateBoardAtIndex,
+  recordStatsEvent
 } from './handlers-utils.js';
-
-/**
- * Update stats after a task creation
- */
-function recordCreation(stats: StatsFile, task: Task, timestamp: string): StatsFile {
-  return {
-    ...stats,
-    updatedAt: timestamp,
-    counters: {
-      ...stats.counters,
-      created: stats.counters.created + 1
-    },
-    timeline: [
-      ...stats.timeline,
-      { t: timestamp, event: 'created', id: task.id }
-    ],
-    tasks: {
-      ...stats.tasks,
-      [task.id]: { ...task }
-    }
-  };
-}
-
-/**
- * Update stats after a task completion
- */
-function recordCompletion(stats: StatsFile, task: Task, timestamp: string): StatsFile {
-  return {
-    ...stats,
-    updatedAt: timestamp,
-    counters: {
-      ...stats.counters,
-      completed: stats.counters.completed + 1
-    },
-    timeline: [
-      ...stats.timeline,
-      { t: timestamp, event: 'completed', id: task.id }
-    ],
-    tasks: {
-      ...stats.tasks,
-      [task.id]: { ...task }
-    }
-  };
-}
-
-/**
- * Update stats after a task update
- */
-function recordUpdate(stats: StatsFile, task: Task, timestamp: string): StatsFile {
-  return {
-    ...stats,
-    updatedAt: timestamp,
-    counters: {
-      ...stats.counters,
-      edited: stats.counters.edited + 1
-    },
-    timeline: [
-      ...stats.timeline,
-      { t: timestamp, event: 'edited', id: task.id }
-    ],
-    tasks: {
-      ...stats.tasks,
-      [task.id]: { ...task }
-    }
-  };
-}
-
-/**
- * Update stats after a task deletion
- */
-function recordDeletion(stats: StatsFile, task: Task, timestamp: string): StatsFile {
-  return {
-    ...stats,
-    updatedAt: timestamp,
-    counters: {
-      ...stats.counters,
-      deleted: stats.counters.deleted + 1
-    },
-    timeline: [
-      ...stats.timeline,
-      { t: timestamp, event: 'deleted', id: task.id }
-    ],
-    tasks: {
-      ...stats.tasks,
-      [task.id]: { ...task }
-    }
-  };
-}
 
 // --- Read Operations ---
 
@@ -200,15 +113,15 @@ export async function createTask(
     createdAt
   };
 
-  const updatedTasks: TasksFile = {
+  const updatedTasksFile: TasksFile = {
     ...tasks,
     tasks: [newTask, ...tasks.tasks],
     updatedAt: timestamp
   };
 
-  const updatedStats = recordCreation(stats, newTask, timestamp);
+  const updatedStats = recordStatsEvent(stats, newTask, 'created', timestamp);
 
-  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasks);
+  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
   await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
 
   return { ok: true, id };
@@ -248,7 +161,7 @@ export async function updateTask(
     updatedAt: timestamp
   };
 
-  const updatedStats = recordUpdate(stats, updatedTask, timestamp);
+  const updatedStats = recordStatsEvent(stats, updatedTask, 'edited', timestamp);
 
   await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
   await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
@@ -290,7 +203,7 @@ export async function completeTask(
     updatedAt: timestamp
   };
 
-  const updatedStats = recordCompletion(stats, completedTask, timestamp);
+  const updatedStats = recordStatsEvent(stats, completedTask, 'completed', timestamp);
 
   await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
   await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
@@ -331,7 +244,7 @@ export async function deleteTask(
     updatedAt: timestamp
   };
 
-  const updatedStats = recordDeletion(stats, deletedTask, timestamp);
+  const updatedStats = recordStatsEvent(stats, deletedTask, 'deleted', timestamp);
 
   await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
   await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
@@ -510,7 +423,7 @@ export async function batchUpdateTags(
   let updatedStats = stats;
   for (const task of updatedTasksList) {
     if (input.updates.find(u => u.taskId === task.id)) {
-      updatedStats = recordUpdate(updatedStats, task, timestamp);
+      updatedStats = recordStatsEvent(updatedStats, task, 'edited', timestamp);
     }
   }
   
@@ -586,11 +499,11 @@ export async function batchMoveTasks(
   
   for (const task of tasksToMove) {
     const completedTask: Task = { ...task, state: 'Completed', closedAt: timestamp, updatedAt: timestamp };
-    updatedSourceStats = recordCompletion(updatedSourceStats, completedTask, timestamp);
+    updatedSourceStats = recordStatsEvent(updatedSourceStats, completedTask, 'completed', timestamp);
   }
   
   for (const task of newTasksForTarget) {
-    updatedTargetStats = recordCreation(updatedTargetStats, task, timestamp);
+    updatedTargetStats = recordStatsEvent(updatedTargetStats, task, 'created', timestamp);
   }
   
   // Save all changes (atomic per board, both boards updated in sequence)
@@ -652,7 +565,7 @@ export async function batchClearTag(
   let updatedStats = stats;
   for (const task of updatedTasksList) {
     if (input.taskIds.includes(task.id)) {
-      updatedStats = recordUpdate(updatedStats, task, timestamp);
+      updatedStats = recordStatsEvent(updatedStats, task, 'edited', timestamp);
     }
   }
   

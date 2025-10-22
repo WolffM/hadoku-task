@@ -687,6 +687,4 @@ test('full CRUD workflow', async () => {
 ## See Also
 
 - **[API Reference](API.md)** - Complete endpoint documentation with examples
-- **[Development Guide](DEVELOPMENT.md)** - Development workflow and contribution guidelines
-- **[Child App Template](CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps
 - **[README](../README.md)** - Project overview and quick start
