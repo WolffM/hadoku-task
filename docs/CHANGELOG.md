@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.37] - 2025-10-21
+
+### 🐛 Fixed - Checkbox Visibility Across Themes
+
+#### **Fixed Black Checkboxes on Light Theme**
+- **Issue:** Checkboxes in settings modal were black (browser default), making them invisible or hard to see
+- **Impact:** Poor visibility on light themes, inconsistent appearance across themes
+- **User Report:** Screenshot showed black checkboxes on light background in settings modal
+
+**Problem:**
+```css
+/* ❌ Before - No color styling, browser default (black) */
+.settings-option input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+```
+
+#### **Solution: Theme-Aware Checkbox Colors**
+
+```css
+/* ✅ After - Uses theme's primary color */
+.settings-option input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);  /* 🎨 Theme-aware color */
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+}
+```
+
+### 🎨 Cross-Theme Validation
+
+**Checkboxes now match theme primary colors:**
+
+| Theme | Primary Color | Checkbox Color | Visibility |
+|-------|--------------|----------------|------------|
+| **Pink Light** | #e91e63 | Pink | ✅ Visible |
+| **Pink Dark** | #f48fb1 | Light Pink | ✅ Visible |
+| **Green Light** | #4caf50 | Green | ✅ Visible |
+| **Green Dark** | #81c784 | Light Green | ✅ Visible |
+| **Blue Light** | #2196f3 | Blue | ✅ Visible |
+| **Blue Dark** | #64b5f6 | Light Blue | ✅ Visible |
+| **Gray Light** | #9e9e9e | Gray | ✅ Visible |
+| **Gray Dark** | #bdbdbd | Light Gray | ✅ Visible |
+
+### 🌐 Browser Support
+
+**Modern Browsers (accent-color support):**
+- ✅ Chrome 93+ (September 2021)
+- ✅ Firefox 92+ (September 2021)
+- ✅ Safari 15.4+ (March 2022)
+- ✅ Edge 93+ (September 2021)
+
+**Fallback for Older Browsers:**
+- ✅ Native checkbox appearance preserved
+- ✅ Maintains functionality
+- ✅ Uses system default colors
+
+### ✨ Benefits
+
+- ✅ **Consistent theming** - Checkboxes match app's color scheme
+- ✅ **Clear visibility** - Works on all light/dark theme variants
+- ✅ **Native feel** - Uses browser's native checkbox appearance
+- ✅ **Accessible** - Maintains all native checkbox functionality
+- ✅ **No custom styling needed** - Leverages modern CSS standard
+
+### 📦 Build Output
+```
+CSS: 43.15 kB (+0.11 kB) │ gzip: 7.09 kB
+```
+
+---
+
 ## [3.0.36] - 2025-10-21
 
 ### ✨ Added - Loading Skeleton & Smooth Animations
@@ -489,148 +570,9 @@ dist/index.js   104.87 kB │ gzip: 23.31 kB
 
 ---
 
-## [3.0.32] - 2025-10-21
-
-### 🐛 Fixed - Button Logic & Display Issues
-
-#### **Fixed Tag Button Visibility Logic**
-- **Issue:** "Always Use Vertical Layout" preference was incorrectly enabling the Tag button
-- **Root Cause:** `isMobile` included `preferences.alwaysVerticalLayout`, and tag button used `(showTagButton || isMobile)` condition
-- **Solution:** Tag button now only controlled by "Enable Tag Button" preference
-
-**Before:**
-```typescript
-const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
-{(showTagButton || isMobile) && <TagButton />}  // ❌ Wrong logic
-```
-
-**After:**
-```typescript
-{showTagButton && <TagButton />}  // ✅ Only controlled by preference
-```
-
-**Behavior Changes:**
-- ✅ Tag button only appears when "Enable Tag Button" is checked
-- ✅ "Always Use Vertical Layout" no longer affects tag button visibility
-- ✅ Cleaner, more predictable behavior
-
-#### **Fixed Header Display for Empty UserId**
-- **Issue:** Non-public users with empty/null userId showed just "Tasks -" 
-- **Solution:** Added fallback to show "user" when userId is missing
-
-**Before:**
-```typescript
-Tasks{userType !== 'public' && userId !== 'public' ? ` - ${userId}` : ''}
-// Result: "Tasks -" when userId was empty
-```
-
-**After:**
-```typescript
-Tasks{userType !== 'public' ? ` - ${userId || 'user'}` : ''}
-// Result: "Tasks - user" when userId is empty
-```
-
-#### **Fixed Sync Button Null Reference Error**
-- **Issue:** `TypeError: can't access property "blur", currentTarget is null`
-- **Root Cause:** `e.currentTarget` becomes null in async operations
-- **Solution:** Store button reference before async operations
-
-**Before:**
-```typescript
-onClick={async (e) => {
-  // ... async operations ...
-  finally {
-    ;(e.currentTarget as HTMLButtonElement).blur()  // ❌ Can be null
-  }
-}}
-```
-
-**After:**
-```typescript
-onClick={async (e) => {
-  const button = e.currentTarget as HTMLButtonElement  // ✅ Store reference
-  // ... async operations ...
-  finally {
-    if (button) button.blur()  // ✅ Safe check
-  }
-}}
-```
-
-### 🔧 Added - Development Tooling
-
-#### **Automatic CHANGELOG.md Trimming**
-- **Feature:** Keep only the last 5 version entries automatically
-- **Integration:** Runs on every commit via pre-commit hook
-- **Script:** `scripts/trim-changelog.js` with ES module support
-
-**Algorithm:**
-1. Find all version blocks (`## [x.x.x] - YYYY-MM-DD`)
-2. If ≤ 5 versions → keep all
-3. If > 5 versions → keep first 5, trim the rest
-4. Add version history footer with git reference
-
-**Pre-commit Hook Updated:**
-```bash
-npm run version:patch
-npm run build:all
-node scripts/trim-changelog.js        # ← NEW
-git add package.json package-lock.json docs/CHANGELOG.md
-```
-
-**NPM Scripts:**
-```json
-"trim-changelog": "node scripts/trim-changelog.js"
-```
-
-**Current Status:**
-```
-Found 4 version blocks in CHANGELOG.md
-Keeping all 4 versions (≤ 5)
-```
-
-### 🎨 Updated - Settings Descriptions
-
-#### **Simplified Tag Button Description**
-**Before:**
-```
-"Show tag button on desktop (always visible on mobile)"
-```
-
-**After:**
-```
-"Show tag button on task items"
-```
-
-**Reason:** Removed mobile reference since tag button is now only controlled by the explicit preference.
-
-### 🧹 Code Cleanup
-
-#### **Removed Mobile Dependency from TaskItem**
-- ❌ Removed `isMobile` prop from `TaskItemProps` interface
-- ❌ Removed `isMobile={isMobile}` from all TaskLayout → TaskItem calls
-- ✅ Simplified conditional rendering logic
-- ✅ Cleaner component architecture
-
-#### **Props Flow Simplification**
-```
-App.tsx (showTagButton state)
-  ↓
-TaskLayout.tsx (pass-through)
-  ↓
-TaskItem.tsx (showTagButton only)
-```
-
-### 📦 Build Output
-```
-dist/style.css   41.98 kB │ gzip:  6.79 kB
-dist/index.js   104.00 kB │ gzip: 23.07 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.32, please refer to git commit history.
+For versions prior to 3.0.33, please refer to git commit history.
 
 ---
 
