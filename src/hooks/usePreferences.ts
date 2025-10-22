@@ -1,0 +1,80 @@
+/**
+ * usePreferences hook
+ * Manages user preferences: loading, saving, cleanup, and migrations
+ */
+
+import { useState, useEffect } from 'react'
+import { createApi } from '../api/client'
+import type { UserPreferences } from '../domain/types'
+import { DEFAULT_PREFERENCES, cleanupOrphanedKeys, migrateFromSessionStorage } from '../utils/preferences'
+
+export interface UsePreferencesReturn {
+  preferences: UserPreferences
+  savePreferences: (updates: Partial<UserPreferences>) => Promise<void>
+  preferencesLoaded: boolean
+  isDarkTheme: boolean
+}
+
+/**
+ * Hook to manage user preferences
+ * Handles loading, saving, migrations, and storage cleanup
+ */
+export function usePreferences(
+  userType: string,
+  userId: string,
+  sessionId?: string
+): UsePreferencesReturn {
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false)
+
+  // Load preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      // Clean up any orphaned keys from schema changes
+      cleanupOrphanedKeys(userType, userId)
+      
+      console.log('[usePreferences] Loading preferences...', { userType, userId, sessionId })
+      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+      const prefs = await api.getPreferences()
+      console.log('[usePreferences] Loaded preferences:', prefs)
+      
+      if (prefs) {
+        // Check for sessionStorage migration
+        const migrations = migrateFromSessionStorage(prefs)
+        if (migrations) {
+          const newPrefs = { ...prefs, ...migrations, updatedAt: new Date().toISOString() }
+          setPreferences(newPrefs)
+          // Save migrated preferences
+          await api.savePreferences(newPrefs)
+          console.log('[usePreferences] Applied and saved migrations')
+        } else {
+          setPreferences(prefs)
+          console.log('[usePreferences] Applied preferences to state')
+        }
+      }
+      
+      setPreferencesLoaded(true)
+    }
+    
+    void loadPreferences()
+  }, [userType, userId, sessionId])
+
+  // Save preferences function
+  const savePreferences = async (updates: Partial<UserPreferences>) => {
+    const newPrefs = { ...preferences, ...updates, updatedAt: new Date().toISOString() }
+    setPreferences(newPrefs)
+    
+    const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+    await api.savePreferences(newPrefs)
+  }
+
+  // Compute if current theme is dark
+  const isDarkTheme = preferences.theme?.endsWith('-dark') || preferences.theme === 'dark'
+
+  return {
+    preferences,
+    savePreferences,
+    preferencesLoaded,
+    isDarkTheme
+  }
+}
