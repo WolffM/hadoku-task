@@ -3,10 +3,27 @@
  * Scoped to .task-app-container to avoid affecting parent page
  */
 
+/* Ensure html and body fill viewport and extend background */
+html {
+  height: 100%;
+}
+
 /* Reset body margin to ensure background extends to edges */
 body {
   margin: 0;
   padding: 0;
+  background-color: var(--color-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Ensure #app div (Vite mount point) fills available space */
+#app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .task-app-container * {

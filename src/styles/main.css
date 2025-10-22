@@ -5,6 +5,7 @@
 .task-app-container {
   width: 100%;
   padding-top: var(--spacing-xl);
+  flex: 1;
 }
 
 .task-app {
