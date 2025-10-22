@@ -37,6 +37,7 @@ export default function App(props: TaskAppProps = {}) {
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false)
   const [preferences, setPreferences] = useState<UserPreferences>({
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -129,6 +130,7 @@ export default function App(props: TaskAppProps = {}) {
         setPreferences(prefs)
         console.log('[App] Applied preferences to state')
       }
+      setPreferencesLoaded(true)
     }
     void loadPreferences()
   }, [userType, userId, sessionId])
@@ -492,6 +494,11 @@ export default function App(props: TaskAppProps = {}) {
 
   // Determine if current theme is dark variant
   const isDarkTheme = theme.endsWith('-dark') || theme === 'dark'
+
+  // Don't render until preferences are loaded to avoid theme flash
+  if (!preferencesLoaded) {
+    return null
+  }
 
   return (
     <div

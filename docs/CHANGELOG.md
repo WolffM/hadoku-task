@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.35] - 2025-10-21
+
+### 🐛 Fixed - Theme Flash on Page Load
+
+#### **Eliminated White Flash Before Theme Loads**
+- **Issue:** Unpleasant flash of light theme before correct theme (e.g., pink-dark) was applied
+- **User Experience:** Users briefly saw light theme on every page load, even with dark theme selected
+- **Root Cause:** Component rendered immediately with default theme while preferences loaded asynchronously
+
+**Problem Timeline:**
+```typescript
+1. Component renders with default theme: 'light' ⚡ (visible flash!)
+2. API call starts (async)
+3. User sees light theme for ~50-100ms
+4. Preferences load: theme: 'pink-dark'
+5. Component re-renders with correct theme
+```
+
+#### **Solution: Wait for Preferences Before Rendering**
+
+**Implementation:**
+```typescript
+// Added loading state to prevent premature render
+const [preferencesLoaded, setPreferencesLoaded] = useState(false)
+
+// Mark as loaded after preferences are fetched
+useEffect(() => {
+  const loadPreferences = async () => {
+    const prefs = await api.getPreferences()
+    if (prefs) setPreferences(prefs)
+    setPreferencesLoaded(true)  // ✅ Ready to render
+  }
+  void loadPreferences()
+}, [userType, userId, sessionId])
+
+// Don't render until preferences are loaded
+if (!preferencesLoaded) {
+  return null  // Prevents theme flash
+}
+```
+
+**Benefits:**
+- ✅ **No theme flash** - component waits for correct theme before rendering
+- ✅ **Fast loading** - preferences load from localStorage (nearly instant)
+- ✅ **Smooth UX** - user sees correct theme immediately on first render
+- ✅ **Works with all themes** - light, dark, pink, green, etc.
+
+### 📦 Build Output
+```
+dist/style.css   41.98 kB │ gzip:  6.79 kB
+dist/index.js   105.65 kB │ gzip: 23.53 kB
+```
+
+---
+
 ## [3.0.34] - 2025-10-21
 
 ### 🐛 Fixed - Critical Preferences Persistence Bugs
@@ -604,67 +659,9 @@ dist/index.js   104.11 kB │ gzip: 23.10 kB
 
 ---
 
-## [3.0.30] - 2025-10-18
-
-### 🔧 Fixed - UserId Management
-
-#### **Removed Page Reload on UserId Change**
-- **Before:** Changing userId added it to URL params and reloaded the entire page
-- **After:** UserId change is API-only, no reload, updates sessionStorage for display
-
-**Why:** userId is primarily for display and validation. If you see your userId, your key loaded correctly and is mapped to both a sessionId and userId. The parent app manages the backend mapping (key → sessionId + userId).
-
-**Changes:**
-```typescript
-// entry.tsx
-const userId = props.userId || 'test-admin'  // From parent only, not URL params
-
-// App.tsx - handleUserIdChange
-const result = await api.setUserId(newUserId.trim())
-if (result.ok) {
-  sessionStorage.setItem('displayUserId', newUserId.trim())
-  setShowSettingsModal(false)  // No page reload
-}
-```
-
-#### **Sync Button Animation & Timeout**
-- Added spinning animation that continues while syncing
-- 5-second timeout protection prevents infinite spinning
-- Button disables during sync operation
-- Hover animation (single rotation) on idle state
-- Proper error handling for 4xx/5xx responses and network failures
-
-**Implementation:**
-```typescript
-// Hover: Single rotation
-.sync-btn:hover svg {
-  animation: spin 0.6s ease-in-out;
-}
-
-// Active syncing: Continuous rotation
-.sync-btn.spinning svg {
-  animation: spin 1s linear infinite;
-}
-
-// Timeout protection (5 seconds)
-await Promise.race([initialLoad(), timeoutPromise])
-```
-
-### 📝 Documentation Updates
-
-**API.md:**
-- Clarified userId is for display/validation, not security
-- Added note that `setUserId` does NOT reload the page
-
-**PARENT_API_REFERENCE.md:**
-- Added purpose statement for User Management endpoints
-- Explained userId is primarily for display and key validation
-
----
-
 ## Version History
 
-For versions prior to 3.0.30, please refer to git commit history.
+For versions prior to 3.0.31, please refer to git commit history.
 
 ---
 
