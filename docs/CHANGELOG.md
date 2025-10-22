@@ -7,6 +7,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.38] - 2025-10-22
+
+### 🧹 Refactor - Dead Code Cleanup
+
+#### **Removed Unused Code & Type Definitions**
+- **Goal:** Clean up codebase by removing unused exports, functions, and type definitions
+- **Impact:** Smaller bundle size, cleaner codebase, easier maintenance
+- **Method:** Comprehensive search for unreferenced code across all TypeScript/JavaScript files
+
+### 🗑️ Removed Dead Code
+
+#### **1. Unused Type Definitions (`src/domain/types.ts`)**
+Removed 4 server-infrastructure types that were never used:
+
+```typescript
+// ❌ REMOVED - Never used in codebase
+export interface RouterConfig {
+  dataPath: string
+  githubConfig?: GitHubConfig
+}
+
+export interface GitHubConfig {
+  owner: string
+  repo: string
+  branch: string
+  token: string
+}
+
+export interface SyncQueueItem {
+  userType: string
+  dataType: 'tasks' | 'stats'
+  timestamp: number
+}
+
+export type DataType = 'tasks' | 'stats'
+```
+
+**Analysis:**
+- `RouterConfig` & `GitHubConfig`: Leftover from planned server features, never implemented
+- `SyncQueueItem`: Unused queue system, not referenced anywhere
+- `DataType`: Unused type alias, no references found
+
+#### **2. Unused Utility Function (`src/domain/utils/tags.ts`)**
+Removed exclusive tag filtering function that was never called:
+
+```typescript
+// ❌ REMOVED - Never called anywhere
+export function getTasksByTagExclusive(tasks: Task[], tag: string, topTags: string[]): Task[] {
+  return tasks.filter(t => {
+    const taskTags = t.tag?.split(' ') || []
+    if (!taskTags.includes(tag)) return false
+    
+    // Only show in the first matching top tag column
+    const firstMatchingTag = topTags.find(topTag => taskTags.includes(topTag))
+    return firstMatchingTag === tag
+  })
+}
+```
+
+**Analysis:**
+- Created for exclusive tag filtering feature that was later simplified
+- `getTasksByTag()` is used instead (6 references)
+- No imports or calls to this function found
+
+### ✅ Verified Active Code
+
+**Comprehensive search verified all other code is actively used:**
+
+#### **Handler Utilities (10/10 used)**
+- ✅ `findTaskOrThrow` - Used 4× in handlers.ts
+- ✅ `findBoardOrThrow` - Used 4× in handlers.ts
+- ✅ `updateBoardAtIndex` - Used 4× in handlers.ts
+- ✅ `recordStatsEvent` - Used 8× in handlers.ts
+- ✅ `extractTasksFromBoard` - Used in batchMoveTasks
+- ✅ `prepareTasksForBoard` - Used in batchMoveTasks
+- ✅ `updateBatchMoveStats` - Used in batchMoveTasks
+- ✅ `closeTask` - Used in completeTask & deleteTask
+- ✅ `withTaskOperation` - Used 5× in handlers.ts
+- ✅ `withBoardOperation` - Used 4× in handlers.ts
+
+#### **Utility Functions (8/8 used)**
+- ✅ `validateBoardName` - Used in App.tsx, CreateBoardModal
+- ✅ `validateAndChangeKey` - Used in SettingsModal
+- ✅ `getTaskIdsFromDragEvent` - Used 3× in drag/drop components
+- ✅ `getRandomPlaceholder` - Used in App.tsx
+- ✅ `formatAge` - Used in TaskItem
+- ✅ `getLayoutConfig` - Used 2× in TaskLayout
+- ✅ `cleanupOrphanedKeys` - Used in usePreferences hook
+- ✅ `migrateFromSessionStorage` - Used in usePreferences hook
+
+#### **Tag Utilities (5/5 used)**
+- ✅ `parseTaskInput` - Used in useTasks hook
+- ✅ `getTopTags` - Used in App.tsx
+- ✅ `getTasksByTag` - Used 3× in TaskLayout
+- ✅ `getRemainingTasks` - Used in TaskLayout
+- ✅ `getAllTags` - Used in App.tsx
+
+#### **Internal Helpers (2/2 used)**
+- ✅ `deferredBroadcast` - Used 15× in localStorageApi.ts
+- ✅ `extractBoardTasks` - Used 6× in useTasks hook
+
+### 📊 Cleanup Results
+
+**Files Modified:**
+- `src/domain/types.ts` - Removed 4 unused type definitions (19 lines)
+- `src/domain/utils/tags.ts` - Removed 1 unused function (14 lines)
+
+**Total Lines Removed:** 33 lines of dead code
+
+**Bundle Impact:**
+- Cleaner type exports
+- Reduced unused utility code
+- No impact on functionality (code was never called)
+
+### 🎯 Benefits
+
+- ✅ **Cleaner codebase** - No unused exports cluttering the API surface
+- ✅ **Easier maintenance** - Less code to understand and maintain
+- ✅ **Better IntelliSense** - Fewer unused options in autocomplete
+- ✅ **Verified active code** - Comprehensive search confirms all remaining code is used
+- ✅ **No regressions** - Zero functionality impact (removed code was never executed)
+
+### 🔍 Analysis Method
+
+**Comprehensive Dead Code Detection:**
+1. ✅ Searched for all export statements across TypeScript files
+2. ✅ Verified usage of each exported function/interface
+3. ✅ Checked for imports and references in all files
+4. ✅ Validated with TypeScript compiler (no new errors)
+5. ✅ Confirmed all remaining code has active references
+
+**Tools Used:**
+- `grep_search` - Pattern matching across codebase
+- `list_code_usages` - Symbol reference checking
+- TypeScript compiler validation
+
+### 📦 Build Output
+```
+No change to bundle sizes (removed code was never imported/bundled)
+```
+
+---
+
 ## [3.0.37] - 2025-10-21
 
 ### 🐛 Fixed - Checkbox Visibility Across Themes
@@ -416,163 +559,9 @@ dist/index.js   105.61 kB │ gzip: 23.50 kB
 
 ---
 
-## [3.0.33] - 2025-10-21
-
-### 🐛 Fixed - Settings Persistence Issue
-
-#### **Fixed Theme & Button Settings Lost on Browser Restart**
-- **Issue:** Users reported that theme and button visibility settings were reverted when reopening the app
-- **Root Cause:** These settings were stored in `sessionStorage` which is cleared when browser/tab closes
-- **Impact:** Only `experimentalThemes` and `alwaysVerticalLayout` persisted (stored in localStorage + server)
-
-**Problem Analysis:**
-```typescript
-// ❌ Lost on browser close
-sessionStorage.setItem('theme', theme)
-sessionStorage.setItem('showCompleteButton', 'true')
-sessionStorage.setItem('showDeleteButton', 'true') 
-sessionStorage.setItem('showTagButton', 'false')
-
-// ✅ Persisted across sessions
-localStorage + server sync (experimentalThemes, alwaysVerticalLayout)
-```
-
-#### **Solution: Moved to Device-Specific localStorage**
-- **Choice:** Moved theme & button settings to `localStorage` while keeping them device-specific
-- **Rationale:** These settings should be device-specific (mobile vs desktop) but persistent across sessions
-- **Architecture:** Device-specific settings in localStorage, cross-device settings sync to server
-
-### 🏗️ Updated - Storage Architecture
-
-#### **New Unified Preferences System**
-**Enhanced UserPreferences Interface:**
-```typescript
-export interface UserPreferences {
-  version: 1
-  updatedAt: string
-  // Cross-device settings (localStorage + server sync)
-  experimentalThemes?: boolean
-  alwaysVerticalLayout?: boolean
-  // Device-specific settings (localStorage only)
-  theme?: string
-  showCompleteButton?: boolean
-  showDeleteButton?: boolean
-  showTagButton?: boolean
-}
-```
-
-**Storage Strategy:**
-| Setting | Storage | Persistence | Cross-Device |
-|---------|---------|-------------|--------------|
-| **Theme** | `localStorage` | ✅ **Fixed** | ❌ Device-specific |
-| **Button Visibility** | `localStorage` | ✅ **Fixed** | ❌ Device-specific |
-| **Experimental Themes** | `localStorage + server` | ✅ Persists | ✅ Syncs |
-| **Always Vertical Layout** | `localStorage + server` | ✅ Persists | ✅ Syncs |
-
-#### **Smart Server Sync Filtering**
-- **Device-specific settings:** Stay local, don't sync to server
-- **Cross-device settings:** Sync to server for consistency across devices
-
-**Implementation:**
-```typescript
-async savePreferences(prefs) {
-  // Always save locally (includes device-specific)
-  await localStorage.savePreferences(prefs)
-  
-  // Filter out device-specific settings for server sync
-  const { theme, showCompleteButton, showDeleteButton, showTagButton, ...serverPrefs } = prefs
-  
-  // Only sync cross-device settings to server
-  if (Object.keys(serverPrefs).length > 0) {
-    fetch('/task/api/preferences', { body: JSON.stringify(serverPrefs) })
-  }
-}
-```
-
-### 🔄 Added - Migration System
-
-#### **Automatic sessionStorage → localStorage Migration**
-- **Feature:** One-time migration of existing settings from sessionStorage
-- **Safety:** Only migrates if localStorage doesn't already have the setting
-- **Cleanup:** Removes old sessionStorage entries after successful migration
-
-**Migration Logic:**
-```typescript
-useEffect(() => {
-  const migrateFromSessionStorage = () => {
-    const sessionTheme = sessionStorage.getItem('theme')
-    const sessionComplete = sessionStorage.getItem('showCompleteButton')
-    const sessionDelete = sessionStorage.getItem('showDeleteButton')
-    const sessionTag = sessionStorage.getItem('showTagButton')
-    
-    const migrations = {}
-    if (sessionTheme && !preferences.theme) migrations.theme = sessionTheme
-    if (sessionComplete !== null && preferences.showCompleteButton === undefined) {
-      migrations.showCompleteButton = sessionComplete === 'true'
-    }
-    // ... migrate other settings
-    
-    if (Object.keys(migrations).length > 0) {
-      console.log('[App] Migrating settings from sessionStorage to localStorage')
-      setPreferences({ ...preferences, ...migrations })
-      // Clean up old sessionStorage
-      sessionStorage.removeItem('theme')
-      sessionStorage.removeItem('showCompleteButton')
-      // ...
-    }
-  }
-  migrateFromSessionStorage()
-}, [preferences.theme, preferences.showCompleteButton, ...])
-```
-
-### 🎯 Updated - Settings UI Integration
-
-#### **Unified Settings Handlers**
-- **Before:** Direct state setters + sessionStorage writes
-- **After:** All settings use `savePreferences()` for consistency
-
-**Theme Picker:**
-```typescript
-// ✅ Now uses unified system
-const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
-onClick={() => setTheme(family.lightTheme)}
-```
-
-**Button Visibility Settings:**
-```typescript
-// ✅ Now uses unified system
-onChange={(e) => savePreferences({ showCompleteButton: !e.target.checked })}
-onChange={(e) => savePreferences({ showDeleteButton: !e.target.checked })}
-onChange={(e) => savePreferences({ showTagButton: e.target.checked })}
-```
-
-### ✅ Result - User Experience Fixed
-
-**What Users Experience Now:**
-1. ✅ Open app
-2. ✅ Change theme color (e.g., light → dark)
-3. ✅ Disable complete button
-4. ✅ Enable tag button  
-5. ✅ Close browser completely
-6. ✅ **Reopen app → all settings preserved!** 🎉
-
-**Benefits:**
-- ✅ **Persistent:** Settings survive browser restarts
-- ✅ **Device-specific:** Different settings on mobile vs desktop
-- ✅ **Consistent:** All settings use same unified system
-- ✅ **Backwards compatible:** Automatic migration from old system
-
-### 📦 Build Output
-```
-dist/style.css   41.98 kB │ gzip:  6.79 kB
-dist/index.js   104.87 kB │ gzip: 23.31 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.33, please refer to git commit history.
+For versions prior to 3.0.34, please refer to git commit history.
 
 ---
 
