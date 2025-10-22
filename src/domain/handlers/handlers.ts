@@ -20,7 +20,10 @@ import {
   findTaskOrThrow,
   findBoardOrThrow,
   updateBoardAtIndex,
-  recordStatsEvent
+  recordStatsEvent,
+  extractTasksFromBoard,
+  prepareTasksForBoard,
+  updateBatchMoveStats
 } from './handlers-utils.js';
 
 // --- Read Operations ---
@@ -454,63 +457,56 @@ export async function batchMoveTasks(
 ): Promise<{ ok: boolean; message: string; moved: number }> {
   const timestamp = now();
   
-  // Get source board tasks and stats
-  const sourceTasks = await storage.getTasks(auth.userType, auth.userId, input.sourceBoardId);
-  const sourceStats = await storage.getStats(auth.userType, auth.userId, input.sourceBoardId);
+  // Load source and target board data
+  const [sourceTasks, sourceStats, targetTasks, targetStats] = await Promise.all([
+    storage.getTasks(auth.userType, auth.userId, input.sourceBoardId),
+    storage.getStats(auth.userType, auth.userId, input.sourceBoardId),
+    storage.getTasks(auth.userType, auth.userId, input.targetBoardId),
+    storage.getStats(auth.userType, auth.userId, input.targetBoardId)
+  ]);
   
-  // Get target board tasks and stats
-  const targetTasks = await storage.getTasks(auth.userType, auth.userId, input.targetBoardId);
-  const targetStats = await storage.getStats(auth.userType, auth.userId, input.targetBoardId);
-  
-  // Find tasks to move from source
-  const tasksToMove = sourceTasks.tasks.filter(task => input.taskIds.includes(task.id));
+  // Extract tasks to move from source board
+  const { tasksToExtract: tasksToMove, remainingTasks } = extractTasksFromBoard(
+    sourceTasks.tasks,
+    input.taskIds
+  );
   
   if (tasksToMove.length === 0) {
     return { ok: true, message: 'No tasks to move', moved: 0 };
   }
   
-  // Remove tasks from source (mark as completed, not deleted)
-  const updatedSourceTasks = sourceTasks.tasks.filter(task => !input.taskIds.includes(task.id));
+  // Prepare tasks for target board (preserves IDs, timestamps, etc.)
+  const preparedTasks = prepareTasksForBoard(tasksToMove, timestamp);
+  
+  // Update task files
   const updatedSourceTasksFile: TasksFile = {
     ...sourceTasks,
-    tasks: updatedSourceTasks,
+    tasks: remainingTasks,
     updatedAt: timestamp
   };
-  
-  // Create tasks on target board (preserve original IDs, title, tags, and createdAt)
-  const newTasksForTarget: Task[] = tasksToMove.map(task => ({
-    id: task.id, // Preserve original task ID
-    title: task.title,
-    tag: task.tag,
-    state: 'Active',
-    createdAt: task.createdAt, // Preserve original creation timestamp
-    updatedAt: timestamp
-  }));
   
   const updatedTargetTasksFile: TasksFile = {
     ...targetTasks,
-    tasks: [...newTasksForTarget, ...targetTasks.tasks],
+    tasks: [...preparedTasks, ...targetTasks.tasks],
     updatedAt: timestamp
   };
   
-  // Update stats: record completions on source, creations on target
-  let updatedSourceStats = sourceStats;
-  let updatedTargetStats = targetStats;
+  // Update stats for both boards
+  const { updatedSourceStats, updatedTargetStats } = updateBatchMoveStats(
+    sourceStats,
+    targetStats,
+    tasksToMove,
+    preparedTasks,
+    timestamp
+  );
   
-  for (const task of tasksToMove) {
-    const completedTask: Task = { ...task, state: 'Completed', closedAt: timestamp, updatedAt: timestamp };
-    updatedSourceStats = recordStatsEvent(updatedSourceStats, completedTask, 'completed', timestamp);
-  }
-  
-  for (const task of newTasksForTarget) {
-    updatedTargetStats = recordStatsEvent(updatedTargetStats, task, 'created', timestamp);
-  }
-  
-  // Save all changes (atomic per board, both boards updated in sequence)
-  await storage.saveTasks(auth.userType, auth.userId, input.sourceBoardId, updatedSourceTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, input.sourceBoardId, updatedSourceStats);
-  await storage.saveTasks(auth.userType, auth.userId, input.targetBoardId, updatedTargetTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, input.targetBoardId, updatedTargetStats);
+  // Save all changes atomically per board
+  await Promise.all([
+    storage.saveTasks(auth.userType, auth.userId, input.sourceBoardId, updatedSourceTasksFile),
+    storage.saveStats(auth.userType, auth.userId, input.sourceBoardId, updatedSourceStats),
+    storage.saveTasks(auth.userType, auth.userId, input.targetBoardId, updatedTargetTasksFile),
+    storage.saveStats(auth.userType, auth.userId, input.targetBoardId, updatedTargetStats)
+  ]);
   
   return {
     ok: true,

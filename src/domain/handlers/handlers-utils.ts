@@ -97,3 +97,69 @@ export function recordStatsEvent(
     }
   };
 }
+
+// --- Batch Operation Helpers ---
+
+/**
+ * Extract tasks from a board by IDs
+ * Returns the tasks to extract and the remaining tasks
+ */
+export function extractTasksFromBoard(
+  tasks: Task[],
+  taskIds: string[]
+): { tasksToExtract: Task[]; remainingTasks: Task[] } {
+  const tasksToExtract = tasks.filter(task => taskIds.includes(task.id));
+  const remainingTasks = tasks.filter(task => !taskIds.includes(task.id));
+  return { tasksToExtract, remainingTasks };
+}
+
+/**
+ * Prepare tasks for insertion into target board
+ * Preserves IDs, title, tags, and createdAt timestamp
+ */
+export function prepareTasksForBoard(
+  tasks: Task[],
+  timestamp: string
+): Task[] {
+  return tasks.map(task => ({
+    id: task.id,
+    title: task.title,
+    tag: task.tag,
+    state: 'Active' as const,
+    createdAt: task.createdAt,
+    updatedAt: timestamp
+  }));
+}
+
+/**
+ * Update stats for batch move operation
+ * Records completions on source and creations on target
+ */
+export function updateBatchMoveStats(
+  sourceStats: StatsFile,
+  targetStats: StatsFile,
+  movedTasks: Task[],
+  preparedTasks: Task[],
+  timestamp: string
+): { updatedSourceStats: StatsFile; updatedTargetStats: StatsFile } {
+  let updatedSourceStats = sourceStats;
+  let updatedTargetStats = targetStats;
+  
+  // Record completions on source board
+  for (const task of movedTasks) {
+    const completedTask: Task = {
+      ...task,
+      state: 'Completed',
+      closedAt: timestamp,
+      updatedAt: timestamp
+    };
+    updatedSourceStats = recordStatsEvent(updatedSourceStats, completedTask, 'completed', timestamp);
+  }
+  
+  // Record creations on target board
+  for (const task of preparedTasks) {
+    updatedTargetStats = recordStatsEvent(updatedTargetStats, task, 'created', timestamp);
+  }
+  
+  return { updatedSourceStats, updatedTargetStats };
+}
