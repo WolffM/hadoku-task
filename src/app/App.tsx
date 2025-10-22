@@ -116,7 +116,8 @@ export default function App(props: TaskAppProps = {}) {
     console.log('[App] User context changed, initializing...', { userType, userId })
     void initialLoad()
     inputRef.current?.focus()
-  }, [userType, userId, initialLoad])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userType, userId])
 
   // Handler functions
   const handleAddTask = async (input: string) => {
