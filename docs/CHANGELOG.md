@@ -7,6 +7,140 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.39] - 2025-10-22
+
+### 🔧 Refactor - Remove userId, Use sessionId for localStorage Keys
+
+#### **Problem: userId Was Fragile and Redundant**
+- **Issue:** Parent app owns `userId` and can change it, breaking localStorage keys
+- **Issue:** Three identifiers (`userType`, `userId`, `sessionId`) when two suffice
+- **Issue:** `userId` provided no real value over `sessionId`
+
+**Old Architecture (Problematic):**
+```typescript
+// localStorage keys break when userId changes
+"admin-john-doe-main-tasks"      // ❌ Breaks if user changes name
+"friend-jane-smith-work-tasks"   // ❌ Parent can change userId anytime
+
+// API client had redundant parameter
+createApi(userType, userId, sessionId)  // ❌ userId was redundant
+```
+
+#### **Solution: Use sessionId for localStorage Keys**
+
+**New Architecture (Stable):**
+```typescript
+// localStorage keys are stable across userId changes
+"admin-abc-123-xyz-main-tasks"      // ✅ Stable session identifier
+"friend-def-456-uvw-work-tasks"     // ✅ Parent controls session lifecycle
+
+// API client simplified
+createApi(userType, sessionId)      // ✅ One identifier, clearer intent
+```
+
+### 🗑️ Breaking Changes
+
+#### **Removed userId Parameter**
+```typescript
+// ❌ OLD - userId parameter removed
+interface TaskAppProps {
+  userType?: string
+  userId?: string
+  sessionId?: string
+}
+
+// ✅ NEW - Only sessionId needed
+interface TaskAppProps {
+  userType?: string
+  sessionId?: string
+}
+```
+
+#### **Updated API Signatures**
+```typescript
+// ❌ OLD
+createApi(userType, userId, sessionId)
+createLocalStorageApi(userType, userId)
+usePreferences(userType, userId, sessionId)
+useTasks({ userType, userId, sessionId })
+
+// ✅ NEW
+createApi(userType, sessionId)
+createLocalStorageApi(userType, sessionId)
+usePreferences(userType, sessionId)
+useTasks({ userType, sessionId })
+```
+
+#### **Updated localStorage Key Pattern**
+```typescript
+// ❌ OLD - Keys used userId
+"${userType}-${userId}-${boardId}-tasks"
+"admin-john-doe-main-tasks"
+
+// ✅ NEW - Keys use sessionId
+"${userType}-${sessionId}-${boardId}-tasks"
+"admin-abc-123-xyz-main-tasks"
+```
+
+### 📦 Files Modified (22 files)
+
+**Core Storage Layer:**
+- `src/api/storage/LocalStorageStorage.ts` - Use sessionId in localStorage keys
+- `src/server/storage.ts` - Update Storage interface
+- `src/domain/types.ts` - Update AuthContext interface
+
+**API Layer:**
+- `src/api/localStorageApi.ts` - Remove userId, use sessionId
+- `src/api/client.ts` - Remove userId from headers and keys
+
+**Domain Layer:**
+- `src/domain/handlers/handlers-utils.ts` - Use auth.sessionId
+- `src/domain/handlers/handlers.ts` - Use auth.sessionId
+
+**React Components:**
+- `src/app/App.tsx` - Remove userId parameter
+- `src/app/entry.tsx` - Remove userId from TaskAppProps
+
+**Hooks:**
+- `src/hooks/usePreferences.ts` - Use sessionId parameter
+- `src/hooks/useTasks/index.ts` - Use sessionId parameter
+- `src/hooks/useTasks/helpers.ts` - Use sessionId in broadcasts
+
+**Utilities:**
+- `src/utils/preferences.ts` - Update cleanupOrphanedKeys to use sessionId
+
+### ✅ Benefits
+
+1. **Stable localStorage keys** - Keys won't break when parent changes userId
+2. **Simpler architecture** - Two identifiers instead of three
+3. **Clearer intent** - `userType` (behavior) + `sessionId` (identity)
+4. **Parent controls lifecycle** - Parent decides when to invalidate session
+5. **Less confusion** - One less parameter to pass around
+6. **More robust** - No risk of data loss from userId changes
+
+### 🔄 Migration Impact
+
+**For Parent App:**
+- ✅ **Action Required:** Stop passing `userId` prop to task app
+- ✅ **Action Required:** Ensure `sessionId` is stable and unique per session
+- ⚠️ **Data Impact:** Existing localStorage data will not be accessible (uses old keys)
+
+**For Users:**
+- ⚠️ **One-time data loss:** Existing tasks/boards will not appear (different localStorage keys)
+- ✅ **Benefit:** Data will be stable going forward (no more userId changes breaking keys)
+
+**Migration Strategy:**
+- No automated migration provided - clean slate approach
+- Parent app can implement migration if needed by reading old keys and writing to new pattern
+
+### 📊 Build Output
+```
+dist/style.css   43.07 kB │ gzip:  7.07 kB  
+dist/index.js   108.26 kB │ gzip: 24.69 kB (+0.05 kB)
+```
+
+---
+
 ## [3.0.38] - 2025-10-22
 
 ### 🧹 Refactor - Dead Code Cleanup
@@ -389,179 +523,9 @@ dist/index.js   105.65 kB │ gzip: 23.53 kB
 
 ---
 
-## [3.0.34] - 2025-10-21
-
-### 🐛 Fixed - Critical Preferences Persistence Bugs
-
-#### **Fixed Theme & Button Settings Being Wiped on Page Refresh**
-- **Issue:** Theme and button visibility settings were reset to defaults on every page refresh
-- **Impact:** Users couldn't maintain their preferred theme or button configurations
-- **Root Cause:** Two critical bugs in the preferences system were causing data loss
-
-### 🔧 Bug #1: Server Preferences Overwriting Device Settings
-
-#### **Problem:**
-The `getPreferences()` API was **overwriting** localStorage with server data, wiping out device-specific settings:
-
-```typescript
-// ❌ OLD CODE - Overwrote device settings
-async getPreferences() {
-  const serverPrefs = await fetch('/task/api/preferences')
-  await localStorage.savePreferences(serverPrefs)  // ⚠️ OVERWRITES theme/buttons!
-  return serverPrefs  // ⚠️ Missing device-specific settings!
-}
-```
-
-#### **Solution: Smart Merge Strategy**
-```typescript
-// ✅ NEW CODE - Preserves device settings
-async getPreferences() {
-  const localPrefs = await localStorage.getPreferences()  // Get device settings first
-  
-  try {
-    const serverPrefs = await fetch('/task/api/preferences')
-    if (response.ok) {
-      // Merge server with local, explicitly preserve device settings
-      const mergedPrefs = {
-        ...localPrefs,  // Keep device-specific settings
-        ...serverPrefs, // Override with server preferences
-        // Ensure device-specific settings are never overwritten
-        theme: localPrefs.theme,
-        showCompleteButton: localPrefs.showCompleteButton,
-        showDeleteButton: localPrefs.showDeleteButton,
-        showTagButton: localPrefs.showTagButton
-      }
-      await localStorage.savePreferences(mergedPrefs)
-      return mergedPrefs  // ✅ Contains ALL settings!
-    }
-  } catch (err) {
-    // Server failed, use local settings
-  }
-  return localPrefs  // ✅ Always preserves device settings
-}
-```
-
-### 🔧 Bug #2: localStorage Actively Stripping Theme Data
-
-#### **Problem:**
-The localStorage implementation had **legacy code** that was **actively removing** theme and button fields:
-
-```typescript
-// ❌ OLD CODE - Stripped theme data!
-async getPreferences() {
-  const parsed = JSON.parse(stored)
-  const { theme, ...prefs } = parsed  // ⚠️ INTENTIONALLY removing theme!
-  return prefs  // ⚠️ Theme data lost forever!
-}
-```
-
-#### **Solution: Return Complete Preferences**
-```typescript
-// ✅ NEW CODE - Preserves all data
-async getPreferences() {
-  const parsed = JSON.parse(stored)
-  return parsed  // ✅ Return ALL preferences including theme!
-}
-
-// ✅ Better defaults with device-specific settings
-return {
-  version: 1,
-  updatedAt: new Date().toISOString(),
-  theme: 'light',
-  showCompleteButton: true,
-  showDeleteButton: true,
-  showTagButton: false
-}
-```
-
-### 📊 Data Flow Comparison
-
-#### **Before (Broken):**
-```
-1. User sets theme: 'dark' → localStorage ✅
-2. Page refresh → getPreferences()
-3. Server returns: { experimentalThemes: true }
-4. localStorage.savePreferences(serverData) → overwrites theme ❌
-5. localStorage strips theme field → lost forever ❌
-6. App receives: { experimentalThemes: true } → theme missing ❌
-7. UI resets to default theme ❌
-```
-
-#### **After (Fixed):**
-```
-1. User sets theme: 'dark' → localStorage ✅
-2. Page refresh → getPreferences()
-3. Get local first: { theme: 'dark', showTagButton: true, ... } ✅
-4. Get server: { experimentalThemes: true, alwaysVerticalLayout: false }
-5. Smart merge: { theme: 'dark', showTagButton: true, experimentalThemes: true, ... } ✅
-6. Save merged data → all settings preserved ✅
-7. App receives complete preferences → UI maintains settings ✅
-```
-
-### 🧪 Added - Debug Logging
-
-#### **Enhanced Preferences Loading Visibility**
-```typescript
-// Added debug logs to track preferences loading
-console.log('[App] Loading preferences...', { userType, userId, sessionId })
-console.log('[App] Loaded preferences:', prefs)
-console.log('[App] Applied preferences to state')
-```
-
-**Benefits:**
-- ✅ Easier debugging of preferences issues
-- ✅ Visibility into merge operations
-- ✅ Clear tracking of data flow
-
-### ✅ Result - Complete Persistence Fix
-
-#### **User Experience Now:**
-1. ✅ Set theme to dark mode
-2. ✅ Disable complete button  
-3. ✅ Enable tag button
-4. ✅ **Close browser completely**
-5. ✅ **Reopen → all settings preserved!** 🎉
-
-#### **Technical Guarantees:**
-- ✅ **Theme persists** across page refreshes
-- ✅ **Button visibility settings persist** across page refreshes
-- ✅ **Server sync works** for cross-device settings (experimentalThemes, alwaysVerticalLayout)
-- ✅ **Device-specific settings** never get wiped by server calls
-- ✅ **Merge conflicts resolved** by always preserving device preferences
-- ✅ **Offline support** maintains all local settings
-
-### 🏗️ Architecture Improvements
-
-#### **Clear Separation of Concerns:**
-```typescript
-// Device-specific (localStorage only)
-theme: string
-showCompleteButton: boolean
-showDeleteButton: boolean  
-showTagButton: boolean
-
-// Cross-device (localStorage + server sync)
-experimentalThemes: boolean
-alwaysVerticalLayout: boolean
-```
-
-#### **Robust Merge Strategy:**
-- **Local-first:** Always start with complete local preferences
-- **Server enhancement:** Merge in cross-device settings from server
-- **Device protection:** Explicitly preserve device-specific settings
-- **Fallback safety:** Works offline when server unavailable
-
-### 📦 Build Output
-```
-dist/style.css   41.98 kB │ gzip:  6.79 kB
-dist/index.js   105.61 kB │ gzip: 23.50 kB
-```
-
----
-
 ## Version History
 
-For versions prior to 3.0.34, please refer to git commit history.
+For versions prior to 3.0.35, please refer to git commit history.
 
 ---
 

@@ -336,14 +336,14 @@ import '@wolffm/task/style.css'
 <TaskApp 
   basename="/task"
   userType="public"
-  userId="user-123"
+  sessionId="session-123"
 />
 ```
 
 **Props:**
 - `basename`: Base path for the app (default: `/task`)
 - `userType`: User type for API calls (default: `public`)
-- `userId`: User identifier (default: `public`)
+- `sessionId`: Session identifier (default: `public`)
 - `apiUrl`: Override API URL (optional)
 - `environment`: Environment name (optional)
 
@@ -440,30 +440,12 @@ Validate a key without changing the current session.
 ---
 
 ### POST `/user/set-id`
-Update the user ID for the current session.
+**DEPRECATED:** This endpoint is no longer used. The task app now uses `sessionId` directly without needing a separate `userId` mapping.
 
-**Purpose:** Changes which userId is associated with the current sessionId in the backend. This is primarily for display and validation - if you see your userId, your key loaded correctly and is mapped to both a sessionId and userId.
-
-**Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
-- `x-session-id`: Session ID
-
-**Body:**
-```json
-{
-  "newUserId": "new-user-id"
-}
-```
-
-**Response:**
-```json
-{
-  "ok": true,
-  "message": "User ID updated"
-}
-```
-
-**Note:** This does NOT reload the page. The parent app handles the backend mapping (key → sessionId + userId), and the child app updates sessionStorage for display only.
+**Migration Note:** Parent apps should:
+- Stop calling this endpoint
+- Use `sessionId` as the stable identifier
+- Pass `sessionId` prop to the task app instead of `userId`
 
 ---
 

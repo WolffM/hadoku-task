@@ -11,7 +11,6 @@ export interface TaskAppProps {
   apiUrl?: string;
   environment?: string;
   userType?: 'public' | 'friend' | 'admin';
-  userId?: string;
   sessionId?: string;
 }
 
@@ -19,10 +18,9 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   // Extract userType from URL params if not provided in props
   const urlParams = new URLSearchParams(window.location.search)
   const userType = props.userType || (urlParams.get('userType') as ('public' | 'friend' | 'admin')) || 'admin' // TEMPORARY: Testing as admin
-  const userId = props.userId || 'test-admin' // userId comes from parent only, not URL
-  const sessionId = props.sessionId  // Session ID from parent (for authenticated requests)
+  const sessionId = props.sessionId || 'public-session'  // Session ID from parent (for authenticated requests)
   
-  const finalProps = { ...props, userType, userId, sessionId }
+  const finalProps = { ...props, userType, sessionId }
   const root = createRoot(el)
   root.render(<App {...finalProps} />)
   ;(el as any).__root = root

@@ -24,7 +24,7 @@ npm run dev
 - 🔍 **Smart Filtering** - Filter by tag or view all
 - 🎯 **Drag & Drop** - Move tasks between columns and boards
 - 🎨 **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
-- ⚙️ **User Management** - Settings modal with userId and session key management
+- ⚙️ **Session Management** - Settings modal with session key management
 - 📋 **Multi-Board** - Organize tasks across multiple boards
 - ⚡ **Optimistic Updates** - Instant UI response, background sync
 - 👥 **Multi-User** - Public (localStorage only), Friend/Admin (server sync)
@@ -66,12 +66,8 @@ Each theme includes distinct button colors for visual interest and proper contra
 ## Documentation
 
 📖 **[Architecture](docs/ARCHITECTURE.md)** - System design and Universal Adapter Pattern  
-📚 **[API Reference](docs/API.md)** - Complete endpoint documentation  
-📋 **[Parent API Reference](docs/PARENT_API_REFERENCE.md)** - Parent integration guide  
+📚 **[API Reference](docs/API.md)** - Complete endpoint documentation   
 📝 **[Changelog](docs/CHANGELOG.md)** - Version history and changes  
-🚀 **[Development Guide](docs/DEVELOPMENT.md)** - Setup, workflow, contribution guidelines  
-📦 **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** - Template for creating new micro-frontend apps  
-🔌 **[Universal Adapter Pattern](docs/UNIVERSAL_ADAPTER_PATTERN.md)** - Framework-agnostic API handlers
 
 ---
 

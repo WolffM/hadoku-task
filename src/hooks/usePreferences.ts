@@ -21,8 +21,7 @@ export interface UsePreferencesReturn {
  */
 export function usePreferences(
   userType: string,
-  userId: string,
-  sessionId?: string
+  sessionId: string
 ): UsePreferencesReturn {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [preferencesLoaded, setPreferencesLoaded] = useState(false)
@@ -31,10 +30,10 @@ export function usePreferences(
   useEffect(() => {
     const loadPreferences = async () => {
       // Clean up any orphaned keys from schema changes
-      cleanupOrphanedKeys(userType, userId)
+      cleanupOrphanedKeys(userType, sessionId)
       
-      console.log('[usePreferences] Loading preferences...', { userType, userId, sessionId })
-      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+      console.log('[usePreferences] Loading preferences...', { userType, sessionId })
+      const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
       const prefs = await api.getPreferences()
       console.log('[usePreferences] Loaded preferences:', prefs)
       
@@ -57,14 +56,14 @@ export function usePreferences(
     }
     
     void loadPreferences()
-  }, [userType, userId, sessionId])
+  }, [userType, sessionId])
 
   // Save preferences function
   const savePreferences = async (updates: Partial<UserPreferences>) => {
     const newPrefs = { ...preferences, ...updates, updatedAt: new Date().toISOString() }
     setPreferences(newPrefs)
     
-    const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+    const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
     await api.savePreferences(newPrefs)
   }
 

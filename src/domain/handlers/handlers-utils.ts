@@ -229,8 +229,8 @@ export async function withTaskOperation<T>(
   
   // Load current state
   const [tasks, stats] = await Promise.all([
-    storage.getTasks(auth.userType, auth.userId, boardId),
-    storage.getStats(auth.userType, auth.userId, boardId)
+    storage.getTasks(auth.userType, auth.sessionId, boardId),
+    storage.getStats(auth.userType, auth.sessionId, boardId)
   ]);
   
   // Execute operation
@@ -244,8 +244,8 @@ export async function withTaskOperation<T>(
   
   // Save both files
   await Promise.all([
-    storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasks),
-    storage.saveStats(auth.userType, auth.userId, boardId, updatedStats)
+    storage.saveTasks(auth.userType, auth.sessionId, boardId, updatedTasks),
+    storage.saveStats(auth.userType, auth.sessionId, boardId, updatedStats)
   ]);
   
   return result;
@@ -273,13 +273,13 @@ export async function withBoardOperation<T>(
   const timestamp = new Date().toISOString();
   
   // Load current boards
-  const boards = await storage.getBoards(auth.userType, auth.userId);
+  const boards = await storage.getBoards(auth.userType, auth.sessionId);
   
   // Execute operation
   const { updatedBoards, result } = operation(boards, timestamp);
   
   // Save updated boards
-  await storage.saveBoards(auth.userType, updatedBoards, auth.userId);
+  await storage.saveBoards(auth.userType, updatedBoards, auth.sessionId);
   
   return result;
 }

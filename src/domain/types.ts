@@ -72,8 +72,8 @@ export interface StatsFile {
 }
 
 export interface AuthContext {
-  userType: UserType;
-  userId?: string;
+  userType: UserType
+  sessionId?: string
 }
 
 export interface CreateTaskInput {

@@ -23,9 +23,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
 /**
  * Clean up orphaned localStorage keys from intermediate schema versions
- * Removes keys that don't match the current userType-userId prefix pattern
+ * Removes keys that don't match the current userType-sessionId prefix pattern
  */
-export function cleanupOrphanedKeys(userType: string, userId: string): void {
+export function cleanupOrphanedKeys(userType: string, sessionId: string): void {
   const currentVersion = window.localStorage.getItem(STORAGE_VERSION_KEY)
   
   if (currentVersion !== STORAGE_VERSION) {
@@ -37,7 +37,7 @@ export function cleanupOrphanedKeys(userType: string, userId: string): void {
     Object.keys(window.localStorage).forEach(key => {
       // Only remove if it matches orphaned pattern AND doesn't match current schema
       const isOrphaned = ORPHANED_KEY_PATTERNS.some(pattern => pattern.test(key))
-      const isCurrentSchema = key.includes(`${userType}-${userId}`)
+      const isCurrentSchema = key.includes(`${userType}-${sessionId}`)
       
       if (isOrphaned && !isCurrentSchema) {
         console.log('[Preferences] Removing orphaned key:', key)

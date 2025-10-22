@@ -25,12 +25,12 @@ function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, 
 /**
  * Create a localStorage-based API client that mirrors the server API interface
  */
-export function createLocalStorageApi(userType: string = 'public', userId: string = 'public') {
-  const storage = new LocalStorageStorage(userType, userId)
+export function createLocalStorageApi(userType: string = 'public', sessionId: string = 'public') {
+  const storage = new LocalStorageStorage(userType, sessionId)
   
   // For localStorage operations, treat all users as 'registered' to bypass server auth checks
   // Public users CAN create tasks locally, the auth checks are only for server-side API calls
-  const authContext = { userType: 'registered' as any, userId }
+  const authContext = { userType: 'registered' as any, sessionId }
   
   return {
     async getBoards(): Promise<BoardsFile> {
@@ -45,8 +45,8 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       }
       
       for (const b of boardsFile.boards) {
-        const tasksFile = await storage.getTasks(userType, userId, b.id)
-        const statsFile = await storage.getStats(userType, userId, b.id)
+        const tasksFile = await storage.getTasks(userType, sessionId, b.id)
+        const statsFile = await storage.getStats(userType, sessionId, b.id)
         populated.boards.push({
           id: b.id,
           name: b.name,
@@ -60,7 +60,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     async createBoard(boardId: string): Promise<Board> {
-      console.debug('[localStorageApi] createBoard (using handler)', { userType, userId, boardId })
+      console.debug('[localStorageApi] createBoard (using handler)', { userType, sessionId, boardId })
       
       // Use handler
       const result = await TaskHandlers.createBoard(
@@ -70,13 +70,13 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Initialize empty tasks/stats for new board
-      await storage.saveTasks(userType, userId, boardId, {
+      await storage.saveTasks(userType, sessionId, boardId, {
         version: 1,
         updatedAt: new Date().toISOString(),
         tasks: []
       })
       
-      await storage.saveStats(userType, userId, boardId, {
+      await storage.saveStats(userType, sessionId, boardId, {
         version: 2,
         updatedAt: new Date().toISOString(),
         counters: { created: 0, completed: 0, edited: 0, deleted: 0 },
@@ -85,7 +85,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       })
       
       // Broadcast update
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
       
       return result.board
     },
@@ -99,18 +99,18 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Cleanup board data
-      await storage.deleteBoardData(userType, userId, boardId)
+      await storage.deleteBoardData(userType, sessionId, boardId)
       
       // Broadcast update
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
     },
 
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
-      return storage.getTasks(userType, userId, boardId)
+      return storage.getTasks(userType, sessionId, boardId)
     },
 
     async getStats(boardId: string = 'main'): Promise<StatsFile> {
-      return storage.getStats(userType, userId, boardId)
+      return storage.getStats(userType, sessionId, boardId)
     },
 
     async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
@@ -126,7 +126,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Get the created task from storage
-      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const createdTask = tasksFile.tasks.find(t => t.id === result.id)
       
       if (!createdTask) {
@@ -140,7 +140,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
           boardId, 
           taskId: result.id 
         })
-        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       } else {
         console.log('[localStorageApi] createTask: broadcast suppressed')
       }
@@ -163,11 +163,11 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
-        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       }
       
       // Get updated task from storage
-      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const updatedTask = tasksFile.tasks.find(t => t.id === id)
       
       if (!updatedTask) {
@@ -179,7 +179,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
 
     async completeTask(id: string, boardId: string = 'main'): Promise<Task> {
       // Get the task BEFORE completing it (since handler removes it from active list)
-      const tasksFile = await storage.getTasks(userType, userId, boardId)
+      const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const taskToComplete = tasksFile.tasks.find(t => t.id === id)
       
       if (!taskToComplete) {
@@ -195,7 +195,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Broadcast update
-      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       
       // Return the completed task with updated state
       return {
@@ -210,7 +210,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       console.log('[localStorageApi] deleteTask (using handler)', { id, boardId, suppressBroadcast })
       
       // Get the task BEFORE deletion so we can return it
-      const tasksFileBefore = await storage.getTasks(userType, userId, boardId)
+      const tasksFileBefore = await storage.getTasks(userType, sessionId, boardId)
       const taskToDelete = tasksFileBefore.tasks.find(t => t.id === id)
       
       if (!taskToDelete) {
@@ -228,7 +228,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
         console.log('[localStorageApi] deleteTask: broadcasting', { sessionId: SESSION_ID })
-        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+        deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       } else {
         console.log('[localStorageApi] deleteTask: broadcast suppressed')
       }
@@ -251,7 +251,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Broadcast update
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     async deleteTag(tag: string, boardId: string = 'main'): Promise<void> {
@@ -263,12 +263,12 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Broadcast update
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     // User preferences (includes device-specific settings like theme)
     async getPreferences(): Promise<import('../domain/types').UserPreferences> {
-      const key = `${userType}-${userId}-preferences`
+      const key = `${userType}-${sessionId}-preferences`
       const stored = localStorage.getItem(key)
       if (stored) {
         const parsed = JSON.parse(stored)
@@ -286,7 +286,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>): Promise<void> {
-      const key = `${userType}-${userId}-preferences`
+      const key = `${userType}-${sessionId}-preferences`
       const current = await this.getPreferences()
       const updated = {
         ...current,
@@ -324,12 +324,12 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       boards.updatedAt = new Date().toISOString()
       
       // Save back to localStorage
-      const boardsKey = `${userType}-${userId}-boards`
+      const boardsKey = `${userType}-${sessionId}-boards`
       localStorage.setItem(boardsKey, JSON.stringify(boards))
       
       // Update individual board storage
-      const sourceBoardKey = `${userType}-${userId}-${sourceBoardId}-tasks`
-      const targetBoardKey = `${userType}-${userId}-${targetBoardId}-tasks`
+      const sourceBoardKey = `${userType}-${sessionId}-${sourceBoardId}-tasks`
+      const targetBoardKey = `${userType}-${sessionId}-${targetBoardId}-tasks`
       
       localStorage.setItem(sourceBoardKey, JSON.stringify({
         version: 1,
@@ -344,7 +344,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       }))
       
       // Broadcast change
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
       
       return { ok: true, moved: tasksToMove.length }
     },
@@ -360,7 +360,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       )
       
       // Broadcast update
-      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]): Promise<void> {
@@ -376,7 +376,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
       console.log('[localStorageApi] batchClearTag result:', result)
       
       // Broadcast update
-      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, userId, boardId })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
       
       console.log('[localStorageApi] batchClearTag END')
     },
@@ -394,7 +394,7 @@ export function createLocalStorageApi(userType: string = 'public', userId: strin
     },
 
     async setUserId(_newUserId: string): Promise<{ ok: boolean; message?: string }> {
-      // For localStorage/public mode, userId changes are handled by URL params
+      // For localStorage/public mode changes are handled by URL params
       return { ok: true }
     }
   }

@@ -5,14 +5,14 @@ import { createLocalStorageApi } from './localStorageApi'
  * Sync API boards data to localStorage
  * Updates localStorage to match server state for offline access and cross-tab consistency
  */
-async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalStorageApi>, apiData: BoardsFile, userType: string, userId: string) {
+async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalStorageApi>, apiData: BoardsFile, userType: string, sessionId: string) {
   // For each board in API response, update localStorage
   for (const board of apiData.boards || []) {
     const boardId = board.id
     
     // Update tasks for this board
     if (board.tasks && board.tasks.length > 0) {
-      const tasksKey = `${userType}-${userId}-${boardId}-tasks`
+      const tasksKey = `${userType}-${sessionId}-${boardId}-tasks`
       const tasksFile: TasksFile = {
         version: 1,
         updatedAt: apiData.updatedAt || new Date().toISOString(),
@@ -23,13 +23,13 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
     
     // Update stats for this board if present
     if (board.stats) {
-      const statsKey = `${userType}-${userId}-${boardId}-stats`
+      const statsKey = `${userType}-${sessionId}-${boardId}-stats`
       window.localStorage.setItem(statsKey, JSON.stringify(board.stats))
     }
   }
   
   // Update boards index
-  const boardsKey = `${userType}-${userId}-boards`
+  const boardsKey = `${userType}-${sessionId}-boards`
   const boardsIndex = {
     version: 1,
     updatedAt: apiData.updatedAt || new Date().toISOString(),
@@ -47,12 +47,11 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
   })
 }
 
-function adminHeaders(userType: string, userId?: string, sessionId?: string) {
+function adminHeaders(userType: string, sessionId?: string) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-User-Type': userType
   }
-  if (userId) headers['X-User-Id'] = userId
   if (sessionId) headers['X-Session-Id'] = sessionId
   return headers
 }
@@ -63,8 +62,8 @@ function adminHeaders(userType: string, userId?: string, sessionId?: string) {
  * - "public" is localStorage-only, no server sync
  * - All other user types (friend, admin, custom names) sync to server in background
  */
-export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', userId: string = 'public', sessionId?: string) {
-  const localStorage = createLocalStorageApi(userType, userId)
+export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', sessionId: string = 'public') {
+  const localStorage = createLocalStorageApi(userType, sessionId)
   
   // Public mode: localStorage only, no server sync
   if (userType === 'public') {
@@ -82,8 +81,8 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
     async syncFromApi(): Promise<void> {
       try {
         console.log('[api] Syncing from API...')
-        const response = await fetch(`/task/api/boards?userType=${userType}&userId=${encodeURIComponent(userId)}`, {
-          headers: adminHeaders(userType, userId, sessionId)
+        const response = await fetch(`/task/api/boards?userType=${userType}&sessionId=${encodeURIComponent(sessionId)}`, {
+          headers: adminHeaders(userType, sessionId)
         })
         
         if (!response.ok) {
@@ -101,7 +100,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         console.log('[api] Synced from API:', { boards: apiData.boards.length, totalTasks: apiData.boards.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) })
         
         // Update localStorage with server state
-        await syncBoardsToLocalStorage(localStorage, apiData, userType, userId)
+        await syncBoardsToLocalStorage(localStorage, apiData, userType, sessionId)
       } catch (error) {
         console.error('[api] Sync from API failed:', error)
       }
@@ -114,7 +113,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Send task to server WITH the client-generated ID so server uses same ID
       fetch('/task/api', {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ 
           id: data.id || localTask.id,  // Use provided ID (for moves) or client-generated ID
           ...data, 
@@ -140,7 +139,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/tags`, {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => console.log('[api] Background sync: createTag completed'))
@@ -152,7 +151,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/tags/delete`, {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => console.log('[api] Background sync: deleteTag completed'))
@@ -165,7 +164,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}`, {
         method: 'PATCH',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ ...patch, boardId })
       })
         .then(() => console.log('[api] Background sync: patchTask completed'))
@@ -178,7 +177,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}/complete`, {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId })
       })
         .then(r => {
@@ -194,7 +193,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/${id}`, {
         method: 'DELETE',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId })
       })
         .then(r => {
@@ -210,7 +209,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch('/task/api/boards', {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ id: boardId, name: boardId })
       })
         .then(() => console.log('[api] Background sync: createBoard completed'))
@@ -223,7 +222,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Background server sync
       fetch(`/task/api/boards/${encodeURIComponent(boardId)}`, {
         method: 'DELETE',
-        headers: adminHeaders(userType, userId, sessionId)
+        headers: adminHeaders(userType, sessionId)
       })
         .then(() => console.log('[api] Background sync: deleteBoard completed'))
         .catch(err => console.error('[api] Failed to sync deleteBoard:', err))
@@ -238,7 +237,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // Try to sync server preferences (cross-device settings only)
       try {
         const response = await fetch('/task/api/preferences', {
-          headers: adminHeaders(userType, userId, sessionId)
+          headers: adminHeaders(userType, sessionId)
         })
         if (response.ok) {
           const serverPrefs = await response.json()
@@ -275,7 +274,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       if (Object.keys(serverPrefs).length > 0) {
         fetch('/task/api/preferences', {
           method: 'PUT',
-          headers: adminHeaders(userType, userId, sessionId),
+          headers: adminHeaders(userType, sessionId),
           body: JSON.stringify(serverPrefs)
         })
           .then(() => console.log('[api] Background sync: savePreferences completed (server-only)'))
@@ -291,7 +290,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // 2. BACKGROUND: Sync to server (fire-and-forget)
       fetch('/task/api/batch-tag', {
         method: 'PATCH',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId, updates })
       })
         .then(() => console.log('[api] Background sync: batchUpdateTags completed'))
@@ -305,7 +304,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // 2. BACKGROUND: Sync to server (fire-and-forget)
       fetch('/task/api/batch-move', {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
       })
         .then(() => console.log('[api] Background sync: batchMoveTasks completed'))
@@ -321,7 +320,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
       // 2. BACKGROUND: Sync to server (fire-and-forget)
       fetch('/task/api/batch-clear-tag', {
         method: 'POST',
-        headers: adminHeaders(userType, userId, sessionId),
+        headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({ boardId, tag, taskIds })
       })
         .then(() => console.log('[api] Background sync: batchClearTag completed'))

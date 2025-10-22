@@ -41,15 +41,15 @@ export async function getBoards(
   auth: AuthContext
 ): Promise<BoardsFile> {
   // Get board metadata (id, name, tags only in board-scoped architecture)
-  const boardsFile = await storage.getBoards(auth.userType, auth.userId);
+  const boardsFile = await storage.getBoards(auth.userType, auth.sessionId);
   
   // Populate each board with its tasks and stats from separate storage
   const populatedBoards = await Promise.all(
     boardsFile.boards.map(async (board) => {
       // Fetch tasks for this board
-      const tasksFile = await storage.getTasks(auth.userType, auth.userId, board.id);
+      const tasksFile = await storage.getTasks(auth.userType, auth.sessionId, board.id);
       // Fetch stats for this board
-      const statsFile = await storage.getStats(auth.userType, auth.userId, board.id);
+      const statsFile = await storage.getStats(auth.userType, auth.sessionId, board.id);
       
       return {
         ...board,
@@ -73,7 +73,7 @@ export async function getBoardTasks(
   auth: AuthContext,
   boardId: string
 ): Promise<Task[]> {
-  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
+  const tasks = await storage.getTasks(auth.userType, auth.sessionId, boardId);
   return tasks.tasks;
 }
 
@@ -85,7 +85,7 @@ export async function getBoardStats(
   auth: AuthContext,
   boardId: string
 ): Promise<StatsFile> {
-  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
+  const stats = await storage.getStats(auth.userType, auth.sessionId, boardId);
   return stats;
 }
 
@@ -401,10 +401,10 @@ export async function batchMoveTasks(
   
   // Load source and target board data
   const [sourceTasks, sourceStats, targetTasks, targetStats] = await Promise.all([
-    storage.getTasks(auth.userType, auth.userId, input.sourceBoardId),
-    storage.getStats(auth.userType, auth.userId, input.sourceBoardId),
-    storage.getTasks(auth.userType, auth.userId, input.targetBoardId),
-    storage.getStats(auth.userType, auth.userId, input.targetBoardId)
+    storage.getTasks(auth.userType, auth.sessionId, input.sourceBoardId),
+    storage.getStats(auth.userType, auth.sessionId, input.sourceBoardId),
+    storage.getTasks(auth.userType, auth.sessionId, input.targetBoardId),
+    storage.getStats(auth.userType, auth.sessionId, input.targetBoardId)
   ]);
   
   // Extract tasks to move from source board
@@ -444,10 +444,10 @@ export async function batchMoveTasks(
   
   // Save all changes atomically per board
   await Promise.all([
-    storage.saveTasks(auth.userType, auth.userId, input.sourceBoardId, updatedSourceTasksFile),
-    storage.saveStats(auth.userType, auth.userId, input.sourceBoardId, updatedSourceStats),
-    storage.saveTasks(auth.userType, auth.userId, input.targetBoardId, updatedTargetTasksFile),
-    storage.saveStats(auth.userType, auth.userId, input.targetBoardId, updatedTargetStats)
+    storage.saveTasks(auth.userType, auth.sessionId, input.sourceBoardId, updatedSourceTasksFile),
+    storage.saveStats(auth.userType, auth.sessionId, input.sourceBoardId, updatedSourceStats),
+    storage.saveTasks(auth.userType, auth.sessionId, input.targetBoardId, updatedTargetTasksFile),
+    storage.saveStats(auth.userType, auth.sessionId, input.targetBoardId, updatedTargetStats)
   ]);
   
   return {

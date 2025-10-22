@@ -276,16 +276,6 @@ The child repo includes a filesystem implementation (`storage.ts`) for self-host
 - **Performance**: ~5-10ms  
 - **Use Case**: Authenticated users
 
-```
-task/data/
-├── friend/
-│   ├── tasks.json    # Active tasks
-│   └── stats.json    # History & analytics
-└── admin/
-    ├── tasks.json
-    └── stats.json
-```
-
 **Git Integration**: Automatic commits for backup and sync.
 
 ### Cloudflare KV Storage (Parent Implements)

@@ -9,15 +9,15 @@ import { SESSION_ID } from '../../api/session'
  * Broadcast a tasks-updated message with a delay to ensure localStorage propagation
  */
 export function deferredBroadcast(
-  sessionId: string,
+  sessionIdParam: string,
   userType: string,
-  userId?: string,
+  sessionId?: string,
   delayMs: number = 50
 ) {
   setTimeout(() => {
     try {
       const bc = new BroadcastChannel('tasks')
-      bc.postMessage({ type: 'tasks-updated', sessionId, userType, userId })
+      bc.postMessage({ type: 'tasks-updated', sessionId: sessionIdParam, userType })
       bc.close()
     } catch (err) {
       console.error('[useTasks] Broadcast failed:', err)
@@ -83,13 +83,13 @@ export async function withPendingOperation<T>(
 export async function withBulkOperation(
   operation: () => Promise<void>,
   userType: string,
-  userId?: string
+  sessionId?: string
 ): Promise<void> {
   await operation()
   
   // Manually broadcast after bulk operation completes
   console.log('[withBulkOperation] Broadcasting bulk update with delay')
-  deferredBroadcast(SESSION_ID, userType, userId)
+  deferredBroadcast(SESSION_ID, userType, sessionId)
 }
 
 /**

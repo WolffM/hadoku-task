@@ -34,7 +34,7 @@ import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
 export default function App(props: TaskAppProps = {}) {
-  const { userType = 'public', userId = 'public', sessionId } = props
+  const { userType = 'public', sessionId = 'public' } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,7 +46,7 @@ export default function App(props: TaskAppProps = {}) {
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
 
   // Hooks for preferences and theme
-  const { preferences, savePreferences, preferencesLoaded, isDarkTheme } = usePreferences(userType, userId, sessionId)
+  const { preferences, savePreferences, preferencesLoaded, isDarkTheme } = usePreferences(userType, sessionId)
   const { theme, showThemePicker, setShowThemePicker, themePickerRef, THEME_FAMILIES, setTheme } = useTheme(preferences, savePreferences, containerRef)
 
   // Compute mobile layout  
@@ -76,7 +76,7 @@ export default function App(props: TaskAppProps = {}) {
     moveTasksToBoard,
     createTagOnBoard,
     deleteTagOnBoard
-  } = useTasks({ userType, userId, sessionId })
+  } = useTasks({ userType, sessionId })
 
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({ 
@@ -113,11 +113,11 @@ export default function App(props: TaskAppProps = {}) {
 
   // Initialize on mount
   useEffect(() => {
-    console.log('[App] User context changed, initializing...', { userType, userId })
+    console.log('[App] User context changed, initializing...', { userType, sessionId })
     void initialLoad()
     inputRef.current?.focus()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userType, userId])
+  }, [userType, sessionId])
 
   // Handler functions
   const handleAddTask = async (input: string) => {
@@ -434,7 +434,7 @@ export default function App(props: TaskAppProps = {}) {
           onClose={() => modals.setShowSettingsModal(false)}
           onSavePreferences={savePreferences}
           onValidateKey={async (key) => {
-            const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
+            const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
             return await api.validateKey(key)
           }}
         />
