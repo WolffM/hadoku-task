@@ -19,11 +19,7 @@ body {
   font-weight: var(--font-weight-normal);
   color: var(--color-text);
   background-color: var(--color-bg);
-  color-scheme: light dark; /* Support both light and dark color schemes */
-  
-  /* Tell Dark Reader to respect our dark themes */
-  --darkreader-bg--color-bg: var(--color-bg);
-  --darkreader-text--color-text: var(--color-text);
+  /* Don't set color-scheme here - let individual theme sections handle it */
 }
 
 /* Light themes explicitly use light color scheme */

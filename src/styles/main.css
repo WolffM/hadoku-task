@@ -384,6 +384,8 @@
   height: 18px;
   flex-shrink: 0;
   accent-color: var(--color-primary);
+  /* Add border for better visibility on light backgrounds */
+  border: 1px solid var(--color-border);
   /* Fallback styling for browsers that don't support accent-color */
   appearance: auto;
   -webkit-appearance: checkbox;

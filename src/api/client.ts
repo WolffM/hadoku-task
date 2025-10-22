@@ -334,31 +334,14 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', us
         const response = await fetch('/task/api/validate-key', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'X-User-Type': userType,
-            'X-User-Id': userId,
-            'X-Session-Id': key
-          }
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ key })
         })
         return response.ok
       } catch (err) {
         console.error('[api] Failed to validate key:', err)
         return false
-      }
-    },
-
-    async setUserId(newUserId: string): Promise<{ ok: boolean; message?: string }> {
-      try {
-        const response = await fetch('/task/api/user/set-id', {
-          method: 'POST',
-          headers: adminHeaders(userType, userId, sessionId),
-          body: JSON.stringify({ newUserId })
-        })
-        const result = await response.json()
-        return result
-      } catch (err) {
-        console.error('[api] Failed to set userId:', err)
-        return { ok: false, message: 'Failed to set userId' }
       }
     }
   }

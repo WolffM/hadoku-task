@@ -62,11 +62,8 @@ export default function App(props: TaskAppProps = {}) {
   const setShowDeleteButton = (show: boolean) => savePreferences({ showDeleteButton: show })
   const setShowTagButton = (show: boolean) => savePreferences({ showTagButton: show })
   
-  const [newUserId, setNewUserId] = useState('')
   const [newKey, setNewKey] = useState('')
   const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
-  const [isChangingUserId, setIsChangingUserId] = useState(false)
-  const [userIdError, setUserIdError] = useState<string | null>(null)
   const [isValidatingKey, setIsValidatingKey] = useState(false)
   const [boardContextMenu, setBoardContextMenu] = useState<{boardId: string, x: number, y: number} | null>(null)
   const [tagContextMenu, setTagContextMenu] = useState<{tag: string, x: number, y: number} | null>(null)
@@ -119,9 +116,49 @@ export default function App(props: TaskAppProps = {}) {
     [preferences.experimentalThemes]
   )
 
+  // Clean up orphaned localStorage keys from intermediate schema versions
+  const cleanupOrphanedKeys = () => {
+    const STORAGE_VERSION = '1.0'
+    const versionKey = 'task-storage-version'
+    const currentVersion = window.localStorage.getItem(versionKey)
+    
+    if (currentVersion !== STORAGE_VERSION) {
+      console.log('[App] Storage version mismatch, cleaning up orphaned keys', { 
+        current: currentVersion, 
+        expected: STORAGE_VERSION 
+      })
+      
+      // Remove orphaned keys from intermediate schema (keys without userType-userId prefix)
+      const orphanedPatterns = [
+        /^tasks-/,          // tasks-main, tasks-work
+        /^stats-/,          // stats-main, stats-work
+        /^boards$/,         // boards (without prefix)
+        /^preferences$/     // preferences (without prefix)
+      ]
+      
+      Object.keys(window.localStorage).forEach(key => {
+        // Only remove if it matches orphaned pattern AND doesn't match current schema
+        const isOrphaned = orphanedPatterns.some(pattern => pattern.test(key))
+        const isCurrentSchema = key.includes(`${userType}-${userId}`)
+        
+        if (isOrphaned && !isCurrentSchema) {
+          console.log('[App] Removing orphaned key:', key)
+          window.localStorage.removeItem(key)
+        }
+      })
+      
+      // Mark storage as upgraded
+      window.localStorage.setItem(versionKey, STORAGE_VERSION)
+      console.log('[App] Storage upgraded to version', STORAGE_VERSION)
+    }
+  }
+
   // Load user preferences on mount (before anything else)
   useEffect(() => {
     const loadPreferences = async () => {
+      // Clean up any orphaned keys from schema changes
+      cleanupOrphanedKeys()
+      
       console.log('[App] Loading preferences...', { userType, userId, sessionId })
       const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
       const prefs = await api.getPreferences()
@@ -141,33 +178,6 @@ export default function App(props: TaskAppProps = {}) {
     setPreferences(newPrefs)
     const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
     await api.savePreferences(newPrefs)
-  }
-
-  // Handle userId change
-  const handleUserIdChange = async () => {
-    if (!newUserId.trim() || isChangingUserId) return
-    
-    setIsChangingUserId(true)
-    setUserIdError(null)
-    
-    try {
-      const api = createApi(userType as 'public' | 'friend' | 'admin', userId, sessionId)
-      const result = await api.setUserId(newUserId.trim())
-      
-      if (result.ok) {
-        // Success - store in sessionStorage for display
-        sessionStorage.setItem('displayUserId', newUserId.trim())
-        setUserIdError(null)
-        setShowSettingsModal(false)
-        setNewUserId('')
-      } else {
-        setUserIdError(result.message || 'Failed to update user ID')
-      }
-    } catch (err) {
-      setUserIdError('Failed to update user ID')
-    } finally {
-      setIsChangingUserId(false)
-    }
   }
 
   // Handle key validation and change
@@ -254,7 +264,8 @@ export default function App(props: TaskAppProps = {}) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showThemePicker])
 
-  // Auto-switch theme variant when Dark Reader / system preference changes
+  // Auto-switch theme variant when system preference changes
+  // Note: Dark Reader handles its own color inversion, we don't need special logic for it
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     
@@ -271,7 +282,7 @@ export default function App(props: TaskAppProps = {}) {
         
         if (currentMode !== targetMode) {
           const newTheme = `${themeFamily}-${targetMode}` as ThemeName
-          console.log(`[Theme] Auto-switching from ${theme} to ${newTheme} (Dark Reader/system preference)`)
+          console.log(`[Theme] Auto-switching from ${theme} to ${newTheme} (system preference)`)
           setTheme(newTheme)
         }
       }
@@ -553,7 +564,7 @@ export default function App(props: TaskAppProps = {}) {
           style={{ cursor: 'pointer' }}
           title="Settings"
         >
-          Tasks{userType !== 'public' ? ` - ${userId || 'user'}` : ''}
+          Tasks
         </h1>
         <div className="theme-picker" ref={themePickerRef}>
           <button 
@@ -938,41 +949,6 @@ export default function App(props: TaskAppProps = {}) {
         {/* User Management Section */}
         <div className="settings-section">
           <h4 className="settings-section-title">User Management</h4>
-          
-          <div className="settings-field">
-            <label className="settings-field-label">Current User ID</label>
-            <div className="settings-field-input-group">
-              <input
-                type="text"
-                className="settings-text-input"
-                value={newUserId || userId}
-                onChange={(e) => setNewUserId(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newUserId && newUserId !== userId && userType !== 'public' && !isChangingUserId) {
-                    handleUserIdChange()
-                  }
-                }}
-                placeholder={userType === 'public' ? 'public' : userId}
-                disabled={userType === 'public' || isChangingUserId}
-              />
-              {newUserId && newUserId !== userId && userType !== 'public' && (
-                <button 
-                  className="settings-field-button"
-                  onClick={handleUserIdChange}
-                  disabled={isChangingUserId}
-                >
-                  {isChangingUserId ? (
-                    <span className="spinner"></span>
-                  ) : (
-                    '↵'
-                  )}
-                </button>
-              )}
-            </div>
-            {userIdError && (
-              <div className="settings-error-message">{userIdError}</div>
-            )}
-          </div>
 
           <div className="settings-field">
             <label className="settings-field-label">Enter New Key</label>
