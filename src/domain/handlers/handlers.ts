@@ -23,7 +23,8 @@ import {
   recordStatsEvent,
   extractTasksFromBoard,
   prepareTasksForBoard,
-  updateBatchMoveStats
+  updateBatchMoveStats,
+  withTaskOperation
 } from './handlers-utils.js';
 
 // --- Read Operations ---
@@ -98,36 +99,30 @@ export async function createTask(
   input: CreateTaskInput,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; id: ULID }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
+  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
+    // Use client-provided ID if available, otherwise generate server-side
+    const id = input.id || generateULID();
+    // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
+    const createdAt = input.createdAt || timestamp;
+    
+    const newTask: Task = {
+      id,
+      title: input.title,
+      tag: input.tag ?? null,
+      state: 'Active',
+      createdAt
+    };
 
-  // Use client-provided ID if available, otherwise generate server-side
-  const id = input.id || generateULID();
-  // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
-  const createdAt = input.createdAt || timestamp;
-  const newTask: Task = {
-    id,
-    title: input.title,
-    tag: input.tag ?? null,
-    state: 'Active',
-    createdAt
-  };
-
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: [newTask, ...tasks.tasks],
-    updatedAt: timestamp
-  };
-
-  const updatedStats = recordStatsEvent(stats, newTask, 'created', timestamp);
-
-  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
-
-  return { ok: true, id };
+    return {
+      updatedTasks: {
+        ...tasks,
+        tasks: [newTask, ...tasks.tasks],
+        updatedAt: timestamp
+      },
+      statsEvents: [{ task: newTask, eventType: 'created' }],
+      result: { ok: true, id }
+    };
+  });
 }
 
 /**
@@ -141,35 +136,28 @@ export async function updateTask(
   input: UpdateTaskInput,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
+  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
+    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
+    const updatedTask: Task = {
+      ...task,
+      ...input,
+      updatedAt: timestamp
+    };
 
-  const updatedTask: Task = {
-    ...task,
-    ...input,
-    updatedAt: timestamp
-  };
+    const newTasks = [...tasks.tasks];
+    newTasks[taskIndex] = updatedTask;
 
-  const newTasks = [...tasks.tasks];
-  newTasks[taskIndex] = updatedTask;
-
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: newTasks,
-    updatedAt: timestamp
-  };
-
-  const updatedStats = recordStatsEvent(stats, updatedTask, 'edited', timestamp);
-
-  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
-
-  return { ok: true, message: `Task ${taskId} updated` };
+    return {
+      updatedTasks: {
+        ...tasks,
+        tasks: newTasks,
+        updatedAt: timestamp
+      },
+      statsEvents: [{ task: updatedTask, eventType: 'edited' }],
+      result: { ok: true, message: `Task ${taskId} updated` }
+    };
+  });
 }
 
 /**
@@ -182,36 +170,29 @@ export async function completeTask(
   taskId: ULID,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
+  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
+    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
+    const completedTask: Task = {
+      ...task,
+      state: 'Completed',
+      closedAt: timestamp,
+      updatedAt: timestamp
+    };
 
-  const completedTask: Task = {
-    ...task,
-    state: 'Completed',
-    closedAt: timestamp,
-    updatedAt: timestamp
-  };
+    const newTasks = [...tasks.tasks];
+    newTasks.splice(taskIndex, 1); // Remove from active tasks
 
-  const newTasks = [...tasks.tasks];
-  newTasks.splice(taskIndex, 1); // Remove from active tasks
-
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: newTasks,
-    updatedAt: timestamp
-  };
-
-  const updatedStats = recordStatsEvent(stats, completedTask, 'completed', timestamp);
-
-  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
-
-  return { ok: true, message: `Task ${taskId} completed` };
+    return {
+      updatedTasks: {
+        ...tasks,
+        tasks: newTasks,
+        updatedAt: timestamp
+      },
+      statsEvents: [{ task: completedTask, eventType: 'completed' }],
+      result: { ok: true, message: `Task ${taskId} completed` }
+    };
+  });
 }
 
 /**
@@ -223,36 +204,29 @@ export async function deleteTask(
   taskId: ULID,
   boardId: string = 'main'
 ): Promise<{ ok: boolean; message: string }> {
-  const timestamp = now();
-  
-  // Get board-scoped tasks and stats
-  const tasks = await storage.getTasks(auth.userType, auth.userId, boardId);
-  const stats = await storage.getStats(auth.userType, auth.userId, boardId);
+  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
+    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
 
-  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
+    const deletedTask: Task = {
+      ...task,
+      state: 'Deleted',
+      closedAt: timestamp,
+      updatedAt: timestamp
+    };
 
-  const deletedTask: Task = {
-    ...task,
-    state: 'Deleted',
-    closedAt: timestamp,
-    updatedAt: timestamp
-  };
+    const newTasks = [...tasks.tasks];
+    newTasks.splice(taskIndex, 1); // Remove from active tasks
 
-  const newTasks = [...tasks.tasks];
-  newTasks.splice(taskIndex, 1); // Remove from active tasks
-
-  const updatedTasksFile: TasksFile = {
-    ...tasks,
-    tasks: newTasks,
-    updatedAt: timestamp
-  };
-
-  const updatedStats = recordStatsEvent(stats, deletedTask, 'deleted', timestamp);
-
-  await storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasksFile);
-  await storage.saveStats(auth.userType, auth.userId, boardId, updatedStats);
-
-  return { ok: true, message: `Task ${taskId} deleted` };
+    return {
+      updatedTasks: {
+        ...tasks,
+        tasks: newTasks,
+        updatedAt: timestamp
+      },
+      statsEvents: [{ task: deletedTask, eventType: 'deleted' }],
+      result: { ok: true, message: `Task ${taskId} deleted` }
+    };
+  });
 }
 
 // --- Board Operations ---

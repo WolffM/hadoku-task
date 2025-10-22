@@ -163,3 +163,55 @@ export function updateBatchMoveStats(
   
   return { updatedSourceStats, updatedTargetStats };
 }
+
+// --- Task Operation Pattern Helper ---
+
+/**
+ * Generic wrapper for task operations that follow the load→modify→save pattern
+ * Handles loading tasks/stats, applying transformation, updating stats, and saving
+ * 
+ * @param storage - Storage instance
+ * @param auth - Auth context
+ * @param boardId - Board ID
+ * @param operation - Function that transforms tasks and returns result + stat event info
+ * @returns Result from the operation
+ */
+export async function withTaskOperation<T>(
+  storage: any, // Storage type from server
+  auth: any, // AuthContext type
+  boardId: string,
+  operation: (
+    tasks: TasksFile,
+    stats: StatsFile,
+    timestamp: string
+  ) => {
+    updatedTasks: TasksFile;
+    statsEvents: Array<{ task: Task; eventType: 'created' | 'completed' | 'edited' | 'deleted' }>;
+    result: T;
+  }
+): Promise<T> {
+  const timestamp = new Date().toISOString();
+  
+  // Load current state
+  const [tasks, stats] = await Promise.all([
+    storage.getTasks(auth.userType, auth.userId, boardId),
+    storage.getStats(auth.userType, auth.userId, boardId)
+  ]);
+  
+  // Execute operation
+  const { updatedTasks, statsEvents, result } = operation(tasks, stats, timestamp);
+  
+  // Update stats with all events
+  let updatedStats = stats;
+  for (const { task, eventType } of statsEvents) {
+    updatedStats = recordStatsEvent(updatedStats, task, eventType, timestamp);
+  }
+  
+  // Save both files
+  await Promise.all([
+    storage.saveTasks(auth.userType, auth.userId, boardId, updatedTasks),
+    storage.saveStats(auth.userType, auth.userId, boardId, updatedStats)
+  ]);
+  
+  return result;
+}
