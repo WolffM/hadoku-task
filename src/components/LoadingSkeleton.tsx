@@ -13,19 +13,33 @@ export function LoadingSkeleton({ isDarkTheme }: LoadingSkeletonProps) {
   return (
     <div className="task-app-loading" data-dark-theme={isDarkTheme ? 'true' : 'false'}>
       <div className="task-app-loading__skeleton">
-        <div className="skeleton-header"></div>
+        {/* Header */}
+        <div className="skeleton-header-row">
+          <div className="skeleton-header"></div>
+          <div className="skeleton-theme-button"></div>
+        </div>
+        
+        {/* Boards */}
         <div className="skeleton-boards">
           <div className="skeleton-board"></div>
           <div className="skeleton-board"></div>
-          <div className="skeleton-board"></div>
+          <div className="skeleton-board-add"></div>
         </div>
+        
+        {/* Input */}
         <div className="skeleton-input"></div>
+        
+        {/* Tag filters */}
         <div className="skeleton-filters">
           <div className="skeleton-filter"></div>
           <div className="skeleton-filter"></div>
           <div className="skeleton-filter"></div>
+          <div className="skeleton-filter-add"></div>
         </div>
-        <div className="skeleton-tasks">
+        
+        {/* Task column */}
+        <div className="skeleton-column">
+          <div className="skeleton-column-header"></div>
           <div className="skeleton-task"></div>
           <div className="skeleton-task"></div>
           <div className="skeleton-task"></div>

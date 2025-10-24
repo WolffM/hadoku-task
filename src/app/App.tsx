@@ -53,7 +53,7 @@ export default function App(props: TaskAppProps = {}) {
   const isMobileDevice = useIsMobile()
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
-  const [sessionInitialized, setSessionInitialized] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
   
   // Initialize effectiveSessionId immediately for public users to prevent storage churn
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
@@ -137,7 +137,7 @@ export default function App(props: TaskAppProps = {}) {
       
       // Get old sessionId before handshake
       const oldSessionId = getStoredSessionId()
-      
+
       // Perform handshake (for public users, this ensures stable sessionId in localStorage)
       const serverPreferences = await performSessionHandshake(propsSessionId, userType)
       
@@ -178,12 +178,12 @@ export default function App(props: TaskAppProps = {}) {
         setEffectiveSessionId(finalSessionId)
       }
       
-      // Mark session as initialized
-      setSessionInitialized(true)
-      
       // Now load full data from API
       console.log('[App] Loading data from API...')
       await initialLoad()
+      
+      // Mark as fully loaded (session initialized + preferences loaded + data loaded)
+      setIsLoaded(true)
     }
     
     void initializeSession()
@@ -315,10 +315,10 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
-  // Show loading skeleton until session is initialized
+  // Show loading skeleton until everything is loaded
   // Use system preference for theme during initial load, then switch to user preference
-  if (!sessionInitialized || !preferencesLoaded) {
-    return <LoadingSkeleton isDarkTheme={preferencesLoaded ? isDarkTheme : systemPrefersDark} />
+  if (!isLoaded) {
+    return <LoadingSkeleton isDarkTheme={systemPrefersDark} />
   }
 
   return (

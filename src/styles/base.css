@@ -120,11 +120,36 @@ body {
   background-color: var(--color-bg);
   padding: 1rem;
   box-sizing: border-box;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dark theme for loading skeleton */
+.task-app-loading[data-dark-theme="true"] {
+  --color-bg: #1a1a1a;
+  --color-bg-alt: #2a2a2a;
+  --color-neutral-light: #3a3a3a;
+}
+
+/* Light theme for loading skeleton */
+.task-app-loading[data-dark-theme="false"] {
+  --color-bg: #ffffff;
+  --color-bg-alt: #f0f0f0;
+  --color-neutral-light: #e0e0e0;
 }
 
 .task-app-loading__skeleton {
-  max-width: 1200px;
+  max-width: 720px;
   margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 /* Shimmer animation for skeleton elements */
@@ -138,9 +163,13 @@ body {
 }
 
 .skeleton-header,
+.skeleton-theme-button,
 .skeleton-board,
+.skeleton-board-add,
 .skeleton-input,
 .skeleton-filter,
+.skeleton-filter-add,
+.skeleton-column-header,
 .skeleton-task {
   background: linear-gradient(
     90deg,
@@ -153,11 +182,23 @@ body {
   border-radius: 0.5rem;
 }
 
-/* Skeleton header */
-.skeleton-header {
-  height: 3rem;
-  width: 200px;
+/* Skeleton header row */
+.skeleton-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.skeleton-header {
+  height: 2.5rem;
+  width: 150px;
+}
+
+.skeleton-theme-button {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 50%;
 }
 
 /* Skeleton boards */
@@ -165,16 +206,22 @@ body {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .skeleton-board {
   height: 2.5rem;
-  width: 100px;
+  width: 80px;
+}
+
+.skeleton-board-add {
+  height: 2.5rem;
+  width: 40px;
 }
 
 /* Skeleton input */
 .skeleton-input {
-  height: 2.5rem;
+  height: 3rem;
   width: 100%;
   margin-bottom: 1rem;
 }
@@ -189,17 +236,27 @@ body {
 
 .skeleton-filter {
   height: 2rem;
-  width: 80px;
+  width: 90px;
 }
 
-/* Skeleton tasks */
-.skeleton-tasks {
+.skeleton-filter-add {
+  height: 2rem;
+  width: 30px;
+}
+
+/* Skeleton column */
+.skeleton-column {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
+.skeleton-column-header {
+  height: 2rem;
+  width: 120px;
+}
+
 .skeleton-task {
-  height: 3rem;
+  height: 4rem;
   width: 100%;
 }
