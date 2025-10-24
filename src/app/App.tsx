@@ -54,7 +54,16 @@ export default function App(props: TaskAppProps = {}) {
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [sessionInitialized, setSessionInitialized] = useState(false)
-  const [effectiveSessionId, setEffectiveSessionId] = useState(propsSessionId)
+  
+  // Initialize effectiveSessionId immediately for public users to prevent storage churn
+  const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
+    // For public users, use stored sessionId immediately if available
+    if (userType === 'public') {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('currentSessionId') : null
+      return stored || propsSessionId
+    }
+    return propsSessionId
+  })
 
   // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
   const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences } = usePreferences(userType, effectiveSessionId, true)
