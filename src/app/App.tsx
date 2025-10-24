@@ -41,6 +41,14 @@ export default function App(props: TaskAppProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Detect system color scheme preference for initial loading
+  const [systemPrefersDark] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  })
+
   // Basic state
   const isMobileDevice = useIsMobile()
   const [placeholder] = useState(() => getRandomPlaceholder())
@@ -288,8 +296,9 @@ export default function App(props: TaskAppProps = {}) {
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
   // Show loading skeleton until session is initialized
+  // Use system preference for theme during initial load, then switch to user preference
   if (!sessionInitialized || !preferencesLoaded) {
-    return <LoadingSkeleton isDarkTheme={isDarkTheme} />
+    return <LoadingSkeleton isDarkTheme={preferencesLoaded ? isDarkTheme : systemPrefersDark} />
   }
 
   return (
