@@ -13,21 +13,31 @@ export interface UsePreferencesReturn {
   savePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   preferencesLoaded: boolean
   isDarkTheme: boolean
+  setPreferences: (prefs: UserPreferences) => void
 }
 
 /**
  * Hook to manage user preferences
  * Handles loading, saving, migrations, and storage cleanup
+ * 
+ * NOTE: Initial loading is now handled by App.tsx via session handshake.
+ * This hook maintains preferences state and provides save functionality.
  */
 export function usePreferences(
   userType: string,
-  sessionId: string
+  sessionId: string,
+  skipInitialLoad: boolean = false
 ): UsePreferencesReturn {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [preferencesLoaded, setPreferencesLoaded] = useState(false)
 
-  // Load preferences on mount
+  // Load preferences on mount (only if not skipped)
   useEffect(() => {
+    if (skipInitialLoad) {
+      setPreferencesLoaded(true)
+      return
+    }
+    
     const loadPreferences = async () => {
       // Clean up any orphaned keys from schema changes
       cleanupOrphanedKeys(userType, sessionId)
@@ -56,7 +66,7 @@ export function usePreferences(
     }
     
     void loadPreferences()
-  }, [userType, sessionId])
+  }, [userType, sessionId, skipInitialLoad])
 
   // Save preferences function
   const savePreferences = async (updates: Partial<UserPreferences>) => {
@@ -74,6 +84,7 @@ export function usePreferences(
     preferences,
     savePreferences,
     preferencesLoaded,
-    isDarkTheme
+    isDarkTheme,
+    setPreferences
   }
 }

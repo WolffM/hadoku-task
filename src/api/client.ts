@@ -231,53 +231,40 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
 
     // User preferences
     async getPreferences() {
-      // Always start with local preferences (includes device-specific settings)
-      const localPrefs = await localStorage.getPreferences()
-      
-      // Try to sync server preferences (cross-device settings only)
-      try {
-        const response = await fetch('/task/api/preferences', {
-          headers: adminHeaders(userType, sessionId)
-        })
-        if (response.ok) {
-          const serverPrefs = await response.json()
-          // Merge server preferences with local (preserve device-specific settings)
-          const mergedPrefs = {
-            ...localPrefs,  // Keep device-specific settings (theme, buttons)
-            ...serverPrefs, // Override with server preferences (experimentalThemes, alwaysVerticalLayout)
-            // Ensure device-specific settings are never overwritten by server
-            theme: localPrefs.theme,
-            showCompleteButton: localPrefs.showCompleteButton,
-            showDeleteButton: localPrefs.showDeleteButton,
-            showTagButton: localPrefs.showTagButton
+      // For non-public users, always fetch from server
+      if (userType !== 'public') {
+        try {
+          const response = await fetch('/task/api/preferences', {
+            headers: adminHeaders(userType, sessionId)
+          })
+          if (response.ok) {
+            const serverPrefs = await response.json()
+            console.log('[api] Fetched preferences from server:', serverPrefs)
+            // Also save to localStorage for offline access
+            await localStorage.savePreferences(serverPrefs)
+            return serverPrefs
           }
-          // Save merged preferences to localStorage
-          await localStorage.savePreferences(mergedPrefs)
-          console.log('[api] Synced server preferences, preserved device-specific settings')
-          return mergedPrefs
+        } catch (err) {
+          console.warn('[api] Failed to fetch preferences from server, using localStorage:', err)
         }
-      } catch (err) {
-        console.warn('[api] Failed to fetch preferences from server, using localStorage:', err)
       }
-      // Fallback to localStorage only
-      return localPrefs
+      
+      // Fallback to localStorage (for public users or if server fails)
+      return await localStorage.getPreferences()
     },
 
     async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>) {
-      // Always save to localStorage (includes device-specific settings)
+      // Always save to localStorage first (for immediate UI update)
       await localStorage.savePreferences(prefs)
       
-      // Extract server-syncable preferences (exclude device-specific ones)
-      const { theme, showCompleteButton, showDeleteButton, showTagButton, ...serverPrefs } = prefs
-      
-      // Only sync non-device-specific preferences to server
-      if (Object.keys(serverPrefs).length > 0) {
+      // For non-public users, sync to server
+      if (userType !== 'public') {
         fetch('/task/api/preferences', {
           method: 'PUT',
           headers: adminHeaders(userType, sessionId),
-          body: JSON.stringify(serverPrefs)
+          body: JSON.stringify(prefs)
         })
-          .then(() => console.log('[api] Background sync: savePreferences completed (server-only)'))
+          .then(() => console.log('[api] Background sync: savePreferences completed'))
           .catch(err => console.error('[api] Failed to sync savePreferences:', err))
       }
     },

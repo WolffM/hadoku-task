@@ -13,6 +13,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { performSessionHandshake, clearOldSessionStorage, getStoredSessionId } from '../api/session'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader } from '../components/AppHeader'
 import { BoardsSection } from '../components/BoardsSection'
@@ -34,7 +35,7 @@ import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
 export default function App(props: TaskAppProps = {}) {
-  const { userType = 'public', sessionId = 'public' } = props
+  const { userType = 'public', sessionId: propsSessionId = 'public' } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
@@ -44,9 +45,11 @@ export default function App(props: TaskAppProps = {}) {
   const isMobileDevice = useIsMobile()
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
+  const [sessionInitialized, setSessionInitialized] = useState(false)
+  const [effectiveSessionId, setEffectiveSessionId] = useState(propsSessionId)
 
-  // Hooks for preferences and theme
-  const { preferences, savePreferences, preferencesLoaded, isDarkTheme } = usePreferences(userType, sessionId)
+  // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
+  const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences } = usePreferences(userType, effectiveSessionId, true)
   const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme } = useTheme(preferences, savePreferences, containerRef)
 
   // Compute mobile layout  
@@ -76,7 +79,7 @@ export default function App(props: TaskAppProps = {}) {
     moveTasksToBoard,
     createTagOnBoard,
     deleteTagOnBoard
-  } = useTasks({ userType, sessionId })
+  } = useTasks({ userType, sessionId: effectiveSessionId })
 
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({ 
@@ -110,13 +113,54 @@ export default function App(props: TaskAppProps = {}) {
     setSelectedFilters(new Set())
   }, [currentBoardId])
 
-  // Initialize on mount
+  // Session handshake and initialization on mount
   useEffect(() => {
-    console.log('[App] User context changed, initializing...', { userType, sessionId })
-    void initialLoad()
-    inputRef.current?.focus()
+    async function initializeSession() {
+      console.log('[App] Initializing session...', { userType, sessionId: propsSessionId })
+      
+      // Get old sessionId before handshake
+      const oldSessionId = getStoredSessionId()
+      
+      // Perform handshake (for public users, this ensures stable sessionId in localStorage)
+      const serverPreferences = await performSessionHandshake(propsSessionId, userType)
+      
+      // Determine the effective sessionId to use
+      let finalSessionId = propsSessionId
+      if (userType === 'public') {
+        // Public users: use their stable localStorage sessionId
+        finalSessionId = getStoredSessionId() || propsSessionId
+        console.log('[App] Public user - using stable sessionId:', finalSessionId)
+      } else {
+        // Authenticated users: use the sessionId from props (from parent)
+        finalSessionId = propsSessionId
+        
+        // Apply server preferences if available
+        if (serverPreferences) {
+          setPreferences(serverPreferences)
+          console.log('[App] Applied preferences from handshake:', serverPreferences)
+        }
+        
+        // Clear old session storage keys if sessionId changed
+        if (oldSessionId && oldSessionId !== propsSessionId) {
+          console.log('[App] SessionId changed, clearing old storage')
+          clearOldSessionStorage(oldSessionId, userType)
+        }
+      }
+      
+      // Set the effective sessionId for all hooks to use
+      setEffectiveSessionId(finalSessionId)
+      
+      // Mark session as initialized
+      setSessionInitialized(true)
+      
+      // Now load full data from API
+      console.log('[App] Loading data from API...')
+      await initialLoad()
+    }
+    
+    void initializeSession()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userType, sessionId])
+  }, [userType, propsSessionId])
 
   // Handler functions
   const handleAddTask = async (input: string) => {
@@ -243,8 +287,8 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
-  // Show loading skeleton until preferences are loaded
-  if (!preferencesLoaded) {
+  // Show loading skeleton until session is initialized
+  if (!sessionInitialized || !preferencesLoaded) {
     return <LoadingSkeleton isDarkTheme={isDarkTheme} />
   }
 
@@ -438,7 +482,7 @@ export default function App(props: TaskAppProps = {}) {
           onClose={() => modals.setShowSettingsModal(false)}
           onSavePreferences={savePreferences}
           onValidateKey={async (key) => {
-            const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
+            const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
             return await api.validateKey(key)
           }}
         />
