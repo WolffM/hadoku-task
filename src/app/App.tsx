@@ -147,6 +147,14 @@ export default function App(props: TaskAppProps = {}) {
         // Public users: use their stable localStorage sessionId
         finalSessionId = getStoredSessionId() || propsSessionId
         console.log('[App] Public user - using stable sessionId:', finalSessionId)
+        
+        // For public users, load preferences from localStorage now
+        const api = createApi('public', finalSessionId)
+        const localPrefs = await api.getPreferences()
+        if (localPrefs) {
+          setPreferences(localPrefs)
+          console.log('[App] Loaded public user preferences from localStorage:', localPrefs)
+        }
       } else {
         // Authenticated users: use the sessionId from props (from parent)
         finalSessionId = propsSessionId
@@ -164,8 +172,11 @@ export default function App(props: TaskAppProps = {}) {
         }
       }
       
-      // Set the effective sessionId for all hooks to use
-      setEffectiveSessionId(finalSessionId)
+      // Set the effective sessionId for all hooks to use (only if different)
+      if (finalSessionId !== effectiveSessionId) {
+        console.log('[App] Updating effectiveSessionId:', { from: effectiveSessionId, to: finalSessionId })
+        setEffectiveSessionId(finalSessionId)
+      }
       
       // Mark session as initialized
       setSessionInitialized(true)
