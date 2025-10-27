@@ -1,4 +1,18 @@
-npm run version:smart
-npm run build:all
-node scripts/trim-changelog.js
-git add package.json package-lock.json docs/CHANGELOG.md
+# Check if themes package changed
+if git diff --cached --name-only | grep -q "^themes/"; then
+  echo "📦 Themes package changed, bumping version..."
+  cd themes
+  npm run version:smart
+  npm run build
+  git add package.json package-lock.json
+  cd ..
+fi
+
+# Check if task package changed (root package)
+if git diff --cached --name-only | grep -qv "^themes/"; then
+  echo "📦 Task package changed, bumping version..."
+  npm run version:smart
+  npm run build:all
+  node scripts/trim-changelog.js
+  git add package.json package-lock.json docs/CHANGELOG.md
+fi
