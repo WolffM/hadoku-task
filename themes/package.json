@@ -1,0 +1,43 @@
+{
+  "name": "@wolffm/themes",
+  "version": "1.0.0",
+  "description": "14 beautiful themes (7 base themes with light/dark variants) using CSS custom properties - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Pink",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WolffM/hadoku-task.git",
+    "directory": "themes"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "dist",
+    "src/themes.css",
+    "README.md"
+  ],
+  "exports": {
+    "./themes.css": "./src/themes.css",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "themes",
+    "css-variables",
+    "design-tokens",
+    "dark-mode",
+    "color-schemes",
+    "hadoku"
+  ],
+  "author": "WolffM",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
