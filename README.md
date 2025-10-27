@@ -14,19 +14,9 @@ Native Android app available! Built with Capacitor WebView wrapper.
 
 **Quick Download:**
 - 📥 [Latest APK](https://github.com/WolffM/hadoku-task-mobile/releases/latest/download/hadoku-task.apk)
-- 🔄 [Add to Obtainium](obtainium://add/https://github.com/WolffM/hadoku-task-mobile) - One-click auto-update setup
+- 🔄 **Obtainium**: [Install Obtainium](https://github.com/ImranR98/Obtainium/releases/latest), then add URL: `https://github.com/WolffM/hadoku-task-mobile`
 
 **Repository:** [hadoku-task-mobile](https://github.com/WolffM/hadoku-task-mobile)
-
-<details>
-<summary>Manual Obtainium setup (if deep link doesn't work)</summary>
-
-1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases/latest) on your Android device
-2. Open Obtainium and tap "Add App"
-3. Enter URL: `https://github.com/WolffM/hadoku-task-mobile`
-4. Obtainium will auto-detect releases and notify you of updates
-
-</details>
 
 ---
 
