@@ -24,15 +24,15 @@ jobs:
       
       - name: Configure npm for GitHub Packages
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Install dependencies (Task)
         run: npm ci
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build Task package
         run: npm run build:all
@@ -65,7 +65,7 @@ jobs:
         if: steps.themes_changed.outputs.changed == 'true'
         run: cd themes && npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Notify parent about themes update
         if: steps.themes_changed.outputs.changed == 'true'
@@ -111,7 +111,7 @@ jobs:
         if: steps.task_changed.outputs.changed == 'true'
         run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Notify parent about task update
         if: steps.task_changed.outputs.changed == 'true'
