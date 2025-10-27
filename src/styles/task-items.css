@@ -2,6 +2,11 @@
  * Task item styles - List and individual task items
  */
 
+/* Component-specific sizes */
+.task-app-container {
+  --size-task-item-min-height: 60px;
+}
+
 .task-app__list {
   list-style: none;
   padding: 0;
@@ -25,7 +30,7 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
+  border-radius: var(--border-radius-lg);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
   cursor: grab;

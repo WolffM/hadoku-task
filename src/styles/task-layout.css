@@ -38,7 +38,7 @@
 .task-app__tag-column {
   /* Minimal default: no border or background to keep layout clean */
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   padding: var(--spacing-lg);
   background: transparent;
   transition: all var(--transition-smooth);
@@ -83,7 +83,7 @@
 .task-app__remaining {
   /* Minimal default like tag columns */
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   padding: var(--spacing-lg);
   background: transparent;
   transition: all var(--transition-smooth);

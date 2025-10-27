@@ -304,7 +304,7 @@
   flex: 1;
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   background: var(--color-bg-card);
   color: var(--color-text);
   font-size: var(--font-size-sm);
@@ -328,7 +328,7 @@
 .settings-field-button {
   padding: var(--spacing-sm) var(--spacing-md);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   background: var(--color-primary);
   color: white;
   font-size: var(--font-size-base);
@@ -380,7 +380,7 @@
   gap: var(--spacing-md);
   cursor: pointer;
   padding: var(--spacing-md);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   transition: background var(--transition-fast);
 }
 
@@ -465,7 +465,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   transition: color var(--transition-fast),
               background-color var(--transition-fast);
   opacity: 0.6;
@@ -578,7 +578,7 @@
   left: 0;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   box-shadow: var(--shadow-sm);
   z-index: 30;
   padding: 6px;
@@ -672,7 +672,7 @@
 .task-app__input {
   flex: 1;
   padding: 10px var(--spacing-lg);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   border: 1px solid var(--color-border);
   background-color: var(--color-bg-card);
   color: var(--color-text);
@@ -765,7 +765,7 @@
   position: fixed;
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-modal);
   padding: var(--spacing-xs);
   z-index: 10000;
@@ -781,7 +781,7 @@
   background: transparent;
   color: var(--color-text);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: var(--font-size-sm);
   transition: background-color var(--transition-fast);
 }

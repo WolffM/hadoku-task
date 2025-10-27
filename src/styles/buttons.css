@@ -2,6 +2,12 @@
  * Button styles - All button variants
  */
 
+/* Component-specific sizes */
+.task-app-container {
+  --size-action-btn-width: 32px;
+  --size-sort-btn-min-width: 20px;
+}
+
 /* Shared button utilities */
 .task-app__btn-fade {
   transition: opacity var(--transition-smooth),
@@ -18,7 +24,7 @@
   border: none;
   padding: var(--spacing-sm);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: var(--font-size-base);
   color: var(--color-text);
   opacity: 0.7;
@@ -60,8 +66,8 @@
 }
 
 .task-app__action-btn:last-child {
-  border-top-right-radius: var(--radius-lg);
-  border-bottom-right-radius: var(--radius-lg);
+  border-top-right-radius: var(--border-radius-lg);
+  border-bottom-right-radius: var(--border-radius-lg);
 }
 
 .task-app__action-btn:disabled {
@@ -114,7 +120,7 @@
   border: none;
   padding: var(--spacing-xs);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: 22px;
   color: var(--color-primary);
   transition: background-color var(--transition-smooth);
@@ -144,7 +150,7 @@
   border: none;
   padding: var(--spacing-xs);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: 20px;
   color: var(--color-danger);
   opacity: 0.7;
@@ -175,7 +181,7 @@
   color: var(--color-danger-text);
   border: none;
   padding: 6px var(--spacing-lg);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   font-size: var(--font-size-xs);
   cursor: pointer;
   transition: background-color var(--transition-smooth);

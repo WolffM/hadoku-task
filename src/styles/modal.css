@@ -20,7 +20,7 @@
 .modal-card {
   background-color: var(--color-bg-card);
   padding: var(--spacing-3xl);
-  border-radius: var(--radius-md);
+  border-radius: var(--border-radius-md);
   max-width: 400px;
   box-shadow: var(--shadow-modal);
   color: var(--color-text);
@@ -52,7 +52,7 @@
   padding: var(--spacing-md) var(--spacing-lg);
   font-size: var(--font-size-base);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   margin-bottom: var(--spacing-xl);
   background-color: var(--color-bg-card);
   color: var(--color-text);
@@ -82,7 +82,7 @@
   padding: var(--spacing-md) var(--spacing-xl);
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   background-color: var(--color-bg-card);
   color: var(--color-text);
   font-size: var(--font-size-base);
@@ -142,7 +142,7 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-lg);
   background-color: var(--color-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   border: 1px solid var(--color-border-light);
   max-height: 120px;
   overflow-y: auto;
@@ -154,7 +154,7 @@
   padding: var(--spacing-xs) var(--spacing-md);
   background-color: var(--color-primary-light);
   color: var(--color-primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
@@ -184,7 +184,7 @@
   width: 100%;
   padding: var(--spacing-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   font-size: var(--font-size-base);
   background-color: var(--color-bg-input);
   color: var(--color-text);
@@ -219,7 +219,7 @@
 .edit-tag-pill {
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--border-radius-sm);
   background-color: var(--color-bg-hover);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
