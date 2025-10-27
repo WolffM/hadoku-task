@@ -3,7 +3,6 @@
  * Main stylesheet that imports all component styles
  */
 
-@import './variables.css';
 @import './base.css';
 @import './buttons.css';
 @import './task-items.css';
