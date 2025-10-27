@@ -2,6 +2,8 @@
 
 **A minimalist, portable task tracking micro-frontend**
 
+Live at: https://hadoku.me/task/
+
 Fast, focused task management with tags, filtering, and multi-user support. Built as a reusable micro-frontend with framework-agnostic API handlers. Perfect for embedding in larger applications or using standalone.
 
 ---
