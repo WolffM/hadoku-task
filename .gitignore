@@ -1,5 +1,6 @@
 # Node modules
 node_modules/
+themes/node_modules/
 dist/
 dist-ssr/
 
@@ -28,7 +29,6 @@ src/**/*.d.ts.map
 .env
 .env.local
 .env.*.local
-.npmrc
 
 # Backup files
 *.old.*
