@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "14 beautiful themes (7 base themes with light/dark variants) using CSS custom properties - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Pink",
   "type": "module",
   "repository": {

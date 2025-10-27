@@ -48,6 +48,35 @@ const theme = loadTheme()
 console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 ```
 
+### Use Theme Picker UI (Optional)
+
+The package includes a simple, framework-agnostic theme picker UI:
+
+```typescript
+import { createThemePicker, injectThemePickerStyles } from '@wolffm/themes'
+
+// Inject default styles (call once)
+injectThemePickerStyles()
+
+// Create theme picker
+const picker = createThemePicker({
+  currentTheme: 'dark',
+  includeExperimental: true, // Include pink theme
+  onThemeChange: (theme) => {
+    console.log('Theme changed to:', theme)
+  },
+  container: document.getElementById('theme-picker-container')
+})
+
+// Programmatically change theme
+picker.setTheme('ocean-light')
+
+// Clean up when done
+picker.destroy()
+```
+
+The theme picker works in vanilla JS, React, Vue, or any framework!
+
 ### Apply to HTML
 
 ```html

@@ -80,3 +80,13 @@ export function clearTheme(): void {
   sessionStorage.removeItem('hadoku-theme')
   setTheme('light')
 }
+
+// Export theme picker UI
+export { 
+  createThemePicker, 
+  injectThemePickerStyles,
+  BASE_THEME_FAMILIES,
+  EXPERIMENTAL_THEME_FAMILIES,
+  type ThemePickerOptions,
+  type ThemeFamily
+} from './picker.js'
