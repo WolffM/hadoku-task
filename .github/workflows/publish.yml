@@ -22,18 +22,29 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@wolffm'
       
-      - name: Install dependencies
+      - name: Install dependencies (Task)
         run: npm ci
       
-      - name: Build
+      - name: Build Task package
         run: npm run build:all
+      
+      - name: Install dependencies (Themes)
+        run: cd themes && npm ci
+      
+      - name: Build Themes package
+        run: cd themes && npm run build
       
       - name: Configure npm for GitHub Packages
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
       
-      - name: Publish to GitHub Packages
+      - name: Publish Themes package
+        run: cd themes && npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Publish Task package
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
