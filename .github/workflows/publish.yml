@@ -5,6 +5,8 @@ on:
     branches:
       - main  # Trigger on every push to main
   workflow_dispatch:  # Allow manual trigger
+  repository_dispatch:
+    types: [themes_package_updated]  # Allow parent to trigger updates
 
 permissions:
   contents: read
@@ -43,6 +45,46 @@ jobs:
         run: cd themes && npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Notify parent about themes update
+        if: success()
+        env:
+          HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+        run: |
+          echo "Notifying parent repos about @wolffm/themes update..."
+          
+          if [ -z "$HADOKU_SITE_TOKEN" ]; then
+            echo "⚠️  Warning: HADOKU_SITE_TOKEN not available, skipping notification"
+            exit 0
+          fi
+          
+          # Notify hadoku_site
+          payload=$(cat <<EOF
+            {
+              "event_type": "themes_package_updated",
+              "client_payload": {
+                "package": "@wolffm/themes",
+                "sha": "${{ github.sha }}",
+                "ref": "${{ github.ref }}"
+              }
+            }
+          EOF
+          )
+
+          status_code=$(curl -sS \
+            -o /dev/null \
+            -w "%{http_code}" \
+            -X POST "https://api.github.com/repos/WolffM/hadoku_site/dispatches" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $HADOKU_SITE_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$payload")
+
+          if [ "$status_code" = "204" ]; then
+            echo "✅ Notified hadoku_site about themes update"
+          else
+            echo "⚠️  Failed to notify hadoku_site (HTTP $status_code)"
+          fi
       
       - name: Publish Task package
         run: npm publish
