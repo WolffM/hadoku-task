@@ -5,8 +5,6 @@ on:
     branches:
       - main  # Trigger on every push to main
   workflow_dispatch:  # Allow manual trigger
-  repository_dispatch:
-    types: [themes_package_updated]  # Allow parent to trigger updates
 
 permissions:
   contents: read
@@ -36,18 +34,28 @@ jobs:
       - name: Build Themes package
         run: cd themes && npm run build
       
+      - name: Check if themes package changed
+        id: themes_changed
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^themes/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Configure npm for GitHub Packages
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
       
       - name: Publish Themes package
+        if: steps.themes_changed.outputs.changed == 'true'
         run: cd themes && npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Notify parent about themes update
-        if: success()
+        if: steps.themes_changed.outputs.changed == 'true' && success()
         env:
           HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
