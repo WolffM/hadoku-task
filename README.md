@@ -1,204 +1,97 @@
 ﻿# Hadoku Task Manager
 
-**A minimalist task tracking micro-frontend for hadoku.me**
+**A minimalist, portable task tracking micro-frontend**
 
-Fast, focused task management with tags, filtering, and multi-user support. Built as a portable micro-frontend with framework-agnostic API handlers and session-based authentication.
+Fast, focused task management with tags, filtering, and multi-user support. Built as a reusable micro-frontend with framework-agnostic API handlers. Perfect for embedding in larger applications or using standalone.
 
 ---
 
-## Quick Start
+## 📱 Mobile App (Android)
+
+Native Android app available! Built with Capacitor WebView wrapper.
+
+**Quick Download:**
+- 📥 [Latest APK](https://github.com/WolffM/hadoku-task-mobile/releases/latest/download/hadoku-task.apk)
+- 🔄 [Install with Obtainium](https://github.com/ImranR98/Obtainium) - Auto-update from GitHub releases
+
+**Repository:** [hadoku-task-mobile](https://github.com/WolffM/hadoku-task-mobile)
+
+<details>
+<summary>How to install with Obtainium</summary>
+
+1. Install [Obtainium](https://github.com/ImranR98/Obtainium/releases/latest) on your Android device
+2. Add app with these details:
+   - **App Source URL**: `https://github.com/WolffM/hadoku-task-mobile`
+   - **App Name**: Hadoku Task
+   - **Release URL Pattern**: Uses default GitHub releases pattern
+3. Obtainium will auto-detect new releases and notify you of updates!
+
+</details>
+
+---
+
+## ✨ Features
+
+- ⚡ **Quick Task Entry** - Type and press Enter
+- 🏷️ **Tag Support** - Organize with `#tags`  
+- 🔍 **Smart Filtering** - Filter by tag or view all
+- 🎯 **Drag & Drop** - Reorder tasks and move between boards
+- 🎨 **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
+- 📋 **Multi-Board** - Organize tasks across multiple boards
+- ⚡ **Optimistic Updates** - Instant UI response with background sync
+- 👥 **Multi-User** - Public (localStorage), Friend/Admin (server sync)
+- 🔌 **Framework Agnostic** - Pure handlers work with any backend
+
+---
+
+## 🚀 Quick Start
+
+### Install and Run
 
 ```bash
-# Install and run
 npm install
 npm run dev
 # Open http://localhost:5173?userType=public
 ```
 
----
-
-## Features
-
-- ⚡ **Quick Task Entry** - Type and press Enter
-- 🏷️ **Tag Support** - Organize with `#tags`
-- 🔍 **Smart Filtering** - Filter by tag or view all
-- 🎯 **Drag & Drop** - Move tasks between columns and boards
-- 🎨 **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
-- ⚙️ **Session Management** - Settings modal with session key management
-- 📋 **Multi-Board** - Organize tasks across multiple boards
-- ⚡ **Optimistic Updates** - Instant UI response, background sync
-- 👥 **Multi-User** - Public (localStorage only), Friend/Admin (server sync)
-- 🔌 **Framework Agnostic** - Pure handlers work with any backend framework
-
----
-
-## Usage
-
-### Creating Tasks
-```
-Buy groceries [Enter]                    # Plain task
-Buy groceries #home [Enter]              # With tag
-Fix bug #high priority [Enter]           # Multi-word tag  #high-priority
-```
-
-### Actions
-- **** Mark complete
-- **** Delete task
-- **** Edit title
-- **+** Add tag
-- **Drag** Move between columns
-
-### Themes
-Choose from 7 carefully crafted themes with the theme picker (icon in top-right):
-
-- **☼ Light** - Clean blue and white
-- **☽ Dark** - Sophisticated midnight palette  
-- **❖ Strawberry** - Sweet pink tones
-- **≈ Ocean** - Deep sea blues
-- **◆ Cyberpunk** - Neon dystopia
-- **◉ Coffee** - Rich espresso tones
-- **✿ Lavender** - Soft purple elegance
-
-Each theme includes distinct button colors for visual interest and proper contrast.
-
----
-
-## Documentation
-
-📖 **[Architecture](docs/ARCHITECTURE.md)** - System design and Universal Adapter Pattern  
-📚 **[API Reference](docs/API.md)** - Complete endpoint documentation   
-📝 **[Changelog](docs/CHANGELOG.md)** - Version history and changes  
-
----
-
-## Build & Deploy
+### Build for Production
 
 ```bash
-npm run build          # Client only
-npm run build:router   # Server handlers
-npm run build:all      # Both
+npm run build:all
 ```
 
-**Output**: 
-- **Client bundle**: `dist/index.js` (~95KB / ~22KB gzipped), `dist/style.css` (~40KB / ~7KB gzipped)
-- **Handlers**: `dist/server/` (TypeScript compiled to JavaScript)
-
-**Deploy to**: 
-- Client → `hadoku_site/public/mf/task/`
-- Handlers → `hadoku_site/api/apps/task/` or `hadoku_site/functions/task/lib/`
+**Output:**
+- Client: `dist/index.js` (~22KB gzipped), `dist/style.css` (~7KB gzipped)
+- Handlers: `dist/server/` (TypeScript compiled to JavaScript)
 
 ---
 
-## Architecture
+## 📦 Installation
 
-### Universal Adapter Pattern
+### As an NPM Package
 
-This package exports **pure, framework-agnostic handlers** that work with any web framework:
-
-```typescript
-import { TaskHandlers, TaskStorage } from '@hadoku/task/api'
-
-// Implement storage for your environment
-const storage: TaskStorage = {
-  getTasks: async (userType) => { /* KV, filesystem, database, etc */ },
-  saveTasks: async (userType, tasks) => { /* ... */ },
-  getStats: async (userType) => { /* ... */ },
-  saveStats: async (userType, stats) => { /* ... */ }
-}
-
-// Use with any framework
-const result = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
+```bash
+npm install @wolffm/task
 ```
 
-**Deployment Flexibility**:
-- ✅ **Cloudflare Workers** - Use with Hono + Workers KV storage
-- ✅ **Self-hosted** - Use with Express + filesystem storage (for testing/development)
-- ✅ **Any framework** - Just implement the Storage interface
+### Basic Integration
 
-**Client Architecture**:
-- **All user types** use browser localStorage for instant UI updates
-- **Public mode** - localStorage only, no persistence
-- **Friend/Admin mode** - localStorage + background sync to Cloudflare Workers KV
-- Zero blocking on API calls, optimistic updates everywhere
-
-### Client Architecture
-
-- Main component with theme state orchestrates custom hooks
-- Modular components (TaskItem, TaskLayout)
-- Utility libraries for tags, formatting, layout
-- Comprehensive CSS module system with 7 complete themes
-- Design token system with ~45 CSS custom properties per theme
-- Theme picker with horizontal dropdown and monochrome Unicode icons
-
-### Server Handlers
-
-- **handlers.ts** - Pure business logic (createTask, updateTask, etc.)
-- **storage.ts** - Storage interface + filesystem implementation
-- **router.ts** - Express adapter (for testing/self-hosted)
-- **routes-adapter.ts** - Route factory for any framework
-
-See **[Architecture docs](docs/ARCHITECTURE.md)** for detailed system design and **[Universal Adapter Pattern](docs/UNIVERSAL_ADAPTER_PATTERN.md)** for implementation guide.
-
----
-
-## API
-
-The handlers export pure functions. Example integration:
-
-### Framework-Agnostic Handlers
-
-```typescript
-import { TaskHandlers } from '@hadoku/task/api'
-
-// All handlers follow this pattern:
-await TaskHandlers.getTasks(storage, auth)
-await TaskHandlers.createTask(storage, auth, input)
-await TaskHandlers.updateTask(storage, auth, taskId, input)
-await TaskHandlers.deleteTask(storage, auth, taskId)
-```
-
-### Express Integration
-
-```typescript
-import { createTaskRouter } from './apps/task/router.js'
-app.use('/task/api', createTaskRouter({ dataPath: './data/task' }))
-```
-
-### Hono Integration (Cloudflare Workers)
-
-```typescript
-import { TaskHandlers, TaskStorage } from '@hadoku/task/api'
-import { Hono } from 'hono'
-
-const app = new Hono()
-const storage: TaskStorage = createKVStorage(env.TASK_KV)
-
-app.get('/task/api', async (c) => {
-  const auth = { userType: c.req.header('X-User-Type') || 'public' }
-  return c.json(await TaskHandlers.getTasks(storage, auth))
-})
-```
-
-See **[API docs](docs/API.md)** for complete endpoint examples.
-
----
-
-## Integration
-
-### Client
+**Client-side:**
 ```javascript
-import { mount } from '/mf/task/index.js'
+import { mount } from '@wolffm/task/frontend'
+import '@wolffm/task/style.css'
+
 mount(document.getElementById('app'), {
-  apiUrl: '/task/api',
-  userType: 'friend'
+  userType: 'public',
+  sessionId: 'session-123'
 })
 ```
 
-### Server
+**Server-side (framework-agnostic):**
 ```typescript
-import { TaskHandlers, TaskStorage } from '@hadoku/task/api'
+import { TaskHandlers, TaskStorage } from '@wolffm/task/api'
 
-// Implement storage for your environment
+// Implement storage for your environment (KV, filesystem, database, etc.)
 const storage: TaskStorage = {
   getTasks: async (userType) => { /* your implementation */ },
   saveTasks: async (userType, tasks) => { /* your implementation */ },
@@ -206,63 +99,135 @@ const storage: TaskStorage = {
   saveStats: async (userType, stats) => { /* your implementation */ }
 }
 
-// Use handlers with your framework
-const result = await TaskHandlers.createTask(storage, auth, input)
+// Use handlers with any framework (Express, Hono, Cloudflare Workers, etc.)
+const tasks = await TaskHandlers.getTasks(storage, auth)
+const newTask = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
 ```
 
-See **[Child App Template](docs/CHILD_APP_TEMPLATE.md)** for full integration guide.
-
 ---
 
-## Development
+## 💡 Usage
 
-```bash
-npm run dev           # Vite dev server
-npm run test:server   # With backend
+### Creating Tasks
+
+```
+Buy groceries [Enter]                    # Plain task
+Buy groceries #home [Enter]              # With tag
+Fix bug #high-priority [Enter]           # Tagged task
 ```
 
-### Adding Features
+### Task Actions
 
-| Add | Location |
-|-----|----------|
-| Utility | `src/lib/` |
-| API call | `src/hooks/useTasks.ts` |
-| Component | `src/components/` |
-| Styles | `src/styles/` (modular CSS files) |
-| Theme | `src/styles/variables.css` + `App.tsx` |
-| Operation | `src/server/handlers/` |
-| Route | `src/server/routes/` |
+- **✓** Mark complete
+- **×** Delete task  
+- **✎** Edit title
+- **+** Add tag
+- **Drag** Reorder or move between boards
 
-**Styling Guidelines**: 
-- Use CSS custom properties for all colors, spacing, typography
-- Add new themes by defining all ~45 variables in `variables.css`
-- Include `--color-success-text` and `--color-danger-text` for button visibility
-- Keep CSS files modular (variables, layout, buttons, modals, filters, boards, tasks)
+### Themes
 
-**Code Guidelines**: Keep files <250 lines, extract reusable logic.
+Choose from 7 carefully crafted themes via the theme picker (top-right):
 
-See **[Development docs](docs/DEVELOPMENT.md)** for detailed workflow.
+- **☼ Light** - Clean blue and white
+- **☽ Dark** - Sophisticated midnight  
+- **❖ Strawberry** - Sweet pink tones
+- **≈ Ocean** - Deep sea blues
+- **◆ Cyberpunk** - Neon dystopia
+- **◉ Coffee** - Rich espresso
+- **✿ Lavender** - Soft purple
 
 ---
 
-## Data Storage
+## 📚 Documentation
 
-| User Type | Storage | Persistence | Performance | Backup |
-|-----------|---------|-------------|-------------|--------|
-| Public | In-memory | None | <1ms | None |
-| Friend | File + Git | Committed to repo | ~5-10ms | Automatic |
-| Admin | File + Git | Committed to repo | ~5-10ms | Automatic |
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, patterns, technical decisions | Developers integrating or extending |
+| **[API.md](docs/API.md)** | Complete endpoint reference | Backend implementers |
+| **[CHANGELOG.md](docs/CHANGELOG.md)** | Version history and changes | All users |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | Contribution guidelines | Contributors |
 
-**Files**: `task/data/friend/`, `task/data/admin/` (committed for backup/sync)
+### Quick Links
+
+- **Getting Started**: You're reading it! (README.md)
+- **How it works**: [Architecture Overview](docs/ARCHITECTURE.md#overview)
+- **Security model**: [Authentication & Security](docs/ARCHITECTURE.md#security--authentication)
+- **API endpoints**: [Complete API Reference](docs/API.md)
+- **Add features**: [Contributing Guide](CONTRIBUTING.md)
 
 ---
 
-## Links
+## 🏗️ Architecture Highlights
 
-- **Demo**: https://hadoku.me/task
-- **Parent**: https://hadoku.me
-- **Repo**: https://github.com/WolffM/hadoku-task
+### Universal Adapter Pattern
+
+This package separates pure business logic from framework-specific code:
+
+```typescript
+// Handlers are pure functions - work with ANY framework
+await TaskHandlers.getTasks(storage, auth)
+await TaskHandlers.createTask(storage, auth, input)
+```
+
+**Deployment flexibility:**
+- ✅ Cloudflare Workers (KV storage)
+- ✅ Node.js + Express (filesystem storage)
+- ✅ Any framework that can call JavaScript functions
+
+### Client Architecture
+
+- React-based UI with optimistic updates
+- All user types use localStorage for instant feedback
+- Non-public users sync to server in background
+- 7 complete themes with CSS custom properties
+
+**See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design documentation.**
 
 ---
 
-**Version**: 3.0.29 | **License**: MIT | **Author**: WolffM
+## 🔐 Security & Authentication
+
+**This micro-frontend delegates authentication to the parent application.**
+
+The task app:
+- ✅ Does NOT handle credentials or passwords
+- ✅ Receives `userType` and `sessionId` from parent
+- ✅ Uses these for storage namespacing only
+
+Your parent app must:
+- ✅ Handle user login/logout
+- ✅ Validate authentication keys
+- ✅ Provide correct `userType` and `sessionId`
+- ✅ Secure API endpoints
+
+**See [ARCHITECTURE.md - Security](docs/ARCHITECTURE.md#security--authentication) for complete security model.**
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development workflow
+- Code style guidelines
+- How to add features
+- Pull request process
+
+---
+
+## 📝 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🔗 Links
+
+- **Web Repository**: https://github.com/WolffM/hadoku-task
+- **Mobile Repository**: https://github.com/WolffM/hadoku-task-mobile
+- **Example Deployment**: [hadoku.me/task](https://hadoku.me/task)
+- **NPM Package**: `@wolffm/task`
+- **Android APK**: [Latest Release](https://github.com/WolffM/hadoku-task-mobile/releases/latest)
+
+---
+
+**Version**: 3.1.8 | **Author**: WolffM

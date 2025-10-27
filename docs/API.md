@@ -1,28 +1,62 @@
-# Task API Reference
+# API Reference
 
-Quick reference for integrating the `@wolffm/task` package into your application.
+Complete endpoint documentation for implementing the Task Manager backend.
 
-## Installation
-
-```bash
-npm install @wolffm/task
-```
-
-## Server API Endpoints
-
-### Base Path
-All endpoints are relative to your configured base path (e.g., `/task` or `/api/tasks`).
-
-### Authentication
-Include the `x-user-type` header with one of: `public`, `admin`, `friend`
+> **Note**: This document is for backend implementers. For integration examples, see [README.md](../README.md).
 
 ---
 
+## Authentication
+
+**This micro-frontend delegates authentication to your parent application.**
+
+### Your Responsibilities
+
+1. **Validate authentication keys/tokens** in your backend
+2. **Provide `userType` and `sessionId`** to the task app via props
+3. **Secure all API endpoints** - validate auth headers before processing
+4. **Handle user login/logout** in your application
+
+### Request Headers
+
+All authenticated endpoints should include:
+
+```
+X-User-Type: public | friend | admin
+X-Session-Id: <unique-session-identifier>
+```
+
+---
+
+## Storage Interface
+
+Implement this interface for your storage backend:
+
+```typescript
+interface TaskStorage {
+  getTasks(userType: UserType): Promise<TasksFile>
+  saveTasks(userType: UserType, tasks: TasksFile): Promise<void>
+  getStats(userType: UserType): Promise<StatsFile>
+  saveStats(userType: UserType, stats: StatsFile): Promise<void>
+}
+```
+
+**Implementations:**
+- Cloudflare Workers KV
+- Filesystem (Node.js)
+- Database (SQL/NoSQL)
+- In-memory (testing)
+
+---
+
+## Task Endpoints
+
 ### GET `/`
+
 Get all active tasks for a board.
 
 **Query Parameters:**
-- `userType` (optional): `public` | `admin` | `friend` (default: `public`)
+- `userType` (optional): `public` | `friend` | `admin`
 - `boardId` (optional): Board ID (default: `main`)
 
 **Response:**
@@ -30,12 +64,12 @@ Get all active tasks for a board.
 {
   "tasks": [
     {
-      "id": "TASK_ID",
+      "id": "01HQ...",
       "title": "Task title",
-      "tag": "tag1 tag2",
-      "state": "Active",
-      "createdAt": 1234567890,
-      "completedAt": null
+      "tag": "work home",
+      "createdAt": "2025-10-27T12:00:00Z",
+      "updatedAt": "2025-10-27T12:00:00Z",
+      "closedAt": null
     }
   ]
 }
@@ -43,35 +77,19 @@ Get all active tasks for a board.
 
 ---
 
-### GET `/stats`
-Get statistics for the current user.
-
-**Query Parameters:**
-- `userType` (optional): `public` | `admin` | `friend`
-- `boardId` (optional): Board ID
-
-**Response:**
-```json
-{
-  "totalTasks": 10,
-  "completedTasks": 5,
-  "activeTasks": 5
-}
-```
-
----
-
 ### POST `/`
+
 Create a new task.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **Body:**
 ```json
 {
   "title": "Task title",
-  "tag": "tag1 tag2",
+  "tag": "work",
   "boardId": "main"
 }
 ```
@@ -79,50 +97,26 @@ Create a new task.
 **Response:**
 ```json
 {
-  "id": "TASK_ID",
+  "id": "01HQ...",
   "title": "Task title",
-  "tag": "tag1 tag2",
-  "state": "Active",
-  "createdAt": 1234567890
-}
-```
-
----
-
-### POST `/:id/complete`
-Mark a task as completed.
-
-**Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
-
-**URL Parameters:**
-- `id`: Task ID
-
-**Body:**
-```json
-{
-  "boardId": "main"  // Optional, defaults to 'main'
-}
-```
-
-**Response:**
-```json
-{
-  "ok": true,
-  "message": "Task TASK_ID completed"
+  "tag": "work",
+  "createdAt": "2025-10-27T12:00:00Z",
+  "updatedAt": "2025-10-27T12:00:00Z"
 }
 ```
 
 ---
 
 ### PATCH `/:id`
-Update a task (title or tags).
+
+Update a task's title or tags.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **URL Parameters:**
-- `id`: Task ID
+- `id`: Task ID (ULID format)
 
 **Body:**
 ```json
@@ -136,19 +130,22 @@ Update a task (title or tags).
 **Response:**
 ```json
 {
-  "id": "TASK_ID",
+  "id": "01HQ...",
   "title": "Updated title",
-  "tag": "new-tag"
+  "tag": "new-tag",
+  "updatedAt": "2025-10-27T12:30:00Z"
 }
 ```
 
 ---
 
-### DELETE `/:id`
-Delete a task permanently.
+### POST `/:id/complete`
+
+Mark a task as completed (moves to stats graveyard).
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **URL Parameters:**
 - `id`: Task ID
@@ -156,7 +153,35 @@ Delete a task permanently.
 **Body:**
 ```json
 {
-  "boardId": "main"  // Optional, defaults to 'main'
+  "boardId": "main"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "message": "Task 01HQ... completed"
+}
+```
+
+---
+
+### DELETE `/:id`
+
+Permanently delete a task.
+
+**Headers:**
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
+
+**URL Parameters:**
+- `id`: Task ID
+
+**Body:**
+```json
+{
+  "boardId": "main"
 }
 ```
 
@@ -170,39 +195,28 @@ Delete a task permanently.
 
 ---
 
-### POST `/clear`
-Clear all completed tasks (public user only).
-
-**Headers:**
-- `x-user-type`: Must be `public`
-
-**Response:**
-```json
-{
-  "success": true,
-  "deletedCount": 5
-}
-```
-
----
-
-## Board Management Endpoints
+## Board Endpoints
 
 ### GET `/boards`
+
 Get all boards for the current user.
 
 **Query Parameters:**
-- `userType` (optional): `public` | `admin` | `friend`
+- `userType` (optional): `public` | `friend` | `admin`
+- `sessionId` (optional): Session identifier
 
 **Response:**
 ```json
 {
+  "version": 1,
+  "updatedAt": "2025-10-27T12:00:00Z",
   "boards": [
     {
       "id": "main",
-      "name": "main",
+      "name": "Main Board",
+      "tags": ["work", "home"],
       "tasks": [...],
-      "tags": ["tag1", "tag2"]
+      "stats": {...}
     }
   ]
 }
@@ -211,15 +225,17 @@ Get all boards for the current user.
 ---
 
 ### POST `/boards`
+
 Create a new board.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **Body:**
 ```json
 {
-  "boardId": "project-x",
+  "id": "project-x",
   "name": "Project X"
 }
 ```
@@ -229,18 +245,20 @@ Create a new board.
 {
   "id": "project-x",
   "name": "Project X",
-  "tasks": [],
-  "tags": []
+  "tags": [],
+  "tasks": []
 }
 ```
 
 ---
 
 ### DELETE `/boards/:id`
+
 Delete a board and all its tasks.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **URL Parameters:**
 - `id`: Board ID (cannot delete "main")
@@ -252,13 +270,24 @@ Delete a board and all its tasks.
 }
 ```
 
+**Error Response:**
+```json
+{
+  "error": "Cannot delete main board"
+}
+```
+
 ---
 
+## Tag Endpoints
+
 ### POST `/boards/:id/tags`
+
 Create a persisted tag on a board.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **URL Parameters:**
 - `id`: Board ID
@@ -274,23 +303,25 @@ Create a persisted tag on a board.
 ```json
 {
   "success": true,
-  "tags": ["urgent", "other-tag"]
+  "tags": ["urgent", "work", "home"]
 }
 ```
 
 ---
 
 ### POST `/tags/delete`
+
 Delete a persisted tag from a board.
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **Body:**
 ```json
 {
   "boardId": "main",
-  "tag": "tag-to-delete"
+  "tag": "urgent"
 }
 ```
 
@@ -298,75 +329,93 @@ Delete a persisted tag from a board.
 ```json
 {
   "success": true,
-  "tags": ["remaining-tag"]
+  "tags": ["work", "home"]
 }
 ```
 
 ---
 
-## Express Integration Example
+## Batch Operations
 
-```typescript
-import express from 'express'
-import { createTaskRoutes, FileStorage } from '@wolffm/task/api'
+### PATCH `/batch-tag`
 
-const app = express()
-app.use(express.json())
+Update tags for multiple tasks.
 
-// Initialize storage
-const storage = new FileStorage('./data')
+**Headers:**
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
-// Mount task routes
-app.use('/api/tasks', createTaskRoutes(storage))
+**Body:**
+```json
+{
+  "boardId": "main",
+  "updates": [
+    { "taskId": "01HQ...", "tag": "urgent" },
+    { "taskId": "01HR...", "tag": null }
+  ]
+}
+```
 
-app.listen(3000)
+**Response:**
+```json
+{
+  "success": true,
+  "updated": 2
+}
 ```
 
 ---
 
-## Frontend Components
+### POST `/batch-move`
 
-Import the pre-built frontend application:
+Move multiple tasks between boards.
 
-```typescript
-import { TaskApp } from '@wolffm/task/frontend'
-import '@wolffm/task/style.css'
+**Headers:**
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
-// In your React app:
-<TaskApp 
-  basename="/task"
-  userType="public"
-  sessionId="session-123"
-/>
+**Body:**
+```json
+{
+  "sourceBoardId": "main",
+  "targetBoardId": "archive",
+  "taskIds": ["01HQ...", "01HR..."]
+}
 ```
 
-**Props:**
-- `basename`: Base path for the app (default: `/task`)
-- `userType`: User type for API calls (default: `public`)
-- `sessionId`: Session identifier (default: `public`)
-- `apiUrl`: Override API URL (optional)
-- `environment`: Environment name (optional)
+**Response:**
+```json
+{
+  "success": true,
+  "moved": 2
+}
+```
 
 ---
 
-## Data Storage
+### POST `/batch-clear-tag`
 
-The package includes two storage implementations:
+Remove a specific tag from multiple tasks.
 
-### FileStorage
-Stores data in JSON files on the filesystem.
+**Headers:**
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
-```typescript
-import { FileStorage } from '@wolffm/task/api'
-const storage = new FileStorage('./task-data')
+**Body:**
+```json
+{
+  "boardId": "main",
+  "tag": "urgent",
+  "taskIds": ["01HQ...", "01HR..."]
+}
 ```
 
-### MemoryStorage
-Stores data in memory (useful for testing).
-
-```typescript
-import { MemoryStorage } from '@wolffm/task/api'
-const storage = new MemoryStorage()
+**Response:**
+```json
+{
+  "success": true,
+  "updated": 2
+}
 ```
 
 ---
@@ -374,34 +423,34 @@ const storage = new MemoryStorage()
 ## Preferences Endpoints
 
 ### GET `/preferences`
-Get user preferences (synced from server for non-public users).
+
+Get user preferences (synced for non-public users).
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
-- `x-user-id`: User ID
-- `x-session-id`: Session ID (for non-public users)
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **Response:**
 ```json
 {
   "version": 1,
-  "updatedAt": "2025-10-18T12:00:00Z",
+  "updatedAt": "2025-10-27T12:00:00Z",
   "experimentalThemes": false,
   "alwaysVerticalLayout": false
 }
 ```
 
-**Note:** Theme is NOT included in preferences - it's stored per-device in sessionStorage.
+> **Note**: Theme is NOT included - it's stored per-device in sessionStorage.
 
 ---
 
 ### PUT `/preferences`
-Save user preferences (syncs to server for non-public users).
+
+Save user preferences (syncs for non-public users).
 
 **Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
-- `x-user-id`: User ID
-- `x-session-id`: Session ID (for non-public users)
+- `X-User-Type`: `public` | `friend` | `admin`
+- `X-Session-Id`: Session identifier
 
 **Body:**
 ```json
@@ -423,29 +472,66 @@ Save user preferences (syncs to server for non-public users).
 ## User Management Endpoints
 
 ### POST `/validate-key`
-Validate a key without changing the current session.
 
-**Headers:**
-- `x-user-type`: `public` | `admin` | `friend`
-- `x-user-id`: User ID
-- `x-session-id`: The key to validate
+Validate an authentication key.
 
-**Response:**
+> **Note**: Implement your own key validation logic. This endpoint is called when users enter a key in the settings modal.
+
+**Body:**
+```json
+{
+  "key": "user-provided-key"
+}
+```
+
+**Response (valid):**
 ```json
 {
   "valid": true
 }
 ```
 
+**Response (invalid):**
+```json
+{
+  "valid": false
+}
+```
+
 ---
 
-### POST `/user/set-id`
-**DEPRECATED:** This endpoint is no longer used. The task app now uses `sessionId` directly without needing a separate `userId` mapping.
+## Statistics Endpoint
 
-**Migration Note:** Parent apps should:
-- Stop calling this endpoint
-- Use `sessionId` as the stable identifier
-- Pass `sessionId` prop to the task app instead of `userId`
+### GET `/stats`
+
+Get task statistics for a board.
+
+**Query Parameters:**
+- `userType` (optional): `public` | `friend` | `admin`
+- `boardId` (optional): Board ID (default: `main`)
+
+**Response:**
+```json
+{
+  "version": 2,
+  "counters": {
+    "totalCreated": 150,
+    "totalCompleted": 120,
+    "totalDeleted": 10,
+    "totalUpdated": 200
+  },
+  "graveyard": [
+    {
+      "id": "01HQ...",
+      "title": "Completed task",
+      "tag": "work",
+      "createdAt": "2025-10-20T10:00:00Z",
+      "closedAt": "2025-10-27T12:00:00Z",
+      "reason": "completed"
+    }
+  ]
+}
+```
 
 ---
 
@@ -453,26 +539,72 @@ Validate a key without changing the current session.
 
 All endpoints return errors in this format:
 
-```json
-{
-  "error": "Error message"
-}
-```
-
-**Common HTTP Status Codes:**
+**HTTP Status Codes:**
 - `200` - Success
 - `400` - Bad request (validation error)
 - `403` - Forbidden (permission denied)
 - `404` - Not found
 - `500` - Server error
 
+**Error Response:**
+```json
+{
+  "error": "Error message describing what went wrong"
+}
+```
+
 ---
 
-## Notes
+## Data Types
 
-- Task IDs are generated using ULID format
-- Timestamps are Unix epoch milliseconds
-- Tags are space-separated strings (e.g., `"tag1 tag2 tag3"`)
-- The `main` board is created automatically and cannot be deleted
-- Public users can only access their own data
-- Admin and friend users have additional permissions (if configured)
+### Task
+```typescript
+interface Task {
+  id: string           // ULID format
+  title: string
+  tag?: string         // Space-separated tags
+  createdAt: string    // ISO 8601
+  updatedAt: string    // ISO 8601
+  closedAt?: string    // ISO 8601 (when completed/deleted)
+}
+```
+
+### Board
+```typescript
+interface Board {
+  id: string
+  name: string
+  tags: string[]       // Persisted tags
+  tasks: Task[]
+  stats: StatsFile
+}
+```
+
+### StatsFile
+```typescript
+interface StatsFile {
+  version: number
+  counters: {
+    totalCreated: number
+    totalCompleted: number
+    totalDeleted: number
+    totalUpdated: number
+  }
+  graveyard: StatsTaskRecord[]
+}
+```
+
+---
+
+## Implementation Examples
+
+For complete integration examples with Express, Hono, and Cloudflare Workers, see:
+- [README.md - Installation](../README.md#installation)
+- [ARCHITECTURE.md - Server Architecture](ARCHITECTURE.md#server-architecture)
+
+---
+
+**Related Documentation:**
+- [Architecture Overview](ARCHITECTURE.md)
+- [Contributing Guide](../CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
