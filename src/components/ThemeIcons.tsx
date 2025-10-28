@@ -98,6 +98,16 @@ export const HeartIcon = () => (
   </svg>
 )
 
+export const LeafIcon = () => (
+  <svg {...iconProps}>
+    {/* Leaf shape with vein */}
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" fill="currentColor" />
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9 14.5 11 14 11 20" stroke="currentColor" strokeWidth="2" fill="none" />
+    {/* Leaf vein */}
+    <path d="M11 8c3 2 5 4 7 7" stroke="white" strokeWidth="1.5" opacity="0.4" />
+  </svg>
+)
+
 export const SettingsIcon = () => (
   <svg {...iconProps}>
     {/* Gear teeth as rectangles */}

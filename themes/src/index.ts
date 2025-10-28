@@ -6,16 +6,18 @@
 export const THEMES = [
   'light',
   'dark',
+  'coffee-light',
+  'coffee-dark',
+  'nature-light',
+  'nature-dark',
+  'lavender-light',
+  'lavender-dark',
   'strawberry-light',
   'strawberry-dark',
   'ocean-light',
   'ocean-dark',
   'cyberpunk-light',
   'cyberpunk-dark',
-  'coffee-light',
-  'coffee-dark',
-  'lavender-light',
-  'lavender-dark',
   'pink-light',
   'pink-dark'
 ] as const
@@ -80,13 +82,3 @@ export function clearTheme(): void {
   sessionStorage.removeItem('hadoku-theme')
   setTheme('light')
 }
-
-// Export theme picker UI
-export { 
-  createThemePicker, 
-  injectThemePickerStyles,
-  BASE_THEME_FAMILIES,
-  EXPERIMENTAL_THEME_FAMILIES,
-  type ThemePickerOptions,
-  type ThemeFamily
-} from './picker.js'

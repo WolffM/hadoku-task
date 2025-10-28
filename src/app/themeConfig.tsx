@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, HeartIcon } from '../components/ThemeIcons'
+import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon } from '../components/ThemeIcons'
 import type { ThemeName } from './types'
 
 export interface ThemeFamily {
@@ -27,6 +27,30 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     darkLabel: 'Dark'
   },
   { 
+    lightIcon: <CoffeeIcon />,
+    darkIcon: <CoffeeIcon />,
+    lightTheme: 'coffee-light',
+    darkTheme: 'coffee-dark',
+    lightLabel: 'Coffee Light',
+    darkLabel: 'Coffee Dark'
+  },
+  { 
+    lightIcon: <LeafIcon />,
+    darkIcon: <LeafIcon />,
+    lightTheme: 'nature-light',
+    darkTheme: 'nature-dark',
+    lightLabel: 'Nature Light',
+    darkLabel: 'Nature Dark'
+  },
+  { 
+    lightIcon: <FlowerIcon />,
+    darkIcon: <FlowerIcon />,
+    lightTheme: 'lavender-light',
+    darkTheme: 'lavender-dark',
+    lightLabel: 'Lavender Light',
+    darkLabel: 'Lavender Dark'
+  },
+  { 
     lightIcon: <StrawberryIcon />,
     darkIcon: <StrawberryIcon />,
     lightTheme: 'strawberry-light',
@@ -42,6 +66,10 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Ocean Light',
     darkLabel: 'Ocean Dark'
   },
+]
+
+// Experimental theme families (gated by preference)
+export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
   { 
     lightIcon: <ZapIcon />,
     darkIcon: <ZapIcon />,
@@ -50,26 +78,6 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Cyberpunk Light',
     darkLabel: 'Cyberpunk Dark'
   },
-  { 
-    lightIcon: <CoffeeIcon />,
-    darkIcon: <CoffeeIcon />,
-    lightTheme: 'coffee-light',
-    darkTheme: 'coffee-dark',
-    lightLabel: 'Coffee Light',
-    darkLabel: 'Coffee Dark'
-  },
-  { 
-    lightIcon: <FlowerIcon />,
-    darkIcon: <FlowerIcon />,
-    lightTheme: 'lavender-light',
-    darkTheme: 'lavender-dark',
-    lightLabel: 'Lavender Light',
-    darkLabel: 'Lavender Dark'
-  },
-]
-
-// Experimental theme families (gated by preference)
-export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
   { 
     lightIcon: <HeartIcon />,
     darkIcon: <HeartIcon />,

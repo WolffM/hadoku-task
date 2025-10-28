@@ -16,11 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@wolffm'
+          cache: 'pnpm'
       
       - name: Configure npm for GitHub Packages
         run: |
@@ -29,19 +34,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Install dependencies (Task)
-        run: npm ci
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build Task package
-        run: npm run build:all
-      
-      - name: Install dependencies (Themes)
-        run: cd themes && npm ci
+        run: pnpm run build:all
       
       - name: Build Themes package
-        run: cd themes && npm run build
+        run: pnpm --filter @wolffm/themes run build
       
       - name: Check if themes package changed
         id: themes_changed
@@ -63,7 +65,7 @@ jobs:
       
       - name: Publish Themes package
         if: steps.themes_changed.outputs.changed == 'true'
-        run: cd themes && npm publish
+        run: pnpm --filter @wolffm/themes publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -109,7 +111,7 @@ jobs:
       
       - name: Publish Task package
         if: steps.task_changed.outputs.changed == 'true'
-        run: npm publish
+        run: pnpm --filter @wolffm/task publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       

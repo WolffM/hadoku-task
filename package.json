@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.2.4",
+  "version": "3.2.6",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
@@ -28,15 +28,15 @@
     "dev": "vite",
     "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build:all": "npm run build && npm run build:server",
+    "build:all": "pnpm run build && pnpm run build:server",
     "preview": "vite preview",
-    "version:patch": "npm version patch --no-git-tag-version",
+    "version:patch": "pnpm version patch --no-git-tag-version",
     "version:smart": "node scripts/version-manager.js",
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky"
   },
   "dependencies": {
-    "@wolffm/themes": "^1.0.0",
+    "@wolffm/themes": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
