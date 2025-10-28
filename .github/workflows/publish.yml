@@ -45,22 +45,33 @@ jobs:
       - name: Build Themes package
         run: pnpm --filter @wolffm/themes run build
       
+      - name: Debug - Show changed files
+        run: |
+          echo "Files changed in this push:"
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
+          echo "---"
+      
       - name: Check if themes package changed
         id: themes_changed
         run: |
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^themes/"; then
             echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ Themes package has changes"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ No changes in themes package"
           fi
       
       - name: Check if task package changed
         id: task_changed
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qv "^themes/"; then
+          # Check if any files changed outside of themes/ directory
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q -v "^themes/"; then
             echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ Task package has changes"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ No changes in task package"
           fi
       
       - name: Publish Themes package
