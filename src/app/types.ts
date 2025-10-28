@@ -1,6 +1,7 @@
 /**
  * Client-only type definitions
  * Re-exports shared types from domain and adds client-specific types
+ * Updated: 2025-10-27
  */
 
 // Re-export all domain types (including UserPreferences which syncs to server)

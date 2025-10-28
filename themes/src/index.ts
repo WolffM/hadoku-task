@@ -1,6 +1,7 @@
 /**
  * Hadoku Theme System - Utilities
  * Framework-agnostic theme management for Hadoku themes
+ * 16 beautiful themes across 8 theme families
  */
 
 export const THEMES = [
