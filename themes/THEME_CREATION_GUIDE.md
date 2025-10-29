@@ -6,6 +6,20 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 
 Each theme requires **28 color variables** organized into 7 categories. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
+### The 5 Main Colors (From Palette)
+
+These are the only colors you need to select from the input palette:
+
+1. **`--color-primary`** - Primary brand color (most vibrant/saturated)
+2. **`--color-success`** - Success/completion indicator (green, yellow, or bright accent)
+3. **`--color-danger`** - Error/warning indicator (red, orange, pink, or contrasting bold)
+4. **`--color-neutral`** - Neutral gray or desaturated base
+5. **`--color-bg`** - Primary background (lightest for light themes, darkest for dark themes)
+
+All other 23 variables are **derived** from these 5 main colors using color manipulation.
+
+---
+
 ### Required Variables by Category
 
 #### 1. Primary Colors (6 variables)
@@ -20,7 +34,7 @@ Each theme requires **28 color variables** organized into 7 categories. The syst
 **Purpose:** Positive actions, completed tasks
 - `--color-success` - **MAIN:** Success/completion indicator
 - `--color-success-dark` - **ALT:** Darker shade (darken 10-15%)
-- `--color-success-text` - **ALT:** Text color on success backgrounds (light or dark)
+- `--color-success-text` - **ALT:** Text color on success backgrounds (auto-calculated for contrast)
 
 #### 3. Danger Colors (5 variables)
 **Purpose:** Destructive actions, errors, warnings
@@ -28,32 +42,32 @@ Each theme requires **28 color variables** organized into 7 categories. The syst
 - `--color-danger-dark` - **ALT:** Darker shade (darken 10-15%)
 - `--color-danger-darker` - **ALT:** Even darker (darken 20-30%)
 - `--color-danger-light` - **ALT:** Light tint/background shade
-- `--color-danger-text` - **ALT:** Text color on danger backgrounds
+- `--color-danger-text` - **ALT:** Text color on danger backgrounds (auto-calculated)
 
 #### 4. Neutral Colors (3 variables)
 **Purpose:** Non-critical UI elements, disabled states
 - `--color-neutral` - **MAIN:** Neutral gray or muted color
-- `--color-neutral-light` - **ALT:** Lighter shade for subtle backgrounds
-- `--color-neutral-lighter` - **ALT:** Even lighter for hover states
+- `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
+- `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
 
 #### 5. Text Colors (4 variables)
 **Purpose:** All text hierarchy
-- `--color-text` - **MAIN:** Primary text color (dark for light themes, light for dark themes)
-- `--color-text-secondary` - **ALT:** Secondary text (slightly muted)
-- `--color-text-tertiary` - **ALT:** Tertiary text (more muted)
-- `--color-text-muted` - **ALT:** Least prominent text
+- `--color-text` - **ALT:** Primary text (auto-calculated based on bg luminance for 4.5:1 contrast)
+- `--color-text-secondary` - **ALT:** Secondary text (slightly muted, 80% opacity)
+- `--color-text-tertiary` - **ALT:** Tertiary text (60% opacity)
+- `--color-text-muted` - **ALT:** Least prominent text (40% opacity)
 
 #### 6. Border Colors (2 variables)
 **Purpose:** UI element boundaries
-- `--color-border` - **ALT:** Default border color (subtle, derived from neutral)
-- `--color-border-light` - **ALT:** Lighter border for less prominent divisions
+- `--color-border` - **ALT:** Default border color (derived from neutral)
+- `--color-border-light` - **ALT:** Lighter border (derived from neutral-light)
 
 #### 7. Background Colors (4 variables)
 **Purpose:** Page and component backgrounds
-- `--color-bg` - **MAIN:** Primary background
-- `--color-bg-card` - **MAIN:** Card/panel background
-- `--color-bg-alt` - **ALT:** Alternative background (slightly different shade)
-- `--color-bg-overlay` - **ALT:** Modal/overlay background (semi-transparent)
+- `--color-bg` - **MAIN:** Primary background canvas
+- `--color-bg-card` - **ALT:** Card/panel background (lighten/darken bg by 3-5%)
+- `--color-bg-alt` - **ALT:** Alternative background (lighten/darken bg by 2-4%)
+- `--color-bg-overlay` - **ALT:** Modal/overlay background (bg at 50-80% opacity)
 
 #### 8. Shadows (6 variables)
 **Purpose:** Depth and elevation
@@ -66,16 +80,7 @@ Each theme requires **28 color variables** organized into 7 categories. The syst
 
 ---
 
-## Color Role Analysis from Existing Themes
-
-### Main Colors (Selected from palette)
-1. **Primary** - Brand identity color
-2. **Success** - Green, yellow, orange, or bright accent
-3. **Danger** - Contrasting color for warnings (red, purple, pink)
-4. **Neutral** - Gray or desaturated color
-5. **Text** - High contrast color for readability
-6. **Background** - Base canvas color
-7. **Card Background** - Elevated surface color
+## Derivation Strategy
 
 ### Alt Colors (Derived through manipulation)
 - **Darker shades** - darken(main, 10-30%)
@@ -102,7 +107,7 @@ Given a color list like:
 - Most saturated → Primary, Success, Danger
 - Desaturated → Neutral, Borders
 
-### Step 2: Assign Main Colors
+### Step 2: Assign 5 Main Colors
 
 #### For Light Theme:
 ```
@@ -110,9 +115,7 @@ Given a color list like:
 --color-success: [Green-ish or complementary bright color]
 --color-danger: [Red/Orange/Pink or contrasting vibrant]
 --color-neutral: [Muted gray or desaturated color]
---color-text: [Darkest color with good contrast]
 --color-bg: [Lightest color]
---color-bg-card: [Second lightest or pure white]
 ```
 
 #### For Dark Theme:
@@ -121,45 +124,62 @@ Given a color list like:
 --color-success: [Bright accent that pops]
 --color-danger: [Bold contrasting color]
 --color-neutral: [Mid-tone gray]
---color-text: [Lightest color]
 --color-bg: [Darkest color]
---color-bg-card: [Second darkest]
 ```
 
-### Step 3: Generate Alt Colors
+### Step 3: Generate 23 Alt Colors
 
 Use color manipulation functions:
 
 ```javascript
-// Darker shades
+// === From PRIMARY ===
 --color-primary-dark: darken(primary, 15%)
+--color-primary-light: lighten(primary, 40%) // light theme
+--color-primary-light: darken(primary, 30%)  // dark theme
+--color-primary-bg: rgba(primary, 0.05)      // light theme
+--color-primary-bg: rgba(primary, 0.15)      // dark theme
+--color-primary-hover: rgba(primary, 0.08)   // light theme
+--color-primary-hover: rgba(primary, 0.15)   // dark theme
 
-// Lighter tints (light theme)
---color-primary-light: lighten(primary, 40%)
+// === From SUCCESS ===
+--color-success-dark: darken(success, 15%)
+--color-success-text: getContrastText(success) // auto: white or black
 
-// Darker tints (dark theme)
---color-primary-light: darken(primary, 30%)
+// === From DANGER ===
+--color-danger-dark: darken(danger, 15%)
+--color-danger-darker: darken(danger, 30%)
+--color-danger-light: lighten(danger, 40%)     // light theme
+--color-danger-light: darken(danger, 30%)      // dark theme
+--color-danger-text: getContrastText(danger)   // auto: white or black
 
-// Background with opacity
---color-primary-bg: rgba(primary, 0.05) // light theme
---color-primary-bg: rgba(primary, 0.15) // dark theme
+// === From NEUTRAL ===
+--color-neutral-light: lighten(neutral, 20%)   // light theme
+--color-neutral-light: darken(neutral, 20%)    // dark theme
+--color-neutral-lighter: lighten(neutral, 30%) // light theme
+--color-neutral-lighter: darken(neutral, 30%)  // dark theme
 
-// Hover states
---color-primary-hover: rgba(primary, 0.08) // light theme
---color-primary-hover: rgba(primary, 0.15) // dark theme
+// === From BACKGROUND ===
+--color-text: getContrastText(bg)           // auto: dark or light for 4.5:1
+--color-text-secondary: rgba(text, 0.8)
+--color-text-tertiary: rgba(text, 0.6)
+--color-text-muted: rgba(text, 0.4)
 
-// Text colors (progressive desaturation)
---color-text-secondary: adjust-brightness(text, -15%)
---color-text-tertiary: adjust-brightness(text, -30%)
---color-text-muted: adjust-brightness(text, -45%)
+--color-bg-card: lighten(bg, 3%)            // light theme
+--color-bg-card: lighten(bg, 5%)            // dark theme
+--color-bg-alt: darken(bg, 2%)              // light theme
+--color-bg-alt: darken(bg, 5%)              // dark theme
+--color-bg-overlay: rgba(text, 0.5)
 
-// Borders (from neutral or background)
 --color-border: mix(neutral, bg, 70%)
 --color-border-light: mix(neutral, bg, 50%)
 
-// Shadows
---shadow-sm: 0 1px 2px rgba(primary, 0.08)
+// === Shadows (from primary or black) ===
+--shadow-sm: 0 1px 2px rgba(primary, 0.08)      // or rgba(0,0,0,0.4) for dark
+--shadow-md: 0 2px 4px rgba(primary, 0.12)
+--shadow-modal: 0 8px 24px rgba(primary, 0.2)
 --shadow-focus: 0 0 0 3px rgba(primary, 0.25)
+--shadow-focus-sm: 0 0 0 2px rgba(primary, 0.25)
+--shadow-focus-alt: 0 0 0 2px rgba(primary, 0.15)
 ```
 
 ### Step 4: Validate Contrast
@@ -188,42 +208,50 @@ Ensure WCAG AA compliance:
 ### Light Theme Assignment:
 ```css
 [data-theme="sunset-light"] {
-  /* Main Colors */
+  /* ===== 5 MAIN COLORS (from palette) ===== */
   --color-primary: #ff6b35;              /* Vibrant orange */
   --color-success: #fdc830;              /* Golden yellow */
   --color-danger: #004e89;               /* Deep blue */
   --color-neutral: #e0e0e0;              /* Light gray */
-  --color-text: #2d2d2d;                 /* Dark gray */
   --color-bg: #ffffff;                   /* Pure white */
-  --color-bg-card: #f4f4f4;              /* Off-white */
   
-  /* Alt Colors (derived) */
-  --color-primary-dark: #e65a2a;         /* darken(#ff6b35, 10%) */
-  --color-primary-light: #ffe0d5;        /* lighten(#ff6b35, 50%) */
-  --color-primary-bg: #fff5f2;           /* rgba(#ff6b35, 0.05) */
+  /* ===== 23 ALT COLORS (derived) ===== */
+  
+  /* From Primary */
+  --color-primary-dark: #e65a2a;         /* darken 10% */
+  --color-primary-light: #ffe0d5;        /* lighten 50% */
+  --color-primary-bg: #fff5f2;           /* rgba 5% */
   --color-primary-hover: rgba(255, 107, 53, 0.08);
   
-  --color-success-dark: #e0b425;
-  --color-success-text: white;
+  /* From Success */
+  --color-success-dark: #e0b425;         /* darken 10% */
+  --color-success-text: #1a1a1a;         /* auto-contrast */
   
-  --color-danger-dark: #003d6e;
-  --color-danger-darker: #002c4f;
-  --color-danger-light: #e6f2ff;
-  --color-danger-text: white;
+  /* From Danger */
+  --color-danger-dark: #003d6e;          /* darken 15% */
+  --color-danger-darker: #002c4f;        /* darken 30% */
+  --color-danger-light: #e6f2ff;         /* lighten 40% */
+  --color-danger-text: white;            /* auto-contrast */
   
-  --color-neutral-light: #f4f4f4;
-  --color-neutral-lighter: #fafafa;
+  /* From Neutral */
+  --color-neutral-light: #f4f4f4;        /* lighten 20% */
+  --color-neutral-lighter: #fafafa;      /* lighten 30% */
   
-  --color-text-secondary: #555555;
-  --color-text-tertiary: #888888;
-  --color-text-muted: #aaaaaa;
+  /* From Background (auto-calculated) */
+  --color-text: #2d2d2d;                 /* auto: dark for light bg */
+  --color-text-secondary: rgba(45, 45, 45, 0.8);
+  --color-text-tertiary: rgba(45, 45, 45, 0.6);
+  --color-text-muted: rgba(45, 45, 45, 0.4);
   
-  --color-border: #e0e0e0;
-  --color-border-light: #efefef;
-  
-  --color-bg-alt: #f9f9f9;
+  --color-bg-card: #f4f4f4;              /* lighten bg 3% */
+  --color-bg-alt: #f9f9f9;               /* darken bg 2% */
   --color-bg-overlay: rgba(45, 45, 45, 0.5);
   
+  /* Borders (from neutral + bg) */
+  --color-border: #e0e0e0;               /* mix(neutral, bg, 70%) */
+  --color-border-light: #efefef;         /* mix(neutral, bg, 50%) */
+  
+  /* Shadows */
   --shadow-sm: 0 1px 2px rgba(255, 107, 53, 0.08);
   --shadow-md: 0 2px 4px rgba(255, 107, 53, 0.12);
   --shadow-modal: 0 8px 24px rgba(255, 107, 53, 0.2);
