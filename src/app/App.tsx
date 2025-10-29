@@ -33,6 +33,7 @@ import { getRandomPlaceholder } from '../utils/placeholders'
 import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
 import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
+import { DEFAULT_PREFERENCES } from '../utils/preferences'
 
 export default function App(props: TaskAppProps = {}) {
   const { userType = 'public', sessionId: propsSessionId = 'public' } = props
@@ -66,8 +67,8 @@ export default function App(props: TaskAppProps = {}) {
   })
 
   // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
-  const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences } = usePreferences(userType, effectiveSessionId, true)
-  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme } = useTheme(preferences, savePreferences, containerRef)
+  const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences, setPreferencesLoaded } = usePreferences(userType, effectiveSessionId, true)
+  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme, isThemeReady } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
 
   // Compute mobile layout  
   const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
@@ -151,19 +152,18 @@ export default function App(props: TaskAppProps = {}) {
         // For public users, load preferences from localStorage now
         const api = createApi('public', finalSessionId)
         const localPrefs = await api.getPreferences()
-        if (localPrefs) {
-          setPreferences(localPrefs)
-          console.log('[App] Loaded public user preferences from localStorage:', localPrefs)
-        }
+        console.log('[App] Loaded public user preferences from localStorage:', localPrefs)
+        // Set preferences (or defaults if none found)
+        setPreferences(localPrefs || DEFAULT_PREFERENCES)
+        setPreferencesLoaded(true)
       } else {
         // Authenticated users: use the sessionId from props (from parent)
         finalSessionId = propsSessionId
         
         // Apply server preferences if available
-        if (serverPreferences) {
-          setPreferences(serverPreferences)
-          console.log('[App] Applied preferences from handshake:', serverPreferences)
-        }
+        console.log('[App] Applied preferences from handshake:', serverPreferences)
+        setPreferences(serverPreferences || DEFAULT_PREFERENCES)
+        setPreferencesLoaded(true)
         
         // Clear old session storage keys if sessionId changed
         if (oldSessionId && oldSessionId !== propsSessionId) {
@@ -315,11 +315,14 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
-  // Show loading skeleton until everything is loaded
+  // Show loading skeleton until everything is loaded AND theme is ready AND preferences are loaded
   // Use system preference for theme during initial load, then switch to user preference
-  if (!isLoaded) {
+  if (!isLoaded || !isThemeReady || !preferencesLoaded) {
+    console.log(`[App] Still loading - isLoaded: ${isLoaded}, isThemeReady: ${isThemeReady}, preferencesLoaded: ${preferencesLoaded}`)
     return <LoadingSkeleton isDarkTheme={systemPrefersDark} />
   }
+  
+  console.log(`[App] Rendering app - theme: ${theme}, isLoaded: ${isLoaded}, isThemeReady: ${isThemeReady}`)
 
   return (
     <div

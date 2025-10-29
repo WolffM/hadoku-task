@@ -12,7 +12,8 @@
  */
 
 /* ===== LIGHT THEME (Default) ===== */
-:root {
+:root,
+[data-theme="light"] {
   /* Primary Colors */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
