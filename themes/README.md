@@ -1,10 +1,10 @@
 # @wolffm/themes
 
-16 beautiful color themes using CSS custom properties. Framework-agnostic and ready to use in any web project.
+24 beautiful color themes using CSS custom properties. Framework-agnostic and ready to use in any web project.
 
 ## Themes
 
-8 base themes, each with light and dark variants:
+12 theme families, each with light and dark variants:
 
 - **Light** (default) - Clean blue and white
 - **Dark** - Sophisticated midnight with purple accents
@@ -15,6 +15,7 @@
 - **Lavender Light/Dark** - Soft purple elegance
 - **Nature Light/Dark** - Lush leaf greens inspired by forests and earth
 - **Pink Light/Dark** - Bubblegum pink and neon glows
+- **Kitsune Springs A-D Light/Dark** - Japanese spa-inspired themes with serene colors (8 variants)
 
 ## Installation
 
