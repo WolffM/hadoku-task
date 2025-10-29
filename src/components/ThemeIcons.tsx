@@ -139,3 +139,18 @@ export const TagIcon = () => (
     <circle cx="6" cy="10" r="1.5" fill="white" />
   </svg>
 )
+
+export const SpaIcon = () => (
+  <svg {...iconProps}>
+    {/* Steam wisps */}
+    <path d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
+    <path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
+    <path d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
+    {/* Hot spring bowl */}
+    <path d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z" fill="none" stroke="currentColor" strokeWidth="2" />
+    <ellipse cx="8" cy="14" rx="4" ry="1.5" fill="currentColor" opacity="0.3" />
+    {/* Stones */}
+    <circle cx="17" cy="18" r="2" fill="currentColor" opacity="0.4" />
+    <circle cx="20" cy="16" r="1.5" fill="currentColor" opacity="0.4" />
+  </svg>
+)

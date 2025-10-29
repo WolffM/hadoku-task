@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon } from '../components/ThemeIcons'
+import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon } from '../components/ThemeIcons'
 import type { ThemeName } from './types'
 
 export interface ThemeFamily {
@@ -85,6 +85,38 @@ export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
     darkTheme: 'pink-dark',
     lightLabel: 'Pink Light',
     darkLabel: 'Pink Dark'
+  },
+  { 
+    lightIcon: <SpaIcon />,
+    darkIcon: <SpaIcon />,
+    lightTheme: 'kitsune-springs-a-light',
+    darkTheme: 'kitsune-springs-a-dark',
+    lightLabel: 'Kitsune A Light',
+    darkLabel: 'Kitsune A Dark'
+  },
+  { 
+    lightIcon: <SpaIcon />,
+    darkIcon: <SpaIcon />,
+    lightTheme: 'kitsune-springs-b-light',
+    darkTheme: 'kitsune-springs-b-dark',
+    lightLabel: 'Kitsune B Light',
+    darkLabel: 'Kitsune B Dark'
+  },
+  { 
+    lightIcon: <SpaIcon />,
+    darkIcon: <SpaIcon />,
+    lightTheme: 'kitsune-springs-c-light',
+    darkTheme: 'kitsune-springs-c-dark',
+    lightLabel: 'Kitsune C Light',
+    darkLabel: 'Kitsune C Dark'
+  },
+  { 
+    lightIcon: <SpaIcon />,
+    darkIcon: <SpaIcon />,
+    lightTheme: 'kitsune-springs-d-light',
+    darkTheme: 'kitsune-springs-d-dark',
+    lightLabel: 'Kitsune D Light',
+    darkLabel: 'Kitsune D Dark'
   },
 ]
 
