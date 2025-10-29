@@ -9,7 +9,7 @@ import type { UserPreferences } from '../domain/types'
 import { DEFAULT_PREFERENCES, cleanupOrphanedKeys, migrateFromSessionStorage } from '../utils/preferences'
 
 export interface UsePreferencesReturn {
-  preferences: UserPreferences | null
+  preferences: UserPreferences
   savePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   preferencesLoaded: boolean
   isDarkTheme: boolean
@@ -29,13 +29,13 @@ export function usePreferences(
   sessionId: string,
   skipInitialLoad: boolean = false
 ): UsePreferencesReturn {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [preferencesLoaded, setPreferencesLoaded] = useState(false)
 
   // Load preferences on mount (only if not skipped)
   useEffect(() => {
     if (skipInitialLoad) {
-      setPreferencesLoaded(true)
+      // Don't auto-set to true - let the caller control this
       return
     }
     
@@ -79,7 +79,7 @@ export function usePreferences(
   }
 
   // Compute if current theme is dark
-  const isDarkTheme = preferences?.theme?.endsWith('-dark') || preferences?.theme === 'dark'
+  const isDarkTheme = preferences.theme?.endsWith('-dark') || preferences.theme === 'dark'
 
   return {
     preferences,

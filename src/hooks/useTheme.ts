@@ -23,7 +23,7 @@ export interface UseThemeReturn {
  * and applying theme to container element
  */
 export function useTheme(
-  preferences: UserPreferences | null,
+  preferences: UserPreferences,
   savePreferences: (updates: Partial<UserPreferences>) => Promise<void>,
   containerRef: RefObject<HTMLDivElement>,
   preferencesLoaded: boolean = true
@@ -35,25 +35,23 @@ export function useTheme(
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
   const defaultTheme = systemPrefersDark ? 'dark' : 'light'
   
-  const theme = (preferences?.theme || defaultTheme) as ThemeName
+  const theme = (preferences.theme || defaultTheme) as ThemeName
   const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
 
   // Compute theme families based on experimental preferences
   const THEME_FAMILIES = useMemo(() => 
-    getThemeFamilies(preferences?.experimentalThemes || false),
-    [preferences?.experimentalThemes]
+    getThemeFamilies(preferences.experimentalThemes || false),
+    [preferences.experimentalThemes]
   )
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {
-    // Don't apply theme until we have actual preferences (not null)
-    if (!preferences) {
-      console.log(`[Theme] Waiting for preferences to be loaded (preferences is null)`)
+    // Don't apply theme until preferences are fully loaded
+    if (!preferencesLoaded) {
       setIsThemeReady(false)
       return
     }
     
-    console.log(`[Theme] Applying theme: ${theme} (preferences loaded)`)
     setIsThemeReady(false) // Reset ready state when theme changes
     
     // Apply to document root (for standalone usage)
@@ -66,12 +64,11 @@ export function useTheme(
     
     // Mark theme as ready after a brief delay to ensure CSS has been applied
     const timer = setTimeout(() => {
-      console.log(`[Theme] Theme ready: ${theme}`)
       setIsThemeReady(true)
     }, 50)
     
     return () => clearTimeout(timer)
-  }, [theme, containerRef, preferences])
+  }, [theme, containerRef, preferencesLoaded])
 
   // Auto-switch theme variant when system preference changes
   useEffect(() => {

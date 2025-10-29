@@ -147,22 +147,22 @@ export default function App(props: TaskAppProps = {}) {
       if (userType === 'public') {
         // Public users: use their stable localStorage sessionId
         finalSessionId = getStoredSessionId() || propsSessionId
-        console.log('[App] Public user - using stable sessionId:', finalSessionId)
         
         // For public users, load preferences from localStorage now
         const api = createApi('public', finalSessionId)
         const localPrefs = await api.getPreferences()
-        console.log('[App] Loaded public user preferences from localStorage:', localPrefs)
-        // Set preferences (or defaults if none found)
-        setPreferences(localPrefs || DEFAULT_PREFERENCES)
+        if (localPrefs) {
+          setPreferences(localPrefs)
+        }
         setPreferencesLoaded(true)
       } else {
         // Authenticated users: use the sessionId from props (from parent)
         finalSessionId = propsSessionId
         
         // Apply server preferences if available
-        console.log('[App] Applied preferences from handshake:', serverPreferences)
-        setPreferences(serverPreferences || DEFAULT_PREFERENCES)
+        if (serverPreferences) {
+          setPreferences(serverPreferences)
+        }
         setPreferencesLoaded(true)
         
         // Clear old session storage keys if sessionId changed
@@ -174,12 +174,10 @@ export default function App(props: TaskAppProps = {}) {
       
       // Set the effective sessionId for all hooks to use (only if different)
       if (finalSessionId !== effectiveSessionId) {
-        console.log('[App] Updating effectiveSessionId:', { from: effectiveSessionId, to: finalSessionId })
         setEffectiveSessionId(finalSessionId)
       }
       
       // Now load full data from API
-      console.log('[App] Loading data from API...')
       await initialLoad()
       
       // Mark as fully loaded (session initialized + preferences loaded + data loaded)
@@ -318,11 +316,8 @@ export default function App(props: TaskAppProps = {}) {
   // Show loading skeleton until everything is loaded AND theme is ready AND preferences are loaded
   // Use system preference for theme during initial load, then switch to user preference
   if (!isLoaded || !isThemeReady || !preferencesLoaded) {
-    console.log(`[App] Still loading - isLoaded: ${isLoaded}, isThemeReady: ${isThemeReady}, preferencesLoaded: ${preferencesLoaded}`)
     return <LoadingSkeleton isDarkTheme={systemPrefersDark} />
   }
-  
-  console.log(`[App] Rendering app - theme: ${theme}, isLoaded: ${isLoaded}, isThemeReady: ${isThemeReady}`)
 
   return (
     <div

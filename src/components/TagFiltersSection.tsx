@@ -16,7 +16,7 @@ export interface TagFiltersSectionProps {
   onTagContextMenu: (tag: string, x: number, y: number) => void
   onDragOver: (e: React.DragEvent, filter: string) => void
   onDragLeave: (e: React.DragEvent) => void
-  onDrop: (e: React.DragEvent) => Promise<void>
+  onDrop: (e: React.DragEvent, filterTag: string) => Promise<void>
   onCreateTagClick: () => void
   onPendingOperation: (op: PendingTaskOperation | null) => void
 }
