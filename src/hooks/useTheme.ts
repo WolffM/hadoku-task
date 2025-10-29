@@ -37,12 +37,14 @@ export function useTheme(
     [preferences.experimentalThemes]
   )
 
-  // Apply theme to container element
+  // Apply theme to document root
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.setAttribute('data-theme', theme)
+    if (theme === 'light') {
+      document.documentElement.removeAttribute('data-theme')
+    } else {
+      document.documentElement.setAttribute('data-theme', theme)
     }
-  }, [theme, containerRef])
+  }, [theme])
 
   // Auto-switch theme variant when system preference changes
   useEffect(() => {
