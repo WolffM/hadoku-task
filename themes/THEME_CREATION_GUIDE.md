@@ -8,13 +8,30 @@ Each theme requires **28 color variables** organized into 7 categories. The syst
 
 ### The 5 Main Colors (From Palette)
 
-These are the only colors you need to select from the input palette:
+These are the only colors you need to select from the input palette. **Be creative** - these are guidelines, not rules:
 
-1. **`--color-primary`** - Primary brand color (most vibrant/saturated)
-2. **`--color-success`** - Success/completion indicator (green, yellow, or bright accent)
-3. **`--color-danger`** - Error/warning indicator (red, orange, pink, or contrasting bold)
-4. **`--color-neutral`** - Neutral gray or desaturated base
-5. **`--color-bg`** - Primary background (lightest for light themes, darkest for dark themes)
+1. **`--color-primary`** - Primary brand color
+   - Usually the most vibrant/saturated color
+   - Examples: blue, pink, orange, purple, cyan
+   
+2. **`--color-success`** - Success/completion indicator
+   - Any bright, positive-feeling color
+   - Examples: green, yellow, cyan, orange, neon, gold
+   - Doesn't have to be green!
+   
+3. **`--color-danger`** - Error/warning/delete indicator
+   - Any bold, contrasting color that stands out
+   - Examples: red, orange, pink, purple, magenta, brown
+   - Should contrast well with primary and success
+   
+4. **`--color-neutral`** - Neutral/muted base
+   - Desaturated or gray tone
+   - Used for borders, disabled states
+   
+5. **`--color-bg`** - Primary background
+   - Lightest color for light themes
+   - Darkest color for dark themes
+   - Can be pure white/black or tinted
 
 All other 23 variables are **derived** from these 5 main colors using color manipulation.
 
@@ -31,10 +48,10 @@ All other 23 variables are **derived** from these 5 main colors using color mani
 - `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
 
 #### 2. Success Colors (3 variables)
-**Purpose:** Positive actions, completed tasks
+**Purpose:** Positive actions, completed tasks, checkmarks
 - `--color-success` - **MAIN:** Success/completion indicator
-- `--color-success-dark` - **ALT:** Darker shade (darken 10-15%)
-- `--color-success-text` - **ALT:** Text color on success backgrounds (auto-calculated for contrast)
+- `--color-success-dark` - **ALT:** Darker shade (~10-15% darker, or pick complementary from palette)
+- `--color-success-text` - **ALT:** Text on success backgrounds (white or black for contrast)
 
 #### 3. Danger Colors (5 variables)
 **Purpose:** Destructive actions, errors, warnings
@@ -65,9 +82,12 @@ All other 23 variables are **derived** from these 5 main colors using color mani
 #### 7. Background Colors (4 variables)
 **Purpose:** Page and component backgrounds
 - `--color-bg` - **MAIN:** Primary background canvas
-- `--color-bg-card` - **ALT:** Card/panel background (lighten/darken bg by 3-5%)
-- `--color-bg-alt` - **ALT:** Alternative background (lighten/darken bg by 2-4%)
-- `--color-bg-overlay` - **ALT:** Modal/overlay background (bg at 50-80% opacity)
+- `--color-bg-card` - **ALT:** Card/panel background
+  - Can be pure white/black
+  - Or lighten/darken bg by 3-5%
+  - Or add subtle hue shift for character
+- `--color-bg-alt` - **ALT:** Alternative background (slightly different from bg)
+- `--color-bg-overlay` - **ALT:** Modal/overlay background (semi-transparent)
 
 #### 8. Shadows (6 variables)
 **Purpose:** Depth and elevation
@@ -82,12 +102,41 @@ All other 23 variables are **derived** from these 5 main colors using color mani
 
 ## Derivation Strategy
 
-### Alt Colors (Derived through manipulation)
+### Alt Colors (Derived or Selected Creatively)
+
+You have two approaches for deriving the 23 alt colors:
+
+**Option A: Algorithmic (Recommended for AI)**
 - **Darker shades** - darken(main, 10-30%)
 - **Lighter tints** - lighten(main, 10-40%) or adjust alpha
 - **Text contrast** - Calculate based on background luminance
 - **Borders** - Desaturate and adjust brightness
 - **Shadows** - Use primary or black with alpha
+
+**Option B: Creative Selection (Recommended for Designers)**
+- Pick complementary colors from the input palette
+- Add subtle hue shifts to create mood
+- Use palette harmony (analogous, triadic, etc.)
+- Example: Strawberry theme has pink hue shifts in backgrounds
+
+---
+
+## Real Examples from Existing Themes
+
+### How Success & Danger Colors Vary:
+
+| Theme | Success | Danger | Notes |
+|-------|---------|--------|-------|
+| **Light** | #0ea5e9 (cyan) | #f97316 (orange) | Cool + warm contrast |
+| **Dark** | #fde047 (yellow) | #c084fc (purple) | High contrast neons |
+| **Strawberry** | #22c55e (green) | #ec4899 (hot pink) | Traditional green |
+| **Ocean** | #f97316 (orange) | #ec4899 (pink) | Coral reef vibes |
+| **Cyberpunk** | #00f5d4 (cyan) | #fb5607 (orange) | Neon dystopia |
+| **Coffee** | #eab308 (gold) | #78350f (brown) | Warm earth tones |
+| **Lavender** | #84cc16 (lime) | #6366f1 (indigo) | Unexpected pops |
+| **Nature** | #a7d88f (sage) | #c8643b (rust) | Organic palette |
+
+**Takeaway:** Success and Danger are **theme-specific**, not fixed to green/red!
 
 ---
 
@@ -111,21 +160,23 @@ Given a color list like:
 
 #### For Light Theme:
 ```
---color-primary: [Most vibrant/saturated mid-tone]
---color-success: [Green-ish or complementary bright color]
---color-danger: [Red/Orange/Pink or contrasting vibrant]
+--color-primary: [Most vibrant/saturated color - your theme's identity]
+--color-success: [Any bright, positive color - can be cyan, yellow, green, orange]
+--color-danger: [Contrasting bold color - pick what feels right]
 --color-neutral: [Muted gray or desaturated color]
---color-bg: [Lightest color]
+--color-bg: [Lightest color - can be pure white or tinted]
 ```
 
 #### For Dark Theme:
 ```
---color-primary: [Brightest saturated color]
---color-success: [Bright accent that pops]
---color-danger: [Bold contrasting color]
+--color-primary: [Brightest saturated color that pops]
+--color-success: [Bright accent - yellow, neon, cyan work great]
+--color-danger: [Bold color that contrasts with primary - purple, pink, etc.]
 --color-neutral: [Mid-tone gray]
---color-bg: [Darkest color]
+--color-bg: [Darkest color - can be pure black or tinted]
 ```
+
+**Pro Tip:** Success and Danger should be visually distinct from Primary AND from each other. Test them side-by-side!
 
 ### Step 3: Generate 23 Alt Colors
 
@@ -308,12 +359,21 @@ Before submitting a new theme, verify:
 
 ## Common Pitfalls
 
-1. **Insufficient contrast** - Text must be readable
-2. **Too similar colors** - Primary, Success, Danger should be distinct
-3. **Harsh transitions** - Derived colors should be smooth gradations
-4. **Ignoring accessibility** - Always check WCAG guidelines
-5. **Inconsistent opacity** - Use similar alpha values for similar purposes
+1. **Insufficient contrast** - Text must be readable (≥4.5:1 ratio)
+2. **Too similar colors** - Primary, Success, Danger should be visually distinct
+3. **Ignoring accessibility** - Always check WCAG guidelines
+4. **Forgetting the mood** - Themes should have personality and character
+5. **Over-relying on formulas** - Sometimes picking from the palette works better than algorithmic derivation
 6. **Missing dark variant** - Every theme needs both light and dark versions
+
+## Creativity Encouraged!
+
+**Don't be afraid to:**
+- Use unexpected color combinations
+- Add subtle hue shifts to backgrounds
+- Pick complementary colors from palette instead of darkening
+- Create unique shadows and focus rings
+- Break the "rules" if it looks good and meets accessibility standards
 
 ---
 
