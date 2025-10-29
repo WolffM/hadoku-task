@@ -4,7 +4,21 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 
 ## Theme Structure Overview
 
-Each theme requires **28 color variables** organized into 7 categories. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
+Each theme requires **26 color variables** + **6 shadow variables** = **32 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
+
+### Color Variables Count:
+- Primary colors: 5
+- Success colors: 3
+- Danger colors: 5
+- Neutral colors: 3
+- Text colors: 4
+- Border colors: 2
+- Background colors: 4
+- **Total: 26 color variables**
+
+### Additional Variables:
+- Shadow variables: 6
+- **Grand Total: 32 variables per theme**
 
 ### The 5 Main Colors (From Palette)
 
@@ -12,16 +26,12 @@ These are the only colors you need to select from the input palette. **Be creati
 
 1. **`--color-primary`** - Primary brand color
    - Usually the most vibrant/saturated color
-   - Examples: blue, pink, orange, purple, cyan
    
 2. **`--color-success`** - Success/completion indicator
    - Any bright, positive-feeling color
-   - Examples: green, yellow, cyan, orange, neon, gold
-   - Doesn't have to be green!
    
 3. **`--color-danger`** - Error/warning/delete indicator
    - Any bold, contrasting color that stands out
-   - Examples: red, orange, pink, purple, magenta, brown
    - Should contrast well with primary and success
    
 4. **`--color-neutral`** - Neutral/muted base
@@ -31,15 +41,14 @@ These are the only colors you need to select from the input palette. **Be creati
 5. **`--color-bg`** - Primary background
    - Lightest color for light themes
    - Darkest color for dark themes
-   - Can be pure white/black or tinted
 
-All other 23 variables are **derived** from these 5 main colors using color manipulation.
+All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
 
 ---
 
 ### Required Variables by Category
 
-#### 1. Primary Colors (6 variables)
+#### 1. Primary Colors (5 variables)
 **Purpose:** Main interactive elements, buttons, links
 - `--color-primary` - **MAIN:** Primary brand color
 - `--color-primary-dark` - **ALT:** Darker shade (darken 10-15%)
@@ -104,7 +113,7 @@ All other 23 variables are **derived** from these 5 main colors using color mani
 
 ### Alt Colors (Derived or Selected Creatively)
 
-You have two approaches for deriving the 23 alt colors:
+You have two approaches for deriving the 21 alt colors (+ 6 shadows):
 
 **Option A: Algorithmic (Recommended for AI)**
 - **Darker shades** - darken(main, 10-30%)
@@ -178,7 +187,7 @@ Given a color list like:
 
 **Pro Tip:** Success and Danger should be visually distinct from Primary AND from each other. Test them side-by-side!
 
-### Step 3: Generate 23 Alt Colors
+### Step 3: Generate 21 Alt Colors + 6 Shadows
 
 Use color manipulation functions:
 
@@ -266,7 +275,7 @@ Ensure WCAG AA compliance:
   --color-neutral: #e0e0e0;              /* Light gray */
   --color-bg: #ffffff;                   /* Pure white */
   
-  /* ===== 23 ALT COLORS (derived) ===== */
+  /* ===== 21 ALT COLORS + 6 SHADOWS (derived) ===== */
   
   /* From Primary */
   --color-primary-dark: #e65a2a;         /* darken 10% */
@@ -346,8 +355,8 @@ function getContrastText(bg: string): 'light' | 'dark' {
 
 Before submitting a new theme, verify:
 
-- [ ] All 28 color variables are defined
-- [ ] All 6 shadow variables are defined
+- [ ] All 26 color variables are defined
+- [ ] All 6 shadow variables are defined (32 total)
 - [ ] Primary text has ≥4.5:1 contrast on main background
 - [ ] Theme works in both light and dark variants
 - [ ] Hover states are visually distinct but subtle
