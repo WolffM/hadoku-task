@@ -26,7 +26,18 @@ export async function validateAndChangeKey(
       // Valid key - reload page with new key parameter
       const url = new URL(window.location.href)
       url.searchParams.set('key', trimmedKey)
-      window.location.href = url.toString()
+      const newUrl = url.toString()
+      
+      // Notify parent window (mobile app) of URL change
+      if (window.parent !== window) {
+        console.log('📨 Notifying mobile app of URL change')
+        window.parent.postMessage({
+          type: 'urlChange',
+          url: newUrl
+        }, '*')
+      }
+      
+      window.location.href = newUrl
       return { success: true }
     } else {
       return { success: false, error: 'Invalid key' }
