@@ -86,37 +86,13 @@ export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Pink Light',
     darkLabel: 'Pink Dark'
   },
-  { 
+  {
     lightIcon: <SpaIcon />,
     darkIcon: <SpaIcon />,
-    lightTheme: 'kitsune-springs-a-light',
-    darkTheme: 'kitsune-springs-a-dark',
-    lightLabel: 'Kitsune A Light',
-    darkLabel: 'Kitsune A Dark'
-  },
-  { 
-    lightIcon: <SpaIcon />,
-    darkIcon: <SpaIcon />,
-    lightTheme: 'kitsune-springs-b-light',
-    darkTheme: 'kitsune-springs-b-dark',
-    lightLabel: 'Kitsune B Light',
-    darkLabel: 'Kitsune B Dark'
-  },
-  { 
-    lightIcon: <SpaIcon />,
-    darkIcon: <SpaIcon />,
-    lightTheme: 'kitsune-springs-c-light',
-    darkTheme: 'kitsune-springs-c-dark',
-    lightLabel: 'Kitsune C Light',
-    darkLabel: 'Kitsune C Dark'
-  },
-  { 
-    lightIcon: <SpaIcon />,
-    darkIcon: <SpaIcon />,
-    lightTheme: 'kitsune-springs-d-light',
-    darkTheme: 'kitsune-springs-d-dark',
-    lightLabel: 'Kitsune D Light',
-    darkLabel: 'Kitsune D Dark'
+    lightTheme: 'izakaya-light',
+    darkTheme: 'izakaya-dark',
+    lightLabel: 'Izakaya Light',
+    darkLabel: 'Izakaya Dark'
   },
 ]
 

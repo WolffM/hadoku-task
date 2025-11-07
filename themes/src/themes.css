@@ -741,9 +741,9 @@
   --shadow-focus-sm: 0 0 0 2px rgba(95, 175, 75, 0.35);
   --shadow-focus-alt: 0 0 0 2px rgba(95, 175, 75, 0.25);
 }
-/* Kitsune Spa Springs – six themes (3 light, 3 dark) */
+/* ARCHIVED: Kitsune Theme Contest Losers - see THEME_GRAVEYARD.md */
 
-[data-theme="kitsune-springs-a-light"] {
+/* [data-theme="kitsune-springs-a-light"] {
   --color-primary: #32C2AC;
   --color-primary-dark: #2AA592;
   --color-primary-light: #80DED0;
@@ -776,9 +776,9 @@
   --shadow-focus: 0 0 0 3px rgba(50, 194, 172, 0.25);
   --shadow-focus-sm: 0 0 0 2px rgba(50, 194, 172, 0.25);
   --shadow-focus-alt: 0 0 0 2px rgba(50, 194, 172, 0.15);
-}
+} */
 
-[data-theme="kitsune-springs-b-light"] {
+/* [data-theme="kitsune-springs-b-light"] {
   --color-primary: #BB70DA;
   --color-primary-dark: #A849D0;
   --color-primary-light: #E1C6F0;
@@ -811,9 +811,9 @@
   --shadow-focus: 0 0 0 3px rgba(187, 112, 218, 0.25);
   --shadow-focus-sm: 0 0 0 2px rgba(187, 112, 218, 0.25);
   --shadow-focus-alt: 0 0 0 2px rgba(187, 112, 218, 0.15);
-}
+} */
 
-[data-theme="kitsune-springs-c-light"] {
+/* [data-theme="kitsune-springs-c-light"] {
   --color-primary: #E06B49;
   --color-primary-dark: #C05D40;
   --color-primary-light: #F4C7BA;
@@ -846,9 +846,11 @@
   --shadow-focus: 0 0 0 3px rgba(224, 107, 73, 0.25);
   --shadow-focus-sm: 0 0 0 2px rgba(224, 107, 73, 0.25);
   --shadow-focus-alt: 0 0 0 2px rgba(224, 107, 73, 0.15);
-}
+} */
 
-[data-theme="kitsune-springs-d-light"] {
+/* Izakaya Theme - Winner of Kitsune Theme Contest */
+
+[data-theme="izakaya-light"] {
   --color-primary: #41BAAE;
   --color-primary-dark: #369C92;
   --color-primary-light: #7AD5CC;
@@ -890,7 +892,7 @@
   --shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
 }
 
-[data-theme="kitsune-springs-a-dark"] {
+/* [data-theme="kitsune-springs-a-dark"] {
   --color-primary: #D45C3C;
   --color-primary-dark: #B64F34;
   --color-primary-light: #823D2E;
@@ -923,9 +925,9 @@
   --shadow-focus: 0 0 0 3px rgba(212, 92, 60, 0.35);
   --shadow-focus-sm: 0 0 0 2px rgba(212, 92, 60, 0.35);
   --shadow-focus-alt: 0 0 0 2px rgba(212, 92, 60, 0.20);
-}
+} */
 
-[data-theme="kitsune-springs-b-dark"] {
+/* [data-theme="kitsune-springs-b-dark"] {
   --color-primary: #BF663B;
   --color-primary-dark: #A35633;
   --color-primary-light: #6B3B28;
@@ -958,9 +960,9 @@
   --shadow-focus: 0 0 0 3px rgba(191, 102, 59, 0.35);
   --shadow-focus-sm: 0 0 0 2px rgba(191, 102, 59, 0.35);
   --shadow-focus-alt: 0 0 0 2px rgba(191, 102, 59, 0.20);
-}
+} */
 
-[data-theme="kitsune-springs-c-dark"] {
+/* [data-theme="kitsune-springs-c-dark"] {
   --color-primary: #2ECAB9;
   --color-primary-dark: #27AC9D;
   --color-primary-light: #208D82;
@@ -993,9 +995,9 @@
   --shadow-focus: 0 0 0 3px rgba(46, 202, 185, 0.35);
   --shadow-focus-sm: 0 0 0 2px rgba(46, 202, 185, 0.35);
   --shadow-focus-alt: 0 0 0 2px rgba(46, 202, 185, 0.20);
-}
+} */
 
-[data-theme="kitsune-springs-d-dark"] {
+[data-theme="izakaya-dark"] {
   --color-primary: #41BAAE;
   --color-primary-dark: #2C877D;
   --color-primary-light: #74D3C7;

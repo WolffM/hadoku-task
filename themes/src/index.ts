@@ -1,8 +1,7 @@
 /**
  * Hadoku Theme System - Utilities
  * Framework-agnostic theme management for Hadoku themes
- * 24 beautiful themes across 12 theme families
- * CI/CD test change
+ * 18 beautiful themes across 9 theme families
  */
 
 export const THEMES = [
@@ -22,14 +21,8 @@ export const THEMES = [
   'cyberpunk-dark',
   'pink-light',
   'pink-dark',
-  'kitsune-springs-a-light',
-  'kitsune-springs-a-dark',
-  'kitsune-springs-b-light',
-  'kitsune-springs-b-dark',
-  'kitsune-springs-c-light',
-  'kitsune-springs-c-dark',
-  'kitsune-springs-d-light',
-  'kitsune-springs-d-dark'
+  'izakaya-light',
+  'izakaya-dark'
 ] as const
 
 export type Theme = typeof THEMES[number]
