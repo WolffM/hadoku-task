@@ -1,6 +1,5 @@
 /**
  * Main App component
- * Refactored to use extracted hooks and components for better maintainability
  */
 
 import React, { useEffect, useRef, useState } from 'react'
