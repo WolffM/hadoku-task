@@ -65,20 +65,31 @@ export function saveTheme(theme: Theme): void {
 
 /**
  * Load saved theme from sessionStorage
- * @returns Saved theme or 'light' if none saved
+ * @returns Saved theme, or browser preference, or 'light' if none available
  */
 export function loadTheme(): Theme {
+  // First check sessionStorage
   const saved = sessionStorage.getItem('hadoku-theme') as Theme
   if (saved && THEMES.includes(saved)) {
     setTheme(saved)
     return saved
   }
+
+  // If no saved theme, respect browser's color scheme preference
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const browserTheme = prefersDark ? 'dark' : 'light'
+    setTheme(browserTheme)
+    return browserTheme
+  }
+
+  // Final fallback to light
   return 'light'
 }
 
 /**
  * Initialize theme system on page load
- * Loads saved theme or defaults to light
+ * Loads saved theme, respects browser preference, or defaults to light
  */
 export function initTheme(): Theme {
   return loadTheme()
