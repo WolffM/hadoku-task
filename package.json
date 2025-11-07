@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.2.16",
+  "version": "3.2.17",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
   "repository": {
