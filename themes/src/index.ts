@@ -2,6 +2,7 @@
  * Hadoku Theme System - Utilities
  * Framework-agnostic theme management for Hadoku themes
  * 24 beautiful themes across 12 theme families
+ * CI/CD test change
  */
 
 export const THEMES = [
