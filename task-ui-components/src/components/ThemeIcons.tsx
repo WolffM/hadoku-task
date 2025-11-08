@@ -128,6 +128,18 @@ export const SettingsIcon = () => (
   </svg>
 )
 
+export const TagIcon = () => (
+  <svg {...iconProps} width={16} height={16} viewBox="0 0 20 20">
+    {/* Tag body - rectangular shape pointing right */}
+    <path
+      d="M2 4 L12 4 L16 10 L12 16 L2 16 Z"
+      fill="currentColor"
+    />
+    {/* Hole in tag */}
+    <circle cx="6" cy="10" r="1.5" fill="white" />
+  </svg>
+)
+
 export const SpaIcon = () => (
   <svg {...iconProps}>
     {/* Steam wisps */}

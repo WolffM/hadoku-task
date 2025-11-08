@@ -25,10 +25,11 @@
     "./style.css": "./dist/task.css"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm run build:packages && vite",
     "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build:all": "pnpm run build && pnpm run build:server",
+    "build:packages": "pnpm --filter @wolffm/themes run build && pnpm --filter @wolffm/task-ui-components run build",
+    "build:all": "pnpm run build:packages && pnpm run build && pnpm run build:server",
     "preview": "vite preview",
     "version:patch": "pnpm version patch --no-git-tag-version",
     "version:smart": "node scripts/version-manager.js",
@@ -36,6 +37,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@wolffm/task-ui-components": "workspace:*",
     "@wolffm/themes": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

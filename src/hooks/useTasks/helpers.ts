@@ -4,9 +4,11 @@
  */
 
 import { SESSION_ID } from '../../api/session'
+import { deferredBroadcast as broadcastUtil } from '../../utils/broadcast'
 
 /**
  * Broadcast a tasks-updated message with a delay to ensure localStorage propagation
+ * @deprecated Use deferredBroadcast from utils/broadcast directly
  */
 export function deferredBroadcast(
   sessionIdParam: string,
@@ -14,15 +16,7 @@ export function deferredBroadcast(
   sessionId?: string,
   delayMs: number = 50
 ) {
-  setTimeout(() => {
-    try {
-      const bc = new BroadcastChannel('tasks')
-      bc.postMessage({ type: 'tasks-updated', sessionId: sessionIdParam, userType })
-      bc.close()
-    } catch (err) {
-      console.error('[useTasks] Broadcast failed:', err)
-    }
-  }, delayMs)
+  broadcastUtil('tasks-updated', { sessionId: sessionIdParam, userType }, delayMs)
 }
 
 /**

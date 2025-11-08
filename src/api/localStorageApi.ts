@@ -4,23 +4,11 @@
  */
 
 import { generateULID } from '../domain/utils/shared'
-import type { TasksFile, StatsFile, Task, BoardsFile, Board } from '../domain/types'
+import type { TasksFile, StatsFile, Task, BoardsFile, Board, AuthContext } from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
-
-// Helper to broadcast with delay to ensure localStorage propagation across tabs
-function deferredBroadcast(type: 'tasks-updated' | 'boards-updated', data: any, delayMs: number = 50) {
-  setTimeout(() => {
-    try {
-      const bc = new BroadcastChannel('tasks')
-      bc.postMessage({ type, ...data })
-      bc.close()
-    } catch (err) {
-      console.error('[localStorageApi] Broadcast failed:', err)
-    }
-  }, delayMs)
-}
+import { deferredBroadcast } from '../utils/broadcast'
 
 /**
  * Create a localStorage-based API client that mirrors the server API interface
@@ -30,7 +18,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
   
   // For localStorage operations, treat all users as 'registered' to bypass server auth checks
   // Public users CAN create tasks locally, the auth checks are only for server-side API calls
-  const authContext = { userType: 'registered' as any, sessionId }
+  const authContext: AuthContext = { userType: 'registered', sessionId }
   
   return {
     async getBoards(): Promise<BoardsFile> {

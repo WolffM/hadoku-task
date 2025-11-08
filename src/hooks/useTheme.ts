@@ -46,27 +46,23 @@ export function useTheme(
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {
-    // Don't apply theme until preferences are fully loaded
-    if (!preferencesLoaded) {
-      setIsThemeReady(false)
-      return
-    }
-    
     setIsThemeReady(false) // Reset ready state when theme changes
-    
+
     // Apply to document root (for standalone usage)
     document.documentElement.setAttribute('data-theme', theme)
-    
+
     // Also apply to container (for microfrontend usage where parent may isolate styles)
     if (containerRef.current) {
       containerRef.current.setAttribute('data-theme', theme)
     }
-    
+
+    console.log('[useTheme] Applied theme:', theme, { preferencesLoaded })
+
     // Mark theme as ready after a brief delay to ensure CSS has been applied
     const timer = setTimeout(() => {
       setIsThemeReady(true)
     }, 50)
-    
+
     return () => clearTimeout(timer)
   }, [theme, containerRef, preferencesLoaded])
 

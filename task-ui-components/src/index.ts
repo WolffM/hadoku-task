@@ -18,6 +18,7 @@ export {
   HeartIcon,
   LeafIcon,
   SettingsIcon,
+  TagIcon,
   SpaIcon
 } from './components/ThemeIcons'
 

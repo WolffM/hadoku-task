@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon } from '../components/ThemeIcons'
+import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon } from '@wolffm/task-ui-components'
 import type { ThemeName } from './types'
 
 export interface ThemeFamily {

@@ -77,17 +77,18 @@ The ThemePicker requires these CSS variables to be defined by your theme system:
 
 Available theme icons:
 
-- `SunIcon`
-- `MoonIcon`
-- `StrawberryIcon`
-- `WaveIcon`
-- `ZapIcon`
-- `CoffeeIcon`
-- `FlowerIcon`
-- `HeartIcon`
-- `LeafIcon`
-- `SettingsIcon`
-- `SpaIcon`
+- `SunIcon` - Sun/light mode icon
+- `MoonIcon` - Moon/dark mode icon
+- `StrawberryIcon` - Strawberry fruit icon
+- `WaveIcon` - Ocean wave icon
+- `ZapIcon` - Lightning bolt icon (cyberpunk)
+- `CoffeeIcon` - Coffee cup icon
+- `FlowerIcon` - Flower/lavender icon
+- `HeartIcon` - Heart icon (pink theme)
+- `LeafIcon` - Leaf icon (nature theme)
+- `SettingsIcon` - Gear/settings icon
+- `TagIcon` - Tag/label icon
+- `SpaIcon` - Hot spring/spa icon (izakaya theme)
 
 ## Props
 

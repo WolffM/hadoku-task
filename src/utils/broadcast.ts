@@ -1,0 +1,36 @@
+/**
+ * Shared broadcast utilities for cross-tab communication
+ * Provides deferred broadcasting to ensure localStorage propagation
+ */
+
+export type BroadcastType = 'tasks-updated' | 'boards-updated'
+
+export interface BroadcastData {
+  type: BroadcastType
+  sessionId?: string
+  userType?: string
+  [key: string]: any
+}
+
+/**
+ * Broadcast a message with a delay to ensure localStorage propagation across tabs
+ *
+ * @param type - Type of broadcast event
+ * @param data - Additional data to broadcast
+ * @param delayMs - Delay before broadcasting (default: 50ms)
+ */
+export function deferredBroadcast(
+  type: BroadcastType,
+  data: Omit<BroadcastData, 'type'> = {},
+  delayMs: number = 50
+): void {
+  setTimeout(() => {
+    try {
+      const bc = new BroadcastChannel('tasks')
+      bc.postMessage({ type, ...data })
+      bc.close()
+    } catch (err) {
+      console.error('[broadcast] Failed to broadcast:', err)
+    }
+  }, delayMs)
+}

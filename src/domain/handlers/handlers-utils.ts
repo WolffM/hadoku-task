@@ -12,8 +12,10 @@ import type {
   StatsFile,
   Board,
   BoardsFile,
-  ULID
+  ULID,
+  AuthContext
 } from '../types.js';
+import type { Storage } from '../../server/storage.js';
 
 /**
  * Find task by ID or throw error
@@ -212,8 +214,8 @@ export function closeTask(
  * @returns Result from the operation
  */
 export async function withTaskOperation<T>(
-  storage: any, // Storage type from server
-  auth: any, // AuthContext type
+  storage: Storage,
+  auth: AuthContext,
   boardId: string,
   operation: (
     tasks: TasksFile,
@@ -263,8 +265,8 @@ export async function withTaskOperation<T>(
  * @returns Result from the operation
  */
 export async function withBoardOperation<T>(
-  storage: any,
-  auth: any,
+  storage: Storage,
+  auth: AuthContext,
   operation: (boards: BoardsFile, timestamp: string) => {
     updatedBoards: BoardsFile;
     result: T;

@@ -4,7 +4,7 @@
  */
 
 import React, { type RefObject } from 'react'
-import { SettingsIcon } from './ThemeIcons'
+import { SettingsIcon } from '@wolffm/task-ui-components'
 import { getThemeIcon, type ThemeFamily } from '../app/themeConfig'
 import type { ThemeName } from '../app/types'
 

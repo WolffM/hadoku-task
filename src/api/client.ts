@@ -1,5 +1,8 @@
-import type { TasksFile, StatsFile, BoardsFile } from '../domain/types'
+import type { TasksFile, StatsFile, BoardsFile, Task } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
+
+// Type for task updates (partial Task without id and createdAt)
+type TaskPatch = Partial<Omit<Task, 'id' | 'createdAt'>>
 
 /**
  * Sync API boards data to localStorage
@@ -159,7 +162,7 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
       return result
     },
     
-    async patchTask(id: string, patch: any, boardId: string = 'main', suppressBroadcast: boolean = false) {
+    async patchTask(id: string, patch: TaskPatch, boardId: string = 'main', suppressBroadcast: boolean = false) {
       const result = await localStorage.patchTask(id, patch, boardId, suppressBroadcast)
       // Background server sync
       fetch(`/task/api/${id}`, {

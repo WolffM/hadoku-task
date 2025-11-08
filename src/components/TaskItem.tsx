@@ -5,7 +5,7 @@
 import React from 'react'
 import type { Task } from '../domain/types'
 import { formatAge } from '../utils/formatters'
-import { TagIcon } from './ThemeIcons'
+import { TagIcon } from '@wolffm/task-ui-components'
 
 interface TaskItemProps {
   task: Task
