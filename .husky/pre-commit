@@ -2,17 +2,29 @@
 if git diff --cached --name-only | grep -q "^themes/"; then
   echo "📦 Themes package changed, bumping version..."
   cd themes
-  npm run version:smart
-  npm run build
+  pnpm run version:smart
+  pnpm install
+  pnpm run build
   git add package.json package-lock.json
   cd ..
 fi
 
-# Check if task package changed (root package)
-if git diff --cached --name-only | grep -qv "^themes/"; then
+# Check if task-ui-components package changed
+if git diff --cached --name-only | grep -q "^task-ui-components/"; then
+  echo "📦 UI Components package changed, bumping version..."
+  cd task-ui-components
+  pnpm run version:smart
+  pnpm install
+  pnpm run build
+  git add package.json package-lock.json
+  cd ..
+fi
+
+# Check if task package changed (root package - exclude sub-packages)
+if git diff --cached --name-only | grep -qv "^themes/" | grep -qv "^task-ui-components/"; then
   echo "📦 Task package changed, bumping version..."
-  npm run version:smart
-  npm run build:all
+  pnpm run version:smart
+  pnpm run build:all
   node scripts/trim-changelog.js
   git add package.json package-lock.json docs/CHANGELOG.md
 fi

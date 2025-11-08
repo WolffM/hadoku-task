@@ -1,0 +1,49 @@
+{
+  "name": "@wolffm/task-ui-components",
+  "version": "1.0.1",
+  "description": "Reusable UI components for task management applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./theme-picker.css": "./dist/theme-picker.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc && pnpm run copy-css",
+    "copy-css": "node -e \"require('fs').copyFileSync('src/theme-picker.css', 'dist/theme-picker.css')\"",
+    "version:smart": "node scripts/version-manager.cjs",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "theme-picker",
+    "ui-components",
+    "react",
+    "themes",
+    "task-management"
+  ],
+  "author": "wolffm",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WolffM/hadoku-task.git",
+    "directory": "task-ui-components"
+  }
+}

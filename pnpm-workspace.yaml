@@ -1,3 +1,4 @@
 packages:
   - '.'
   - 'themes'
+  - 'task-ui-components'

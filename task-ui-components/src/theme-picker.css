@@ -1,0 +1,224 @@
+/**
+ * ThemePicker Component Styles
+ * Beautiful theme picker with light/dark pill design
+ *
+ * Required CSS Variables (should be defined by your theme system):
+ * --color-text
+ * --color-primary
+ * --color-primary-hover
+ * --color-primary-bg
+ * --color-bg-card
+ * --color-text-secondary
+ * --shadow-focus-sm
+ * --shadow-md
+ * --shadow-modal
+ * --transition-fast (e.g., 0.15s ease)
+ * --spacing-sm (e.g., 8px)
+ * --spacing-md (e.g., 12px)
+ * --spacing-lg (e.g., 16px)
+ * --font-size-lg (e.g., 18px)
+ * --font-weight-semibold (e.g., 600)
+ */
+
+.theme-picker {
+  position: relative;
+}
+
+/* Theme toggle button */
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg, 18px);
+  cursor: pointer;
+  padding: var(--spacing-sm, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text, #000);
+  opacity: 0.7;
+  transition: background-color var(--transition-fast, 0.15s ease),
+              opacity var(--transition-fast, 0.15s ease);
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--color-primary-hover, rgba(0, 0, 0, 0.05));
+  opacity: 1;
+}
+
+.theme-toggle-btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus-sm, 0 0 0 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Theme picker overlay - covers entire viewport for click-outside detection */
+.theme-picker__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+  background: transparent;
+}
+
+/* Theme picker dropdown - positioned relative to picker button */
+.theme-picker__dropdown {
+  position: absolute;
+  top: 0;
+  left: calc(100% + var(--spacing-md, 12px));
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md, 12px); /* Spacing between pill tower and settings button */
+}
+
+/* Theme pill tower - has the shadow */
+.theme-picker__pills {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* No gap - pancake stack */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.15)); /* Shadow on pill tower only */
+}
+
+/* Theme pill - contains light and dark buttons */
+.theme-pill {
+  display: flex;
+  gap: 0;
+  background: transparent;
+  border: none;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+/* Separator line between pills */
+.theme-pill:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Theme pill buttons */
+.theme-pill__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--spacing-lg, 16px) * 1.2); /* 20% bigger total (10% + 10%) */
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  position: relative;
+  overflow: visible; /* Allow border to show */
+}
+
+/* Light button default style */
+.theme-pill__btn--light {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1e293b;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Dark button default style - more cyber with darker background and blue tint */
+.theme-pill__btn--dark {
+  background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+  color: #64748b;
+  border-left: 1px solid rgba(100, 116, 139, 0.1);
+}
+
+/* First pill top-left corner rounding - rounded corner instead of full circle */
+.theme-pill:first-child .theme-pill__btn--light {
+  border-top-left-radius: 12px;
+}
+
+/* First pill top-right corner rounding */
+.theme-pill:first-child .theme-pill__btn--dark {
+  border-top-right-radius: 12px;
+}
+
+/* Last pill bottom-left corner rounding */
+.theme-pill:last-child .theme-pill__btn--light {
+  border-bottom-left-radius: 12px;
+}
+
+/* Last pill bottom-right corner rounding */
+.theme-pill:last-child .theme-pill__btn--dark {
+  border-bottom-right-radius: 12px;
+}
+
+.theme-pill__btn--light:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: var(--color-primary, #3b82f6);
+}
+
+.theme-pill__btn--dark:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #cbd5e1;
+}
+
+/* Active states - with proper border radius that doesn't clip, 10% bigger border */
+.theme-pill__btn--light.active {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  color: var(--color-primary, #3b82f6);
+  box-shadow: inset 0 0 0 2.2px var(--color-primary, #3b82f6); /* Uses theme primary color */
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.theme-pill__btn--dark.active {
+  background: linear-gradient(135deg, #020617 0%, #000000 100%);
+  color: var(--color-primary, #3b82f6); /* Use theme primary color */
+  box-shadow: inset 0 0 0 2.2px var(--color-primary, #3b82f6); /* Use theme primary color */
+  font-weight: var(--font-weight-semibold, 600);
+  /* Add glow effect for cyber look */
+  filter: brightness(1.1);
+}
+
+/* Icon container - reduced by ~15% (24px -> 20px) */
+.theme-pill__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.theme-pill__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Settings icon button - circular, separate from pill tower */
+.theme-picker__settings-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  border-radius: 50%; /* Circular */
+  box-shadow: var(--shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
+  flex-shrink: 0;
+}
+
+.theme-picker__settings-icon:hover {
+  background: var(--color-primary-bg, rgba(59, 130, 246, 0.1));
+  color: var(--color-primary, #3b82f6);
+  transform: rotate(45deg);
+  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.15));
+}
+
+.theme-picker__settings-icon svg {
+  width: 20px;
+  height: 20px;
+}

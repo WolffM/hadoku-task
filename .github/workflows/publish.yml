@@ -46,7 +46,10 @@ jobs:
       
       - name: Build Themes package
         run: pnpm --filter @wolffm/themes run build
-      
+
+      - name: Build UI Components package
+        run: pnpm --filter @wolffm/task-ui-components run build
+
       - name: Debug - Show changed files
         run: |
           echo "Files changed in this push:"
@@ -63,12 +66,23 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "✗ No changes in themes package"
           fi
-      
+
+      - name: Check if task-ui-components package changed
+        id: ui_components_changed
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q "^task-ui-components/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ UI Components package has changes"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ No changes in UI components package"
+          fi
+
       - name: Check if task package changed
         id: task_changed
         run: |
-          # Check if any files changed outside of themes/ directory
-          if git diff --name-only HEAD~1 HEAD | grep -q -v "^themes/"; then
+          # Check if any files changed outside of themes/ and task-ui-components/ directories
+          if git diff --name-only HEAD~1 HEAD | grep -qv "^themes/" | grep -qv "^task-ui-components/"; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ Task package has changes"
           else
@@ -81,7 +95,13 @@ jobs:
         run: pnpm --filter @wolffm/themes publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      - name: Publish UI Components package
+        if: steps.ui_components_changed.outputs.changed == 'true'
+        run: pnpm --filter @wolffm/task-ui-components publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish Task package
         if: steps.task_changed.outputs.changed == 'true'
         run: pnpm --filter @wolffm/task publish --no-git-checks
@@ -89,28 +109,41 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Notify parent about package updates
-        if: steps.themes_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
+        if: steps.themes_changed.outputs.changed == 'true' || steps.ui_components_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
         env:
           HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
           echo "Notifying hadoku_site about package updates..."
-          
+
           if [ -z "$HADOKU_SITE_TOKEN" ]; then
             echo "⚠️  Warning: HADOKU_SITE_TOKEN not available, skipping notification"
             exit 0
           fi
-          
+
           # Build array of updated packages
           updated_packages="["
+          first=true
+
           if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
             updated_packages="${updated_packages}\"@wolffm/themes\""
+            first=false
           fi
+
+          if [ "${{ steps.ui_components_changed.outputs.changed }}" = "true" ]; then
+            if [ "$first" = "false" ]; then
+              updated_packages="${updated_packages},"
+            fi
+            updated_packages="${updated_packages}\"@wolffm/task-ui-components\""
+            first=false
+          fi
+
           if [ "${{ steps.task_changed.outputs.changed }}" = "true" ]; then
-            if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
+            if [ "$first" = "false" ]; then
               updated_packages="${updated_packages},"
             fi
             updated_packages="${updated_packages}\"@wolffm/task\""
           fi
+
           updated_packages="${updated_packages}]"
           
           echo "Updated packages: $updated_packages"
