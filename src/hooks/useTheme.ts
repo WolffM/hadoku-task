@@ -15,6 +15,7 @@ export interface UseThemeReturn {
   THEME_FAMILIES: ThemeFamily[]
   setTheme: (theme: ThemeName) => void
   isThemeReady: boolean
+  isInitialThemeLoad: boolean
 }
 
 /**
@@ -30,6 +31,7 @@ export function useTheme(
 ): UseThemeReturn {
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [isThemeReady, setIsThemeReady] = useState(false)
+  const [isInitialThemeLoad, setIsInitialThemeLoad] = useState(true)
 
   // Use system preference as default theme (like the loading skeleton)
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -46,8 +48,6 @@ export function useTheme(
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {
-    setIsThemeReady(false) // Reset ready state when theme changes
-
     // Apply to document root (for standalone usage)
     document.documentElement.setAttribute('data-theme', theme)
 
@@ -58,13 +58,19 @@ export function useTheme(
 
     console.log('[useTheme] Applied theme:', theme, { preferencesLoaded })
 
-    // Mark theme as ready after a brief delay to ensure CSS has been applied
-    const timer = setTimeout(() => {
+    // Only delay theme ready on initial load, not on theme changes
+    if (isInitialThemeLoad) {
+      // Mark theme as ready after a brief delay to ensure CSS has been applied
+      const timer = setTimeout(() => {
+        setIsThemeReady(true)
+        setIsInitialThemeLoad(false)
+      }, 50)
+      return () => clearTimeout(timer)
+    } else {
+      // Theme changes are instant - no skeleton needed
       setIsThemeReady(true)
-    }, 50)
-
-    return () => clearTimeout(timer)
-  }, [theme, containerRef, preferencesLoaded])
+    }
+  }, [theme, containerRef, preferencesLoaded, isInitialThemeLoad])
 
   // Auto-switch theme variant when system preference changes
   useEffect(() => {
@@ -112,6 +118,7 @@ export function useTheme(
     setShowThemePicker,
     THEME_FAMILIES,
     setTheme,
-    isThemeReady
+    isThemeReady,
+    isInitialThemeLoad
   }
 }

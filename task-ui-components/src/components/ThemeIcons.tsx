@@ -154,3 +154,80 @@ export const SpaIcon = () => (
     <circle cx="20" cy="16" r="1.5" fill="currentColor" opacity="0.4" />
   </svg>
 )
+
+/**
+ * Generic/Fallback icons for custom themes without specific icons
+ * These provide visual differentiation when using the ThemePicker with custom themes
+ */
+
+export const CircleIcon = () => (
+  <svg {...iconProps}>
+    <circle cx="12" cy="12" r="8" />
+  </svg>
+)
+
+export const SquareIcon = () => (
+  <svg {...iconProps}>
+    <rect x="5" y="5" width="14" height="14" rx="2" />
+  </svg>
+)
+
+export const TriangleIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 5 L21 19 L3 19 Z" />
+  </svg>
+)
+
+export const DiamondIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 2 L22 12 L12 22 L2 12 Z" />
+  </svg>
+)
+
+export const StarIcon = () => (
+  <svg {...iconProps}>
+    <polygon points="12,2 15,10 23,10 17,15 19,23 12,18 5,23 7,15 1,10 9,10" />
+  </svg>
+)
+
+export const HexagonIcon = () => (
+  <svg {...iconProps}>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+  </svg>
+)
+
+export const PentagonIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 2 L22 9 L18 20 L6 20 L2 9 Z" />
+  </svg>
+)
+
+export const OctagonIcon = () => (
+  <svg {...iconProps}>
+    <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86" />
+  </svg>
+)
+
+/**
+ * Fallback icon sets for themes - provides 8 distinct shapes
+ * Use these when you don't have specific icons for your themes
+ */
+export const FALLBACK_ICONS = [
+  CircleIcon,
+  SquareIcon,
+  TriangleIcon,
+  DiamondIcon,
+  StarIcon,
+  HexagonIcon,
+  PentagonIcon,
+  OctagonIcon,
+] as const
+
+/**
+ * Get a fallback icon for a theme by index
+ * Icons repeat after 8 themes to provide consistent differentiation
+ */
+export function getFallbackIcon(index: number) {
+  const Icon = FALLBACK_ICONS[index % FALLBACK_ICONS.length]
+  return <Icon />
+}

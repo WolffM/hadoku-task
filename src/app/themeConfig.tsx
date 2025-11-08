@@ -4,17 +4,8 @@
  */
 
 import React from 'react'
-import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon } from '@wolffm/task-ui-components'
+import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon, type ThemeFamily } from '@wolffm/task-ui-components'
 import type { ThemeName } from './types'
-
-export interface ThemeFamily {
-  lightIcon: React.ReactNode
-  darkIcon: React.ReactNode
-  lightTheme: ThemeName
-  darkTheme: ThemeName
-  lightLabel: string
-  darkLabel: string
-}
 
 // Base theme families (always available)
 export const BASE_THEME_FAMILIES: ThemeFamily[] = [

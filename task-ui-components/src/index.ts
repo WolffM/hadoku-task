@@ -19,7 +19,18 @@ export {
   LeafIcon,
   SettingsIcon,
   TagIcon,
-  SpaIcon
+  SpaIcon,
+  // Generic/Fallback icons
+  CircleIcon,
+  SquareIcon,
+  TriangleIcon,
+  DiamondIcon,
+  StarIcon,
+  HexagonIcon,
+  PentagonIcon,
+  OctagonIcon,
+  FALLBACK_ICONS,
+  getFallbackIcon
 } from './components/ThemeIcons'
 
 // Types
@@ -28,3 +39,6 @@ export type {
   ThemeFamily,
   ThemePickerProps
 } from './types'
+
+// Utilities
+export { logger } from './utils/logger'

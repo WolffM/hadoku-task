@@ -16,6 +16,8 @@ npm install @wolffm/task-ui-components
 
 ## Usage
 
+### With Custom Icons
+
 ```tsx
 import { ThemePicker, SunIcon, MoonIcon } from '@wolffm/task-ui-components'
 import '@wolffm/task-ui-components/theme-picker.css'
@@ -49,6 +51,55 @@ function App() {
 }
 ```
 
+### With Automatic Fallback Icons (No Icons Needed!)
+
+Perfect when using your own theme system without the `@wolffm/themes` package:
+
+```tsx
+import { ThemePicker } from '@wolffm/task-ui-components'
+import '@wolffm/task-ui-components/theme-picker.css'
+import './my-custom-themes.css' // Your own theme CSS
+
+const THEME_FAMILIES = [
+  {
+    // Icons will be automatically assigned (CircleIcon for first theme)
+    lightTheme: 'ocean-light',
+    darkTheme: 'ocean-dark',
+    lightLabel: 'Ocean Light',
+    darkLabel: 'Ocean Dark'
+  },
+  {
+    // SquareIcon for second theme
+    lightTheme: 'forest-light',
+    darkTheme: 'forest-dark',
+    lightLabel: 'Forest Light',
+    darkLabel: 'Forest Dark'
+  },
+  {
+    // TriangleIcon for third theme
+    lightTheme: 'sunset-light',
+    darkTheme: 'sunset-dark',
+    lightLabel: 'Sunset Light',
+    darkLabel: 'Sunset Dark'
+  }
+]
+
+function App() {
+  const [theme, setTheme] = useState('ocean-light')
+  const [showPicker, setShowPicker] = useState(false)
+
+  return (
+    <ThemePicker
+      currentTheme={theme}
+      isOpen={showPicker}
+      themeFamilies={THEME_FAMILIES}
+      onThemeChange={setTheme}
+      onToggle={() => setShowPicker(!showPicker)}
+    />
+  )
+}
+```
+
 ## CSS Variables
 
 The ThemePicker requires these CSS variables to be defined by your theme system:
@@ -75,7 +126,9 @@ The ThemePicker requires these CSS variables to be defined by your theme system:
 
 ## Icons
 
-Available theme icons:
+### Theme-Specific Icons
+
+Available themed icons for specific aesthetics:
 
 - `SunIcon` - Sun/light mode icon
 - `MoonIcon` - Moon/dark mode icon
@@ -89,6 +142,103 @@ Available theme icons:
 - `SettingsIcon` - Gear/settings icon
 - `TagIcon` - Tag/label icon
 - `SpaIcon` - Hot spring/spa icon (izakaya theme)
+
+### Generic/Fallback Icons
+
+When you don't have specific icons for your themes, use generic shape icons for visual differentiation:
+
+- `CircleIcon` - Simple circle
+- `SquareIcon` - Rounded square
+- `TriangleIcon` - Triangle
+- `DiamondIcon` - Diamond shape
+- `StarIcon` - Star shape
+- `HexagonIcon` - Hexagon
+- `PentagonIcon` - Pentagon
+- `OctagonIcon` - Octagon
+
+**Automatic Fallback:**
+
+The `ThemePicker` component automatically uses fallback icons if you don't provide any:
+
+```tsx
+import { ThemePicker } from '@wolffm/task-ui-components'
+
+const THEME_FAMILIES = [
+  {
+    // No icons provided - will use CircleIcon automatically
+    lightTheme: 'custom-light',
+    darkTheme: 'custom-dark',
+    lightLabel: 'Custom Light',
+    darkLabel: 'Custom Dark'
+  },
+  {
+    // No icons provided - will use SquareIcon automatically
+    lightTheme: 'another-light',
+    darkTheme: 'another-dark',
+    lightLabel: 'Another Light',
+    darkLabel: 'Another Dark'
+  }
+]
+```
+
+**Manual Fallback Usage:**
+
+You can also manually use fallback icons:
+
+```tsx
+import { getFallbackIcon, FALLBACK_ICONS } from '@wolffm/task-ui-components'
+
+// Get icon by index (0-7, repeats after 8)
+const icon = getFallbackIcon(0) // Returns CircleIcon
+const icon2 = getFallbackIcon(5) // Returns HexagonIcon
+
+// Or use the array directly
+const CircleIconComponent = FALLBACK_ICONS[0]
+const iconElement = <CircleIconComponent />
+```
+
+**Fallback Icon Sequence:**
+
+When icons are omitted from `ThemeFamily`, they're assigned in this order:
+
+1. `CircleIcon` (index 0)
+2. `SquareIcon` (index 1)
+3. `TriangleIcon` (index 2)
+4. `DiamondIcon` (index 3)
+5. `StarIcon` (index 4)
+6. `HexagonIcon` (index 5)
+7. `PentagonIcon` (index 6)
+8. `OctagonIcon` (index 7)
+9. Pattern repeats from `CircleIcon` for 9+ themes
+
+This ensures each theme gets a visually distinct icon while maintaining consistency across app reloads.
+
+## Logger
+
+Production-safe logging utility that respects development mode and admin status:
+
+```typescript
+import { logger } from '@wolffm/task-ui-components'
+
+// Enable admin mode (after authentication)
+logger.setAdminStatus(true)
+
+// Log levels (always shown in development or admin mode)
+logger.info('Theme changed', { theme: 'dark' })
+logger.debug('Component state', { isOpen: true })
+logger.component('mount', 'ThemePicker', props)
+logger.theme('strawberry-dark', { source: 'preference' })
+
+// Always shown
+logger.warn('Deprecated feature used', { feature: 'old-api' })
+logger.error('Failed to save', { error: err.message })
+```
+
+**Features:**
+- **Development mode**: All logs shown when `localhost` or `127.0.0.1`
+- **Admin mode**: All logs shown when `setAdminStatus(true)` called
+- **Production**: Only errors and warnings shown for non-admin users
+- **Structured context**: Pass objects for better debugging
 
 ## Props
 
@@ -107,14 +257,14 @@ Available theme icons:
 
 ### ThemeFamily
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `lightIcon` | `ReactNode` | Icon for light variant |
-| `darkIcon` | `ReactNode` | Icon for dark variant |
-| `lightTheme` | `string` | Theme name for light variant |
-| `darkTheme` | `string` | Theme name for dark variant |
-| `lightLabel` | `string` | Label for light variant (tooltip) |
-| `darkLabel` | `string` | Label for dark variant (tooltip) |
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `lightIcon` | `ReactNode` | ❌ | Icon for light variant (auto-fallback if omitted) |
+| `darkIcon` | `ReactNode` | ❌ | Icon for dark variant (auto-fallback if omitted) |
+| `lightTheme` | `string` | ✅ | Theme name for light variant |
+| `darkTheme` | `string` | ✅ | Theme name for dark variant |
+| `lightLabel` | `string` | ✅ | Label for light variant (tooltip) |
+| `darkLabel` | `string` | ✅ | Label for dark variant (tooltip) |
 
 ## License
 

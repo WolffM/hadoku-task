@@ -12,10 +12,13 @@ export type ThemeName = string
 /**
  * Theme family configuration
  * Represents a light/dark theme pair with icons and labels
+ *
+ * Icons are optional - if not provided, the ThemePicker will use fallback icons
+ * based on the theme's position in the array
  */
 export interface ThemeFamily {
-  lightIcon: ReactNode
-  darkIcon: ReactNode
+  lightIcon?: ReactNode
+  darkIcon?: ReactNode
   lightTheme: ThemeName
   darkTheme: ThemeName
   lightLabel: string

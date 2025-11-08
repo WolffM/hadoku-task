@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task-ui-components",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Reusable UI components for task management applications",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -69,7 +69,7 @@ export default function App(props: TaskAppProps = {}) {
 
   // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
   const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences, setPreferencesLoaded } = usePreferences(userType, effectiveSessionId, true)
-  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme, isThemeReady } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
+  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme, isThemeReady, isInitialThemeLoad } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
 
   // Compute mobile layout  
   const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
@@ -330,9 +330,9 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
-  // Show loading skeleton until everything is loaded AND theme is ready AND preferences are loaded
+  // Show loading skeleton only on initial load (not on theme changes)
   // Use system preference for theme during initial load, then switch to user preference
-  if (!isLoaded || !isThemeReady || !preferencesLoaded) {
+  if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded) {
     return <LoadingSkeleton isDarkTheme={systemPrefersDark} />
   }
 

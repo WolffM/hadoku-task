@@ -37,6 +37,14 @@ body {
   color: var(--color-text);
   background-color: var(--color-bg);
   /* Don't set color-scheme here - let individual theme sections handle it */
+
+  /* Smooth transitions for theme changes */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.task-app-container *:not(.task-app-fade-in) {
+  /* Apply smooth color transitions to all elements except fade-in animations */
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Light themes explicitly use light color scheme */

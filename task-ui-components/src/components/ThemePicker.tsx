@@ -6,7 +6,7 @@
 
 import React from 'react'
 import type { ThemePickerProps } from '../types'
-import { SettingsIcon, MoonIcon } from './ThemeIcons'
+import { SettingsIcon, MoonIcon, getFallbackIcon } from './ThemeIcons'
 
 /**
  * ThemePicker - Dropdown theme selector with optional settings button
@@ -55,33 +55,39 @@ export function ThemePicker({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="theme-picker__pills">
-            {themeFamilies.map((family, idx) => (
-              <div key={idx} className="theme-pill">
-                {/* Light variant button */}
-                <button
-                  className={`theme-pill__btn theme-pill__btn--light ${currentTheme === family.lightTheme ? 'active' : ''}`}
-                  onClick={() => onThemeChange(family.lightTheme)}
-                  title={family.lightLabel}
-                  aria-label={family.lightLabel}
-                >
-                  <div className="theme-pill__icon">
-                    {family.lightIcon}
-                  </div>
-                </button>
+            {themeFamilies.map((family, idx) => {
+              // Use provided icons or fallback to generic shapes
+              const lightIcon = family.lightIcon ?? getFallbackIcon(idx)
+              const darkIcon = family.darkIcon ?? getFallbackIcon(idx)
 
-                {/* Dark variant button */}
-                <button
-                  className={`theme-pill__btn theme-pill__btn--dark ${currentTheme === family.darkTheme ? 'active' : ''}`}
-                  onClick={() => onThemeChange(family.darkTheme)}
-                  title={family.darkLabel}
-                  aria-label={family.darkLabel}
-                >
-                  <div className="theme-pill__icon">
-                    {family.darkIcon}
-                  </div>
-                </button>
-              </div>
-            ))}
+              return (
+                <div key={idx} className="theme-pill">
+                  {/* Light variant button */}
+                  <button
+                    className={`theme-pill__btn theme-pill__btn--light ${currentTheme === family.lightTheme ? 'active' : ''}`}
+                    onClick={() => onThemeChange(family.lightTheme)}
+                    title={family.lightLabel}
+                    aria-label={family.lightLabel}
+                  >
+                    <div className="theme-pill__icon">
+                      {lightIcon}
+                    </div>
+                  </button>
+
+                  {/* Dark variant button */}
+                  <button
+                    className={`theme-pill__btn theme-pill__btn--dark ${currentTheme === family.darkTheme ? 'active' : ''}`}
+                    onClick={() => onThemeChange(family.darkTheme)}
+                    title={family.darkLabel}
+                    aria-label={family.darkLabel}
+                  >
+                    <div className="theme-pill__icon">
+                      {darkIcon}
+                    </div>
+                  </button>
+                </div>
+              )
+            })}
           </div>
           {/* Settings button - separate column on the right */}
           {onSettingsClick && (
