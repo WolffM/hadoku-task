@@ -159,13 +159,29 @@ export default function App(props: TaskAppProps = {}) {
       } else {
         // Authenticated users: use the sessionId from props (from parent)
         finalSessionId = propsSessionId
-        
-        // Apply server preferences if available
-        if (serverPreferences) {
+
+        // Priority 1: Check localStorage first (device-specific preferences)
+        const api = createApi(userType as 'public' | 'friend' | 'admin', finalSessionId)
+        const localPrefs = await api.getPreferences()
+
+        // Check if localStorage has actual stored data (not just defaults)
+        const hasLocalData = localPrefs && localPrefs.updatedAt !== undefined
+
+        if (hasLocalData) {
+          // Use localStorage preferences (device-specific)
+          console.log('[App] Using device-specific localStorage preferences')
+          setPreferences(localPrefs)
+        } else if (serverPreferences) {
+          // Priority 2: Use server preferences as fallback
+          console.log('[App] No localStorage data, using server preferences')
           setPreferences(serverPreferences)
+          // Save server preferences to localStorage for next time
+          await api.savePreferences(serverPreferences)
         }
+        // If neither exists, DEFAULT_PREFERENCES will be used
+
         setPreferencesLoaded(true)
-        
+
         // Clear old session storage keys if sessionId changed
         if (oldSessionId && oldSessionId !== propsSessionId) {
           console.log('[App] SessionId changed, clearing old storage')

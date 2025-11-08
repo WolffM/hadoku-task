@@ -7,6 +7,17 @@ import type { UserPreferences } from '../domain/types'
 import { STORAGE_VERSION, STORAGE_VERSION_KEY, ORPHANED_KEY_PATTERNS } from '../app/constants'
 
 /**
+ * Get default user preferences
+ * Respects browser's color scheme preference for theme
+ */
+function getDefaultTheme(): 'light' | 'dark' {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+/**
  * Default user preferences
  * Used when no preferences exist or for fallback values
  */
@@ -15,7 +26,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   updatedAt: new Date().toISOString(),
   experimentalThemes: false,
   alwaysVerticalLayout: false,
-  theme: 'light',
+  theme: getDefaultTheme(),
   showCompleteButton: true,
   showDeleteButton: true,
   showTagButton: false

@@ -274,11 +274,12 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
         const parsed = JSON.parse(stored)
         return parsed  // Return all preferences including theme and button settings
       }
-      // Default preferences with device-specific defaults
+      // Default preferences - respect browser's color scheme preference
+      const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
       return {
         version: 1,
         updatedAt: new Date().toISOString(),
-        theme: 'light',
+        theme: prefersDark ? 'dark' : 'light',
         showCompleteButton: true,
         showDeleteButton: true,
         showTagButton: false
