@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { ContextMenu } from '../ContextMenu'
+import { logger } from '@wolffm/task-ui-components'
 
 export interface TagContextMenuProps {
   isOpen: boolean
@@ -24,19 +25,19 @@ export function TagContextMenu({
   onDeleteTag
 }: TagContextMenuProps) {
   const handleDelete = async () => {
-    console.log('[TagContextMenu] Delete Tag clicked!', { tag })
+    logger.info('[TagContextMenu] Delete Tag clicked', { tag })
     if (!tag) {
-      console.error('[TagContextMenu] No tag when Delete clicked!')
+      logger.error('[TagContextMenu] No tag when Delete clicked')
       return
     }
-    
+
     try {
-      console.log('[TagContextMenu] Calling deleteTag for tag:', tag)
+      logger.info('[TagContextMenu] Calling deleteTag', { tag })
       await onDeleteTag(tag)
-      console.log('[TagContextMenu] deleteTag completed successfully')
+      logger.info('[TagContextMenu] deleteTag completed successfully', { tag })
       onClose()
     } catch (err) {
-      console.error('[TagContextMenu] Failed to delete tag:', err)
+      logger.error('[TagContextMenu] Failed to delete tag', { error: err instanceof Error ? err.message : String(err), tag })
       alert((err as Error).message || 'Failed to delete tag')
     }
   }

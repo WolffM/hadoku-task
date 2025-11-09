@@ -4,6 +4,7 @@
  */
 
 import React, { Component, type ReactNode } from 'react'
+import { logger } from '@wolffm/task-ui-components'
 
 interface Props {
   children: ReactNode
@@ -26,7 +27,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Caught error:', error, errorInfo)
+    logger.error('[ErrorBoundary] Caught error', {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack
+    })
   }
 
   render() {

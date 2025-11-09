@@ -4,6 +4,7 @@ import App from './App'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import '@wolffm/themes/themes.css'
 import '../styles/index.css'
+import { logger } from '@wolffm/task-ui-components'
 
 // Service Worker disabled - parent app handles GitHub integration
 
@@ -35,7 +36,7 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
     </ErrorBoundary>
   )
   ;(el as TaskElement).__root = root
-  console.log('[task-app] Mounted successfully', finalProps)
+  logger.info('[task-app] Mounted successfully', finalProps)
 }
 export function unmount(el: HTMLElement) {
   ;(el as TaskElement).__root?.unmount()

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
 import { DEFAULT_PREFERENCES, cleanupOrphanedKeys, migrateFromSessionStorage } from '../utils/preferences'
+import { logger } from '@wolffm/task-ui-components'
 
 export interface UsePreferencesReturn {
   preferences: UserPreferences
@@ -42,12 +43,12 @@ export function usePreferences(
     const loadPreferences = async () => {
       // Clean up any orphaned keys from schema changes
       cleanupOrphanedKeys(userType, sessionId)
-      
-      console.log('[usePreferences] Loading preferences...', { userType, sessionId })
+
+      logger.info('[usePreferences] Loading preferences...', { userType, sessionId })
       const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
       const prefs = await api.getPreferences()
-      console.log('[usePreferences] Loaded preferences:', prefs)
-      
+      logger.info('[usePreferences] Loaded preferences', { prefs })
+
       if (prefs) {
         // Check for sessionStorage migration
         const migrations = migrateFromSessionStorage(prefs)
@@ -56,10 +57,10 @@ export function usePreferences(
           setPreferences(newPrefs)
           // Save migrated preferences
           await api.savePreferences(newPrefs)
-          console.log('[usePreferences] Applied and saved migrations')
+          logger.info('[usePreferences] Applied and saved migrations')
         } else {
           setPreferences(prefs)
-          console.log('[usePreferences] Applied preferences to state')
+          logger.info('[usePreferences] Applied preferences to state')
         }
       }
       

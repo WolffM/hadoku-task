@@ -3,6 +3,8 @@
  * Functions for handling user authentication and key validation
  */
 
+import { logger } from '@wolffm/task-ui-components'
+
 /**
  * Validate a key and redirect to the authenticated page
  * @param key - The authentication key to validate
@@ -30,20 +32,20 @@ export async function validateAndChangeKey(
       
       // Notify parent window (mobile app) of URL change
       if (window.parent !== window) {
-        console.log('📨 Notifying mobile app of URL change')
+        logger.info('[Auth] Notifying mobile app of URL change', { url: newUrl })
         window.parent.postMessage({
           type: 'urlChange',
           url: newUrl
         }, '*')
       }
-      
+
       window.location.href = newUrl
       return { success: true }
     } else {
       return { success: false, error: 'Invalid key' }
     }
   } catch (err) {
-    console.error('[Auth] Key validation failed:', err)
+    logger.error('[Auth] Key validation failed', { error: err instanceof Error ? err.message : String(err) })
     return { success: false, error: 'Failed to validate key' }
   }
 }

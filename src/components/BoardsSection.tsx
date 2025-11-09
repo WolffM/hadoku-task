@@ -9,6 +9,7 @@ import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { MAX_BOARDS } from '../app/constants'
+import { logger } from '@wolffm/task-ui-components'
 
 export interface BoardsSectionProps {
   boards: BoardsFile | null
@@ -49,20 +50,20 @@ export function BoardsSection({
 
   const handleSyncClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isSyncing) return
-    
-    console.log('[BoardsSection] Manual refresh triggered')
+
+    logger.info('[BoardsSection] Manual refresh triggered')
     setIsSyncing(true)
-    
+
     const button = e.currentTarget
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Sync timeout')), 5000)
     })
-    
+
     try {
       await Promise.race([onInitialLoad(), timeoutPromise])
-      console.log('[BoardsSection] Sync completed successfully')
+      logger.info('[BoardsSection] Sync completed successfully')
     } catch (error) {
-      console.error('[BoardsSection] Sync failed:', error)
+      logger.error('[BoardsSection] Sync failed', { error: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsSyncing(false)
       button?.blur()

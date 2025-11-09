@@ -35,6 +35,7 @@ import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
 import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 import { DEFAULT_PREFERENCES } from '../utils/preferences'
+import { logger } from '@wolffm/task-ui-components'
 
 export default function App(props: TaskAppProps = {}) {
   const { userType = 'public', sessionId: propsSessionId = 'public' } = props
@@ -135,7 +136,7 @@ export default function App(props: TaskAppProps = {}) {
   // Session handshake and initialization on mount
   useEffect(() => {
     async function initializeSession() {
-      console.log('[App] Initializing session...', { userType, sessionId: propsSessionId })
+      logger.info('[App] Initializing session...', { userType, sessionId: propsSessionId })
       
       // Get old sessionId before handshake
       const oldSessionId = getStoredSessionId()
@@ -169,11 +170,11 @@ export default function App(props: TaskAppProps = {}) {
 
         if (hasLocalData) {
           // Use localStorage preferences (device-specific)
-          console.log('[App] Using device-specific localStorage preferences')
+          logger.info('[App] Using device-specific localStorage preferences')
           setPreferences(localPrefs)
         } else if (serverPreferences) {
           // Priority 2: Use server preferences as fallback
-          console.log('[App] No localStorage data, using server preferences')
+          logger.info('[App] No localStorage data, using server preferences')
           setPreferences(serverPreferences)
           // Save server preferences to localStorage for next time
           await api.savePreferences(serverPreferences)
@@ -184,7 +185,7 @@ export default function App(props: TaskAppProps = {}) {
 
         // Clear old session storage keys if sessionId changed
         if (oldSessionId && oldSessionId !== propsSessionId) {
-          console.log('[App] SessionId changed, clearing old storage')
+          logger.info('[App] SessionId changed, clearing old storage')
           clearOldSessionStorage(oldSessionId, userType)
         }
       }
@@ -241,7 +242,7 @@ export default function App(props: TaskAppProps = {}) {
       modals.setShowNewTagDialog(false)
       modals.setInputValue('')
     } catch (err) {
-      console.error('[App] Failed to create tag:', err)
+      logger.error('[App] Failed to create tag', { error: err instanceof Error ? err.message : String(err) })
       throw err
     }
   }
@@ -319,7 +320,7 @@ export default function App(props: TaskAppProps = {}) {
       modals.setShowNewBoardDialog(false)
       modals.setInputValue('')
     } catch (err) {
-      console.error('[App] Failed to create board:', err)
+      logger.error('[App] Failed to create board', { error: err instanceof Error ? err.message : String(err) })
       modals.setValidationError((err as Error).message || 'Failed to create board')
     }
   }

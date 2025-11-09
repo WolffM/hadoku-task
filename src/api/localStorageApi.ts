@@ -9,6 +9,7 @@ import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
 import { deferredBroadcast } from '../utils/broadcast'
+import { logger } from '@wolffm/task-ui-components'
 
 /**
  * Create a localStorage-based API client that mirrors the server API interface
@@ -48,8 +49,8 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async createBoard(boardId: string): Promise<Board> {
-      console.debug('[localStorageApi] createBoard (using handler)', { userType, sessionId, boardId })
-      
+      logger.info('[localStorageApi] createBoard (using handler)', { userType, sessionId, boardId })
+
       // Use handler
       const result = await TaskHandlers.createBoard(
         storage,
@@ -102,8 +103,8 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      console.log('[localStorageApi] createTask (using handler)', { data, boardId, suppressBroadcast })
-      
+      logger.info('[localStorageApi] createTask (using handler)', { data, boardId, suppressBroadcast })
+
       // Use handler - it handles stats, validation, everything
       // Pass through id and createdAt if provided (for preserving IDs during moves)
       const result = await TaskHandlers.createTask(
@@ -112,27 +113,27 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
         data,
         boardId
       )
-      
+
       // Get the created task from storage
       const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const createdTask = tasksFile.tasks.find(t => t.id === result.id)
-      
+
       if (!createdTask) {
         throw new Error('Task creation failed - task not found after creation')
       }
-      
+
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
-        console.log('[localStorageApi] createTask: broadcasting', { 
-          sessionId: SESSION_ID, 
-          boardId, 
-          taskId: result.id 
+        logger.info('[localStorageApi] createTask: broadcasting', {
+          sessionId: SESSION_ID,
+          boardId,
+          taskId: result.id
         })
         deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       } else {
-        console.log('[localStorageApi] createTask: broadcast suppressed')
+        logger.info('[localStorageApi] createTask: broadcast suppressed')
       }
-      
+
       return createdTask
     },    async patchTask(id: string, updates: Partial<Pick<Task, 'title' | 'tag'>>, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
       // Filter out null values - handler expects string | undefined, not null
@@ -195,16 +196,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async deleteTask(id: string, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      console.log('[localStorageApi] deleteTask (using handler)', { id, boardId, suppressBroadcast })
-      
+      logger.info('[localStorageApi] deleteTask (using handler)', { id, boardId, suppressBroadcast })
+
       // Get the task BEFORE deletion so we can return it
       const tasksFileBefore = await storage.getTasks(userType, sessionId, boardId)
       const taskToDelete = tasksFileBefore.tasks.find(t => t.id === id)
-      
+
       if (!taskToDelete) {
         throw new Error('Task not found')
       }
-      
+
       // Use handler to delete the task
       await TaskHandlers.deleteTask(
         storage,
@@ -212,15 +213,15 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
         id,
         boardId
       )
-      
+
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
-        console.log('[localStorageApi] deleteTask: broadcasting', { sessionId: SESSION_ID })
+        logger.info('[localStorageApi] deleteTask: broadcasting', { sessionId: SESSION_ID })
         deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       } else {
-        console.log('[localStorageApi] deleteTask: broadcast suppressed')
+        logger.info('[localStorageApi] deleteTask: broadcast suppressed')
       }
-      
+
       // Return the task as it was before deletion (with state updated to 'Deleted')
       return {
         ...taskToDelete,
@@ -339,35 +340,35 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>): Promise<void> {
-      console.log('[localStorageApi] batchUpdateTags', { boardId, updates })
-      
+      logger.info('[localStorageApi] batchUpdateTags', { boardId, updates })
+
       // Use handler
       await TaskHandlers.batchUpdateTags(
         storage,
         authContext,
         { boardId, updates }
       )
-      
+
       // Broadcast update
       deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]): Promise<void> {
-      console.log('[localStorageApi] batchClearTag START', { boardId, tag, taskIds, taskCount: taskIds.length })
-      
+      logger.info('[localStorageApi] batchClearTag START', { boardId, tag, taskIds, taskCount: taskIds.length })
+
       // Use handler
       const result = await TaskHandlers.batchClearTag(
         storage,
         authContext,
         { boardId, tag, taskIds }
       )
-      
-      console.log('[localStorageApi] batchClearTag result:', result)
-      
+
+      logger.info('[localStorageApi] batchClearTag result', { result })
+
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
-      
-      console.log('[localStorageApi] batchClearTag END')
+
+      logger.info('[localStorageApi] batchClearTag END')
     },
 
     // User Management (localStorage only - no-op for validation)
@@ -375,7 +376,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       // For localStorage/public mode, keys are not validated
       // In development, reject obviously invalid keys for better UX
       if (!key || key.length < 10) {
-        console.warn('[localStorageApi] validateKey: Key too short (must be at least 10 characters)')
+        logger.warn('[localStorageApi] validateKey: Key too short (must be at least 10 characters)')
         return false
       }
       // Accept any key that's long enough (no real validation in public mode)

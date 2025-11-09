@@ -6,6 +6,7 @@ import React from 'react'
 import { useLongPress } from '../hooks/useLongPress'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { Board } from '../domain/types'
+import { logger } from '@wolffm/task-ui-components'
 
 interface BoardButtonProps {
   board: Board
@@ -63,7 +64,11 @@ export function BoardButton({
           await onMoveTasksToBoard(board.id, ids)
           try { onClearSelection() } catch {}
         } catch (err) {
-          console.error('Failed moving tasks to board', err)
+          logger.error('[BoardButton] Failed moving tasks to board', {
+            error: err instanceof Error ? err.message : String(err),
+            boardId: board.id,
+            taskCount: ids.length
+          })
           alert((err as Error).message || 'Failed to move tasks')
         }
       }}

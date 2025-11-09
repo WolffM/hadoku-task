@@ -5,6 +5,7 @@
 
 import type { UserPreferences } from '../domain/types'
 import { STORAGE_VERSION, STORAGE_VERSION_KEY, ORPHANED_KEY_PATTERNS } from '../app/constants'
+import { logger } from '@wolffm/task-ui-components'
 
 /**
  * Get default user preferences
@@ -40,25 +41,25 @@ export function cleanupOrphanedKeys(userType: string, sessionId: string): void {
   const currentVersion = window.localStorage.getItem(STORAGE_VERSION_KEY)
   
   if (currentVersion !== STORAGE_VERSION) {
-    console.log('[Preferences] Storage version mismatch, cleaning up orphaned keys', { 
-      current: currentVersion, 
-      expected: STORAGE_VERSION 
+    logger.info('[Preferences] Storage version mismatch, cleaning up orphaned keys', {
+      current: currentVersion,
+      expected: STORAGE_VERSION
     })
-    
+
     Object.keys(window.localStorage).forEach(key => {
       // Only remove if it matches orphaned pattern AND doesn't match current schema
       const isOrphaned = ORPHANED_KEY_PATTERNS.some(pattern => pattern.test(key))
       const isCurrentSchema = key.includes(`${userType}-${sessionId}`)
-      
+
       if (isOrphaned && !isCurrentSchema) {
-        console.log('[Preferences] Removing orphaned key:', key)
+        logger.info('[Preferences] Removing orphaned key', { key })
         window.localStorage.removeItem(key)
       }
     })
-    
+
     // Mark storage as upgraded
     window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION)
-    console.log('[Preferences] Storage upgraded to version', STORAGE_VERSION)
+    logger.info('[Preferences] Storage upgraded to version', { version: STORAGE_VERSION })
   }
 }
 
@@ -93,20 +94,20 @@ export function migrateFromSessionStorage(
     }
     
     if (Object.keys(migrations).length > 0) {
-      console.log('[Preferences] Migrating settings from sessionStorage to localStorage:', migrations)
-      
+      logger.info('[Preferences] Migrating settings from sessionStorage to localStorage', { migrations })
+
       // Clean up old sessionStorage values
       sessionStorage.removeItem('theme')
       sessionStorage.removeItem('showCompleteButton')
       sessionStorage.removeItem('showDeleteButton')
       sessionStorage.removeItem('showTagButton')
-      
+
       return migrations
     }
-    
+
     return null
   } catch (error) {
-    console.warn('[Preferences] Failed to migrate settings:', error)
+    logger.warn('[Preferences] Failed to migrate settings', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 }

@@ -6,6 +6,7 @@
 import React from 'react'
 import { ContextMenu } from '../ContextMenu'
 import type { BoardsFile } from '../../domain/types'
+import { logger } from '@wolffm/task-ui-components'
 
 export interface BoardContextMenuProps {
   isOpen: boolean
@@ -35,7 +36,10 @@ export function BoardContextMenu({
         await onDeleteBoard(boardId)
         onClose()
       } catch (err) {
-        console.error('[BoardContextMenu] Failed to delete board:', err)
+        logger.error('[BoardContextMenu] Failed to delete board', {
+          error: err instanceof Error ? err.message : String(err),
+          boardId
+        })
         alert((err as Error).message || 'Failed to delete board')
       }
     }

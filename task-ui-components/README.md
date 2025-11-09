@@ -215,30 +215,104 @@ This ensures each theme gets a visually distinct icon while maintaining consiste
 
 ## Logger
 
-Production-safe logging utility that respects development mode and admin status:
+Production-safe logging utility that respects development mode and admin status.
+
+### Basic Usage
 
 ```typescript
 import { logger } from '@wolffm/task-ui-components'
 
-// Enable admin mode (after authentication)
-logger.setAdminStatus(true)
+// Informational logs (dev/admin only)
+logger.info('[Component] Loading data', { userId: '123' })
 
-// Log levels (always shown in development or admin mode)
-logger.info('Theme changed', { theme: 'dark' })
-logger.debug('Component state', { isOpen: true })
-logger.component('mount', 'ThemePicker', props)
-logger.theme('strawberry-dark', { source: 'preference' })
+// Debug logs (dev/admin only)
+logger.debug('[Component] State updated', { isOpen: true, count: 5 })
 
-// Always shown
-logger.warn('Deprecated feature used', { feature: 'old-api' })
-logger.error('Failed to save', { error: err.message })
+// Warnings (always shown)
+logger.warn('[Component] Deprecated API used', { feature: 'old-api' })
+
+// Errors (always shown)
+logger.error('[Component] Failed to save', {
+  error: err instanceof Error ? err.message : String(err),
+  taskId: 'task-123'
+})
 ```
 
-**Features:**
-- **Development mode**: All logs shown when `localhost` or `127.0.0.1`
-- **Admin mode**: All logs shown when `setAdminStatus(true)` called
-- **Production**: Only errors and warnings shown for non-admin users
-- **Structured context**: Pass objects for better debugging
+### Advanced Features
+
+**Enable admin mode** for production debugging:
+
+```typescript
+// After user authentication
+if (userIsAdmin) {
+  logger.setAdminStatus(true)
+}
+```
+
+**Specialized log methods**:
+
+```typescript
+// Component lifecycle logging
+logger.component('mount', 'ThemePicker', { props })
+logger.component('update', 'TaskList', { taskCount: 42 })
+
+// Theme changes
+logger.theme('strawberry-dark', { source: 'user-preference' })
+logger.theme('ocean-light', { source: 'system' })
+```
+
+### Best Practices
+
+**Always use structured logging** with a message and context object:
+
+```typescript
+// ✅ Good - Structured with context
+logger.info('[TaskList] Loading tasks', { boardId, filter })
+
+// ❌ Bad - String concatenation
+logger.info(`Loading tasks for board ${boardId}`)
+
+// ✅ Good - Proper error extraction
+logger.error('[API] Request failed', {
+  error: err instanceof Error ? err.message : String(err),
+  endpoint: '/api/tasks'
+})
+
+// ❌ Bad - Logging error object directly
+logger.error('Request failed:', err)
+```
+
+**Use component prefixes** for easy filtering:
+
+```typescript
+// Component-based prefixes
+logger.info('[TaskList] Mounted')
+logger.info('[ThemePicker] Theme changed')
+
+// Feature-based prefixes
+logger.info('[API] Request completed')
+logger.info('[Auth] User logged in')
+```
+
+### Behavior
+
+| Mode | Development | Production (Admin) | Production (User) |
+|------|-------------|-------------------|------------------|
+| `logger.info()` | ✅ | ✅ | ❌ |
+| `logger.debug()` | ✅ | ✅ | ❌ |
+| `logger.component()` | ✅ | ✅ | ❌ |
+| `logger.theme()` | ✅ | ✅ | ❌ |
+| `logger.warn()` | ✅ | ✅ | ✅ |
+| `logger.error()` | ✅ | ✅ | ✅ |
+
+**Development Detection:**
+- Automatically enabled on `localhost` or `127.0.0.1`
+- Or when `import.meta.env.DEV` is true
+
+**Admin Mode:**
+- Call `logger.setAdminStatus(true)` after authentication
+- Enables all logs in production for debugging
+- Useful for troubleshooting production issues
 
 ## Props
 

@@ -3,6 +3,8 @@
  * Provides deferred broadcasting to ensure localStorage propagation
  */
 
+import { logger } from '@wolffm/task-ui-components'
+
 export type BroadcastType = 'tasks-updated' | 'boards-updated'
 
 export interface BroadcastData {
@@ -30,7 +32,7 @@ export function deferredBroadcast(
       bc.postMessage({ type, ...data })
       bc.close()
     } catch (err) {
-      console.error('[broadcast] Failed to broadcast:', err)
+      logger.error('[broadcast] Failed to broadcast', { error: err instanceof Error ? err.message : String(err) })
     }
   }, delayMs)
 }

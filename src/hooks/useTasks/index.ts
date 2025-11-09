@@ -13,6 +13,7 @@ import {
   withBulkOperation,
   extractBoardTasks,
 } from './helpers'
+import { logger } from '@wolffm/task-ui-components'
 
 interface UseTasksProps {
   userType: string
@@ -35,7 +36,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
 
   async function initialLoad() {
-    console.log('[useTasks] initialLoad called')
+    logger.info('[useTasks] initialLoad called')
     // ✅ Sync from API first (only on initial load, if not public mode)
     if ('syncFromApi' in api) {
       await api.syncFromApi()
@@ -45,7 +46,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   }
 
   async function reload() {
-    console.log('[useTasks] reload called', { currentBoardId, stack: new Error().stack?.split('\n').slice(1, 4).join('\n') })
+    logger.info('[useTasks] reload called', { currentBoardId, stack: new Error().stack?.split('\n').slice(1, 4).join('\n') })
     const bf = await api.getBoards()
     setBoards(bf)
     const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardId)
@@ -54,7 +55,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
 
   // ✅ FIX: Clear state and reload when user context changes
   useEffect(() => {
-    console.log('[useTasks] User context changed, clearing state and reloading', { userType, sessionId })
+    logger.info('[useTasks] User context changed, clearing state and reloading', { userType, sessionId })
     setTasks([])
     setPendingOperations(new Set())
     setBoards(null)
@@ -64,39 +65,39 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
 
   // Listen for broadcasted updates about tasks or boards
   useEffect(() => {
-    console.log('[useTasks] Setting up BroadcastChannel listener', { currentBoardId, userType, sessionId })
+    logger.info('[useTasks] Setting up BroadcastChannel listener', { currentBoardId, userType, sessionId })
     try {
       const bcListener = new BroadcastChannel('tasks')
       bcListener.onmessage = (e) => {
         const msg = e.data || {}
-        console.log('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId, currentContext: { userType, sessionId } })
-        
+        logger.info('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId, currentContext: { userType, sessionId } })
+
         // Ignore messages from the same session to prevent infinite loops
         if (msg.sessionId === SESSION_ID) {
-          console.log('[useTasks] Ignoring own broadcast message')
+          logger.info('[useTasks] Ignoring own broadcast message')
           return
         }
-        
+
         // ✅ FIX: Only respond to messages for the current user context
         if (msg.userType !== userType || msg.sessionId !== sessionId) {
-          console.log('[useTasks] Ignoring message for different user context', { 
+          logger.info('[useTasks] Ignoring message for different user context', {
             msgContext: { userType: msg.userType, sessionId: msg.sessionId },
             currentContext: { userType, sessionId }
           })
           return
         }
-        
+
         if (msg.type === 'tasks-updated' || msg.type === 'boards-updated') {
-          console.log('[useTasks] BroadcastChannel: triggering reload for currentBoardId =', currentBoardId)
+          logger.info('[useTasks] BroadcastChannel: triggering reload for currentBoardId', { currentBoardId })
           void reload()
         }
       }
       return () => {
-        console.log('[useTasks] Cleaning up BroadcastChannel listener', { currentBoardId })
+        logger.info('[useTasks] Cleaning up BroadcastChannel listener', { currentBoardId })
         bcListener.close()
       }
     } catch (err) {
-      console.error('[useTasks] Failed to setup BroadcastChannel', err)
+      logger.error('[useTasks] Failed to setup BroadcastChannel', { error: err instanceof Error ? err.message : String(err) })
     }
   }, [currentBoardId, userType, sessionId]) // ✅ FIX: Recreate listener when user context changes
 
@@ -131,17 +132,17 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   }
 
   async function deleteTask(taskId: string) {
-    console.log('[useTasks] deleteTask START', { taskId, currentBoardId })
+    logger.info('[useTasks] deleteTask START', { taskId, currentBoardId })
     await withPendingOperation(
       `delete-${taskId}`,
       pendingOperations,
       setPendingOperations,
       async () => {
-        console.log('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
+        logger.info('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
         await api.deleteTask(taskId, currentBoardId)
-        console.log('[useTasks] deleteTask: calling reload')
+        logger.info('[useTasks] deleteTask: calling reload')
         await reload()
-        console.log('[useTasks] deleteTask END')
+        logger.info('[useTasks] deleteTask END')
       },
       {
         onError: (error) => alert(error.message || 'Failed to delete task'),
@@ -187,60 +188,60 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   
   // Helper for bulk tag updates - uses batch endpoint to avoid race conditions
   async function bulkUpdateTaskTags(updates: Array<{ taskId: string, tag: string }>) {
-    console.log('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
+    logger.info('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
     try {
       // Use batch API (available in all modes - localStorage and friend/admin)
       await api.batchUpdateTags(
         currentBoardId,
         updates.map(u => ({ taskId: u.taskId, tag: u.tag || null }))
       )
-      
-      console.log('[useTasks] bulkUpdateTaskTags: calling reload')
+
+      logger.info('[useTasks] bulkUpdateTaskTags: calling reload')
       await reload()
-      console.log('[useTasks] bulkUpdateTaskTags END')
+      logger.info('[useTasks] bulkUpdateTaskTags END')
     } catch (error) {
-      console.error('[useTasks] bulkUpdateTaskTags ERROR', error)
+      logger.error('[useTasks] bulkUpdateTaskTags ERROR', { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }
 
   async function deleteTag(tag: string) {
-    console.log('[useTasks] deleteTag START', { tag, currentBoardId, taskCount: tasks.length })
-    
+    logger.info('[useTasks] deleteTag START', { tag, currentBoardId, taskCount: tasks.length })
+
     // Check if we have tasks with this tag
     const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
-    console.log('[useTasks] deleteTag: found tasks with tag', { tag, count: tagTasks.length })
-    
+    logger.info('[useTasks] deleteTag: found tasks with tag', { tag, count: tagTasks.length })
+
     if (tagTasks.length === 0) {
-      console.log('[useTasks] deleteTag: no tasks found with this tag, just deleting tag')
+      logger.info('[useTasks] deleteTag: no tasks found with this tag, just deleting tag')
       try {
         await api.deleteTag(tag, currentBoardId)
         await reload()
-        console.log('[useTasks] deleteTag END (no tasks to clear)')
+        logger.info('[useTasks] deleteTag END (no tasks to clear)')
       } catch (error) {
-        console.error('[useTasks] deleteTag ERROR', error)
+        logger.error('[useTasks] deleteTag ERROR', { error: error instanceof Error ? error.message : String(error) })
         // Note: alert() may also be blocked - log instead
-        console.error('[useTasks] deleteTag: Please fix this error:', (error as Error).message)
+        logger.error('[useTasks] deleteTag: Please fix this error', { errorMessage: (error as Error).message })
       }
       return
     }
 
     try {
-      console.log('[useTasks] deleteTag: starting batch clear')
-      
+      logger.info('[useTasks] deleteTag: starting batch clear')
+
       // Use batch API (available in all modes - localStorage and friend/admin)
       await api.batchClearTag(
         currentBoardId,
         tag,
         tagTasks.map(t => t.id)
       )
-      
-      console.log('[useTasks] deleteTag: calling reload')
+
+      logger.info('[useTasks] deleteTag: calling reload')
       await reload()
-      
-      console.log('[useTasks] deleteTag END')
+
+      logger.info('[useTasks] deleteTag END')
     } catch (error) {
-      console.error('[useTasks] deleteTag ERROR', error)
+      logger.error('[useTasks] deleteTag ERROR', { error: error instanceof Error ? error.message : String(error) })
       alert((error as Error).message || 'Failed to remove tag from tasks')
     }
   }
@@ -259,9 +260,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
 
   // Move multiple tasks to another board
   async function moveTasksToBoard(targetBoardId: string, ids: string[]) {
-    console.log('[useTasks] moveTasksToBoard START', { targetBoardId, ids, currentBoardId })
+    logger.info('[useTasks] moveTasksToBoard START', { targetBoardId, ids, currentBoardId })
     if (!boards) return
-    
+
     // Find which boards the tasks are on
     const sourceBoardIds = new Set<string>()
     for (const b of boards.boards) {
@@ -271,30 +272,30 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         }
       }
     }
-    
-    console.log('[useTasks] moveTasksToBoard: source boards', { sourceBoardIds: Array.from(sourceBoardIds) })
+
+    logger.info('[useTasks] moveTasksToBoard: source boards', { sourceBoardIds: Array.from(sourceBoardIds) })
 
     try {
       // Use batch API (available in all modes) if all tasks are from the same board
       if (sourceBoardIds.size === 1) {
         const sourceBoardId = Array.from(sourceBoardIds)[0]
-        console.log('[useTasks] moveTasksToBoard: using batch API')
+        logger.info('[useTasks] moveTasksToBoard: using batch API')
         await api.batchMoveTasks(sourceBoardId, targetBoardId, ids)
       } else {
-        console.error('[useTasks] moveTasksToBoard: Cannot move tasks from multiple boards at once')
+        logger.error('[useTasks] moveTasksToBoard: Cannot move tasks from multiple boards at once')
         throw new Error('Cannot move tasks from multiple boards at once')
       }
-      
+
       // Switch to the target board and reload it
-      console.log('[useTasks] moveTasksToBoard: switching to target board', { targetBoardId })
+      logger.info('[useTasks] moveTasksToBoard: switching to target board', { targetBoardId })
       setCurrentBoardId(targetBoardId)
       const bf = await api.getBoards()
       setBoards(bf)
       const { tasks: boardTasks } = extractBoardTasks(bf, targetBoardId)
       setTasks(boardTasks)
-      console.log('[useTasks] moveTasksToBoard END')
+      logger.info('[useTasks] moveTasksToBoard END')
     } catch (error) {
-      console.error('[useTasks] moveTasksToBoard ERROR', error)
+      logger.error('[useTasks] moveTasksToBoard ERROR', { error: error instanceof Error ? error.message : String(error) })
       alert((error as Error).message || 'Failed to move tasks')
     }
   }

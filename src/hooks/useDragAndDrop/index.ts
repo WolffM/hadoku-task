@@ -5,6 +5,7 @@
 import React, { useState, useRef } from 'react'
 import { useEffect } from 'react'
 import type { Task } from '../../domain/types'
+import { logger } from '@wolffm/task-ui-components'
 
 interface UseDragAndDropProps {
   tasks: Task[]
@@ -45,7 +46,7 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
 
   function onDragStart(e: React.DragEvent, taskId: string) {
     const idsToDrag = selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
-    console.log('[useDragAndDrop] onDragStart', { taskId, idsToDrag, selectedCount: selectedIds.size })
+    logger.info('[useDragAndDrop] onDragStart', { taskId, idsToDrag, selectedCount: selectedIds.size })
     e.dataTransfer.setData('text/plain', idsToDrag[0])
     try {
       e.dataTransfer.setData('application/x-hadoku-task-ids', JSON.stringify(idsToDrag))
@@ -248,8 +249,8 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
   async function onDrop(e: React.DragEvent, targetTag: string) {
     e.preventDefault()
     setDragOverTag(null)
-    console.log('[useDragAndDrop] onDrop START', { targetTag })
-    
+    logger.info('[useDragAndDrop] onDrop START', { targetTag })
+
     // Extract dragged task IDs (supports multi-task drag)
     const ids = extractDraggedTaskIds(e)
     if (ids.length === 0) return
@@ -260,7 +261,7 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       const s = e.dataTransfer.getData('application/x-hadoku-task-source')
       if (s) srcTag = s
     } catch {}
-    console.log('[useDragAndDrop] onDrop: processing', { targetTag, ids, srcTag, taskCount: ids.length })
+    logger.info('[useDragAndDrop] onDrop: processing', { targetTag, ids, srcTag, taskCount: ids.length })
 
     // Build list of tag updates
     const updates: Array<{ taskId: string, tag: string }> = []
@@ -290,18 +291,18 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       updates.push({ taskId: id, tag: updatedTags })
     }
 
-    console.log('[useDragAndDrop] onDrop: updating tasks', { updateCount: updates.length })
+    logger.info('[useDragAndDrop] onDrop: updating tasks', { updateCount: updates.length })
     try {
       // Use bulk update for efficiency - suppresses individual broadcasts and reloads
       await onBulkUpdate(updates)
-      console.log('[useDragAndDrop] onDrop: updates complete, clearing selection')
+      logger.info('[useDragAndDrop] onDrop: updates complete, clearing selection')
       // clear selection after successful tag updates
       try { clearSelection() } catch {}
     } catch (error) {
-      console.error('Failed to add tag to one or more tasks:', error)
+      logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', { error: error instanceof Error ? error.message : String(error) })
       alert((error as Error).message || 'Failed to add tags')
     }
-    console.log('[useDragAndDrop] onDrop END')
+    logger.info('[useDragAndDrop] onDrop END')
   }
 
   function onFilterDragOver(e: React.DragEvent, filterTag: string) {
@@ -319,41 +320,41 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
   async function onFilterDrop(e: React.DragEvent, filterTag: string) {
     e.preventDefault()
     setDragOverFilter(null)
-    
+
     // Extract dragged task IDs (supports multi-task drag)
     const ids = extractDraggedTaskIds(e)
     if (ids.length === 0) return
-    
-    console.log('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
-    
+
+    logger.info('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
+
     // Build list of tag updates
     const updates: Array<{ taskId: string, tag: string }> = []
     for (const id of ids) {
       const task = tasks.find(t => t.id === id)
       if (!task) continue
-      
+
       const existingTags = task.tag?.split(' ').filter(Boolean) || []
       if (existingTags.includes(filterTag)) {
-        console.log(`Task ${id} already has tag: ${filterTag}`)
+        logger.info('[useDragAndDrop] Task already has tag', { taskId: id, filterTag })
         continue // Tag already exists
       }
-      
+
       const updatedTags = [...existingTags, filterTag].join(' ')
       updates.push({ taskId: id, tag: updatedTags })
     }
-    
+
     if (updates.length === 0) {
-      console.log('No updates needed - all tasks already have this tag')
+      logger.info('[useDragAndDrop] No updates needed - all tasks already have this tag')
       return
     }
-    
-    console.log(`Adding tag "${filterTag}" to ${updates.length} task(s) via filter drop`)
-    
+
+    logger.info('[useDragAndDrop] Adding tag via filter drop', { filterTag, updateCount: updates.length })
+
     try {
       await onBulkUpdate(updates)
       try { clearSelection() } catch {}
     } catch (error) {
-      console.error('Failed to add tag via filter drop:', error)
+      logger.error('[useDragAndDrop] Failed to add tag via filter drop', { error: error instanceof Error ? error.message : String(error) })
       alert((error as Error).message || 'Failed to add tag')
     }
   }

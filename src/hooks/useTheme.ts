@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, type RefObject } from 'react'
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
 import { getThemeFamilies, type ThemeFamily } from '../app/themeConfig'
+import { logger } from '@wolffm/task-ui-components'
 
 export interface UseThemeReturn {
   theme: ThemeName
@@ -56,7 +57,7 @@ export function useTheme(
       containerRef.current.setAttribute('data-theme', theme)
     }
 
-    console.log('[useTheme] Applied theme:', theme, { preferencesLoaded })
+    logger.info(`[useTheme] Applied theme: ${theme}`, { preferencesLoaded })
 
     // Only delay theme ready on initial load, not on theme changes
     if (isInitialThemeLoad) {
@@ -89,7 +90,7 @@ export function useTheme(
         
         if (currentMode !== targetMode) {
           const newTheme = `${themeFamily}-${targetMode}` as ThemeName
-          console.log(`[Theme] Auto-switching from ${theme} to ${newTheme} (system preference)`)
+          logger.info(`[Theme] Auto-switching from ${theme} to ${newTheme} (system preference)`)
           setTheme(newTheme)
         }
       }
