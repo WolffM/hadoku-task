@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Version Bumps:**
 - **@wolffm/task**: 3.3.2 → 3.3.3
-- **@wolffm/themes**: 1.1.2 → 1.1.3
-- **@wolffm/task-ui-components**: 1.0.6 → 1.0.7
+- **@wolffm/themes**: 1.1.2 → 1.1.4 (auto-bumped by version manager)
+- **@wolffm/task-ui-components**: 1.0.6 → 1.0.8 (auto-bumped by version manager)
 
 #### **@wolffm/themes - New React Integration**
 

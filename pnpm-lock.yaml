@@ -54,7 +54,17 @@ importers:
         version: 5.9.3
 
   themes:
+    dependencies:
+      '@wolffm/task-ui-components':
+        specifier: ^1.0.0
+        version: 1.0.5(react@18.3.1)
+      react:
+        specifier: ^18.0.0 || ^19.0.0
+        version: 18.3.1
     devDependencies:
+      '@types/react':
+        specifier: ^18.0.0
+        version: 18.3.26
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -460,6 +470,11 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
+
+  '@wolffm/task-ui-components@1.0.5':
+    resolution: {integrity: sha512-3wRZBxj3qoQwfU1sykeMxs6zY9hVgdWzkOtYj3bYD1RgfTYX+Db0VStH8tCNRyotCPh4TQFaCtngX6cq5kv75A==, tarball: https://npm.pkg.github.com/download/@wolffm/task-ui-components/1.0.5/b1a7ec24abf03fb9bed6e4d2bc6dbb6bd3e5decf}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   baseline-browser-mapping@2.8.20:
     resolution: {integrity: sha512-JMWsdF+O8Orq3EMukbUN1QfbLK9mX2CkUmQBcW2T0s8OmdAUL5LLM/6wFwSrqXzlXB13yhyK9gTKS1rIizOduQ==}
@@ -976,6 +991,10 @@ snapshots:
       vite: 7.1.12
     transitivePeerDependencies:
       - supports-color
+
+  '@wolffm/task-ui-components@1.0.5(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
 
   baseline-browser-mapping@2.8.20: {}
 
