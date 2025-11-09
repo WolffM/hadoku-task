@@ -2,6 +2,7 @@
  * Hadoku Theme System - Utilities
  * Framework-agnostic theme management for Hadoku themes
  * 18 beautiful themes across 9 theme families
+ * Now with React integration support!
  */
 
 export const THEMES = [
