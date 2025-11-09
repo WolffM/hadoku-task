@@ -82,7 +82,7 @@ jobs:
         id: task_changed
         run: |
           # Check if any files changed outside of themes/ and task-ui-components/ directories
-          if git diff --name-only HEAD~1 HEAD | grep -qv "^themes/" | grep -qv "^task-ui-components/"; then
+          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -q .; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ Task package has changes"
           else
