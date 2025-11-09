@@ -5,6 +5,7 @@
 
 // Main components
 export { ThemePicker } from './components/ThemePicker'
+export { ConnectedThemePicker } from './components/ConnectedThemePicker'
 
 // Theme icons - export individually for flexibility
 export {

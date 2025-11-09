@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.3] - 2025-11-08
+
+### 🎨 React Integration & Package Enhancements
+
+**Version Bumps:**
+- **@wolffm/task**: 3.3.2 → 3.3.3
+- **@wolffm/themes**: 1.1.2 → 1.1.3
+- **@wolffm/task-ui-components**: 1.0.6 → 1.0.7
+
+#### **@wolffm/themes - New React Integration**
+
+Added first-class React support with theme metadata and hooks:
+
+**New Exports:**
+- **`useTheme()`** - React hook for stateful theme management
+  - Returns `{ theme, setTheme }`
+  - Automatically saves to sessionStorage
+  - Syncs theme changes across browser tabs via storage events
+
+- **`THEME_FAMILIES`** - Pre-configured array of all 9 theme pairs with icons and labels
+  - Each family includes: `lightTheme`, `darkTheme`, `lightLabel`, `darkLabel`, `lightIcon`, `darkIcon`
+  - Ready to use with `ThemePicker` or `ConnectedThemePicker` components
+
+- **`THEME_ICON_MAP`** - Object mapping theme names to icon components
+  - Maps all 18 themes to their corresponding icons
+  - Useful for custom theme picker implementations
+
+**New Files:**
+- `src/metadata.tsx` - Theme metadata with icon mappings
+- `src/useTheme.tsx` - React hook implementation
+- `scripts/fix-imports.cjs` - ESM import fixer (same as task-ui-components)
+
+**Package Updates:**
+- Added peer dependencies: React ^18.0.0 || ^19.0.0, @wolffm/task-ui-components ^1.0.0 (both optional)
+- Added JSX support to TypeScript config
+- Updated build script to include ESM import fixes
+- Enhanced README with React integration examples
+
+#### **@wolffm/task-ui-components - ConnectedThemePicker Component**
+
+Added stateful wrapper component for easier integration:
+
+**New Component: `ConnectedThemePicker`**
+- Manages `isOpen` state internally
+- Simpler API - no need to manage picker visibility state
+- Same props as `ThemePicker` minus `isOpen` and `onToggle`
+- Perfect for quick integration with `@wolffm/themes`
+
+**Example:**
+```tsx
+import { ConnectedThemePicker } from '@wolffm/task-ui-components'
+import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
+
+function App() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <ConnectedThemePicker
+      themeFamilies={THEME_FAMILIES}
+      currentTheme={theme}
+      onThemeChange={setTheme}
+      getThemeIcon={(theme) => {
+        const Icon = THEME_ICON_MAP[theme]
+        return Icon ? <Icon /> : null
+      }}
+    />
+  )
+}
+```
+
+**Documentation:**
+- Updated README with `ConnectedThemePicker` usage examples
+- Added quick start guide for @wolffm/themes integration
+- Reorganized usage examples (Quick Start, ConnectedThemePicker, ThemePicker, Fallback Icons)
+
+---
+
+## [3.3.2] - 2025-11-08
+
+### 🔧 Build & Packaging
+
+**Version Bumps:**
+- **@wolffm/task**: 3.3.1 → 3.3.2
+- **@wolffm/themes**: 1.1.1 → 1.1.2
+- **@wolffm/task-ui-components**: 1.0.5 → 1.0.6
+
+**Purpose:** Trigger GitHub Actions deployment workflow and notify parent repository (hadoku_site) of updated packages.
+
+#### **ESM Module Resolution Fix**
+
+Fixed critical ESM compatibility issue in `@wolffm/task-ui-components` that blocked integration with strict ESM environments (Astro, Vite):
+
+**Problem:**
+- TypeScript compiler doesn't add `.js` extensions to imports in compiled output
+- Compiled `dist/index.js` had imports like `from './components/ThemePicker'`
+- Caused "ERR_MODULE_NOT_FOUND" errors in strict ESM bundlers
+
+**Solution:**
+1. Added `"type": "module"` to package.json
+2. Changed `moduleResolution` to `"bundler"` in tsconfig.json
+3. Created post-build script `scripts/fix-imports.cjs` that adds `.js` extensions to all relative imports
+4. Updated build script: `tsc && node scripts/fix-imports.cjs && pnpm run copy-css`
+
+**Result:** All compiled imports now have proper `.js` extensions (e.g., `from './components/ThemePicker.js'`), ensuring compatibility with Astro and other strict ESM environments.
+
+---
+
 ## [3.3.1] - 2025-11-08
 
 ### 🎯 Major Refactoring - Monorepo Architecture & Logger Standardization

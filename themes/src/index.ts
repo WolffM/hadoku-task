@@ -96,3 +96,7 @@ export function clearTheme(): void {
   sessionStorage.removeItem('hadoku-theme')
   setTheme('light')
 }
+
+// Theme metadata and React integration (optional peer dependencies)
+export { THEME_FAMILIES, THEME_ICON_MAP } from './metadata'
+export { useTheme } from './useTheme'

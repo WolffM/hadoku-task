@@ -111,9 +111,35 @@ Each theme defines ~50 variables:
 }
 ```
 
-## Framework Examples
+## React Integration
 
-### React
+### Using the `useTheme` Hook (Recommended)
+
+```tsx
+import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
+import { ConnectedThemePicker } from '@wolffm/task-ui-components'
+import '@wolffm/themes/themes.css'
+import '@wolffm/task-ui-components/theme-picker.css'
+
+function App() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <ConnectedThemePicker
+      themeFamilies={THEME_FAMILIES}
+      currentTheme={theme}
+      onThemeChange={setTheme}
+      getThemeIcon={(theme) => {
+        const Icon = THEME_ICON_MAP[theme]
+        return Icon ? <Icon /> : null
+      }}
+    />
+  )
+}
+```
+
+### Manual React Integration
+
 ```tsx
 import { useEffect, useState } from 'react'
 import { loadTheme, setTheme, THEMES, type Theme } from '@wolffm/themes'
@@ -121,17 +147,17 @@ import '@wolffm/themes/themes.css'
 
 function App() {
   const [theme, setThemeState] = useState<Theme>('light')
-  
+
   useEffect(() => {
     const savedTheme = loadTheme()
     setThemeState(savedTheme)
   }, [])
-  
+
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme)
     setThemeState(newTheme)
   }
-  
+
   return (
     <select value={theme} onChange={(e) => handleThemeChange(e.target.value as Theme)}>
       {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -139,6 +165,8 @@ function App() {
   )
 }
 ```
+
+## Framework Examples
 
 ### Vue
 ```vue
@@ -192,7 +220,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ## API Reference
 
-### Functions
+### React Utilities (New in v1.1.3+)
+
+#### `useTheme(): { theme: Theme, setTheme: (theme: Theme) => void }`
+React hook for stateful theme management. Automatically saves to sessionStorage and syncs across tabs.
+
+```tsx
+const { theme, setTheme } = useTheme()
+```
+
+#### `THEME_FAMILIES: ThemeFamily[]`
+Pre-configured array of all 9 theme families with icons and labels. Use with `ThemePicker` or `ConnectedThemePicker` components from `@wolffm/task-ui-components`.
+
+```tsx
+import { THEME_FAMILIES } from '@wolffm/themes'
+// Each family includes: lightTheme, darkTheme, lightLabel, darkLabel, lightIcon, darkIcon
+```
+
+#### `THEME_ICON_MAP: Record<Theme, IconComponent>`
+Map of theme names to their corresponding icon components.
+
+```tsx
+import { THEME_ICON_MAP } from '@wolffm/themes'
+const Icon = THEME_ICON_MAP['cyberpunk-dark']
+```
+
+### Core Functions
 
 #### `setTheme(theme: Theme): void`
 Apply a theme immediately. Sets `data-theme` attribute on `<html>` element.
@@ -204,7 +257,7 @@ Get the currently active theme.
 Save theme to sessionStorage and apply it.
 
 #### `loadTheme(): Theme`
-Load saved theme from sessionStorage, apply it, and return the theme name. Returns 'light' if no theme is saved.
+Load saved theme from sessionStorage, apply it, and return the theme name. Respects browser's `prefers-color-scheme` preference if no saved theme. Returns 'light' if no preference.
 
 #### `initTheme(): Theme`
 Convenience function. Same as `loadTheme()`.

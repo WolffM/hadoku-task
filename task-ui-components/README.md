@@ -16,7 +16,57 @@ npm install @wolffm/task-ui-components
 
 ## Usage
 
-### With Custom Icons
+### Quick Start with @wolffm/themes (Recommended)
+
+The easiest way to use the ThemePicker is with the `@wolffm/themes` package, which provides pre-configured theme families with icons:
+
+```tsx
+import { ConnectedThemePicker } from '@wolffm/task-ui-components'
+import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
+import '@wolffm/task-ui-components/theme-picker.css'
+import '@wolffm/themes/themes.css'
+
+function App() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <ConnectedThemePicker
+      themeFamilies={THEME_FAMILIES}
+      currentTheme={theme}
+      onThemeChange={setTheme}
+      getThemeIcon={(theme) => {
+        const Icon = THEME_ICON_MAP[theme]
+        return Icon ? <Icon /> : null
+      }}
+    />
+  )
+}
+```
+
+### Using ConnectedThemePicker (Stateful)
+
+`ConnectedThemePicker` manages its own open/close state, making it simpler to use:
+
+```tsx
+import { ConnectedThemePicker } from '@wolffm/task-ui-components'
+import '@wolffm/task-ui-components/theme-picker.css'
+
+function App() {
+  const [theme, setTheme] = useState('light')
+
+  return (
+    <ConnectedThemePicker
+      themeFamilies={THEME_FAMILIES}
+      currentTheme={theme}
+      onThemeChange={setTheme}
+    />
+  )
+}
+```
+
+### Using ThemePicker (Manual State)
+
+For full control over the picker's state:
 
 ```tsx
 import { ThemePicker, SunIcon, MoonIcon } from '@wolffm/task-ui-components'
