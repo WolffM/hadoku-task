@@ -7,6 +7,7 @@ import type { UserPreferences } from '../domain/types'
 import { performSessionHandshake, clearOldSessionStorage, getStoredSessionId } from '../api/session'
 import { createApi } from '../api/client'
 import { logger } from '@wolffm/task-ui-components'
+import { logPackageVersions } from '../utils/version'
 
 interface UseSessionInitializationProps {
   userType: string
@@ -37,6 +38,9 @@ export function useSessionInitialization({
   useEffect(() => {
     async function initializeSession() {
       logger.info('[App] Initializing session...', { userType, sessionId: propsSessionId })
+
+      // Log package versions on every page load (helps identify cache issues)
+      logPackageVersions()
 
       // Get old sessionId before handshake
       const oldSessionId = getStoredSessionId()
@@ -89,13 +93,16 @@ export function useSessionInitialization({
           clearOldSessionStorage(oldSessionId, userType)
         }
 
-        // Show welcome toast for authenticated users
-        if (userName) {
-          showToast(`Welcome back, ${userName}`, 'success')
-        } else if (userType === 'friend') {
-          showToast('Welcome back!', 'success')
-        } else if (userType === 'admin') {
-          showToast('Welcome back, Admin', 'success')
+        // Show welcome toast for authenticated users (only if they have a name or are non-public)
+        if (userType !== 'public') {
+          if (userName) {
+            showToast(`Welcome back, ${userName}`, 'success')
+          } else if (userType === 'admin') {
+            showToast('Welcome back, Admin', 'success')
+          } else if (userType === 'friend') {
+            showToast('Welcome back!', 'success')
+          }
+          // Don't show any toast if userName is empty/undefined for friend users
         }
       }
 
