@@ -26,16 +26,23 @@
 export * as TaskHandlers from '../domain/handlers/handlers.js'
 export * as TaskUtils from '../domain/utils/shared.js'
 export type { Storage as TaskStorage } from './storage.js'
+
+// Core Entity Types
 export type {
   Task,
   TasksFile,
-  StatsFile,
-  StatsTaskRecord,
   Board,
   BoardsFile,
+  StatsFile,
+  StatsTaskRecord,
   UserType,
+  ULID
+} from '../domain/types.js'
+
+// API Input/Output Types
+export type {
   AuthContext,
   CreateTaskInput,
   UpdateTaskInput,
-  ULID
+  UserPreferences
 } from '../domain/types.js'

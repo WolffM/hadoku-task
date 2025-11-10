@@ -12,7 +12,7 @@ import { logPackageVersions } from '../utils/version'
 interface UseSessionInitializationProps {
   userType: string
   propsSessionId: string
-  userName?: string
+  preferences: UserPreferences
   effectiveSessionId: string
   setEffectiveSessionId: (sessionId: string) => void
   setPreferences: (prefs: UserPreferences) => void
@@ -25,7 +25,7 @@ interface UseSessionInitializationProps {
 export function useSessionInitialization({
   userType,
   propsSessionId,
-  userName,
+  preferences,
   effectiveSessionId,
   setEffectiveSessionId,
   setPreferences,
@@ -95,6 +95,7 @@ export function useSessionInitialization({
 
         // Show welcome toast for authenticated users (only if they have a name or are non-public)
         if (userType !== 'public') {
+          const userName = preferences.userName
           if (userName) {
             showToast(`Welcome back, ${userName}`, 'success')
           } else if (userType === 'admin') {

@@ -15,11 +15,9 @@ export interface SettingsModalProps {
   showDeleteButton: boolean
   showTagButton: boolean
   userType?: string
-  userName?: string
   onClose: () => void
   onSavePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   onValidateKey: (key: string) => Promise<boolean>
-  onUpdateUserName?: (userName: string) => Promise<{ success: boolean; error?: string }>
   onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
 }
 
@@ -30,11 +28,9 @@ export function SettingsModal({
   showDeleteButton,
   showTagButton,
   userType,
-  userName,
   onClose,
   onSavePreferences,
   onValidateKey,
-  onUpdateUserName,
   onShowToast
 }: SettingsModalProps) {
   const [newKey, setNewKey] = useState('')
@@ -46,6 +42,7 @@ export function SettingsModal({
   const [isUpdatingUserName, setIsUpdatingUserName] = useState(false)
 
   const isAuthenticatedUser = userType !== 'public'
+  const currentUserName = preferences.userName
 
   const handleKeyChange = async () => {
     if (!newKey.trim() || isValidatingKey) return
@@ -67,21 +64,23 @@ export function SettingsModal({
   }
 
   const handleUserNameUpdate = async () => {
-    if (!newUserName.trim() || isUpdatingUserName || !onUpdateUserName) return
+    if (!newUserName.trim() || isUpdatingUserName) return
 
     setIsUpdatingUserName(true)
     setUserNameError(null)
 
     onShowToast?.('Updating display name...', 'info')
 
-    const result = await onUpdateUserName(newUserName.trim())
+    try {
+      // Save userName via preferences (uses same localStorage + API sync flow)
+      await onSavePreferences({ userName: newUserName.trim() })
 
-    if (result.success) {
       onShowToast?.('Display name updated successfully!', 'success')
       setNewUserName('') // Clear input
-    } else {
-      setUserNameError(result.error || 'Failed to update name')
-      onShowToast?.(result.error || 'Failed to update display name', 'error')
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to update name'
+      setUserNameError(errorMsg)
+      onShowToast?.(errorMsg, 'error')
     }
 
     setIsUpdatingUserName(false)
@@ -102,10 +101,10 @@ export function SettingsModal({
           <h4 className="settings-section-title">User Management</h4>
 
           {/* Display current username */}
-          {userName && (
+          {currentUserName && (
             <div className="settings-field">
               <label className="settings-field-label">Current Display Name</label>
-              <div className="settings-field-value">{userName}</div>
+              <div className="settings-field-value">{currentUserName}</div>
             </div>
           )}
 

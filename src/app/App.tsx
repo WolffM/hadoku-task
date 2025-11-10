@@ -148,11 +148,11 @@ export default function App(props: TaskAppProps = {}) {
     setSelectedFilters(new Set())
   }, [currentBoardId])
 
-  // Session initialization hook
+  // Session initialization (handshake, preferences loading, initial data fetch)
   useSessionInitialization({
     userType,
     propsSessionId,
-    userName,
+    preferences,
     effectiveSessionId,
     setEffectiveSessionId,
     setPreferences,

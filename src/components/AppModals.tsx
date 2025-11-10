@@ -41,7 +41,6 @@ interface AppModalsProps {
   showDeleteButton: boolean
   showTagButton: boolean
   userType: string
-  userName?: string
   effectiveSessionId: string
 
   // Toasts
@@ -61,9 +60,8 @@ interface AppModalsProps {
   onTagInputChange: (value: string) => void
 
   onCloseSettingsModal: () => void
-  onSavePreferences: (updates: Partial<UserPreferences>) => Promise<void>
+  onSavePreferences: (prefs: Partial<UserPreferences>) => Promise<void>
   onValidateKey: (key: string) => Promise<boolean>
-  onUpdateUserName?: (userName: string) => Promise<{ success: boolean; error?: string }>
   onShowToast: (message: string, type?: 'success' | 'error' | 'info') => void
 
   onCloseEditTagModal: () => void

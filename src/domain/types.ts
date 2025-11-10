@@ -95,6 +95,7 @@ export interface UserPreferences {
   updatedAt: string
   experimentalThemes?: boolean
   alwaysVerticalLayout?: boolean
+  userName?: string // Display name for user
   // Device-specific settings (localStorage only)
   theme?: string
   showCompleteButton?: boolean
