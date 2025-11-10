@@ -20,6 +20,16 @@ export interface UseThemeReturn {
 }
 
 /**
+ * Validate if a theme is available given the experimental themes setting
+ */
+function isThemeAvailable(themeName: string | undefined, experimentalEnabled: boolean): boolean {
+  if (!themeName) return false
+  
+  const families = getThemeFamilies(experimentalEnabled)
+  return families.some(f => f.lightTheme === themeName || f.darkTheme === themeName)
+}
+
+/**
  * Hook to manage theme state and behavior
  * Handles theme picker visibility, auto-switching on system preference changes,
  * and applying theme to container element
@@ -38,14 +48,42 @@ export function useTheme(
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
   const defaultTheme = systemPrefersDark ? 'dark' : 'light'
   
-  const theme = (preferences.theme || defaultTheme) as ThemeName
-  const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
-
   // Compute theme families based on experimental preferences
   const THEME_FAMILIES = useMemo(() => 
     getThemeFamilies(preferences.experimentalThemes || false),
     [preferences.experimentalThemes]
   )
+
+  // Validate and sanitize theme - fallback to default if theme is invalid or unavailable
+  const theme = useMemo(() => {
+    const requestedTheme = preferences.theme
+    
+    // Check if the requested theme is available
+    if (isThemeAvailable(requestedTheme, preferences.experimentalThemes || false)) {
+      return requestedTheme as ThemeName
+    }
+    
+    // Theme is invalid or not available (e.g., experimental theme but experimentalThemes=false)
+    // Try to find a suitable fallback based on the requested theme's mode (light/dark)
+    if (requestedTheme) {
+      const isDarkMode = requestedTheme.endsWith('-dark') || requestedTheme === 'dark'
+      const fallbackTheme = isDarkMode ? 'dark' : 'light'
+      
+      // Log the fallback for debugging
+      if (preferencesLoaded) {
+        logger.info(`[useTheme] Theme '${requestedTheme}' not available, falling back to '${fallbackTheme}'`, {
+          experimentalEnabled: preferences.experimentalThemes || false
+        })
+      }
+      
+      return fallbackTheme as ThemeName
+    }
+    
+    // No theme specified, use system preference
+    return defaultTheme as ThemeName
+  }, [preferences.theme, preferences.experimentalThemes, defaultTheme, preferencesLoaded])
+  
+  const setTheme = (newTheme: ThemeName) => savePreferences({ theme: newTheme })
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {
