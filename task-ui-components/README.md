@@ -8,6 +8,26 @@ Beautiful, reusable UI components for task management applications.
 
 A gorgeous theme picker with light/dark pill design. Fully customizable to work with any theme system.
 
+### Modal
+
+Generic modal dialog with keyboard shortcuts, customizable actions, and optional input field.
+
+### ContextMenu
+
+Position-based context menu with customizable items and danger states.
+
+### LoadingSkeleton
+
+Flexible loading skeleton with multiple layouts (default, minimal, custom) and dark theme support.
+
+### SettingsModal
+
+Generic settings dialog with section-based organization and multiple field types (toggle, text, password, select, button, custom).
+
+### Toast & Toaster
+
+Toast notification system with success, error, and info variants.
+
 ## Installation
 
 ```bash
@@ -395,3 +415,330 @@ logger.info('[Auth] User logged in')
 ## License
 
 MIT
+
+---
+
+## Additional Components Documentation
+
+### Modal
+
+Generic modal dialog with keyboard shortcuts and customizable actions.
+
+**Features:**
+
+- Keyboard shortcuts (Enter to confirm, Escape to close)
+- Optional input field with auto-focus
+- Configurable buttons (show/hide cancel/confirm)
+- Danger variant for destructive actions
+- Custom class names for styling
+
+**Usage:**
+
+\`\`\`tsx
+import { Modal } from '@wolffm/task-ui-components'
+
+function MyComponent() {
+const [isOpen, setIsOpen] = useState(false)
+const [value, setValue] = useState('')
+
+return (
+<Modal
+isOpen={isOpen}
+title="Create Item"
+onClose={() => setIsOpen(false)}
+onConfirm={async () => {
+await createItem(value)
+setIsOpen(false)
+}}
+inputValue={value}
+onInputChange={setValue}
+inputPlaceholder="Enter name..."
+confirmLabel="Create"
+confirmDisabled={!value.trim()} >
+
+<p>Enter a name for your new item.</p>
+</Modal>
+)
+}
+\`\`\`
+
+**Props:**
+
+| Prop                 | Type                        | Required  | Description                            |
+| -------------------- | --------------------------- | --------- | -------------------------------------- | ---------------- |
+| \`isOpen\`           | \`boolean\`                 | ✅        | Whether modal is visible               |
+| \`title\`            | \`string\`                  | ✅        | Modal title                            |
+| \`onClose\`          | \`() => void\`              | ✅        | Close callback                         |
+| \`onConfirm\`        | \`() => void \\             | Promise\` | ❌                                     | Confirm callback |
+| \`children\`         | \`ReactNode\`               | ❌        | Modal content                          |
+| \`inputValue\`       | \`string\`                  | ❌        | Input field value                      |
+| \`onInputChange\`    | \`(value: string) => void\` | ❌        | Input change callback                  |
+| \`inputPlaceholder\` | \`string\`                  | ❌        | Input placeholder                      |
+| \`confirmLabel\`     | \`string\`                  | ❌        | Confirm button text (default: Confirm) |
+| \`cancelLabel\`      | \`string\`                  | ❌        | Cancel button text (default: Cancel)   |
+| \`confirmDisabled\`  | \`boolean\`                 | ❌        | Disable confirm button                 |
+| \`confirmDanger\`    | \`boolean\`                 | ❌        | Danger styling for confirm             |
+| \`showCancel\`       | \`boolean\`                 | ❌        | Show cancel button (default: true)     |
+| \`showConfirm\`      | \`boolean\`                 | ❌        | Show confirm button (default: true)    |
+| \`className\`        | \`string\`                  | ❌        | Custom CSS class                       |
+| \`overlayClassName\` | \`string\`                  | ❌        | Custom overlay CSS class               |
+
+---
+
+### ContextMenu
+
+Position-based context menu for right-click or contextual actions.
+
+**Features:**
+
+- Position-based rendering (x, y coordinates)
+- Configurable menu items
+- Danger state for destructive items
+- Disabled state support
+- Fixed positioning with z-index
+
+**Usage:**
+
+\`\`\`tsx
+import { ContextMenu, type ContextMenuItem } from '@wolffm/task-ui-components'
+
+function MyComponent() {
+const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+
+const items: ContextMenuItem[] = [
+{
+label: 'Edit',
+onClick: () => handleEdit()
+},
+{
+label: 'Delete',
+onClick: () => handleDelete(),
+isDanger: true
+}
+]
+
+return (
+
+<div onContextMenu={e => {
+e.preventDefault()
+setMenu({ x: e.clientX, y: e.clientY })
+}}>
+<ContextMenu
+isOpen={!!menu}
+x={menu?.x || 0}
+y={menu?.y || 0}
+items={items}
+className="my-context-menu"
+/>
+</div>
+)
+}
+\`\`\`
+
+**Props:**
+
+| Prop          | Type                  | Required | Description             |
+| ------------- | --------------------- | -------- | ----------------------- |
+| \`isOpen\`    | \`boolean\`           | ✅       | Whether menu is visible |
+| \`x\`         | \`number\`            | ✅       | X position (pixels)     |
+| \`y\`         | \`number\`            | ✅       | Y position (pixels)     |
+| \`items\`     | \`ContextMenuItem[]\` | ✅       | Menu items              |
+| \`className\` | \`string\`            | ❌       | Custom CSS class        |
+
+**ContextMenuItem:**
+
+| Prop         | Type            | Required  | Description    |
+| ------------ | --------------- | --------- | -------------- | ------------- |
+| \`label\`    | \`string\`      | ✅        | Item label     |
+| \`onClick\`  | \`() => void \\ | Promise\` | ✅             | Click handler |
+| \`isDanger\` | \`boolean\`     | ❌        | Danger styling |
+| \`disabled\` | \`boolean\`     | ❌        | Disable item   |
+
+---
+
+### LoadingSkeleton
+
+Flexible loading skeleton with multiple layout options.
+
+**Features:**
+
+- Multiple layout options (default, minimal, custom)
+- Dark theme support
+- Customizable content via \`customContent\` prop
+
+**Usage:**
+
+\`\`\`tsx
+import { LoadingSkeleton } from '@wolffm/task-ui-components'
+
+function MyComponent() {
+const [isLoading, setIsLoading] = useState(true)
+const isDark = useTheme() === 'dark'
+
+if (isLoading) {
+return <LoadingSkeleton isDarkTheme={isDark} layout="minimal" />
+}
+
+return <div>Content loaded!</div>
+}
+\`\`\`
+
+**Props:**
+
+| Prop              | Type           | Required     | Description             |
+| ----------------- | -------------- | ------------ | ----------------------- | --- | -------------------------------- |
+| \`isDarkTheme\`   | \`boolean\`    | ❌           | Dark theme mode         |
+| \`className\`     | \`string\`     | ❌           | Custom CSS class        |
+| \`layout\`        | \`'default' \\ | 'minimal' \\ | 'custom'\`              | ❌  | Layout type (default: 'default') |
+| \`customContent\` | \`ReactNode\`  | ❌           | Custom skeleton content |
+
+---
+
+### SettingsModal
+
+Generic settings dialog with section-based organization.
+
+**Features:**
+
+- Section-based organization
+- Multiple field types: toggle, text, password, select, button, custom
+- Validation support
+- Description text for fields
+
+**Usage:**
+
+\`\`\`tsx
+import { SettingsModal, type SettingsSection } from '@wolffm/task-ui-components'
+
+function MyApp() {
+const [isOpen, setIsOpen] = useState(false)
+const [darkMode, setDarkMode] = useState(false)
+const [language, setLanguage] = useState('en')
+
+const sections: SettingsSection[] = [
+{
+id: 'display',
+title: 'Display Settings',
+fields: [
+{
+type: 'toggle',
+id: 'darkMode',
+label: 'Dark Mode',
+description: 'Use dark color scheme',
+value: darkMode,
+onChange: setDarkMode
+},
+{
+type: 'select',
+id: 'language',
+label: 'Language',
+value: language,
+onChange: setLanguage,
+options: [
+{ value: 'en', label: 'English' },
+{ value: 'es', label: 'Spanish' }
+]
+}
+]
+}
+]
+
+return (
+<SettingsModal
+isOpen={isOpen}
+sections={sections}
+onClose={() => setIsOpen(false)}
+/>
+)
+}
+\`\`\`
+
+**Props:**
+
+| Prop                | Type                  | Required | Description                       |
+| ------------------- | --------------------- | -------- | --------------------------------- |
+| \`isOpen\`          | \`boolean\`           | ✅       | Whether modal is visible          |
+| \`sections\`        | \`SettingsSection[]\` | ✅       | Settings sections                 |
+| \`onClose\`         | \`() => void\`        | ✅       | Close callback                    |
+| \`title\`           | \`string\`            | ❌       | Modal title (default: 'Settings') |
+| \`className\`       | \`string\`            | ❌       | Custom CSS class                  |
+| \`showCloseButton\` | \`boolean\`           | ❌       | Show close button (default: true) |
+
+**Field Types:**
+
+\`\`\`typescript
+// Toggle field
+{
+type: 'toggle',
+id: string,
+label: string,
+description?: string,
+value: boolean,
+onChange: (value: boolean) => void,
+disabled?: boolean
+}
+
+// Text input field
+{
+type: 'text',
+id: string,
+label: string,
+description?: string,
+value: string,
+onChange: (value: string) => void,
+placeholder?: string,
+disabled?: boolean
+}
+
+// Password field
+{
+type: 'password',
+id: string,
+label: string,
+description?: string,
+value: string,
+onChange: (value: string) => void,
+placeholder?: string,
+showButton?: boolean,
+buttonLabel?: string,
+onButtonClick?: () => void | Promise<void>,
+buttonDisabled?: boolean,
+error?: string | null,
+autoComplete?: string,
+disabled?: boolean
+}
+
+// Select dropdown
+{
+type: 'select',
+id: string,
+label: string,
+description?: string,
+value: string,
+onChange: (value: string) => void,
+options: Array<{ value: string; label: string }>,
+disabled?: boolean
+}
+
+// Action button
+{
+type: 'button',
+id: string,
+label?: string,
+description?: string,
+buttonLabel: string,
+onClick: () => void | Promise<void>,
+variant?: 'primary' | 'danger' | 'default',
+disabled?: boolean
+}
+
+// Custom component
+{
+type: 'custom',
+id: string,
+label?: string,
+description?: string,
+render: () => ReactNode,
+disabled?: boolean
+}
+\`\`\`

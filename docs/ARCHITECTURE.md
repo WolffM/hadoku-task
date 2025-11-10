@@ -163,10 +163,21 @@ App (main orchestrator)
 ├── User Management
 └── Custom Hooks
     ├── useTasks() - CRUD operations, board management
+    ├── useTaskHandlers() - UI integration layer (modals, validation)
+    ├── useSessionInitialization() - Session setup and sync
     ├── useDragAndDrop() - Drag and drop logic
     ├── useTaskSort() - Sort state
     ├── usePreferences() - Settings sync
     └── useTheme() - Theme switching
+
+├── AppModals - Centralized modal management
+│   ├── SettingsModal
+│   ├── CreateBoardModal
+│   ├── CreateTagModal
+│   ├── EditTagModal
+│   ├── ClearTagModal
+│   ├── BoardContextMenu
+│   └── TagContextMenu
 
 ├── TaskLayout (grid/column layout)
 │   ├── BoardButton (board navigation)
@@ -176,11 +187,7 @@ App (main orchestrator)
 │       ├── Inline edit
 │       └── Tag management
 
-└── Modals
-    ├── SettingsModal (user management + preferences)
-    ├── CreateBoardModal
-    ├── CreateTagModal
-    └── ContextMenus (board/tag actions)
+└── MarqueeOverlay - Drag selection overlay
 ```
 
 ### Data Flow
@@ -222,12 +229,74 @@ if (userType !== 'public') {
 ### File Structure
 
 ```
-src/server/
-├── index.ts              # Exports (TaskHandlers, TaskStorage)
-├── handlers.ts           # Pure business logic functions
-├── storage.ts            # Storage interface + filesystem impl
-├── types.ts              # TypeScript type definitions
-└── utils.ts              # ULID generation, utilities
+src/
+├── api/                      # API client layer
+│   ├── client.ts            # Optimistic API with extensive logging
+│   ├── localStorageApi.ts   # localStorage implementation
+│   ├── session.ts           # Session management
+│   └── storage/             # Storage implementations
+│
+├── app/                      # Application entry and config
+│   ├── App.tsx              # Main orchestrator (~400 lines, refactored)
+│   ├── entry.tsx            # React mount point
+│   ├── themeConfig.tsx      # Theme configuration
+│   └── constants.ts         # App constants
+│
+├── components/               # UI components
+│   ├── AppModals.tsx        # Centralized modal management
+│   ├── MarqueeOverlay.tsx   # Drag selection overlay
+│   ├── TaskLayout.tsx       # Main layout component
+│   ├── TaskItem.tsx         # Individual task card
+│   ├── BoardsSection.tsx    # Board navigation
+│   ├── TagFiltersSection.tsx # Tag filters
+│   └── modals/              # Modal components
+│       ├── SettingsModal.tsx
+│       ├── CreateBoardModal.tsx
+│       ├── CreateTagModal.tsx
+│       ├── EditTagModal.tsx
+│       ├── ClearTagModal.tsx
+│       ├── BoardContextMenu.tsx
+│       └── TagContextMenu.tsx
+│
+├── domain/                   # Business logic
+│   ├── types.ts             # TypeScript interfaces
+│   ├── handlers/            # Pure handler functions
+│   └── utils/               # Domain utilities (tags, validation)
+│
+├── hooks/                    # Custom React hooks
+│   ├── useTasks/            # Task operations (CRUD, boards)
+│   │   ├── index.ts         # Main hook (~400 lines)
+│   │   └── helpers.ts       # Shared utilities
+│   ├── useTaskHandlers.ts   # UI integration layer
+│   ├── useSessionInitialization.ts # Session setup
+│   ├── useDragAndDrop/      # Drag and drop logic
+│   ├── useModalState.ts     # Modal state management
+│   ├── usePreferences.ts    # Settings persistence
+│   └── useTheme.ts          # Theme switching
+│
+├── server/                   # Exported handlers for backend
+│   ├── index.ts             # Exports
+│   ├── handlers.ts          # Business logic
+│   └── storage.ts           # Storage interface
+│
+├── styles/                   # CSS modules
+│   ├── variables.css        # Design tokens + themes
+│   ├── base.css            # Reset and base
+│   ├── main.css            # Layout and structure
+│   ├── buttons.css         # Button styles
+│   ├── modal.css           # Modal dialogs
+│   ├── task-items.css      # Task cards
+│   └── task-layout.css     # Grid layouts
+│
+└── utils/                    # App utilities
+    ├── auth.ts              # Authentication helpers
+    ├── broadcast.ts         # Cross-tab sync
+    ├── dragDrop.ts          # Drag and drop utilities
+    ├── formatters.ts        # Text formatting
+    ├── layout.ts            # Layout calculations
+    ├── placeholders.ts      # Placeholder text
+    ├── preferences.ts       # Preferences helpers
+    └── validation.ts        # Input validation
 ```
 
 ### Handler Pattern
@@ -581,6 +650,108 @@ dist/server/
 ├── types.js          # TypeScript types
 └── utils.js          # Utilities
 ```
+
+---
+
+## Logging System
+
+### Production-Safe Logging
+
+The app includes comprehensive logging via `@wolffm/task-ui-components/logger`:
+
+```typescript
+import { logger } from '@wolffm/task-ui-components'
+
+// Info logs (dev/admin only)
+logger.info('[api] createTask: Starting', { title, boardId })
+logger.info('[api] createTask: Created locally', { taskId })
+
+// Warnings (always shown)
+logger.warn('[api] createTask: Server sync returned error', { status })
+
+// Errors (always shown)
+logger.error('[api] createTask: Server sync failed', { error })
+```
+
+**Behavior:**
+
+| Mode      | Development | Production (Admin) | Production (User) |
+| --------- | ----------- | ------------------ | ----------------- |
+| `info()`  | ✅          | ✅                 | ❌                |
+| `debug()` | ✅          | ✅                 | ❌                |
+| `warn()`  | ✅          | ✅                 | ✅                |
+| `error()` | ✅          | ✅                 | ✅                |
+
+**Admin Mode:**
+
+```typescript
+// Enable admin logging in production
+if (userType === 'admin') {
+  logger.setAdminStatus(true)
+}
+```
+
+**Logging Coverage:**
+
+- ✅ All API operations (start, local complete, server sync)
+- ✅ Performance metrics (sync duration)
+- ✅ Error details with context
+- ✅ State changes in hooks
+- ✅ Cross-tab sync events
+
+---
+
+## Refactored Architecture (v3.4+)
+
+### App.tsx Refactoring
+
+**Before:** 633 lines of mixed concerns  
+**After:** 404 lines focused on composition (36% reduction)
+
+**Extracted Components:**
+
+1. **AppModals** (201 lines) - All modal components centralized
+2. **MarqueeOverlay** (27 lines) - Drag selection overlay
+
+**Extracted Hooks:**
+
+1. **useTaskHandlers** (207 lines) - UI integration layer
+   - Modal state management
+   - Input validation
+   - Tag/board creation with pending operations
+2. **useSessionInitialization** (117 lines) - Session setup
+   - Initial API sync
+   - Preference loading
+   - Authentication state
+
+**Extracted Utilities:**
+
+1. **domain/utils/tags.ts** - Tag parsing and formatting
+   - `splitTags()` - Consistent tag parsing
+   - `formatError()` - Error message formatting
+
+### Hook Organization
+
+**useTasks** - Pure business logic
+
+- CRUD operations
+- Board management
+- API calls
+- BroadcastChannel sync
+
+**useTaskHandlers** - UI integration
+
+- Connects useTasks to UI components
+- Modal state coordination
+- Input validation
+- Pending operation management
+
+**Separation Benefits:**
+
+- ✅ Clear separation of concerns
+- ✅ Easier testing (mock at different levels)
+- ✅ Better code organization
+- ✅ Reduced component complexity
 
 ---
 
