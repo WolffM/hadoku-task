@@ -16,7 +16,7 @@ import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useTaskHandlers } from '../hooks/useTaskHandlers'
 import { useSessionInitialization } from '../hooks/useSessionInitialization'
-import { useToast, LoadingSkeleton } from '@wolffm/task-ui-components'
+import { useToast, LoadingSkeleton, logger } from '@wolffm/task-ui-components'
 import { AppHeader } from '../components/AppHeader'
 import { BoardsSection } from '../components/BoardsSection'
 import { TagFiltersSection } from '../components/TagFiltersSection'
@@ -26,6 +26,7 @@ import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags } from '../domain/utils/tags'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { createApi } from '../api/client'
+import type { UserPreferences } from '../domain/types'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
 export default function App(props: TaskAppProps = {}) {
@@ -194,6 +195,48 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
+  // Handle settings modal open - fetch fresh preferences
+  const handleSettingsOpen = async () => {
+    logger.info('[App] Opening settings modal, fetching fresh preferences...')
+    modals.setShowSettingsModal(true)
+
+    try {
+      // Fetch latest preferences from server (or localStorage for public users)
+      // This ensures we always show current state even if changed in another tab/device
+      const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
+      const freshPrefs = await api.getPreferences()
+      if (freshPrefs) {
+        logger.info('[App] Loaded fresh preferences', {
+          hasUpdatedAt: !!freshPrefs.updatedAt,
+          keys: Object.keys(freshPrefs)
+        })
+        setPreferences(freshPrefs)
+      }
+    } catch (error) {
+      logger.warn('[App] Failed to fetch fresh preferences', {
+        error: error instanceof Error ? error.message : String(error)
+      })
+      // Modal still opens with current preferences - graceful degradation
+    }
+  }
+
+  // Handle preference changes from settings modal
+  const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
+    logger.info('[App] Saving preferences', { keys: Object.keys(prefs) })
+
+    // Update local state immediately for responsive UI
+    setPreferences((prev: UserPreferences) => ({ ...prev, ...prefs }))
+
+    // Save to localStorage AND sync to server (for non-public users)
+    // This happens in api.savePreferences() - it:
+    // 1. Saves to localStorage immediately (instant update)
+    // 2. Background syncs to server (for friend/admin users)
+    const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
+    await api.savePreferences(prefs)
+
+    logger.info('[App] Preferences saved successfully')
+  }
+
   // Show loading skeleton only on initial load (not on theme changes)
   // Use system preference for theme during initial load, then switch to user preference
   if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded) {
@@ -239,7 +282,7 @@ export default function App(props: TaskAppProps = {}) {
           showThemePicker={showThemePicker}
           onThemePickerToggle={() => setShowThemePicker(!showThemePicker)}
           onThemeChange={setTheme}
-          onSettingsClick={() => modals.setShowSettingsModal(true)}
+          onSettingsClick={handleSettingsOpen}
           THEME_FAMILIES={THEME_FAMILIES}
         />
 
@@ -379,7 +422,7 @@ export default function App(props: TaskAppProps = {}) {
           onConfirmCreateTag={handlers.handleCreateTag}
           onTagInputChange={modals.setInputValue}
           onCloseSettingsModal={() => modals.setShowSettingsModal(false)}
-          onSavePreferences={savePreferences}
+          onSavePreferences={handleSavePreferences}
           onValidateKey={async (key: string) => {
             const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
             return await api.validateKey(key)

@@ -432,7 +432,7 @@ export function createApi(
     async getPreferences() {
       logger.info('[api] getPreferences: Starting', { userType })
 
-      // For non-public users, always fetch from server
+      // For non-public users, always fetch from server to ensure sync across devices/tabs
       if (userType !== 'public') {
         try {
           const response = await fetch('/task/api/preferences', {
@@ -444,7 +444,7 @@ export function createApi(
               hasPrefs: !!serverPrefs,
               keys: serverPrefs ? Object.keys(serverPrefs) : []
             })
-            // Also save to localStorage for offline access
+            // Also save to localStorage for offline access and instant local updates
             await localStorage.savePreferences(serverPrefs)
             return serverPrefs
           } else {
@@ -472,11 +472,13 @@ export function createApi(
         keys: Object.keys(prefs)
       })
 
-      // Always save to localStorage first (for immediate UI update)
+      // ALWAYS save to localStorage first for instant UI update
+      // This ensures responsive UI even if server sync is slow/fails
       await localStorage.savePreferences(prefs)
       logger.info('[api] savePreferences: Saved to localStorage')
 
-      // For non-public users, sync to server
+      // For non-public users, sync to server in background
+      // This enables cross-device/tab sync via getPreferences()
       if (userType !== 'public') {
         fetch('/task/api/preferences', {
           method: 'PUT',
