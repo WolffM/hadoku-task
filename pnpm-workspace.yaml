@@ -1,4 +1,7 @@
 packages:
-  - '.'
-  - 'themes'
-  - 'task-ui-components'
+  - .
+  - themes
+  - task-ui-components
+
+onlyBuiltDependencies:
+  - esbuild

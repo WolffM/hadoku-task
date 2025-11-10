@@ -118,7 +118,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBoardId, userType, sessionId]) // ✅ FIX: Recreate listener when user context changes
+  }, [currentBoardId, userType, sessionId])
 
   async function addTask(input: string) {
     input = input.trim()
