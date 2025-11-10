@@ -19,9 +19,9 @@ fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n')
 
 console.log(`[Themes Version Manager] ✅ Version updated: ${major}.${minor}.${patch} → ${newVersion}`)
 
-// Update package-lock.json
+// Update lockfile using pnpm
 try {
-  execSync('npm install --package-lock-only', { stdio: 'inherit' })
+  execSync('pnpm install --lockfile-only', { stdio: 'inherit' })
 } catch (error) {
-  console.error('[Themes Version Manager] Warning: Could not update package-lock.json')
+  console.error('[Themes Version Manager] Warning: Could not update pnpm-lock.yaml')
 }
