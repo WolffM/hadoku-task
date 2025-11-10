@@ -41,6 +41,7 @@ interface AppModalsProps {
   showDeleteButton: boolean
   showTagButton: boolean
   userType: string
+  userName?: string
   effectiveSessionId: string
 
   // Toasts
@@ -60,8 +61,9 @@ interface AppModalsProps {
   onTagInputChange: (value: string) => void
 
   onCloseSettingsModal: () => void
-  onSavePreferences: (prefs: Partial<UserPreferences>) => Promise<void>
+  onSavePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   onValidateKey: (key: string) => Promise<boolean>
+  onUpdateUserName?: (userName: string) => Promise<{ success: boolean; error?: string }>
   onShowToast: (message: string, type?: 'success' | 'error' | 'info') => void
 
   onCloseEditTagModal: () => void
@@ -96,7 +98,8 @@ export function AppModals({
   showCompleteButton,
   showDeleteButton,
   showTagButton,
-  userType: _userType,
+  userType,
+  userName,
   effectiveSessionId: _effectiveSessionId,
   toasts,
   onCloseConfirmClearTag,
@@ -111,6 +114,7 @@ export function AppModals({
   onCloseSettingsModal,
   onSavePreferences,
   onValidateKey,
+  onUpdateUserName,
   onShowToast,
   onCloseEditTagModal,
   onConfirmEditTag,
@@ -158,9 +162,12 @@ export function AppModals({
         showCompleteButton={showCompleteButton}
         showDeleteButton={showDeleteButton}
         showTagButton={showTagButton}
+        userType={userType}
+        userName={userName}
         onClose={onCloseSettingsModal}
         onSavePreferences={onSavePreferences}
         onValidateKey={onValidateKey}
+        onUpdateUserName={onUpdateUserName}
         onShowToast={onShowToast}
       />
 

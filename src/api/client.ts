@@ -660,6 +660,42 @@ export function createApi(
         })
         return false
       }
+    },
+
+    async updateUserName(userName: string): Promise<{ success: boolean; error?: string }> {
+      logger.info('[api] updateUserName: Starting', { userName })
+      try {
+        const response = await fetch('/task/api/user/name', {
+          method: 'PUT',
+          headers: {
+            ...adminHeaders(userType, sessionId),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userName })
+        })
+
+        if (response.ok) {
+          logger.info('[api] updateUserName: Success')
+          return { success: true }
+        } else {
+          const errorText = await response.text()
+          logger.warn('[api] updateUserName: Server returned error', {
+            status: response.status,
+            error: errorText
+          })
+          return {
+            success: false,
+            error: errorText || `Server error: ${response.status}`
+          }
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        logger.error('[api] updateUserName: Failed', { error: errorMsg })
+        return {
+          success: false,
+          error: `Failed to update name: ${errorMsg}`
+        }
+      }
     }
   }
 }

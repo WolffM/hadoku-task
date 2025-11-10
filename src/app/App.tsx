@@ -400,6 +400,7 @@ export default function App(props: TaskAppProps = {}) {
           showDeleteButton={showDeleteButton}
           showTagButton={showTagButton}
           userType={userType}
+          userName={userName}
           effectiveSessionId={effectiveSessionId}
           toasts={toasts}
           onCloseConfirmClearTag={() => modals.setConfirmClearTag(null)}
@@ -426,6 +427,10 @@ export default function App(props: TaskAppProps = {}) {
           onValidateKey={async (key: string) => {
             const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
             return await api.validateKey(key)
+          }}
+          onUpdateUserName={async (newUserName: string) => {
+            const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
+            return await api.updateUserName(newUserName)
           }}
           onShowToast={showToast}
           onCloseEditTagModal={() => {

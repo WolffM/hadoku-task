@@ -14,9 +14,12 @@ export interface SettingsModalProps {
   showCompleteButton: boolean
   showDeleteButton: boolean
   showTagButton: boolean
+  userType?: string
+  userName?: string
   onClose: () => void
   onSavePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   onValidateKey: (key: string) => Promise<boolean>
+  onUpdateUserName?: (userName: string) => Promise<{ success: boolean; error?: string }>
   onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
 }
 
@@ -26,14 +29,23 @@ export function SettingsModal({
   showCompleteButton,
   showDeleteButton,
   showTagButton,
+  userType,
+  userName,
   onClose,
   onSavePreferences,
   onValidateKey,
+  onUpdateUserName,
   onShowToast
 }: SettingsModalProps) {
   const [newKey, setNewKey] = useState('')
   const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
   const [isValidatingKey, setIsValidatingKey] = useState(false)
+
+  const [newUserName, setNewUserName] = useState('')
+  const [userNameError, setUserNameError] = useState<string | null>(null)
+  const [isUpdatingUserName, setIsUpdatingUserName] = useState(false)
+
+  const isAuthenticatedUser = userType !== 'public'
 
   const handleKeyChange = async () => {
     if (!newKey.trim() || isValidatingKey) return
@@ -54,6 +66,27 @@ export function SettingsModal({
     // If successful, page will redirect
   }
 
+  const handleUserNameUpdate = async () => {
+    if (!newUserName.trim() || isUpdatingUserName || !onUpdateUserName) return
+
+    setIsUpdatingUserName(true)
+    setUserNameError(null)
+
+    onShowToast?.('Updating display name...', 'info')
+
+    const result = await onUpdateUserName(newUserName.trim())
+
+    if (result.success) {
+      onShowToast?.('Display name updated successfully!', 'success')
+      setNewUserName('') // Clear input
+    } else {
+      setUserNameError(result.error || 'Failed to update name')
+      onShowToast?.(result.error || 'Failed to update display name', 'error')
+    }
+
+    setIsUpdatingUserName(false)
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -63,44 +96,90 @@ export function SettingsModal({
       confirmLabel="Close"
       cancelLabel="Close"
     >
-      {/* User Management Section */}
-      <div className="settings-section">
-        <h4 className="settings-section-title">User Management</h4>
+      {/* User Management Section - Only for authenticated users */}
+      {isAuthenticatedUser && (
+        <div className="settings-section">
+          <h4 className="settings-section-title">User Management</h4>
 
-        <div className="settings-field">
-          <label className="settings-field-label">Enter New Key</label>
-          <div className="settings-field-input-group">
-            <input
-              type="password"
-              name="key"
-              autoComplete="key"
-              className="settings-text-input"
-              value={newKey}
-              onChange={e => {
-                setNewKey(e.target.value)
-                setKeyValidationError(null)
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && newKey && !isValidatingKey) {
-                  handleKeyChange()
-                }
-              }}
-              placeholder="Enter authentication key"
-              disabled={isValidatingKey}
-            />
-            {newKey && (
-              <button
-                className="settings-field-button"
-                onClick={handleKeyChange}
-                disabled={isValidatingKey}
-              >
-                {isValidatingKey ? <span className="spinner"></span> : '↵'}
-              </button>
-            )}
+          {/* Display current username */}
+          {userName && (
+            <div className="settings-field">
+              <label className="settings-field-label">Current Display Name</label>
+              <div className="settings-field-value">{userName}</div>
+            </div>
+          )}
+
+          {/* Update username */}
+          <div className="settings-field">
+            <label className="settings-field-label">Update Display Name</label>
+            <div className="settings-field-input-group">
+              <input
+                type="text"
+                name="displayName"
+                autoComplete="name"
+                className="settings-text-input"
+                value={newUserName}
+                onChange={e => {
+                  setNewUserName(e.target.value)
+                  setUserNameError(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newUserName.trim() && !isUpdatingUserName) {
+                    handleUserNameUpdate()
+                  }
+                }}
+                placeholder="Enter new display name"
+                disabled={isUpdatingUserName}
+              />
+              {newUserName.trim() && (
+                <button
+                  className="settings-field-button"
+                  onClick={handleUserNameUpdate}
+                  disabled={isUpdatingUserName}
+                >
+                  {isUpdatingUserName ? <span className="spinner"></span> : '↵'}
+                </button>
+              )}
+            </div>
+            {userNameError && <span className="settings-error">{userNameError}</span>}
           </div>
-          {keyValidationError && <span className="settings-error">{keyValidationError}</span>}
+
+          {/* Authentication key */}
+          <div className="settings-field">
+            <label className="settings-field-label">Enter New Key</label>
+            <div className="settings-field-input-group">
+              <input
+                type="password"
+                name="key"
+                autoComplete="key"
+                className="settings-text-input"
+                value={newKey}
+                onChange={e => {
+                  setNewKey(e.target.value)
+                  setKeyValidationError(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newKey && !isValidatingKey) {
+                    handleKeyChange()
+                  }
+                }}
+                placeholder="Enter authentication key"
+                disabled={isValidatingKey}
+              />
+              {newKey && (
+                <button
+                  className="settings-field-button"
+                  onClick={handleKeyChange}
+                  disabled={isValidatingKey}
+                >
+                  {isValidatingKey ? <span className="spinner"></span> : '↵'}
+                </button>
+              )}
+            </div>
+            {keyValidationError && <span className="settings-error">{keyValidationError}</span>}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Preferences Section */}
       <div className="settings-section">
