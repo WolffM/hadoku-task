@@ -69,7 +69,7 @@ export interface BoardSwitchResult {
   foundBoard: boolean
 }
 
-export function extractBoardTasks(boards: BoardsFile, boardId: string): BoardSwitchResult {
+export function extractBoardTasks(boards: BoardsFile | null, boardId: string): BoardSwitchResult {
   const board = boards?.boards?.find((b: Board) => b.id === boardId)
 
   if (board) {

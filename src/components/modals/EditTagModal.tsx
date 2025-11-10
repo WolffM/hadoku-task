@@ -4,10 +4,11 @@
  */
 
 import React from 'react'
-import { Modal } from '../Modal'
+import { Modal } from '@wolffm/task-ui-components'
 import type { BoardsFile } from '../../domain/types'
+import { splitTags } from '../../domain/utils/tags'
 
-export interface EditTagModalProps {
+interface EditTagModalProps {
   isOpen: boolean
   taskId: string | null
   currentTag: string | null
@@ -34,7 +35,7 @@ export function EditTagModal({
 }: EditTagModalProps) {
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
   const boardTags = currentBoard?.tags || []
-  const currentTags = currentTag?.split(' ').filter(Boolean) || []
+  const currentTags = splitTags(currentTag)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {

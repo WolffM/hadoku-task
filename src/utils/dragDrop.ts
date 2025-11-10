@@ -10,7 +10,9 @@ export function getTaskIdsFromDragEvent(dataTransfer: DataTransfer): string[] {
   try {
     const raw = dataTransfer.getData('application/x-hadoku-task-ids')
     if (raw) ids = JSON.parse(raw)
-  } catch { /* Intentionally ignore errors */ }
+  } catch {
+    /* Intentionally ignore errors */
+  }
 
   if (ids.length === 0) {
     const t = dataTransfer.getData('text/plain')
@@ -19,4 +21,3 @@ export function getTaskIdsFromDragEvent(dataTransfer: DataTransfer): string[] {
 
   return ids
 }
-

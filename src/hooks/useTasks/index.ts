@@ -5,12 +5,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createApi } from '../../api/client'
 import type { Task, BoardsFile } from '../../domain/types'
-import { parseTaskInput } from '../../domain/utils/tags'
+import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
-import {
-  withPendingOperation,
-  extractBoardTasks
-} from './helpers'
+import { withPendingOperation, extractBoardTasks } from './helpers'
 import { logger } from '@wolffm/task-ui-components'
 
 interface UseTasksProps {
@@ -179,8 +176,8 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
 
-    const existingTags = task.tag?.split(' ') || []
-    if (existingTags.includes(normalizedTag)) return // Tag already exists
+    const existingTags = splitTags(task.tag)
+    if (existingTags.includes(normalizedTag)) return
 
     const updatedTags = [...existingTags, normalizedTag].join(' ')
 
@@ -220,7 +217,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       logger.info('[useTasks] bulkUpdateTaskTags END')
     } catch (error) {
       logger.error('[useTasks] bulkUpdateTaskTags ERROR', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       throw error
     }
@@ -230,7 +227,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     logger.info('[useTasks] deleteTag START', { tag, currentBoardId, taskCount: tasks.length })
 
     // Check if we have tasks with this tag
-    const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
+    const tagTasks = tasks.filter(t => splitTags(t.tag).includes(tag))
     logger.info('[useTasks] deleteTag: found tasks with tag', { tag, count: tagTasks.length })
 
     if (tagTasks.length === 0) {
@@ -325,7 +322,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       logger.info('[useTasks] moveTasksToBoard END')
     } catch (error) {
       logger.error('[useTasks] moveTasksToBoard ERROR', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       alert((error as Error).message || 'Failed to move tasks')
     }
@@ -399,4 +396,3 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     reload
   }
 }
-

@@ -14,28 +14,19 @@ import { useTheme } from '../hooks/useTheme'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { useToast, Toaster } from '@wolffm/task-ui-components'
-import { performSessionHandshake, clearOldSessionStorage, getStoredSessionId } from '../api/session'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { useTaskHandlers } from '../hooks/useTaskHandlers'
+import { useSessionInitialization } from '../hooks/useSessionInitialization'
+import { useToast, LoadingSkeleton } from '@wolffm/task-ui-components'
 import { AppHeader } from '../components/AppHeader'
 import { BoardsSection } from '../components/BoardsSection'
 import { TagFiltersSection } from '../components/TagFiltersSection'
 import { TaskLayout } from '../components/TaskLayout'
-import {
-  ClearTagModal,
-  CreateBoardModal,
-  CreateTagModal,
-  SettingsModal,
-  EditTagModal,
-  BoardContextMenu,
-  TagContextMenu
-} from '../components/modals'
+import { MarqueeOverlay } from '../components/MarqueeOverlay'
+import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags } from '../domain/utils/tags'
 import { getRandomPlaceholder } from '../utils/placeholders'
-import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
 import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
-import { logger } from '@wolffm/task-ui-components'
 
 export default function App(props: TaskAppProps = {}) {
   const {
@@ -156,224 +147,46 @@ export default function App(props: TaskAppProps = {}) {
     setSelectedFilters(new Set())
   }, [currentBoardId])
 
-  // Session handshake and initialization on mount
-  useEffect(() => {
-    async function initializeSession() {
-      logger.info('[App] Initializing session...', { userType, sessionId: propsSessionId })
+  // Session initialization hook
+  useSessionInitialization({
+    userType,
+    propsSessionId,
+    userName,
+    effectiveSessionId,
+    setEffectiveSessionId,
+    setPreferences,
+    setPreferencesLoaded,
+    initialLoad,
+    setIsLoaded,
+    showToast
+  })
 
-      // Get old sessionId before handshake
-      const oldSessionId = getStoredSessionId()
-
-      // Perform handshake (for public users, this ensures stable sessionId in localStorage)
-      const serverPreferences = await performSessionHandshake(propsSessionId, userType)
-
-      // Determine the effective sessionId to use
-      let finalSessionId = propsSessionId
-      if (userType === 'public') {
-        // Public users: use their stable localStorage sessionId
-        finalSessionId = getStoredSessionId() || propsSessionId
-
-        // For public users, load preferences from localStorage now
-        const api = createApi('public', finalSessionId)
-        const localPrefs = await api.getPreferences()
-        if (localPrefs) {
-          setPreferences(localPrefs)
-        }
-        setPreferencesLoaded(true)
-      } else {
-        // Authenticated users: use the sessionId from props (from parent)
-        finalSessionId = propsSessionId
-
-        // Priority 1: Check localStorage first (device-specific preferences)
-        const api = createApi(userType as 'public' | 'friend' | 'admin', finalSessionId)
-        const localPrefs = await api.getPreferences()
-
-        // Check if localStorage has actual stored data (not just defaults)
-        const hasLocalData = localPrefs && localPrefs.updatedAt !== undefined
-
-        if (hasLocalData) {
-          // Use localStorage preferences (device-specific)
-          logger.info('[App] Using device-specific localStorage preferences')
-          setPreferences(localPrefs)
-        } else if (serverPreferences) {
-          // Priority 2: Use server preferences as fallback
-          logger.info('[App] No localStorage data, using server preferences')
-          setPreferences(serverPreferences)
-          // Save server preferences to localStorage for next time
-          await api.savePreferences(serverPreferences)
-        }
-        // If neither exists, DEFAULT_PREFERENCES will be used
-
-        setPreferencesLoaded(true)
-
-        // Clear old session storage keys if sessionId changed
-        if (oldSessionId && oldSessionId !== propsSessionId) {
-          logger.info('[App] SessionId changed, clearing old storage')
-          clearOldSessionStorage(oldSessionId, userType)
-        }
-
-        // Show welcome toast for authenticated users
-        if (userName) {
-          showToast(`Welcome back, ${userName}`, 'success')
-        } else if (userType === 'friend') {
-          showToast('Welcome back!', 'success')
-        } else if (userType === 'admin') {
-          showToast('Welcome back, Admin', 'success')
-        }
-      }
-
-      // Set the effective sessionId for all hooks to use (only if different)
-      if (finalSessionId !== effectiveSessionId) {
-        setEffectiveSessionId(finalSessionId)
-      }
-
-      // Now load full data from API
-      await initialLoad()
-
-      // Mark as fully loaded (session initialized + preferences loaded + data loaded)
-      setIsLoaded(true)
-    }
-
-    void initializeSession()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userType, propsSessionId])
-
-  // Handler functions
-  const handleAddTask = async (input: string) => {
-    const success = await addTask(input)
-    if (success && inputRef.current) {
-      inputRef.current.value = ''
-      inputRef.current.focus()
-    }
-  }
-
-  const handleDeleteTag = (tag: string) => {
-    const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
-    modals.setConfirmClearTag({ tag, count: tagTasks.length })
-  }
-
-  const handleCreateTag = async (tagName: string) => {
-    const normalized = tagName.trim().replace(/\s+/g, '-')
-    try {
-      await createTagOnBoard(normalized)
-
-      // Check if we have pending task IDs to tag
-      if (
-        modals.pendingTaskOperation?.type === 'apply-tag' &&
-        modals.pendingTaskOperation.taskIds.length > 0
-      ) {
-        const updates = modals.pendingTaskOperation.taskIds.map(taskId => {
-          const task = tasks.find(t => t.id === taskId)
-          const existingTags = task?.tag?.split(' ').filter(Boolean) || []
-          const newTags = [...new Set([...existingTags, normalized])]
-          return { taskId, tag: newTags.join(' ') }
-        })
-
-        await bulkUpdateTaskTags(updates)
-        dragAndDrop.clearSelection()
-      }
-
-      modals.setPendingTaskOperation(null)
-      modals.setShowNewTagDialog(false)
-      modals.setInputValue('')
-    } catch (err) {
-      logger.error('[App] Failed to create tag', {
-        error: err instanceof Error ? err.message : String(err)
-      })
-      throw err
-    }
-  }
-
-  const handleEditTag = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
-    if (task) {
-      modals.setEditTagModal({ taskId, currentTag: task.tag || null })
-      modals.setEditTagInput('')
-    }
-  }
-
-  const handleUpdateTag = async () => {
-    if (!modals.editTagModal) return
-
-    const { taskId, currentTag } = modals.editTagModal
-    const currentTags = currentTag?.split(' ').filter(Boolean) || []
-    const newTagsFromInput = modals.editTagInput.trim()
-      ? modals.editTagInput
-          .trim()
-          .replace(/\s+/g, '-')
-          .split('#')
-          .filter(Boolean)
-          .map(t => t.trim())
-      : []
-
-    // Create new tags on the board first
-    for (const newTag of newTagsFromInput) {
-      await createTagOnBoard(newTag)
-    }
-
-    const allTags = [...new Set([...currentTags, ...newTagsFromInput])].sort()
-    const finalTag = allTags.join(' ')
-
-    await updateTaskTags(taskId, { tag: finalTag })
-
-    modals.setEditTagModal(null)
-    modals.setEditTagInput('')
-  }
-
-  const toggleTagPill = (tag: string) => {
-    if (!modals.editTagModal) return
-
-    const { taskId, currentTag } = modals.editTagModal
-    const currentTags = currentTag?.split(' ').filter(Boolean) || []
-    const tagExists = currentTags.includes(tag)
-
-    if (tagExists) {
-      const newTags = currentTags
-        .filter(t => t !== tag)
-        .sort()
-        .join(' ')
-      modals.setEditTagModal({ taskId, currentTag: newTags })
-    } else {
-      const newTags = [...currentTags, tag].sort().join(' ')
-      modals.setEditTagModal({ taskId, currentTag: newTags })
-    }
-  }
-
-  const validateBoardName = (name: string): string | null => {
-    return validateBoardNameUtil(name, boards?.boards || [])
-  }
-
-  const handleCreateBoard = async (boardName: string) => {
-    const name = boardName.trim()
-    const error = validateBoardName(name)
-    if (error) {
-      modals.setValidationError(error)
-      return
-    }
-
-    try {
-      await createBoard(name)
-
-      // Check if we have pending task IDs to move
-      if (
-        modals.pendingTaskOperation?.type === 'move-to-board' &&
-        modals.pendingTaskOperation.taskIds.length > 0
-      ) {
-        await moveTasksToBoard(name, modals.pendingTaskOperation.taskIds)
-        dragAndDrop.clearSelection()
-      }
-
-      modals.setPendingTaskOperation(null)
-      modals.setValidationError(null)
-      modals.setShowNewBoardDialog(false)
-      modals.setInputValue('')
-    } catch (err) {
-      logger.error('[App] Failed to create board', {
-        error: err instanceof Error ? err.message : String(err)
-      })
-      modals.setValidationError((err as Error).message || 'Failed to create board')
-    }
-  }
+  // Task handlers hook
+  const handlers = useTaskHandlers({
+    tasks,
+    boards,
+    inputRef,
+    addTask,
+    deleteTag,
+    updateTaskTags,
+    bulkUpdateTaskTags,
+    createTagOnBoard,
+    createBoard,
+    moveTasksToBoard,
+    clearSelection: dragAndDrop.clearSelection,
+    setEditTagModal: modals.setEditTagModal,
+    setEditTagInput: modals.setEditTagInput,
+    editTagModal: modals.editTagModal,
+    editTagInput: modals.editTagInput,
+    confirmClearTag: modals.confirmClearTag,
+    setConfirmClearTag: modals.setConfirmClearTag,
+    pendingTaskOperation: modals.pendingTaskOperation,
+    setPendingTaskOperation: modals.setPendingTaskOperation,
+    setShowNewTagDialog: modals.setShowNewTagDialog,
+    setInputValue: modals.setInputValue,
+    setShowNewBoardDialog: modals.setShowNewBoardDialog,
+    setValidationError: modals.setValidationError
+  })
 
   // Computed values
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
@@ -414,7 +227,9 @@ export default function App(props: TaskAppProps = {}) {
             }
             dragAndDrop.clearSelection()
           }
-        } catch { /* Intentionally ignore errors */ }
+        } catch {
+          /* Intentionally ignore errors */
+        }
       }}
     >
       <div className="task-app">
@@ -456,7 +271,7 @@ export default function App(props: TaskAppProps = {}) {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                handleAddTask((e.target as HTMLInputElement).value)
+                handlers.handleAddTask((e.target as HTMLInputElement).value)
               }
               if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault()
@@ -503,7 +318,7 @@ export default function App(props: TaskAppProps = {}) {
           pendingOperations={pendingOperations}
           onComplete={completeTask}
           onDelete={deleteTask}
-          onEditTag={handleEditTag}
+          onEditTag={handlers.handleEditTag}
           onDragStart={dragAndDrop.onDragStart}
           onDragEnd={dragAndDrop.onDragEnd}
           onDragOver={dragAndDrop.onDragOver}
@@ -513,119 +328,76 @@ export default function App(props: TaskAppProps = {}) {
           sortTasksByAge={sortHook.sortTasksByAge}
           getSortIcon={sortHook.getSortIcon}
           getSortTitle={sortHook.getSortTitle}
-          deleteTag={handleDeleteTag}
+          deleteTag={handlers.handleDeleteTag}
           onDeletePersistedTag={deleteTagOnBoard}
           showCompleteButton={showCompleteButton}
           showDeleteButton={showDeleteButton}
           showTagButton={showTagButton}
         />
 
-        {dragAndDrop.isSelecting && dragAndDrop.marqueeRect && (
-          <div
-            className="marquee-overlay"
-            style={{
-              left: `${dragAndDrop.marqueeRect.x}px`,
-              top: `${dragAndDrop.marqueeRect.y}px`,
-              width: `${dragAndDrop.marqueeRect.w}px`,
-              height: `${dragAndDrop.marqueeRect.h}px`
-            }}
-          />
-        )}
+        <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />
 
-        {/* Modals */}
-        <ClearTagModal
-          tag={modals.confirmClearTag?.tag || null}
-          count={modals.confirmClearTag?.count || 0}
-          isOpen={!!modals.confirmClearTag}
-          onClose={() => modals.setConfirmClearTag(null)}
-          onConfirm={deleteTag}
-        />
-
-        <CreateBoardModal
-          isOpen={modals.showNewBoardDialog}
+        <AppModals
+          confirmClearTag={modals.confirmClearTag}
+          showNewBoardDialog={modals.showNewBoardDialog}
+          showNewTagDialog={modals.showNewTagDialog}
+          showSettingsModal={modals.showSettingsModal}
+          editTagModal={modals.editTagModal}
+          boardContextMenu={modals.boardContextMenu}
+          tagContextMenu={modals.tagContextMenu}
           inputValue={modals.inputValue}
           validationError={modals.validationError}
+          editTagInput={modals.editTagInput}
           pendingTaskOperation={modals.pendingTaskOperation}
-          onClose={() => {
-            modals.setShowNewBoardDialog(false)
-            modals.setPendingTaskOperation(null)
-            modals.setValidationError(null)
-          }}
-          onConfirm={handleCreateBoard}
-          onInputChange={value => {
-            modals.setInputValue(value)
-            modals.setValidationError(null)
-          }}
-          validateBoardName={validateBoardName}
-        />
-
-        <CreateTagModal
-          isOpen={modals.showNewTagDialog}
-          inputValue={modals.inputValue}
           tasks={tasks}
-          pendingTaskOperation={modals.pendingTaskOperation}
-          onClose={() => {
-            modals.setShowNewTagDialog(false)
-            modals.setPendingTaskOperation(null)
-          }}
-          onConfirm={handleCreateTag}
-          onInputChange={modals.setInputValue}
-        />
-
-        <SettingsModal
-          isOpen={modals.showSettingsModal}
+          boards={boards}
+          currentBoardId={currentBoardId}
           preferences={preferences}
           showCompleteButton={showCompleteButton}
           showDeleteButton={showDeleteButton}
           showTagButton={showTagButton}
-          onClose={() => modals.setShowSettingsModal(false)}
+          userType={userType}
+          effectiveSessionId={effectiveSessionId}
+          toasts={toasts}
+          onCloseConfirmClearTag={() => modals.setConfirmClearTag(null)}
+          onConfirmDeleteTag={deleteTag}
+          onCloseNewBoardDialog={() => {
+            modals.setShowNewBoardDialog(false)
+            modals.setPendingTaskOperation(null)
+            modals.setValidationError(null)
+          }}
+          onConfirmCreateBoard={handlers.handleCreateBoard}
+          onBoardInputChange={(value: string) => {
+            modals.setInputValue(value)
+            modals.setValidationError(null)
+          }}
+          validateBoardName={handlers.validateBoardName}
+          onCloseNewTagDialog={() => {
+            modals.setShowNewTagDialog(false)
+            modals.setPendingTaskOperation(null)
+          }}
+          onConfirmCreateTag={handlers.handleCreateTag}
+          onTagInputChange={modals.setInputValue}
+          onCloseSettingsModal={() => modals.setShowSettingsModal(false)}
           onSavePreferences={savePreferences}
-          onValidateKey={async key => {
+          onValidateKey={async (key: string) => {
             const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
             return await api.validateKey(key)
           }}
           onShowToast={showToast}
-        />
-
-        <EditTagModal
-          isOpen={!!modals.editTagModal}
-          taskId={modals.editTagModal?.taskId || null}
-          currentTag={modals.editTagModal?.currentTag || null}
-          editTagInput={modals.editTagInput}
-          boards={boards}
-          currentBoardId={currentBoardId}
-          onClose={() => {
+          onCloseEditTagModal={() => {
             modals.setEditTagModal(null)
             modals.setEditTagInput('')
           }}
-          onConfirm={handleUpdateTag}
-          onInputChange={modals.setEditTagInput}
-          onToggleTagPill={toggleTagPill}
-        />
-
-        <BoardContextMenu
-          isOpen={!!modals.boardContextMenu}
-          boardId={modals.boardContextMenu?.boardId || null}
-          x={modals.boardContextMenu?.x || 0}
-          y={modals.boardContextMenu?.y || 0}
-          boards={boards}
-          onClose={() => modals.setBoardContextMenu(null)}
+          onConfirmEditTag={handlers.handleUpdateTag}
+          onEditTagInputChange={modals.setEditTagInput}
+          onToggleTagPill={handlers.toggleTagPill}
+          onCloseBoardContextMenu={() => modals.setBoardContextMenu(null)}
           onDeleteBoard={deleteBoard}
+          onCloseTagContextMenu={() => modals.setTagContextMenu(null)}
+          onDismissToast={dismissToast}
         />
-
-        <TagContextMenu
-          isOpen={!!modals.tagContextMenu}
-          tag={modals.tagContextMenu?.tag || null}
-          x={modals.tagContextMenu?.x || 0}
-          y={modals.tagContextMenu?.y || 0}
-          onClose={() => modals.setTagContextMenu(null)}
-          onDeleteTag={deleteTag}
-        />
-
-        {/* Toast Notifications */}
-        <Toaster toasts={toasts} onDismiss={dismissToast} position="bottom-center" />
       </div>
     </div>
   )
 }
-

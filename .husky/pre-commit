@@ -1,3 +1,25 @@
+echo "🔍 Running pre-commit checks..."
+
+# Run linting
+echo "📋 Running ESLint..."
+pnpm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ ESLint failed. Please fix the errors before committing."
+  echo "💡 Tip: Run 'pnpm run lint:fix' to auto-fix some issues"
+  exit 1
+fi
+
+# Run prettier check
+echo "✨ Checking code formatting..."
+pnpm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ Code formatting check failed. Please format your code before committing."
+  echo "💡 Tip: Run 'pnpm run format' to auto-format all files"
+  exit 1
+fi
+
+echo "✅ Linting and formatting checks passed!"
+
 # Check if themes package changed
 if git diff --cached --name-only | grep -q "^themes/"; then
   echo "📦 Themes package changed, bumping version..."
@@ -28,3 +50,6 @@ if git diff --cached --name-only | grep -qv "^themes/" | grep -qv "^task-ui-comp
   node scripts/trim-changelog.js
   git add package.json package-lock.json docs/CHANGELOG.md
 fi
+
+echo "✅ All pre-commit checks passed!"
+

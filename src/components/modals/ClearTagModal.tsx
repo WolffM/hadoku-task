@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Modal } from '../Modal'
+import { Modal } from '@wolffm/task-ui-components'
 
 export interface ClearTagModalProps {
   tag: string | null

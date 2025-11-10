@@ -1,10 +1,10 @@
 /**
  * CreateTagModal component
- * Dialog for creating a new tag
+ * Modal dialog for creating a new tag
  */
 
 import React from 'react'
-import { Modal } from '../Modal'
+import { Modal } from '@wolffm/task-ui-components'
 import type { Task } from '../../domain/types'
 import type { PendingTaskOperation } from '../../hooks/useModalState'
 import { getAllTags } from '../../domain/utils/tags'

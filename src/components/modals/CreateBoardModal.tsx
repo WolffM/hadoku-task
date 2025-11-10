@@ -1,10 +1,10 @@
 /**
  * CreateBoardModal component
- * Dialog for creating a new board
+ * Modal dialog for creating a new board
  */
 
 import React from 'react'
-import { Modal } from '../Modal'
+import { Modal } from '@wolffm/task-ui-components'
 import type { PendingTaskOperation } from '../../hooks/useModalState'
 
 export interface CreateBoardModalProps {

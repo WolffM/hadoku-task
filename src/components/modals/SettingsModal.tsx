@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react'
-import { Modal } from '../Modal'
+import { Modal } from '@wolffm/task-ui-components'
 import type { UserPreferences } from '../../domain/types'
 import { validateAndChangeKey } from '../../utils/auth'
 

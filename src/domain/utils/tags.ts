@@ -5,6 +5,20 @@
 import type { Task } from '../types'
 
 /**
+ * Split a tag string into an array of individual tags
+ */
+export function splitTags(tagString: string | null | undefined): string[] {
+  return tagString?.split(' ').filter(Boolean) || []
+}
+
+/**
+ * Format error for logging
+ */
+export function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
  * Parse task input and extract title and tags
  */
 export function parseTaskInput(input: string): { title: string; tag?: string } {
@@ -50,7 +64,7 @@ export function parseTaskInput(input: string): { title: string; tag?: string } {
  * Get the top N tags from a list of tasks
  */
 export function getTopTags(tasks: Task[], limit = 6, extraTags: string[] = []): string[] {
-  const taskTags = tasks.flatMap(t => t.tag?.split(' ') || []).filter(Boolean)
+  const taskTags = tasks.flatMap(t => splitTags(t.tag))
   const tagCounts: { [tag: string]: number } = {}
   taskTags.forEach(tag => (tagCounts[tag] = (tagCounts[tag] || 0) + 1))
   // Include extraTags with zero count so they appear if there are no task occurrences
@@ -67,7 +81,7 @@ export function getTopTags(tasks: Task[], limit = 6, extraTags: string[] = []): 
  * Get all tasks that have a specific tag
  */
 export function getTasksByTag(tasks: Task[], tag: string): Task[] {
-  return tasks.filter(t => t.tag?.split(' ').includes(tag))
+  return tasks.filter(t => splitTags(t.tag).includes(tag))
 }
 
 /**
@@ -80,7 +94,7 @@ export function getRemainingTasks(
 ): Task[] {
   const hasFilters = Array.isArray(filters) && filters.length > 0
   return tasks.filter(t => {
-    const taskTags = t.tag?.split(' ') || []
+    const taskTags = splitTags(t.tag)
     if (!hasFilters || !filters) {
       // No filter: exclude tasks that have any of the top tags
       return !excludeTags.some(tag => taskTags.includes(tag))
@@ -96,5 +110,5 @@ export function getRemainingTasks(
  * Get all unique tags from tasks
  */
 export function getAllTags(tasks: Task[]): string[] {
-  return Array.from(new Set(tasks.flatMap(t => t.tag?.split(' ') || []).filter(Boolean)))
+  return Array.from(new Set(tasks.flatMap(t => splitTags(t.tag))))
 }

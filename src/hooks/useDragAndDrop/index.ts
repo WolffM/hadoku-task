@@ -13,7 +13,11 @@ interface UseDragAndDropProps {
   onBulkUpdate: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
 }
 
-export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdate }: UseDragAndDropProps) {
+export function useDragAndDrop({
+  tasks,
+  onTaskUpdate: _onTaskUpdate,
+  onBulkUpdate
+}: UseDragAndDropProps) {
   const [dragOverTag, setDragOverTag] = useState<string | null>(null)
   const [dragOverFilter, setDragOverFilter] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -38,7 +42,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     try {
       const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
       if (raw) ids = JSON.parse(raw)
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
 
     // Fallback to single task ID
     if (ids.length === 0) {
@@ -60,7 +66,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     e.dataTransfer.setData('text/plain', idsToDrag[0])
     try {
       e.dataTransfer.setData('application/x-hadoku-task-ids', JSON.stringify(idsToDrag))
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
     e.dataTransfer.effectAllowed = 'copyMove'
 
     try {
@@ -111,10 +119,14 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
           if (srcTag) {
             try {
               e.dataTransfer.setData('application/x-hadoku-task-source', srcTag)
-            } catch { /* Intentionally ignore errors */ }
+            } catch {
+              /* Intentionally ignore errors */
+            }
           }
         }
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
 
       // Use the clone as drag image and align it so the cursor remains at the same
       // relative position within the row as when the drag started.
@@ -172,7 +184,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
       if (tg.closest && tg.closest(interactiveSelector)) {
         return
       }
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
     setIsSelecting(true)
     selectionStartRef.current = { x: e.clientX, y: e.clientY }
     setMarqueeRect({ x: e.clientX, y: e.clientY, w: 0, h: 0 })
@@ -181,7 +195,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     // Disable native text selection while marquee is active
     try {
       document.body.classList.add('marquee-selecting')
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
   }
 
   function selectionMoveHandler(e: React.MouseEvent) {
@@ -224,10 +240,14 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     selectionStartRef.current = null
     try {
       document.body.classList.remove('marquee-selecting')
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
     try {
       setSelectionJustEndedAt(Date.now())
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
   }
 
   function clearSelection() {
@@ -250,21 +270,27 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
       } as unknown as React.MouseEvent
       try {
         selectionStartHandler(fake)
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
     }
 
     function onDocMouseMove(e: MouseEvent) {
       const fake = { clientX: e.clientX, clientY: e.clientY } as unknown as React.MouseEvent
       try {
         selectionMoveHandler(fake)
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
     }
 
     function onDocMouseUp(e: MouseEvent) {
       const fake = { clientX: e.clientX, clientY: e.clientY } as unknown as React.MouseEvent
       try {
         selectionEndHandler(fake)
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
     }
 
     document.addEventListener('mousedown', onDocMouseDown)
@@ -306,7 +332,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     try {
       const s = e.dataTransfer.getData('application/x-hadoku-task-source')
       if (s) srcTag = s
-    } catch { /* Intentionally ignore errors */ }
+    } catch {
+      /* Intentionally ignore errors */
+    }
     logger.info('[useDragAndDrop] onDrop: processing', {
       targetTag,
       ids,
@@ -350,7 +378,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
       // clear selection after successful tag updates
       try {
         clearSelection()
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
     } catch (error) {
       logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', {
         error: error instanceof Error ? error.message : String(error)
@@ -412,7 +442,9 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
       await onBulkUpdate(updates)
       try {
         clearSelection()
-      } catch { /* Intentionally ignore errors */ }
+      } catch {
+        /* Intentionally ignore errors */
+      }
     } catch (error) {
       logger.error('[useDragAndDrop] Failed to add tag via filter drop', {
         error: error instanceof Error ? error.message : String(error)
@@ -444,4 +476,3 @@ export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdat
     onFilterDrop
   }
 }
-
