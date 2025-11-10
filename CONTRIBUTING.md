@@ -24,6 +24,7 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
 ### Making Changes
 
 1. **Create a feature branch**:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -44,11 +45,13 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
 ### Submitting Changes
 
 1. **Commit your changes** with clear, descriptive messages:
+
    ```bash
    git commit -m "Add feature: description of what you added"
    ```
 
 2. **Push to your fork**:
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -61,17 +64,20 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
 ## Coding Guidelines
 
 ### TypeScript
+
 - Use TypeScript for all new code
 - Provide proper type definitions
 - Avoid `any` types when possible
 
 ### File Organization
+
 - Keep files under 250 lines
 - Extract reusable logic into utilities
 - Place components in `src/components/`
 - Place utilities in `src/utils/` or `src/domain/utils/`
 
 ### Styling
+
 - Use CSS custom properties (CSS variables) for all colors and spacing
 - Add new styles to the appropriate modular CSS file:
   - `variables.css` - Theme colors and design tokens
@@ -84,17 +90,20 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
 ### Adding New Features
 
 #### New Theme
+
 1. Add theme definition in `src/styles/variables.css`
 2. Define all ~45 CSS variables
 3. Update theme type union in `src/app/App.tsx`
 4. Add theme picker option with icon
 
 #### New Component
+
 1. Create in `src/components/`
 2. Add appropriate styles in `src/styles/`
 3. Import and use in parent components
 
 #### New API Endpoint
+
 1. Add handler in `src/domain/handlers/handlers.ts`
 2. Update types in `src/domain/types.ts` if needed
 3. Export in `src/server/index.ts`
@@ -129,6 +138,7 @@ Currently, this project does not have automated tests. When testing manually:
 ## Questions?
 
 Feel free to open an issue for:
+
 - Bug reports
 - Feature requests
 - Questions about the codebase

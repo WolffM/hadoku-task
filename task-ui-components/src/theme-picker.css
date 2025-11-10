@@ -37,8 +37,9 @@
   border-radius: 50%;
   color: var(--color-text, #000);
   opacity: 0.7;
-  transition: background-color var(--transition-fast, 0.15s ease),
-              opacity var(--transition-fast, 0.15s ease);
+  transition:
+    background-color var(--transition-fast, 0.15s ease),
+    opacity var(--transition-fast, 0.15s ease);
   line-height: 1;
   width: 32px;
   height: 32px;

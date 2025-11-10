@@ -4,14 +4,12 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createApi } from '../../api/client'
-import type { Task, TasksFile, BoardsFile } from '../../domain/types'
+import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
 import {
-  deferredBroadcast,
   withPendingOperation,
-  withBulkOperation,
-  extractBoardTasks,
+  extractBoardTasks
 } from './helpers'
 import { logger } from '@wolffm/task-ui-components'
 
@@ -46,7 +44,10 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   }
 
   async function reload() {
-    logger.info('[useTasks] reload called', { currentBoardId, stack: new Error().stack?.split('\n').slice(1, 4).join('\n') })
+    logger.info('[useTasks] reload called', {
+      currentBoardId,
+      stack: new Error().stack?.split('\n').slice(1, 4).join('\n')
+    })
     const bf = await api.getBoards()
     setBoards(bf)
     const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardId)
@@ -55,22 +56,35 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
 
   // ✅ FIX: Clear state and reload when user context changes
   useEffect(() => {
-    logger.info('[useTasks] User context changed, clearing state and reloading', { userType, sessionId })
+    logger.info('[useTasks] User context changed, clearing state and reloading', {
+      userType,
+      sessionId
+    })
     setTasks([])
     setPendingOperations(new Set())
     setBoards(null)
     setCurrentBoardId('main')
     void reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, sessionId])
 
   // Listen for broadcasted updates about tasks or boards
   useEffect(() => {
-    logger.info('[useTasks] Setting up BroadcastChannel listener', { currentBoardId, userType, sessionId })
+    logger.info('[useTasks] Setting up BroadcastChannel listener', {
+      currentBoardId,
+      userType,
+      sessionId
+    })
     try {
       const bcListener = new BroadcastChannel('tasks')
-      bcListener.onmessage = (e) => {
+      bcListener.onmessage = e => {
         const msg = e.data || {}
-        logger.info('[useTasks] BroadcastChannel message received', { msg, sessionId: SESSION_ID, currentBoardId, currentContext: { userType, sessionId } })
+        logger.info('[useTasks] BroadcastChannel message received', {
+          msg,
+          sessionId: SESSION_ID,
+          currentBoardId,
+          currentContext: { userType, sessionId }
+        })
 
         // Ignore messages from the same session to prevent infinite loops
         if (msg.sessionId === SESSION_ID) {
@@ -88,7 +102,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         }
 
         if (msg.type === 'tasks-updated' || msg.type === 'boards-updated') {
-          logger.info('[useTasks] BroadcastChannel: triggering reload for currentBoardId', { currentBoardId })
+          logger.info('[useTasks] BroadcastChannel: triggering reload for currentBoardId', {
+            currentBoardId
+          })
           void reload()
         }
       }
@@ -97,14 +113,17 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         bcListener.close()
       }
     } catch (err) {
-      logger.error('[useTasks] Failed to setup BroadcastChannel', { error: err instanceof Error ? err.message : String(err) })
+      logger.error('[useTasks] Failed to setup BroadcastChannel', {
+        error: err instanceof Error ? err.message : String(err)
+      })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBoardId, userType, sessionId]) // ✅ FIX: Recreate listener when user context changes
 
   async function addTask(input: string) {
     input = input.trim()
     if (!input) return
-    
+
     try {
       const parsed = parseTaskInput(input)
       await api.createTask(parsed, currentBoardId)
@@ -126,7 +145,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         await reload()
       },
       {
-        onError: (error) => alert(error.message || 'Failed to complete task'),
+        onError: error => alert(error.message || 'Failed to complete task')
       }
     )
   }
@@ -145,7 +164,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         logger.info('[useTasks] deleteTask END')
       },
       {
-        onError: (error) => alert(error.message || 'Failed to delete task'),
+        onError: error => alert(error.message || 'Failed to delete task')
       }
     )
   }
@@ -153,18 +172,18 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   async function addTagToTask(taskId: string) {
     const newTag = prompt('Enter tag (without #):')
     if (!newTag) return
-    
+
     // Normalize tag: remove any leading '#' characters, trim, convert spaces to hyphens
     const normalizedTag = newTag.trim().replace(/^#+/, '').replace(/\s+/g, '-')
-    
+
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
-    
+
     const existingTags = task.tag?.split(' ') || []
     if (existingTags.includes(normalizedTag)) return // Tag already exists
-    
+
     const updatedTags = [...existingTags, normalizedTag].join(' ')
-    
+
     try {
       await api.patchTask(taskId, { tag: updatedTags }, currentBoardId)
       await reload()
@@ -174,20 +193,20 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
   }
 
   // updateTaskTags now returns an object with suppressBroadcast and skipReload options
-  async function updateTaskTags(taskId: string, updates: { tag: string }, options: { suppressBroadcast?: boolean, skipReload?: boolean } = {}) {
+  async function updateTaskTags(
+    taskId: string,
+    updates: { tag: string },
+    options: { suppressBroadcast?: boolean; skipReload?: boolean } = {}
+  ) {
     const { suppressBroadcast = false, skipReload = false } = options
-    try {
-      await api.patchTask(taskId, updates, currentBoardId, suppressBroadcast)
-      if (!skipReload) {
-        await reload()
-      }
-    } catch (error) {
-      throw error
+    await api.patchTask(taskId, updates, currentBoardId, suppressBroadcast)
+    if (!skipReload) {
+      await reload()
     }
   }
-  
+
   // Helper for bulk tag updates - uses batch endpoint to avoid race conditions
-  async function bulkUpdateTaskTags(updates: Array<{ taskId: string, tag: string }>) {
+  async function bulkUpdateTaskTags(updates: Array<{ taskId: string; tag: string }>) {
     logger.info('[useTasks] bulkUpdateTaskTags START', { count: updates.length })
     try {
       // Use batch API (available in all modes - localStorage and friend/admin)
@@ -200,7 +219,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       await reload()
       logger.info('[useTasks] bulkUpdateTaskTags END')
     } catch (error) {
-      logger.error('[useTasks] bulkUpdateTaskTags ERROR', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[useTasks] bulkUpdateTaskTags ERROR', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       throw error
     }
   }
@@ -219,9 +240,13 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         await reload()
         logger.info('[useTasks] deleteTag END (no tasks to clear)')
       } catch (error) {
-        logger.error('[useTasks] deleteTag ERROR', { error: error instanceof Error ? error.message : String(error) })
+        logger.error('[useTasks] deleteTag ERROR', {
+          error: error instanceof Error ? error.message : String(error)
+        })
         // Note: alert() may also be blocked - log instead
-        logger.error('[useTasks] deleteTag: Please fix this error', { errorMessage: (error as Error).message })
+        logger.error('[useTasks] deleteTag: Please fix this error', {
+          errorMessage: (error as Error).message
+        })
       }
       return
     }
@@ -241,7 +266,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
 
       logger.info('[useTasks] deleteTag END')
     } catch (error) {
-      logger.error('[useTasks] deleteTag ERROR', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[useTasks] deleteTag ERROR', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       alert((error as Error).message || 'Failed to remove tag from tasks')
     }
   }
@@ -273,7 +300,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       }
     }
 
-    logger.info('[useTasks] moveTasksToBoard: source boards', { sourceBoardIds: Array.from(sourceBoardIds) })
+    logger.info('[useTasks] moveTasksToBoard: source boards', {
+      sourceBoardIds: Array.from(sourceBoardIds)
+    })
 
     try {
       // Use batch API (available in all modes) if all tasks are from the same board
@@ -295,7 +324,9 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       setTasks(boardTasks)
       logger.info('[useTasks] moveTasksToBoard END')
     } catch (error) {
-      logger.error('[useTasks] moveTasksToBoard ERROR', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[useTasks] moveTasksToBoard ERROR', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       alert((error as Error).message || 'Failed to move tasks')
     }
   }
@@ -341,7 +372,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     // Task state
     tasks,
     pendingOperations,
-    
+
     // Task operations
     addTask,
     completeTask,
@@ -350,11 +381,11 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     updateTaskTags,
     bulkUpdateTaskTags,
     deleteTag,
-    
+
     // Board state
     boards,
     currentBoardId,
-    
+
     // Board operations
     createBoard,
     deleteBoard,
@@ -362,9 +393,10 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
     moveTasksToBoard,
     createTagOnBoard,
     deleteTagOnBoard,
-    
+
     // Lifecycle
     initialLoad,
     reload
   }
 }
+

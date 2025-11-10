@@ -33,11 +33,10 @@ export function TagFiltersSection({
   onCreateTagClick,
   onPendingOperation
 }: TagFiltersSectionProps) {
-  
   const handleAddTagDrop = (e: React.DragEvent) => {
     e.preventDefault()
     onDragLeave(e)
-    
+
     const ids = getTaskIdsFromDragEvent(e.dataTransfer)
     if (ids.length > 0) {
       onPendingOperation({ type: 'apply-tag', taskIds: ids })
@@ -60,10 +59,10 @@ export function TagFiltersSection({
           onDrop={onDrop}
         />
       ))}
-      <button 
+      <button
         className={`task-app__filter-add ${dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
         onClick={onCreateTagClick}
-        onDragOver={(e) => {
+        onDragOver={e => {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
           onDragOver(e, 'add-tag')
@@ -71,7 +70,9 @@ export function TagFiltersSection({
         onDragLeave={onDragLeave}
         onDrop={handleAddTagDrop}
         aria-label="Add tag"
-      >＋</button>
+      >
+        ＋
+      </button>
     </div>
   )
 }

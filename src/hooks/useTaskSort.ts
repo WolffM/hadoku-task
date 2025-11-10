@@ -14,7 +14,7 @@ export function useTaskSort() {
     setSortDirections(prev => {
       const current = prev[sectionKey] || 'desc'
       const next: SortDirection = current === 'desc' ? 'asc' : 'desc'
-      
+
       return { ...prev, [sectionKey]: next }
     })
   }
@@ -23,7 +23,7 @@ export function useTaskSort() {
     return [...tasks].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
-      
+
       if (direction === 'asc') {
         return dateA - dateB // oldest first
       } else {

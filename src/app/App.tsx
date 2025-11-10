@@ -1,7 +1,7 @@
 /**
- * 
+ *
  * Main App component
- * 
+ *
  */
 
 import React, { useEffect, useRef, useState } from 'react'
@@ -14,6 +14,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { performSessionHandshake, clearOldSessionStorage, getStoredSessionId } from '../api/session'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader } from '../components/AppHeader'
@@ -34,11 +35,15 @@ import { getRandomPlaceholder } from '../utils/placeholders'
 import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
 import { createApi } from '../api/client'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
-import { DEFAULT_PREFERENCES } from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
 export default function App(props: TaskAppProps = {}) {
-  const { userType = 'public', sessionId: propsSessionId = 'public' } = props
+  const {
+    userType = 'public',
+    sessionId: propsSessionId = 'public',
+    userName,
+    onKeyValidation: _onKeyValidation
+  } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
@@ -57,7 +62,7 @@ export default function App(props: TaskAppProps = {}) {
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
-  
+
   // Initialize effectiveSessionId immediately for public users to prevent storage churn
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
     // For public users, use stored sessionId immediately if available
@@ -69,11 +74,26 @@ export default function App(props: TaskAppProps = {}) {
   })
 
   // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
-  const { preferences, savePreferences, preferencesLoaded, isDarkTheme, setPreferences, setPreferencesLoaded } = usePreferences(userType, effectiveSessionId, true)
-  const { theme, showThemePicker, setShowThemePicker, THEME_FAMILIES, setTheme, isThemeReady, isInitialThemeLoad } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
+  const {
+    preferences,
+    savePreferences,
+    preferencesLoaded,
+    isDarkTheme,
+    setPreferences,
+    setPreferencesLoaded
+  } = usePreferences(userType, effectiveSessionId, true)
+  const {
+    theme,
+    showThemePicker,
+    setShowThemePicker,
+    THEME_FAMILIES,
+    setTheme,
+    isThemeReady,
+    isInitialThemeLoad
+  } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
 
-  // Compute mobile layout  
-  const isMobile = isMobileDevice || (preferences.alwaysVerticalLayout || false)
+  // Compute mobile layout
+  const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false
 
   // Convenience getters for preferences
   const showCompleteButton = preferences.showCompleteButton ?? true
@@ -102,8 +122,8 @@ export default function App(props: TaskAppProps = {}) {
   } = useTasks({ userType, sessionId: effectiveSessionId })
 
   // Drag and drop hook
-  const dragAndDrop = useDragAndDrop({ 
-    tasks, 
+  const dragAndDrop = useDragAndDrop({
+    tasks,
     onTaskUpdate: updateTaskTags,
     onBulkUpdate: bulkUpdateTaskTags
   })
@@ -113,6 +133,9 @@ export default function App(props: TaskAppProps = {}) {
 
   // Modal state hook
   const modals = useModalState()
+
+  // Toast notifications hook
+  const { toasts, showToast, dismissToast } = useToast()
 
   // Note: Theme picker now uses overlay approach like modals instead of useClickOutside
   useClickOutside(
@@ -137,19 +160,19 @@ export default function App(props: TaskAppProps = {}) {
   useEffect(() => {
     async function initializeSession() {
       logger.info('[App] Initializing session...', { userType, sessionId: propsSessionId })
-      
+
       // Get old sessionId before handshake
       const oldSessionId = getStoredSessionId()
 
       // Perform handshake (for public users, this ensures stable sessionId in localStorage)
       const serverPreferences = await performSessionHandshake(propsSessionId, userType)
-      
+
       // Determine the effective sessionId to use
       let finalSessionId = propsSessionId
       if (userType === 'public') {
         // Public users: use their stable localStorage sessionId
         finalSessionId = getStoredSessionId() || propsSessionId
-        
+
         // For public users, load preferences from localStorage now
         const api = createApi('public', finalSessionId)
         const localPrefs = await api.getPreferences()
@@ -188,22 +211,31 @@ export default function App(props: TaskAppProps = {}) {
           logger.info('[App] SessionId changed, clearing old storage')
           clearOldSessionStorage(oldSessionId, userType)
         }
+
+        // Show welcome toast for authenticated users
+        if (userName) {
+          showToast(`Welcome back, ${userName}`, 'success')
+        } else if (userType === 'friend') {
+          showToast('Welcome back!', 'success')
+        } else if (userType === 'admin') {
+          showToast('Welcome back, Admin', 'success')
+        }
       }
-      
+
       // Set the effective sessionId for all hooks to use (only if different)
       if (finalSessionId !== effectiveSessionId) {
         setEffectiveSessionId(finalSessionId)
       }
-      
+
       // Now load full data from API
       await initialLoad()
-      
+
       // Mark as fully loaded (session initialized + preferences loaded + data loaded)
       setIsLoaded(true)
     }
-    
+
     void initializeSession()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, propsSessionId])
 
   // Handler functions
@@ -224,25 +256,30 @@ export default function App(props: TaskAppProps = {}) {
     const normalized = tagName.trim().replace(/\s+/g, '-')
     try {
       await createTagOnBoard(normalized)
-      
+
       // Check if we have pending task IDs to tag
-      if (modals.pendingTaskOperation?.type === 'apply-tag' && modals.pendingTaskOperation.taskIds.length > 0) {
+      if (
+        modals.pendingTaskOperation?.type === 'apply-tag' &&
+        modals.pendingTaskOperation.taskIds.length > 0
+      ) {
         const updates = modals.pendingTaskOperation.taskIds.map(taskId => {
           const task = tasks.find(t => t.id === taskId)
           const existingTags = task?.tag?.split(' ').filter(Boolean) || []
           const newTags = [...new Set([...existingTags, normalized])]
           return { taskId, tag: newTags.join(' ') }
         })
-        
+
         await bulkUpdateTaskTags(updates)
         dragAndDrop.clearSelection()
       }
-      
+
       modals.setPendingTaskOperation(null)
       modals.setShowNewTagDialog(false)
       modals.setInputValue('')
     } catch (err) {
-      logger.error('[App] Failed to create tag', { error: err instanceof Error ? err.message : String(err) })
+      logger.error('[App] Failed to create tag', {
+        error: err instanceof Error ? err.message : String(err)
+      })
       throw err
     }
   }
@@ -257,36 +294,44 @@ export default function App(props: TaskAppProps = {}) {
 
   const handleUpdateTag = async () => {
     if (!modals.editTagModal) return
-    
+
     const { taskId, currentTag } = modals.editTagModal
     const currentTags = currentTag?.split(' ').filter(Boolean) || []
     const newTagsFromInput = modals.editTagInput.trim()
-      ? modals.editTagInput.trim().replace(/\s+/g, '-').split('#').filter(Boolean).map(t => t.trim())
+      ? modals.editTagInput
+          .trim()
+          .replace(/\s+/g, '-')
+          .split('#')
+          .filter(Boolean)
+          .map(t => t.trim())
       : []
-    
+
     // Create new tags on the board first
     for (const newTag of newTagsFromInput) {
       await createTagOnBoard(newTag)
     }
-    
+
     const allTags = [...new Set([...currentTags, ...newTagsFromInput])].sort()
     const finalTag = allTags.join(' ')
-    
+
     await updateTaskTags(taskId, { tag: finalTag })
-    
+
     modals.setEditTagModal(null)
     modals.setEditTagInput('')
   }
 
   const toggleTagPill = (tag: string) => {
     if (!modals.editTagModal) return
-    
+
     const { taskId, currentTag } = modals.editTagModal
     const currentTags = currentTag?.split(' ').filter(Boolean) || []
     const tagExists = currentTags.includes(tag)
-    
+
     if (tagExists) {
-      const newTags = currentTags.filter(t => t !== tag).sort().join(' ')
+      const newTags = currentTags
+        .filter(t => t !== tag)
+        .sort()
+        .join(' ')
       modals.setEditTagModal({ taskId, currentTag: newTags })
     } else {
       const newTags = [...currentTags, tag].sort().join(' ')
@@ -305,22 +350,27 @@ export default function App(props: TaskAppProps = {}) {
       modals.setValidationError(error)
       return
     }
-    
+
     try {
       await createBoard(name)
-      
+
       // Check if we have pending task IDs to move
-      if (modals.pendingTaskOperation?.type === 'move-to-board' && modals.pendingTaskOperation.taskIds.length > 0) {
+      if (
+        modals.pendingTaskOperation?.type === 'move-to-board' &&
+        modals.pendingTaskOperation.taskIds.length > 0
+      ) {
         await moveTasksToBoard(name, modals.pendingTaskOperation.taskIds)
         dragAndDrop.clearSelection()
       }
-      
+
       modals.setPendingTaskOperation(null)
       modals.setValidationError(null)
       modals.setShowNewBoardDialog(false)
       modals.setInputValue('')
     } catch (err) {
-      logger.error('[App] Failed to create board', { error: err instanceof Error ? err.message : String(err) })
+      logger.error('[App] Failed to create board', {
+        error: err instanceof Error ? err.message : String(err)
+      })
       modals.setValidationError((err as Error).message || 'Failed to create board')
     }
   }
@@ -346,22 +396,25 @@ export default function App(props: TaskAppProps = {}) {
       onMouseMove={dragAndDrop.selectionMoveHandler}
       onMouseUp={dragAndDrop.selectionEndHandler}
       onMouseLeave={dragAndDrop.selectionEndHandler}
-      onClick={(e) => {
+      onClick={e => {
         try {
           const tgt = e.target as HTMLElement
-          
+
           // Don't interfere with theme picker clicks
           if (tgt.closest && tgt.closest('.theme-picker')) {
             return
           }
-          
+
           if (!tgt.closest || !tgt.closest('.task-app__item')) {
-            if (dragAndDrop.selectionJustEndedAt && Date.now() - dragAndDrop.selectionJustEndedAt < MARQUEE_CLICK_GRACE_PERIOD) {
+            if (
+              dragAndDrop.selectionJustEndedAt &&
+              Date.now() - dragAndDrop.selectionJustEndedAt < MARQUEE_CLICK_GRACE_PERIOD
+            ) {
               return
             }
             dragAndDrop.clearSelection()
           }
-        } catch {}
+        } catch { /* Intentionally ignore errors */ }
       }}
     >
       <div className="task-app">
@@ -392,6 +445,7 @@ export default function App(props: TaskAppProps = {}) {
           }}
           onPendingOperation={modals.setPendingTaskOperation}
           onInitialLoad={initialLoad}
+          onShowToast={showToast}
         />
 
         <div className="task-app__controls">
@@ -416,7 +470,7 @@ export default function App(props: TaskAppProps = {}) {
           tags={allTags}
           selectedFilters={selectedFilters}
           dragOverFilter={dragAndDrop.dragOverFilter}
-          onToggleFilter={(tag) => {
+          onToggleFilter={tag => {
             setSelectedFilters(prev => {
               const copy = new Set(prev)
               if (copy.has(tag)) copy.delete(tag)
@@ -498,7 +552,7 @@ export default function App(props: TaskAppProps = {}) {
             modals.setValidationError(null)
           }}
           onConfirm={handleCreateBoard}
-          onInputChange={(value) => {
+          onInputChange={value => {
             modals.setInputValue(value)
             modals.setValidationError(null)
           }}
@@ -526,10 +580,11 @@ export default function App(props: TaskAppProps = {}) {
           showTagButton={showTagButton}
           onClose={() => modals.setShowSettingsModal(false)}
           onSavePreferences={savePreferences}
-          onValidateKey={async (key) => {
+          onValidateKey={async key => {
             const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
             return await api.validateKey(key)
           }}
+          onShowToast={showToast}
         />
 
         <EditTagModal
@@ -566,7 +621,11 @@ export default function App(props: TaskAppProps = {}) {
           onClose={() => modals.setTagContextMenu(null)}
           onDeleteTag={deleteTag}
         />
+
+        {/* Toast Notifications */}
+        <Toaster toasts={toasts} onDismiss={dismissToast} position="bottom-center" />
       </div>
     </div>
   )
 }
+

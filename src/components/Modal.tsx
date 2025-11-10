@@ -43,38 +43,29 @@ export function Modal({
   }
 
   return (
-    <div 
-      className="modal-overlay"
-      onClick={onClose}
-    >
-      <div 
-        className="modal-card"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
         <h3>{title}</h3>
-        
+
         {children}
-        
+
         {onInputChange && (
           <input
             type="text"
             className="modal-input"
             value={inputValue || ''}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={e => onInputChange(e.target.value)}
             placeholder={inputPlaceholder}
             autoFocus
             onKeyDown={handleKeyDown}
           />
         )}
-        
+
         <div className="modal-actions">
-          <button 
-            className="modal-button"
-            onClick={onClose}
-          >
+          <button className="modal-button" onClick={onClose}>
             {cancelLabel}
           </button>
-          <button 
+          <button
             className={`modal-button ${confirmDanger ? 'modal-button--danger' : 'modal-button--primary'}`}
             onClick={onConfirm}
             disabled={confirmDisabled}

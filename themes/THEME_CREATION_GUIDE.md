@@ -7,6 +7,7 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 Each theme requires **26 color variables** + **6 shadow variables** = **32 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
 ### Color Variables Count:
+
 - Primary colors: 5
 - Success colors: 3
 - Danger colors: 5
@@ -17,6 +18,7 @@ Each theme requires **26 color variables** + **6 shadow variables** = **32 total
 - **Total: 26 color variables**
 
 ### Additional Variables:
+
 - Shadow variables: 6
 - **Grand Total: 32 variables per theme**
 
@@ -26,18 +28,14 @@ These are the only colors you need to select from the input palette. **Be creati
 
 1. **`--color-primary`** - Primary brand color
    - Usually the most vibrant/saturated color
-   
 2. **`--color-success`** - Success/completion indicator
    - Any bright, positive-feeling color
-   
 3. **`--color-danger`** - Error/warning/delete indicator
    - Any bold, contrasting color that stands out
    - Should contrast well with primary and success
-   
 4. **`--color-neutral`** - Neutral/muted base
    - Desaturated or gray tone
    - Used for borders, disabled states
-   
 5. **`--color-bg`** - Primary background
    - Lightest color for light themes
    - Darkest color for dark themes
@@ -49,7 +47,9 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 ### Required Variables by Category
 
 #### 1. Primary Colors (5 variables)
+
 **Purpose:** Main interactive elements, buttons, links
+
 - `--color-primary` - **MAIN:** Primary brand color
 - `--color-primary-dark` - **ALT:** Darker shade (darken 10-15%)
 - `--color-primary-light` - **ALT:** Light tint for light themes / dark shade for dark themes
@@ -57,13 +57,17 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 - `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
 
 #### 2. Success Colors (3 variables)
+
 **Purpose:** Positive actions, completed tasks, checkmarks
+
 - `--color-success` - **MAIN:** Success/completion indicator
 - `--color-success-dark` - **ALT:** Darker shade (~10-15% darker, or pick complementary from palette)
 - `--color-success-text` - **ALT:** Text on success backgrounds (white or black for contrast)
 
 #### 3. Danger Colors (5 variables)
+
 **Purpose:** Destructive actions, errors, warnings
+
 - `--color-danger` - **MAIN:** Error/danger indicator
 - `--color-danger-dark` - **ALT:** Darker shade (darken 10-15%)
 - `--color-danger-darker` - **ALT:** Even darker (darken 20-30%)
@@ -71,25 +75,33 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 - `--color-danger-text` - **ALT:** Text color on danger backgrounds (auto-calculated)
 
 #### 4. Neutral Colors (3 variables)
+
 **Purpose:** Non-critical UI elements, disabled states
+
 - `--color-neutral` - **MAIN:** Neutral gray or muted color
 - `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
 - `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
 
 #### 5. Text Colors (4 variables)
+
 **Purpose:** All text hierarchy
+
 - `--color-text` - **ALT:** Primary text (auto-calculated based on bg luminance for 4.5:1 contrast)
 - `--color-text-secondary` - **ALT:** Secondary text (slightly muted, 80% opacity)
 - `--color-text-tertiary` - **ALT:** Tertiary text (60% opacity)
 - `--color-text-muted` - **ALT:** Least prominent text (40% opacity)
 
 #### 6. Border Colors (2 variables)
+
 **Purpose:** UI element boundaries
+
 - `--color-border` - **ALT:** Default border color (derived from neutral)
 - `--color-border-light` - **ALT:** Lighter border (derived from neutral-light)
 
 #### 7. Background Colors (4 variables)
+
 **Purpose:** Page and component backgrounds
+
 - `--color-bg` - **MAIN:** Primary background canvas
 - `--color-bg-card` - **ALT:** Card/panel background
   - Can be pure white/black
@@ -99,7 +111,9 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 - `--color-bg-overlay` - **ALT:** Modal/overlay background (semi-transparent)
 
 #### 8. Shadows (6 variables)
+
 **Purpose:** Depth and elevation
+
 - `--shadow-sm` - **ALT:** Subtle shadow (derived from primary or black)
 - `--shadow-md` - **ALT:** Medium shadow
 - `--shadow-modal` - **ALT:** Strong shadow for modals
@@ -116,6 +130,7 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 You have two approaches for deriving the 21 alt colors (+ 6 shadows):
 
 **Option A: Algorithmic (Recommended for AI)**
+
 - **Darker shades** - darken(main, 10-30%)
 - **Lighter tints** - lighten(main, 10-40%) or adjust alpha
 - **Text contrast** - Calculate based on background luminance
@@ -123,6 +138,7 @@ You have two approaches for deriving the 21 alt colors (+ 6 shadows):
 - **Shadows** - Use primary or black with alpha
 
 **Option B: Creative Selection (Recommended for Designers)**
+
 - Pick complementary colors from the input palette
 - Add subtle hue shifts to create mood
 - Use palette harmony (analogous, triadic, etc.)
@@ -134,16 +150,16 @@ You have two approaches for deriving the 21 alt colors (+ 6 shadows):
 
 ### How Success & Danger Colors Vary:
 
-| Theme | Success | Danger | Notes |
-|-------|---------|--------|-------|
-| **Light** | #0ea5e9 (cyan) | #f97316 (orange) | Cool + warm contrast |
-| **Dark** | #fde047 (yellow) | #c084fc (purple) | High contrast neons |
-| **Strawberry** | #22c55e (green) | #ec4899 (hot pink) | Traditional green |
-| **Ocean** | #f97316 (orange) | #ec4899 (pink) | Coral reef vibes |
-| **Cyberpunk** | #00f5d4 (cyan) | #fb5607 (orange) | Neon dystopia |
-| **Coffee** | #eab308 (gold) | #78350f (brown) | Warm earth tones |
-| **Lavender** | #84cc16 (lime) | #6366f1 (indigo) | Unexpected pops |
-| **Nature** | #a7d88f (sage) | #c8643b (rust) | Organic palette |
+| Theme          | Success          | Danger             | Notes                |
+| -------------- | ---------------- | ------------------ | -------------------- |
+| **Light**      | #0ea5e9 (cyan)   | #f97316 (orange)   | Cool + warm contrast |
+| **Dark**       | #fde047 (yellow) | #c084fc (purple)   | High contrast neons  |
+| **Strawberry** | #22c55e (green)  | #ec4899 (hot pink) | Traditional green    |
+| **Ocean**      | #f97316 (orange) | #ec4899 (pink)     | Coral reef vibes     |
+| **Cyberpunk**  | #00f5d4 (cyan)   | #fb5607 (orange)   | Neon dystopia        |
+| **Coffee**     | #eab308 (gold)   | #78350f (brown)    | Warm earth tones     |
+| **Lavender**   | #84cc16 (lime)   | #6366f1 (indigo)   | Unexpected pops      |
+| **Nature**     | #a7d88f (sage)   | #c8643b (rust)     | Organic palette      |
 
 **Takeaway:** Success and Danger are **theme-specific**, not fixed to green/red!
 
@@ -152,14 +168,17 @@ You have two approaches for deriving the 21 alt colors (+ 6 shadows):
 ## AI Theme Generation Process
 
 ### Step 1: Analyze Input Palette
+
 Given a color list like:
+
 ```
-#e4bea6, #f6e9e1, #d2936b, #d3c2b7, #f0bb9a, #312843, #544573, 
-#0e0b13, #363636, #6553cc, #9a8edd, #4130a2, #7c74ab, #7f5b55, 
+#e4bea6, #f6e9e1, #d2936b, #d3c2b7, #f0bb9a, #312843, #544573,
+#0e0b13, #363636, #6553cc, #9a8edd, #4130a2, #7c74ab, #7f5b55,
 #a6817a, #513a36, #6a6a6a, #9f99a9, #c6c3cc, #787085, #a1a1a1
 ```
 
 **Sort by luminance and saturation:**
+
 - Darkest colors → Backgrounds (dark theme)
 - Lightest colors → Backgrounds (light theme)
 - Most saturated → Primary, Success, Danger
@@ -168,6 +187,7 @@ Given a color list like:
 ### Step 2: Assign 5 Main Colors
 
 #### For Light Theme:
+
 ```
 --color-primary: [Most vibrant/saturated color - your theme's identity]
 --color-success: [Any bright, positive color - can be cyan, yellow, green, orange]
@@ -177,6 +197,7 @@ Given a color list like:
 ```
 
 #### For Dark Theme:
+
 ```
 --color-primary: [Brightest saturated color that pops]
 --color-success: [Bright accent - yellow, neon, cyan work great]
@@ -245,6 +266,7 @@ Use color manipulation functions:
 ### Step 4: Validate Contrast
 
 Ensure WCAG AA compliance:
+
 - **Primary text on background:** ≥ 4.5:1
 - **Secondary text on background:** ≥ 3:1
 - **UI elements on background:** ≥ 3:1
@@ -254,63 +276,66 @@ Ensure WCAG AA compliance:
 ## Example: Generating "Sunset" Theme
 
 ### Input Palette:
+
 ```
-#ff6b35, #f7931e, #fdc830, #004e89, #1a659e, 
+#ff6b35, #f7931e, #fdc830, #004e89, #1a659e,
 #f4f4f4, #2d2d2d, #1a1a1a, #ffffff, #e0e0e0
 ```
 
 ### Analysis:
+
 - **Vibrant oranges/yellows:** #ff6b35, #f7931e, #fdc830
 - **Cool blues:** #004e89, #1a659e
 - **Neutrals:** #2d2d2d, #1a1a1a, #f4f4f4, #e0e0e0
 - **Pure:** #ffffff
 
 ### Light Theme Assignment:
+
 ```css
-[data-theme="sunset-light"] {
+[data-theme='sunset-light'] {
   /* ===== 5 MAIN COLORS (from palette) ===== */
-  --color-primary: #ff6b35;              /* Vibrant orange */
-  --color-success: #fdc830;              /* Golden yellow */
-  --color-danger: #004e89;               /* Deep blue */
-  --color-neutral: #e0e0e0;              /* Light gray */
-  --color-bg: #ffffff;                   /* Pure white */
-  
+  --color-primary: #ff6b35; /* Vibrant orange */
+  --color-success: #fdc830; /* Golden yellow */
+  --color-danger: #004e89; /* Deep blue */
+  --color-neutral: #e0e0e0; /* Light gray */
+  --color-bg: #ffffff; /* Pure white */
+
   /* ===== 21 ALT COLORS + 6 SHADOWS (derived) ===== */
-  
+
   /* From Primary */
-  --color-primary-dark: #e65a2a;         /* darken 10% */
-  --color-primary-light: #ffe0d5;        /* lighten 50% */
-  --color-primary-bg: #fff5f2;           /* rgba 5% */
+  --color-primary-dark: #e65a2a; /* darken 10% */
+  --color-primary-light: #ffe0d5; /* lighten 50% */
+  --color-primary-bg: #fff5f2; /* rgba 5% */
   --color-primary-hover: rgba(255, 107, 53, 0.08);
-  
+
   /* From Success */
-  --color-success-dark: #e0b425;         /* darken 10% */
-  --color-success-text: #1a1a1a;         /* auto-contrast */
-  
+  --color-success-dark: #e0b425; /* darken 10% */
+  --color-success-text: #1a1a1a; /* auto-contrast */
+
   /* From Danger */
-  --color-danger-dark: #003d6e;          /* darken 15% */
-  --color-danger-darker: #002c4f;        /* darken 30% */
-  --color-danger-light: #e6f2ff;         /* lighten 40% */
-  --color-danger-text: white;            /* auto-contrast */
-  
+  --color-danger-dark: #003d6e; /* darken 15% */
+  --color-danger-darker: #002c4f; /* darken 30% */
+  --color-danger-light: #e6f2ff; /* lighten 40% */
+  --color-danger-text: white; /* auto-contrast */
+
   /* From Neutral */
-  --color-neutral-light: #f4f4f4;        /* lighten 20% */
-  --color-neutral-lighter: #fafafa;      /* lighten 30% */
-  
+  --color-neutral-light: #f4f4f4; /* lighten 20% */
+  --color-neutral-lighter: #fafafa; /* lighten 30% */
+
   /* From Background (auto-calculated) */
-  --color-text: #2d2d2d;                 /* auto: dark for light bg */
+  --color-text: #2d2d2d; /* auto: dark for light bg */
   --color-text-secondary: rgba(45, 45, 45, 0.8);
   --color-text-tertiary: rgba(45, 45, 45, 0.6);
   --color-text-muted: rgba(45, 45, 45, 0.4);
-  
-  --color-bg-card: #f4f4f4;              /* lighten bg 3% */
-  --color-bg-alt: #f9f9f9;               /* darken bg 2% */
+
+  --color-bg-card: #f4f4f4; /* lighten bg 3% */
+  --color-bg-alt: #f9f9f9; /* darken bg 2% */
   --color-bg-overlay: rgba(45, 45, 45, 0.5);
-  
+
   /* Borders (from neutral + bg) */
-  --color-border: #e0e0e0;               /* mix(neutral, bg, 70%) */
-  --color-border-light: #efefef;         /* mix(neutral, bg, 50%) */
-  
+  --color-border: #e0e0e0; /* mix(neutral, bg, 70%) */
+  --color-border-light: #efefef; /* mix(neutral, bg, 50%) */
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(255, 107, 53, 0.08);
   --shadow-md: 0 2px 4px rgba(255, 107, 53, 0.12);
@@ -326,6 +351,7 @@ Ensure WCAG AA compliance:
 ## Quick Reference: Color Manipulation
 
 ### JavaScript/TypeScript Helpers
+
 ```typescript
 function darken(hex: string, percent: number): string {
   // Decrease HSL lightness by percent
@@ -378,6 +404,7 @@ Before submitting a new theme, verify:
 ## Creativity Encouraged!
 
 **Don't be afraid to:**
+
 - Use unexpected color combinations
 - Add subtle hue shifts to backgrounds
 - Pick complementary colors from palette instead of darkening

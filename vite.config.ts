@@ -17,11 +17,11 @@ export default defineConfig({
     lib: {
       entry: 'src/app/entry.tsx',
       formats: ['es'],
-      fileName: () => 'index.js',
+      fileName: () => 'index.js'
     },
     rollupOptions: {
       // React is provided by hadoku-site via import maps, so externalize it
-      external: ['react', 'react-dom/client', 'react/jsx-runtime'],
+      external: ['react', 'react-dom/client', 'react/jsx-runtime']
     },
     target: 'es2022'
   }

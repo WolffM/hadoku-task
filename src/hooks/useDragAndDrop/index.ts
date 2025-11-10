@@ -10,15 +10,20 @@ import { logger } from '@wolffm/task-ui-components'
 interface UseDragAndDropProps {
   tasks: Task[]
   onTaskUpdate: (taskId: string, updates: { tag: string }) => Promise<void>
-  onBulkUpdate: (updates: Array<{ taskId: string, tag: string }>) => Promise<void>
+  onBulkUpdate: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
 }
 
-export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAndDropProps) {
+export function useDragAndDrop({ tasks, onTaskUpdate: _onTaskUpdate, onBulkUpdate }: UseDragAndDropProps) {
   const [dragOverTag, setDragOverTag] = useState<string | null>(null)
   const [dragOverFilter, setDragOverFilter] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isSelecting, setIsSelecting] = useState(false)
-  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [marqueeRect, setMarqueeRect] = useState<{
+    x: number
+    y: number
+    w: number
+    h: number
+  } | null>(null)
   const [selectionJustEndedAt, setSelectionJustEndedAt] = useState<number | null>(null)
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -28,12 +33,12 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
    */
   function extractDraggedTaskIds(e: React.DragEvent): string[] {
     let ids: string[] = []
-    
+
     // Try to read multi-task IDs first
     try {
       const raw = e.dataTransfer.getData('application/x-hadoku-task-ids')
       if (raw) ids = JSON.parse(raw)
-    } catch {}
+    } catch { /* Intentionally ignore errors */ }
 
     // Fallback to single task ID
     if (ids.length === 0) {
@@ -45,26 +50,34 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
   }
 
   function onDragStart(e: React.DragEvent, taskId: string) {
-    const idsToDrag = selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
-    logger.info('[useDragAndDrop] onDragStart', { taskId, idsToDrag, selectedCount: selectedIds.size })
+    const idsToDrag =
+      selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
+    logger.info('[useDragAndDrop] onDragStart', {
+      taskId,
+      idsToDrag,
+      selectedCount: selectedIds.size
+    })
     e.dataTransfer.setData('text/plain', idsToDrag[0])
     try {
       e.dataTransfer.setData('application/x-hadoku-task-ids', JSON.stringify(idsToDrag))
-    } catch {}
+    } catch { /* Intentionally ignore errors */ }
     e.dataTransfer.effectAllowed = 'copyMove'
 
     try {
       // Find the task row element in case the event target is an inner element
       const elTarget = e.currentTarget as HTMLElement
-      const el = elTarget.closest && elTarget.closest('.task-app__item') ? elTarget.closest('.task-app__item') as HTMLElement : elTarget
+      const el =
+        elTarget.closest && elTarget.closest('.task-app__item')
+          ? (elTarget.closest('.task-app__item') as HTMLElement)
+          : elTarget
       // Add dragging class for CSS animations
       el.classList.add('dragging')
 
       // Create a clone for a custom drag image
       const clone = el.cloneNode(true) as HTMLElement
       clone.style.boxSizing = 'border-box'
-  clone.style.width = `${el.offsetWidth}px`
-  clone.style.height = `${el.offsetHeight}px`
+      clone.style.width = `${el.offsetWidth}px`
+      clone.style.height = `${el.offsetHeight}px`
       clone.style.opacity = '0.95'
       // Do not scale the clone: keep 1:1 so setDragImage offsets are exact
       clone.style.transform = 'none'
@@ -77,37 +90,40 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       document.body.appendChild(clone)
 
       // Store reference so we can remove it on dragend
-      ;(el as any).__dragImage = clone
+      ;(el as HTMLElement & { __dragImage?: HTMLElement }).__dragImage = clone
 
-    // ensure selection includes the dragged item
-    setSelectedIds(prev => {
-      if (prev.has(taskId)) return new Set(prev)
-      const copy = new Set(prev)
-      copy.add(taskId)
-      return copy
-    })
+      // ensure selection includes the dragged item
+      setSelectedIds(prev => {
+        if (prev.has(taskId)) return new Set(prev)
+        const copy = new Set(prev)
+        copy.add(taskId)
+        return copy
+      })
 
       // If the drag started inside a tag-column, include the source tag
       try {
         const col = el.closest('.task-app__tag-column') as HTMLElement | null
         if (col) {
           const hdr = col.querySelector('.task-app__tag-header') || col.querySelector('h3')
-          const txt = hdr ? (hdr.textContent || '') : ''
+          const txt = hdr ? hdr.textContent || '' : ''
           // header looks like "#tag"
           const srcTag = txt.trim().replace(/^#/, '')
           if (srcTag) {
-            try { e.dataTransfer.setData('application/x-hadoku-task-source', srcTag) } catch {}
+            try {
+              e.dataTransfer.setData('application/x-hadoku-task-source', srcTag)
+            } catch { /* Intentionally ignore errors */ }
           }
         }
-      } catch {}
+      } catch { /* Intentionally ignore errors */ }
 
       // Use the clone as drag image and align it so the cursor remains at the same
       // relative position within the row as when the drag started.
       try {
         const rect = el.getBoundingClientRect()
         // Use the exact click point offset inside the element so the drag image aligns exactly
-        let offsetX = Math.round((e as any).clientX - rect.left)
-        let offsetY = Math.round((e as any).clientY - rect.top)
+        const mouseEvent = e as React.DragEvent & { clientX: number; clientY: number }
+        let offsetX = Math.round(mouseEvent.clientX - rect.left)
+        let offsetY = Math.round(mouseEvent.clientY - rect.top)
         // Clamp offsets to clone dimensions
         offsetX = Math.max(0, Math.min(Math.round(clone.offsetWidth - 1), offsetX))
         offsetY = Math.max(0, Math.min(Math.round(clone.offsetHeight - 1), offsetY))
@@ -115,21 +131,27 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       } catch {
         e.dataTransfer.setDragImage(clone, 0, 0)
       }
-    } catch (err) {
-      // ignore if drag image not allowed
+    } catch {
+      // Ignore if drag image not allowed
     }
   }
 
   function onDragEnd(e: React.DragEvent) {
     try {
-      const el = e.currentTarget as HTMLElement
+      const el = e.currentTarget as HTMLElement & { __dragImage?: HTMLElement }
       el.classList.remove('dragging')
-      const clone = (el as any).__dragImage as HTMLElement | undefined
-      if (clone && clone.parentNode) clone.parentNode.removeChild(clone)
-      if (clone) delete (el as any).__dragImage
-    } catch {}
+      const clone = el.__dragImage
+      if (clone?.parentNode) clone.parentNode.removeChild(clone)
+      if (clone) delete el.__dragImage
+    } catch {
+      /* Intentionally ignore errors */
+    }
     // Remove clone and clear selection after any drag completes
-    try { clearSelection() } catch {}
+    try {
+      clearSelection()
+    } catch {
+      /* Intentionally ignore errors */
+    }
   }
 
   // Selection marquee handlers
@@ -145,24 +167,27 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       if (!tg) return
       // Do not start when clicking inside a task item or direct interactive controls
       // Allow starting inside tag columns (empty areas) so box-select works there.
-      const interactiveSelector = '.task-app__item, .task-app__controls, button, input, textarea, .task-app__item-actions'
+      const interactiveSelector =
+        '.task-app__item, .task-app__controls, button, input, textarea, .task-app__item-actions'
       if (tg.closest && tg.closest(interactiveSelector)) {
         return
       }
-    } catch {}
+    } catch { /* Intentionally ignore errors */ }
     setIsSelecting(true)
     selectionStartRef.current = { x: e.clientX, y: e.clientY }
     setMarqueeRect({ x: e.clientX, y: e.clientY, w: 0, h: 0 })
     // clear previous selection
     setSelectedIds(new Set())
     // Disable native text selection while marquee is active
-    try { document.body.classList.add('marquee-selecting') } catch {}
+    try {
+      document.body.classList.add('marquee-selecting')
+    } catch { /* Intentionally ignore errors */ }
   }
 
   function selectionMoveHandler(e: React.MouseEvent) {
-  if (!isSelecting || !selectionStartRef.current) return
-  const x1 = selectionStartRef.current.x
-  const y1 = selectionStartRef.current.y
+    if (!isSelecting || !selectionStartRef.current) return
+    const x1 = selectionStartRef.current.x
+    const y1 = selectionStartRef.current.y
     const x2 = e.clientX
     const y2 = e.clientY
     const left = Math.min(x1, x2)
@@ -176,7 +201,12 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     const newSel = new Set<string>()
     for (const it of items) {
       const rect = it.getBoundingClientRect()
-      const overlap = !(rect.right < left || rect.left > left + w || rect.bottom < top || rect.top > top + h)
+      const overlap = !(
+        rect.right < left ||
+        rect.left > left + w ||
+        rect.bottom < top ||
+        rect.top > top + h
+      )
       if (overlap) {
         const id = it.getAttribute('data-task-id')
         if (id) newSel.add(id)
@@ -188,12 +218,16 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     setSelectedIds(newSel)
   }
 
-  function selectionEndHandler(e: React.MouseEvent) {
+  function selectionEndHandler(_e: React.MouseEvent) {
     setIsSelecting(false)
     setMarqueeRect(null)
     selectionStartRef.current = null
-    try { document.body.classList.remove('marquee-selecting') } catch {}
-    try { setSelectionJustEndedAt(Date.now()) } catch {}
+    try {
+      document.body.classList.remove('marquee-selecting')
+    } catch { /* Intentionally ignore errors */ }
+    try {
+      setSelectionJustEndedAt(Date.now())
+    } catch { /* Intentionally ignore errors */ }
   }
 
   function clearSelection() {
@@ -208,18 +242,29 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       // Forward to our handler if left button
       if (e.button !== 0) return
       // Create a synthetic React-like event wrapper with minimal properties
-      const fake = { target: e.target, clientX: e.clientX, clientY: e.clientY, button: e.button } as unknown as React.MouseEvent
-      try { selectionStartHandler(fake) } catch {}
+      const fake = {
+        target: e.target,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        button: e.button
+      } as unknown as React.MouseEvent
+      try {
+        selectionStartHandler(fake)
+      } catch { /* Intentionally ignore errors */ }
     }
 
     function onDocMouseMove(e: MouseEvent) {
       const fake = { clientX: e.clientX, clientY: e.clientY } as unknown as React.MouseEvent
-      try { selectionMoveHandler(fake) } catch {}
+      try {
+        selectionMoveHandler(fake)
+      } catch { /* Intentionally ignore errors */ }
     }
 
     function onDocMouseUp(e: MouseEvent) {
       const fake = { clientX: e.clientX, clientY: e.clientY } as unknown as React.MouseEvent
-      try { selectionEndHandler(fake) } catch {}
+      try {
+        selectionEndHandler(fake)
+      } catch { /* Intentionally ignore errors */ }
     }
 
     document.addEventListener('mousedown', onDocMouseDown)
@@ -231,6 +276,7 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       document.removeEventListener('mousemove', onDocMouseMove)
       document.removeEventListener('mouseup', onDocMouseUp)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function onDragOver(e: React.DragEvent, targetTag: string) {
@@ -260,11 +306,16 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     try {
       const s = e.dataTransfer.getData('application/x-hadoku-task-source')
       if (s) srcTag = s
-    } catch {}
-    logger.info('[useDragAndDrop] onDrop: processing', { targetTag, ids, srcTag, taskCount: ids.length })
+    } catch { /* Intentionally ignore errors */ }
+    logger.info('[useDragAndDrop] onDrop: processing', {
+      targetTag,
+      ids,
+      srcTag,
+      taskCount: ids.length
+    })
 
     // Build list of tag updates
-    const updates: Array<{ taskId: string, tag: string }> = []
+    const updates: Array<{ taskId: string; tag: string }> = []
     for (const id of ids) {
       const task = tasks.find(t => t.id === id)
       if (!task) continue
@@ -297,9 +348,13 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       await onBulkUpdate(updates)
       logger.info('[useDragAndDrop] onDrop: updates complete, clearing selection')
       // clear selection after successful tag updates
-      try { clearSelection() } catch {}
+      try {
+        clearSelection()
+      } catch { /* Intentionally ignore errors */ }
     } catch (error) {
-      logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       alert((error as Error).message || 'Failed to add tags')
     }
     logger.info('[useDragAndDrop] onDrop END')
@@ -328,7 +383,7 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     logger.info('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
 
     // Build list of tag updates
-    const updates: Array<{ taskId: string, tag: string }> = []
+    const updates: Array<{ taskId: string; tag: string }> = []
     for (const id of ids) {
       const task = tasks.find(t => t.id === id)
       if (!task) continue
@@ -348,13 +403,20 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
       return
     }
 
-    logger.info('[useDragAndDrop] Adding tag via filter drop', { filterTag, updateCount: updates.length })
+    logger.info('[useDragAndDrop] Adding tag via filter drop', {
+      filterTag,
+      updateCount: updates.length
+    })
 
     try {
       await onBulkUpdate(updates)
-      try { clearSelection() } catch {}
+      try {
+        clearSelection()
+      } catch { /* Intentionally ignore errors */ }
     } catch (error) {
-      logger.error('[useDragAndDrop] Failed to add tag via filter drop', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[useDragAndDrop] Failed to add tag via filter drop', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       alert((error as Error).message || 'Failed to add tag')
     }
   }
@@ -366,7 +428,7 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     selectedIds,
     isSelecting,
     marqueeRect,
-  selectionJustEndedAt,
+    selectionJustEndedAt,
     // selection handlers
     selectionStartHandler,
     selectionMoveHandler,
@@ -382,3 +444,4 @@ export function useDragAndDrop({ tasks, onTaskUpdate, onBulkUpdate }: UseDragAnd
     onFilterDrop
   }
 }
+

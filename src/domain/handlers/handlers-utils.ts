@@ -1,21 +1,13 @@
 /**
  * Helper utilities for handlers.ts
  * Extracted common patterns to reduce duplication and improve consistency
- * 
+ *
  * NOTE: No auth checks here - handlers are pure business logic.
  * Auth should be enforced at the API boundary (express routes), not in handlers.
  */
 
-import type {
-  Task,
-  TasksFile,
-  StatsFile,
-  Board,
-  BoardsFile,
-  ULID,
-  AuthContext
-} from '../types.js';
-import type { Storage } from '../../server/storage.js';
+import type { Task, TasksFile, StatsFile, Board, BoardsFile, ULID, AuthContext } from '../types.js'
+import type { Storage } from '../../server/storage.js'
 
 /**
  * Find task by ID or throw error
@@ -23,11 +15,11 @@ import type { Storage } from '../../server/storage.js';
  * @returns Task and its index in the tasks array
  */
 export function findTaskOrThrow(tasks: TasksFile, taskId: ULID): { task: Task; index: number } {
-  const index = tasks.tasks.findIndex(t => t.id === taskId);
+  const index = tasks.tasks.findIndex(t => t.id === taskId)
   if (index < 0) {
-    throw new Error('Task not found');
+    throw new Error('Task not found')
   }
-  return { task: tasks.tasks[index], index };
+  return { task: tasks.tasks[index], index }
 }
 
 /**
@@ -39,11 +31,11 @@ export function findBoardOrThrow(
   boards: BoardsFile,
   boardId: string
 ): { board: Board; index: number } {
-  const index = boards.boards.findIndex(b => b.id === boardId);
+  const index = boards.boards.findIndex(b => b.id === boardId)
   if (index < 0) {
-    throw new Error(`Board ${boardId} not found`);
+    throw new Error(`Board ${boardId} not found`)
   }
-  return { board: boards.boards[index], index };
+  return { board: boards.boards[index], index }
 }
 
 /**
@@ -64,7 +56,7 @@ export function updateBoardAtIndex(
       updatedBoard,
       ...boards.boards.slice(boardIndex + 1)
     ]
-  };
+  }
 }
 
 /**
@@ -89,15 +81,12 @@ export function recordStatsEvent(
       ...stats.counters,
       [eventType]: stats.counters[eventType] + 1
     },
-    timeline: [
-      ...stats.timeline,
-      { t: timestamp, event: eventType, id: task.id }
-    ],
+    timeline: [...stats.timeline, { t: timestamp, event: eventType, id: task.id }],
     tasks: {
       ...stats.tasks,
       [task.id]: { ...task }
     }
-  };
+  }
 }
 
 // --- Batch Operation Helpers ---
@@ -110,19 +99,16 @@ export function extractTasksFromBoard(
   tasks: Task[],
   taskIds: string[]
 ): { tasksToExtract: Task[]; remainingTasks: Task[] } {
-  const tasksToExtract = tasks.filter(task => taskIds.includes(task.id));
-  const remainingTasks = tasks.filter(task => !taskIds.includes(task.id));
-  return { tasksToExtract, remainingTasks };
+  const tasksToExtract = tasks.filter(task => taskIds.includes(task.id))
+  const remainingTasks = tasks.filter(task => !taskIds.includes(task.id))
+  return { tasksToExtract, remainingTasks }
 }
 
 /**
  * Prepare tasks for insertion into target board
  * Preserves IDs, title, tags, and createdAt timestamp
  */
-export function prepareTasksForBoard(
-  tasks: Task[],
-  timestamp: string
-): Task[] {
+export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
   return tasks.map(task => ({
     id: task.id,
     title: task.title,
@@ -130,7 +116,7 @@ export function prepareTasksForBoard(
     state: 'Active' as const,
     createdAt: task.createdAt,
     updatedAt: timestamp
-  }));
+  }))
 }
 
 /**
@@ -144,9 +130,9 @@ export function updateBatchMoveStats(
   preparedTasks: Task[],
   timestamp: string
 ): { updatedSourceStats: StatsFile; updatedTargetStats: StatsFile } {
-  let updatedSourceStats = sourceStats;
-  let updatedTargetStats = targetStats;
-  
+  let updatedSourceStats = sourceStats
+  let updatedTargetStats = targetStats
+
   // Record completions on source board
   for (const task of movedTasks) {
     const completedTask: Task = {
@@ -154,16 +140,16 @@ export function updateBatchMoveStats(
       state: 'Completed',
       closedAt: timestamp,
       updatedAt: timestamp
-    };
-    updatedSourceStats = recordStatsEvent(updatedSourceStats, completedTask, 'completed', timestamp);
+    }
+    updatedSourceStats = recordStatsEvent(updatedSourceStats, completedTask, 'completed', timestamp)
   }
-  
+
   // Record creations on target board
   for (const task of preparedTasks) {
-    updatedTargetStats = recordStatsEvent(updatedTargetStats, task, 'created', timestamp);
+    updatedTargetStats = recordStatsEvent(updatedTargetStats, task, 'created', timestamp)
   }
-  
-  return { updatedSourceStats, updatedTargetStats };
+
+  return { updatedSourceStats, updatedTargetStats }
 }
 
 // --- Task Operation Pattern Helper ---
@@ -178,21 +164,21 @@ export function closeTask(
   state: 'Completed' | 'Deleted',
   timestamp: string
 ): {
-  updatedTasks: TasksFile;
-  closedTask: Task;
+  updatedTasks: TasksFile
+  closedTask: Task
 } {
-  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId);
-  
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
+
   const closedTask: Task = {
     ...task,
     state,
     closedAt: timestamp,
     updatedAt: timestamp
-  };
-  
-  const newTasks = [...tasks.tasks];
-  newTasks.splice(taskIndex, 1); // Remove from active tasks
-  
+  }
+
+  const newTasks = [...tasks.tasks]
+  newTasks.splice(taskIndex, 1) // Remove from active tasks
+
   return {
     updatedTasks: {
       ...tasks,
@@ -200,13 +186,13 @@ export function closeTask(
       updatedAt: timestamp
     },
     closedTask
-  };
+  }
 }
 
 /**
  * Generic wrapper for task operations that follow the load→modify→save pattern
  * Handles loading tasks/stats, applying transformation, updating stats, and saving
- * 
+ *
  * @param storage - Storage instance
  * @param auth - Auth context
  * @param boardId - Board ID
@@ -222,35 +208,35 @@ export async function withTaskOperation<T>(
     stats: StatsFile,
     timestamp: string
   ) => {
-    updatedTasks: TasksFile;
-    statsEvents: Array<{ task: Task; eventType: 'created' | 'completed' | 'edited' | 'deleted' }>;
-    result: T;
+    updatedTasks: TasksFile
+    statsEvents: Array<{ task: Task; eventType: 'created' | 'completed' | 'edited' | 'deleted' }>
+    result: T
   }
 ): Promise<T> {
-  const timestamp = new Date().toISOString();
-  
+  const timestamp = new Date().toISOString()
+
   // Load current state
   const [tasks, stats] = await Promise.all([
     storage.getTasks(auth.userType, auth.sessionId, boardId),
     storage.getStats(auth.userType, auth.sessionId, boardId)
-  ]);
-  
+  ])
+
   // Execute operation
-  const { updatedTasks, statsEvents, result } = operation(tasks, stats, timestamp);
-  
+  const { updatedTasks, statsEvents, result } = operation(tasks, stats, timestamp)
+
   // Update stats with all events
-  let updatedStats = stats;
+  let updatedStats = stats
   for (const { task, eventType } of statsEvents) {
-    updatedStats = recordStatsEvent(updatedStats, task, eventType, timestamp);
+    updatedStats = recordStatsEvent(updatedStats, task, eventType, timestamp)
   }
-  
+
   // Save both files
   await Promise.all([
     storage.saveTasks(auth.userType, auth.sessionId, boardId, updatedTasks),
     storage.saveStats(auth.userType, auth.sessionId, boardId, updatedStats)
-  ]);
-  
-  return result;
+  ])
+
+  return result
 }
 
 // --- Board Operation Pattern Helper ---
@@ -258,7 +244,7 @@ export async function withTaskOperation<T>(
 /**
  * Generic wrapper for board operations that follow the load→modify→save pattern
  * Handles loading boards, applying transformation, and saving
- * 
+ *
  * @param storage - Storage instance
  * @param auth - Auth context
  * @param operation - Function that transforms boards and returns result
@@ -267,21 +253,24 @@ export async function withTaskOperation<T>(
 export async function withBoardOperation<T>(
   storage: Storage,
   auth: AuthContext,
-  operation: (boards: BoardsFile, timestamp: string) => {
-    updatedBoards: BoardsFile;
-    result: T;
+  operation: (
+    boards: BoardsFile,
+    timestamp: string
+  ) => {
+    updatedBoards: BoardsFile
+    result: T
   }
 ): Promise<T> {
-  const timestamp = new Date().toISOString();
-  
+  const timestamp = new Date().toISOString()
+
   // Load current boards
-  const boards = await storage.getBoards(auth.userType, auth.sessionId);
-  
+  const boards = await storage.getBoards(auth.userType, auth.sessionId)
+
   // Execute operation
-  const { updatedBoards, result } = operation(boards, timestamp);
-  
+  const { updatedBoards, result } = operation(boards, timestamp)
+
   // Save updated boards
-  await storage.saveBoards(auth.userType, updatedBoards, auth.sessionId);
-  
-  return result;
+  await storage.saveBoards(auth.userType, updatedBoards, auth.sessionId)
+
+  return result
 }

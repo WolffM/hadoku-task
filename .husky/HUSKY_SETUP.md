@@ -30,9 +30,7 @@ const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 const [major, minor, patch] = packageJson.version.split('.').map(Number)
 
 // Roll over at .20
-const newVersion = patch === 20 
-  ? `${major}.${minor + 1}.0`
-  : `${major}.${minor}.${patch + 1}`
+const newVersion = patch === 20 ? `${major}.${minor + 1}.0` : `${major}.${minor}.${patch + 1}`
 
 packageJson.version = newVersion
 fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n')
@@ -80,6 +78,7 @@ git commit -m "your message"
 **Change rollover threshold**: Modify `patch === 20` in version-manager.js
 
 **Disable rollover**: Use regular increment:
+
 ```javascript
 const newVersion = `${major}.${minor}.${patch + 1}`
 ```

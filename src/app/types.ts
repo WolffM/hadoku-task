@@ -17,22 +17,22 @@ export type {
   AuthContext,
   CreateTaskInput,
   UpdateTaskInput,
-  UserPreferences,
+  UserPreferences
 } from '../domain/types'
 
 // Client-only types
-export type ThemeName = 
-  | 'light' 
+export type ThemeName =
+  | 'light'
   | 'dark'
-  | 'coffee-light' 
+  | 'coffee-light'
   | 'coffee-dark'
   | 'nature-light'
   | 'nature-dark'
-  | 'lavender-light' 
+  | 'lavender-light'
   | 'lavender-dark'
-  | 'strawberry-light' 
+  | 'strawberry-light'
   | 'strawberry-dark'
-  | 'ocean-light' 
+  | 'ocean-light'
   | 'ocean-dark'
   | 'cyberpunk-light'
   | 'cyberpunk-dark'

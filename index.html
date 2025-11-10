@@ -40,16 +40,23 @@
   <script type="module">
     import { mount } from './src/app/entry.tsx'
     
-    // Get userType from URL params (default to public)
+    // Get params from URL
     const params = new URLSearchParams(window.location.search)
     const userType = params.get('userType') || 'public'
+    const userName = params.get('userName') || null
+    
+    console.log('[mount] Mounting with:', { userType, userName })
     
     // Mount the app
     mount(document.getElementById('app'), {
       basename: '/',
       apiUrl: '/task/api',
       environment: 'development',
-      userType: userType
+      userType: userType,
+      userName: userName,
+      onKeyValidation: (isValid, validatedUserType, validatedUserName) => {
+        console.log('[mount] Key validation result:', { isValid, validatedUserType, validatedUserName })
+      }
     })
   </script>
 </body>

@@ -14,12 +14,20 @@ export class LocalStorageStorage {
   // --- Storage Keys ---
   // Note: Always use the userType from constructor, not the one passed to methods
   // This ensures data stays in the same localStorage location regardless of authContext
-  
-  private getTasksKey(userType: string, sessionId: string | undefined, boardId: string | undefined): string {
+
+  private getTasksKey(
+    userType: string,
+    sessionId: string | undefined,
+    boardId: string | undefined
+  ): string {
     return `${this.userType}-${sessionId || this.sessionId}-${boardId || 'main'}-tasks`
   }
 
-  private getStatsKey(userType: string, sessionId: string | undefined, boardId: string | undefined): string {
+  private getStatsKey(
+    userType: string,
+    sessionId: string | undefined,
+    boardId: string | undefined
+  ): string {
     return `${this.userType}-${sessionId || this.sessionId}-${boardId || 'main'}-stats`
   }
 
@@ -36,11 +44,11 @@ export class LocalStorageStorage {
   ): Promise<TasksFile> {
     const key = this.getTasksKey(userType, sessionId, boardId)
     const stored = localStorage.getItem(key)
-    
+
     if (stored) {
       return JSON.parse(stored)
     }
-    
+
     // Return empty tasks file if not found
     return {
       version: 1,
@@ -69,11 +77,11 @@ export class LocalStorageStorage {
   ): Promise<StatsFile> {
     const key = this.getStatsKey(userType, sessionId, boardId)
     const stored = localStorage.getItem(key)
-    
+
     if (stored) {
       return JSON.parse(stored)
     }
-    
+
     // Return empty stats file if not found
     return {
       version: 2,
@@ -102,17 +110,14 @@ export class LocalStorageStorage {
 
   // --- Boards Operations ---
 
-  async getBoards(
-    userType: string,
-    sessionId: string | undefined
-  ): Promise<BoardsFile> {
+  async getBoards(userType: string, sessionId: string | undefined): Promise<BoardsFile> {
     const key = this.getBoardsKey(userType, sessionId)
     const stored = localStorage.getItem(key)
-    
+
     if (stored) {
       return JSON.parse(stored)
     }
-    
+
     // Return default main board if not found
     const defaultBoards: BoardsFile = {
       version: 1,
@@ -126,10 +131,10 @@ export class LocalStorageStorage {
         }
       ]
     }
-    
+
     // Save the default board so it persists
     await this.saveBoards(userType, defaultBoards, sessionId)
-    
+
     return defaultBoards
   }
 

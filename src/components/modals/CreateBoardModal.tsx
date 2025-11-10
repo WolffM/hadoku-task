@@ -30,10 +30,10 @@ export function CreateBoardModal({
 }: CreateBoardModalProps) {
   const handleConfirm = async () => {
     if (!inputValue.trim()) return
-    
+
     const error = validateBoardName(inputValue)
     if (error) return // Validation error will be shown
-    
+
     await onConfirm(inputValue)
   }
 
@@ -51,13 +51,18 @@ export function CreateBoardModal({
       confirmLabel="Create"
       confirmDisabled={isDisabled}
     >
-      {pendingTaskOperation?.type === 'move-to-board' && pendingTaskOperation.taskIds.length > 0 && (
-        <p className="modal-hint">
-          {pendingTaskOperation.taskIds.length} task{pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
-        </p>
-      )}
+      {pendingTaskOperation?.type === 'move-to-board' &&
+        pendingTaskOperation.taskIds.length > 0 && (
+          <p className="modal-hint">
+            {pendingTaskOperation.taskIds.length} task
+            {pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
+          </p>
+        )}
       {validationError && (
-        <p className="modal-error" style={{ color: 'var(--error-color, #d32f2f)', marginTop: '0.5rem' }}>
+        <p
+          className="modal-error"
+          style={{ color: 'var(--error-color, #d32f2f)', marginTop: '0.5rem' }}
+        >
           {validationError}
         </p>
       )}

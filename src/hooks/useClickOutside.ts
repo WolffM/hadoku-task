@@ -24,17 +24,17 @@ export function useClickOutside(
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      
+
       // Check if click is inside the ref element
       if (ref.current && ref.current.contains(target)) {
         return
       }
-      
+
       // Check if click is on an excluded element
       if (excludeSelector && target.closest(excludeSelector)) {
         return
       }
-      
+
       // Click was outside - close
       onClose()
     }

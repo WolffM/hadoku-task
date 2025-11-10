@@ -3,7 +3,6 @@
  * Provides the same interface as the server API but stores data locally
  */
 
-import { generateULID } from '../domain/utils/shared'
 import type { TasksFile, StatsFile, Task, BoardsFile, Board, AuthContext } from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
@@ -16,23 +15,23 @@ import { logger } from '@wolffm/task-ui-components'
  */
 export function createLocalStorageApi(userType: string = 'public', sessionId: string = 'public') {
   const storage = new LocalStorageStorage(userType, sessionId)
-  
+
   // For localStorage operations, treat all users as 'registered' to bypass server auth checks
   // Public users CAN create tasks locally, the auth checks are only for server-side API calls
   const authContext: AuthContext = { userType: 'registered', sessionId }
-  
+
   return {
     async getBoards(): Promise<BoardsFile> {
       // Use handler to get boards
       const boardsFile = await TaskHandlers.getBoards(storage, authContext)
-      
+
       // Populate each board with tasks and stats
-      const populated: BoardsFile = { 
-        version: boardsFile.version, 
-        updatedAt: boardsFile.updatedAt, 
-        boards: [] 
+      const populated: BoardsFile = {
+        version: boardsFile.version,
+        updatedAt: boardsFile.updatedAt,
+        boards: []
       }
-      
+
       for (const b of boardsFile.boards) {
         const tasksFile = await storage.getTasks(userType, sessionId, b.id)
         const statsFile = await storage.getStats(userType, sessionId, b.id)
@@ -44,7 +43,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
           tags: b.tags || []
         })
       }
-      
+
       return populated
     },
 
@@ -52,19 +51,18 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       logger.info('[localStorageApi] createBoard (using handler)', { userType, sessionId, boardId })
 
       // Use handler
-      const result = await TaskHandlers.createBoard(
-        storage,
-        authContext,
-        { id: boardId, name: boardId }
-      )
-      
+      const result = await TaskHandlers.createBoard(storage, authContext, {
+        id: boardId,
+        name: boardId
+      })
+
       // Initialize empty tasks/stats for new board
       await storage.saveTasks(userType, sessionId, boardId, {
         version: 1,
         updatedAt: new Date().toISOString(),
         tasks: []
       })
-      
+
       await storage.saveStats(userType, sessionId, boardId, {
         version: 2,
         updatedAt: new Date().toISOString(),
@@ -72,24 +70,20 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
         timeline: [],
         tasks: {}
       })
-      
+
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
-      
+
       return result.board
     },
 
     async deleteBoard(boardId: string): Promise<void> {
       // Use handler
-      await TaskHandlers.deleteBoard(
-        storage,
-        authContext,
-        boardId
-      )
-      
+      await TaskHandlers.deleteBoard(storage, authContext, boardId)
+
       // Cleanup board data
       await storage.deleteBoardData(userType, sessionId, boardId)
-      
+
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
     },
@@ -102,17 +96,20 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       return storage.getStats(userType, sessionId, boardId)
     },
 
-    async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      logger.info('[localStorageApi] createTask (using handler)', { data, boardId, suppressBroadcast })
+    async createTask(
+      data: { title: string; tag?: string; id?: string; createdAt?: string },
+      boardId: string = 'main',
+      suppressBroadcast: boolean = false
+    ): Promise<Task> {
+      logger.info('[localStorageApi] createTask (using handler)', {
+        data,
+        boardId,
+        suppressBroadcast
+      })
 
       // Use handler - it handles stats, validation, everything
       // Pass through id and createdAt if provided (for preserving IDs during moves)
-      const result = await TaskHandlers.createTask(
-        storage,
-        authContext,
-        data,
-        boardId
-      )
+      const result = await TaskHandlers.createTask(storage, authContext, data, boardId)
 
       // Get the created task from storage
       const tasksFile = await storage.getTasks(userType, sessionId, boardId)
@@ -135,34 +132,34 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       }
 
       return createdTask
-    },    async patchTask(id: string, updates: Partial<Pick<Task, 'title' | 'tag'>>, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
+    },
+    async patchTask(
+      id: string,
+      updates: Partial<Pick<Task, 'title' | 'tag'>>,
+      boardId: string = 'main',
+      suppressBroadcast: boolean = false
+    ): Promise<Task> {
       // Filter out null values - handler expects string | undefined, not null
       const cleanUpdates: { title?: string; tag?: string } = {}
       if (updates.title !== undefined) cleanUpdates.title = updates.title
       if (updates.tag !== undefined && updates.tag !== null) cleanUpdates.tag = updates.tag
-      
+
       // Use handler
-      const result = await TaskHandlers.updateTask(
-        storage,
-        authContext,
-        id,
-        cleanUpdates,
-        boardId
-      )
-      
+      await TaskHandlers.updateTask(storage, authContext, id, cleanUpdates, boardId)
+
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
         deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
       }
-      
+
       // Get updated task from storage
       const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const updatedTask = tasksFile.tasks.find(t => t.id === id)
-      
+
       if (!updatedTask) {
         throw new Error('Task not found after update')
       }
-      
+
       return updatedTask
     },
 
@@ -170,22 +167,17 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       // Get the task BEFORE completing it (since handler removes it from active list)
       const tasksFile = await storage.getTasks(userType, sessionId, boardId)
       const taskToComplete = tasksFile.tasks.find(t => t.id === id)
-      
+
       if (!taskToComplete) {
         throw new Error('Task not found')
       }
-      
+
       // Use handler to complete the task (removes from active, updates stats)
-      const result = await TaskHandlers.completeTask(
-        storage,
-        authContext,
-        id,
-        boardId
-      )
-      
+      await TaskHandlers.completeTask(storage, authContext, id, boardId)
+
       // Broadcast update
       deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
-      
+
       // Return the completed task with updated state
       return {
         ...taskToComplete,
@@ -195,8 +187,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       }
     },
 
-    async deleteTask(id: string, boardId: string = 'main', suppressBroadcast: boolean = false): Promise<Task> {
-      logger.info('[localStorageApi] deleteTask (using handler)', { id, boardId, suppressBroadcast })
+    async deleteTask(
+      id: string,
+      boardId: string = 'main',
+      suppressBroadcast: boolean = false
+    ): Promise<Task> {
+      logger.info('[localStorageApi] deleteTask (using handler)', {
+        id,
+        boardId,
+        suppressBroadcast
+      })
 
       // Get the task BEFORE deletion so we can return it
       const tasksFileBefore = await storage.getTasks(userType, sessionId, boardId)
@@ -207,12 +207,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       }
 
       // Use handler to delete the task
-      await TaskHandlers.deleteTask(
-        storage,
-        authContext,
-        id,
-        boardId
-      )
+      await TaskHandlers.deleteTask(storage, authContext, id, boardId)
 
       // Broadcast update unless suppressed
       if (!suppressBroadcast) {
@@ -233,24 +228,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
 
     async createTag(tag: string, boardId: string = 'main'): Promise<void> {
       // Use handler - expects { boardId, tag } input
-      await TaskHandlers.createTag(
-        storage,
-        authContext,
-        { boardId, tag }
-      )
-      
+      await TaskHandlers.createTag(storage, authContext, { boardId, tag })
+
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     async deleteTag(tag: string, boardId: string = 'main'): Promise<void> {
       // Use handler - expects { boardId, tag } input
-      await TaskHandlers.deleteTag(
-        storage,
-        authContext,
-        { boardId, tag }
-      )
-      
+      await TaskHandlers.deleteTag(storage, authContext, { boardId, tag })
+
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
     },
@@ -261,10 +248,13 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const stored = localStorage.getItem(key)
       if (stored) {
         const parsed = JSON.parse(stored)
-        return parsed  // Return all preferences including theme and button settings
+        return parsed // Return all preferences including theme and button settings
       }
       // Default preferences - respect browser's color scheme preference
-      const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
       return {
         version: 1,
         updatedAt: new Date().toISOString(),
@@ -275,7 +265,9 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       }
     },
 
-    async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>): Promise<void> {
+    async savePreferences(
+      prefs: Partial<import('../domain/types').UserPreferences>
+    ): Promise<void> {
       const key = `${userType}-${sessionId}-preferences`
       const current = await this.getPreferences()
       const updated = {
@@ -288,80 +280,94 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     // Batch operations
-    async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]): Promise<{ ok: boolean; moved: number }> {
+    async batchMoveTasks(
+      sourceBoardId: string,
+      targetBoardId: string,
+      taskIds: string[]
+    ): Promise<{ ok: boolean; moved: number }> {
       const boards = await this.getBoards()
-      
+
       const sourceBoard = boards.boards.find(b => b.id === sourceBoardId)
       const targetBoard = boards.boards.find(b => b.id === targetBoardId)
-      
+
       if (!sourceBoard) {
         throw new Error(`Source board ${sourceBoardId} not found`)
       }
       if (!targetBoard) {
         throw new Error(`Target board ${targetBoardId} not found`)
       }
-      
+
       // Find tasks to move
       const tasksToMove = sourceBoard.tasks.filter(t => taskIds.includes(t.id))
-      
+
       // Remove from source
       sourceBoard.tasks = sourceBoard.tasks.filter(t => !taskIds.includes(t.id))
-      
+
       // Add to target
       targetBoard.tasks = [...targetBoard.tasks, ...tasksToMove]
-      
+
       // Update timestamp
       boards.updatedAt = new Date().toISOString()
-      
+
       // Save back to localStorage
       const boardsKey = `${userType}-${sessionId}-boards`
       localStorage.setItem(boardsKey, JSON.stringify(boards))
-      
+
       // Update individual board storage
       const sourceBoardKey = `${userType}-${sessionId}-${sourceBoardId}-tasks`
       const targetBoardKey = `${userType}-${sessionId}-${targetBoardId}-tasks`
-      
-      localStorage.setItem(sourceBoardKey, JSON.stringify({
-        version: 1,
-        updatedAt: boards.updatedAt,
-        tasks: sourceBoard.tasks
-      }))
-      
-      localStorage.setItem(targetBoardKey, JSON.stringify({
-        version: 1,
-        updatedAt: boards.updatedAt,
-        tasks: targetBoard.tasks
-      }))
-      
+
+      localStorage.setItem(
+        sourceBoardKey,
+        JSON.stringify({
+          version: 1,
+          updatedAt: boards.updatedAt,
+          tasks: sourceBoard.tasks
+        })
+      )
+
+      localStorage.setItem(
+        targetBoardKey,
+        JSON.stringify({
+          version: 1,
+          updatedAt: boards.updatedAt,
+          tasks: targetBoard.tasks
+        })
+      )
+
       // Broadcast change
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
-      
+
       return { ok: true, moved: tasksToMove.length }
     },
 
-    async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>): Promise<void> {
+    async batchUpdateTags(
+      boardId: string,
+      updates: Array<{ taskId: string; tag: string | null }>
+    ): Promise<void> {
       logger.info('[localStorageApi] batchUpdateTags', { boardId, updates })
 
       // Use handler
-      await TaskHandlers.batchUpdateTags(
-        storage,
-        authContext,
-        { boardId, updates }
-      )
+      await TaskHandlers.batchUpdateTags(storage, authContext, { boardId, updates })
 
       // Broadcast update
       deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
     async batchClearTag(boardId: string, tag: string, taskIds: string[]): Promise<void> {
-      logger.info('[localStorageApi] batchClearTag START', { boardId, tag, taskIds, taskCount: taskIds.length })
+      logger.info('[localStorageApi] batchClearTag START', {
+        boardId,
+        tag,
+        taskIds,
+        taskCount: taskIds.length
+      })
 
       // Use handler
-      const result = await TaskHandlers.batchClearTag(
-        storage,
-        authContext,
-        { boardId, tag, taskIds }
-      )
+      const result = await TaskHandlers.batchClearTag(storage, authContext, {
+        boardId,
+        tag,
+        taskIds
+      })
 
       logger.info('[localStorageApi] batchClearTag result', { result })
 

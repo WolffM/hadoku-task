@@ -41,6 +41,6 @@ export function useLongPress({ onLongPress, delay = 500 }: UseLongPressOptions) 
   return {
     onTouchStart: handleTouchStart,
     onTouchEnd: handleTouchEnd,
-    onTouchMove: handleTouchMove,
+    onTouchMove: handleTouchMove
   }
 }

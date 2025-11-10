@@ -50,10 +50,7 @@ export function ThemePicker({
         {currentIcon}
       </button>
       {isOpen && (
-        <div
-          className="theme-picker__dropdown"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="theme-picker__dropdown" onClick={e => e.stopPropagation()}>
           <div className="theme-picker__pills">
             {themeFamilies.map((family, idx) => {
               // Use provided icons or fallback to generic shapes
@@ -69,9 +66,7 @@ export function ThemePicker({
                     title={family.lightLabel}
                     aria-label={family.lightLabel}
                   >
-                    <div className="theme-pill__icon">
-                      {lightIcon}
-                    </div>
+                    <div className="theme-pill__icon">{lightIcon}</div>
                   </button>
 
                   {/* Dark variant button */}
@@ -81,9 +76,7 @@ export function ThemePicker({
                     title={family.darkLabel}
                     aria-label={family.darkLabel}
                   >
-                    <div className="theme-pill__icon">
-                      {darkIcon}
-                    </div>
+                    <div className="theme-pill__icon">{darkIcon}</div>
                   </button>
                 </div>
               )
@@ -105,12 +98,7 @@ export function ThemePicker({
           )}
         </div>
       )}
-      {isOpen && (
-        <div
-          className="theme-picker__overlay"
-          onClick={onToggle}
-        />
-      )}
+      {isOpen && <div className="theme-picker__overlay" onClick={onToggle} />}
     </div>
   )
 }

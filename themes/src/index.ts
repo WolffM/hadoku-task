@@ -26,7 +26,7 @@ export const THEMES = [
   'izakaya-dark'
 ] as const
 
-export type Theme = typeof THEMES[number]
+export type Theme = (typeof THEMES)[number]
 
 /**
  * Set the active theme

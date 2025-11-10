@@ -9,3 +9,4 @@
 @import './task-layout.css';
 @import './main.css';
 @import './modal.css';
+@import '@wolffm/task-ui-components/toaster.css';

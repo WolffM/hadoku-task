@@ -32,8 +32,8 @@ export function ClearTagModal({ tag, count, isOpen, onClose, onConfirm }: ClearT
     >
       {tag && (
         <p>
-          This will remove <strong>#{tag}</strong> from{' '}
-          <strong>{count} task(s)</strong> and delete the tag from the board.
+          This will remove <strong>#{tag}</strong> from <strong>{count} task(s)</strong> and delete
+          the tag from the board.
         </p>
       )}
     </Modal>

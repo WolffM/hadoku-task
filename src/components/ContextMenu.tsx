@@ -14,15 +14,21 @@ interface ContextMenuProps {
   className?: string
 }
 
-export function ContextMenu({ isOpen, x, y, items, className = 'board-context-menu' }: ContextMenuProps) {
+export function ContextMenu({
+  isOpen,
+  x,
+  y,
+  items,
+  className = 'board-context-menu'
+}: ContextMenuProps) {
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
       className={className}
       style={{
         left: `${x}px`,
-        top: `${y}px`,
+        top: `${y}px`
       }}
     >
       {items.map((item, index) => (

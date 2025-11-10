@@ -30,7 +30,7 @@ export async function createTask(storage: Storage, auth: AuthContext, input: Cre
 }
 
 // Parent app provides storage implementation
-const storage = createKVStorage(env.TASK_KV)  // or filesystem, database, etc.
+const storage = createKVStorage(env.TASK_KV) // or filesystem, database, etc.
 
 // Use with any framework
 const result = await TaskHandlers.createTask(storage, auth, input)
@@ -45,12 +45,14 @@ const result = await TaskHandlers.createTask(storage, auth, input)
 **This micro-frontend delegates authentication to the parent application.**
 
 The task app does NOT:
+
 - ❌ Handle user credentials
 - ❌ Hash passwords
 - ❌ Generate session tokens
 - ❌ Validate authentication keys
 
 The task app DOES:
+
 - ✅ Receive `userType` and `sessionId` as props
 - ✅ Use these for storage namespacing (localStorage keys, API requests)
 - ✅ Validate operations based on `userType` (e.g., public can't sync to server)
@@ -104,10 +106,18 @@ export type { Storage as TaskStorage } from './storage.js'
 
 // Parent implements storage
 const storage: TaskStorage = {
-  getTasks: async (userType) => { /* KV, filesystem, DB */ },
-  saveTasks: async (userType, tasks) => { /* ... */ },
-  getStats: async (userType) => { /* ... */ },
-  saveStats: async (userType, stats) => { /* ... */ }
+  getTasks: async userType => {
+    /* KV, filesystem, DB */
+  },
+  saveTasks: async (userType, tasks) => {
+    /* ... */
+  },
+  getStats: async userType => {
+    /* ... */
+  },
+  saveStats: async (userType, stats) => {
+    /* ... */
+  }
 }
 
 // Use with ANY framework
@@ -120,12 +130,14 @@ app.post('/task/api', async (req, res) => {
 ### Why This Works
 
 **Pure functions = maximum reusability**
+
 - No Express/Hono/framework dependencies
 - Works in any JavaScript runtime (Node.js, Workers, Deno)
 - Easy to test (mock the Storage interface)
 - Reusable across different parent apps
 
 **Storage abstraction = deployment flexibility**
+
 - Cloudflare Workers KV (production)
 - Filesystem (development)
 - Database (SQL/NoSQL)
@@ -183,18 +195,21 @@ App (main orchestrator)
 ### Optimistic Updates
 
 **All user types use localStorage for instant UI:**
+
 ```typescript
 // 1. Update localStorage immediately (UI updates)
 await localStorage.createTask(task)
 
 // 2. If not public, sync to server in background
 if (userType !== 'public') {
-  fetch('/task/api', { method: 'POST', body: JSON.stringify(task) })
-    .catch(err => console.error('Background sync failed'))
+  fetch('/task/api', { method: 'POST', body: JSON.stringify(task) }).catch(err =>
+    console.error('Background sync failed')
+  )
 }
 ```
 
 **Benefits:**
+
 - ✅ Zero UI blocking
 - ✅ Instant feedback
 - ✅ Works offline (public mode)
@@ -228,7 +243,7 @@ export async function createTask(
   // 1. Load current state
   const tasks = await storage.getTasks(auth.userType)
   const stats = await storage.getStats(auth.userType)
-  
+
   // 2. Pure transformation
   const newTask = {
     id: generateULID(),
@@ -237,23 +252,24 @@ export async function createTask(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
-  
+
   // 3. Save new state
   await storage.saveTasks(auth.userType, {
     ...tasks,
     tasks: [...tasks.tasks, newTask]
   })
-  
+
   await storage.saveStats(auth.userType, {
     ...stats,
     counters: { ...stats.counters, totalCreated: stats.counters.totalCreated + 1 }
   })
-  
+
   return newTask
 }
 ```
 
 **Benefits:**
+
 - ✅ Testable (just mock Storage)
 - ✅ Framework-agnostic
 - ✅ No hidden dependencies
@@ -273,14 +289,16 @@ interface Storage {
 **Implementations:**
 
 **Filesystem** (included for development):
+
 ```typescript
 const storage = createFilesystemStorage('./data')
 ```
 
 **Cloudflare Workers KV** (parent implements):
+
 ```typescript
 const storage = {
-  getTasks: async (userType) => {
+  getTasks: async userType => {
     const data = await env.TASK_KV.get(`tasks:${userType}`, 'json')
     return data || defaultTasksFile
   },
@@ -316,13 +334,20 @@ src/styles/
 **7 complete themes with ~45 CSS variables each:**
 
 ```css
-:root { /* Light theme (default) */ }
-[data-theme="dark"] { /* Dark theme */ }
-[data-theme="strawberry"] { /* Strawberry theme */ }
+:root {
+  /* Light theme (default) */
+}
+[data-theme='dark'] {
+  /* Dark theme */
+}
+[data-theme='strawberry'] {
+  /* Strawberry theme */
+}
 /* ... 4 more themes */
 ```
 
 **Theme variables structure:**
+
 - Primary colors (5 variants)
 - Success/Danger colors (theme-specific, opposing colors)
 - Neutral colors (grays)
@@ -332,6 +357,7 @@ src/styles/
 - Shadow values
 
 **Theme switching:**
+
 ```typescript
 // Instant switching via data attribute
 document.documentElement.setAttribute('data-theme', 'dark')
@@ -340,6 +366,7 @@ document.documentElement.setAttribute('data-theme', 'dark')
 ### Design Token Philosophy
 
 **All values use CSS custom properties:**
+
 - ✅ Colors: `var(--color-primary)`
 - ✅ Spacing: `var(--spacing-md)`
 - ✅ Typography: `var(--font-size-body)`
@@ -347,6 +374,7 @@ document.documentElement.setAttribute('data-theme', 'dark')
 - ✅ Shadows: `var(--shadow-card)`
 
 **Benefits:**
+
 - Instant theme switching
 - Consistent design system
 - Easy to add new themes
@@ -362,17 +390,18 @@ document.documentElement.setAttribute('data-theme', 'dark')
 
 ```typescript
 // Tasks: {userType}-{sessionId}-{boardId}-tasks
-"public-abc123-main-tasks"
-"friend-xyz789-work-tasks"
+'public-abc123-main-tasks'
+'friend-xyz789-work-tasks'
 
 // Boards index: {userType}-{sessionId}-boards
-"admin-def456-boards"
+'admin-def456-boards'
 
 // Stats: {userType}-{sessionId}-{boardId}-stats
-"friend-xyz789-main-stats"
+'friend-xyz789-main-stats'
 ```
 
 **Why sessionId?**
+
 - ✅ Stable across page reloads
 - ✅ Parent controls session lifecycle
 - ✅ Multiple devices/tabs can coexist
@@ -381,6 +410,7 @@ document.documentElement.setAttribute('data-theme', 'dark')
 ### Server Storage
 
 **Per-board storage:**
+
 ```
 data/
   {userType}/
@@ -391,6 +421,7 @@ data/
 ```
 
 **Benefits:**
+
 - Boards load independently
 - Parallel board operations
 - Efficient sync (only changed boards)
@@ -415,6 +446,7 @@ data/
 ### Server Performance
 
 **Handler execution:**
+
 - Pure functions: No overhead
 - Storage-dependent: Varies by implementation
   - In-memory: <1ms
@@ -427,24 +459,31 @@ data/
 ## Design Patterns
 
 ### 1. Universal Adapter Pattern
+
 **Separation of business logic from framework routing**
 
 ### 2. Storage Interface Pattern
+
 **Abstract storage implementation from business logic**
 
 ### 3. Pure Handler Functions
+
 **Business logic without side effects for testability**
 
 ### 4. Custom Hooks Pattern
+
 **Extract stateful React logic into reusable hooks**
 
 ### 5. Component Composition
+
 **Modular UI rendering with clear responsibilities**
 
 ### 6. CSS Design Tokens
+
 **Centralized theme configuration with custom properties**
 
 ### 7. Optimistic Updates
+
 **Instant UI feedback with background server sync**
 
 ---
@@ -454,25 +493,30 @@ data/
 ### Adding Features
 
 **New Task Property:**
+
 1. Update `Task` interface in `src/domain/types.ts`
 2. Update handler logic in `src/domain/handlers/handlers.ts`
 3. Update UI in `src/components/TaskItem.tsx`
 
 **New Handler:**
+
 1. Add function to `src/domain/handlers/handlers.ts`
 2. Export in `src/server/index.ts`
 3. Parent uses handler with their framework
 
 **New Storage Backend:**
+
 1. Implement `Storage` interface
 2. Use with existing handlers (no changes needed)
 
 **New Theme:**
+
 1. Add theme definition in `src/styles/variables.css` (~45 variables)
 2. Add to type union in `src/app/App.tsx`
 3. Add theme picker option with icon
 
 **New Component:**
+
 1. Create in `src/components/`
 2. Add styles to appropriate CSS file
 3. Import in parent component
@@ -484,6 +528,7 @@ data/
 ### Recommended Approach
 
 **Unit Testing** (handlers):
+
 ```typescript
 import { TaskHandlers } from '@wolffm/task/api'
 
@@ -491,23 +536,24 @@ test('createTask adds new task', async () => {
   const storage = createMockStorage()
   const auth = { userType: 'public' }
   const input = { title: 'Test', tag: 'work' }
-  
+
   const result = await TaskHandlers.createTask(storage, auth, input)
-  
+
   expect(result.title).toBe('Test')
   expect(result.tag).toBe('work')
 })
 ```
 
 **Integration Testing** (with real storage):
+
 ```typescript
 test('full CRUD workflow', async () => {
   const storage = createFilesystemStorage('/tmp/test')
-  
+
   const task = await TaskHandlers.createTask(storage, auth, { title: 'Test' })
   const updated = await TaskHandlers.updateTask(storage, auth, task.id, { title: 'Updated' })
   await TaskHandlers.completeTask(storage, auth, task.id)
-  
+
   const tasks = await TaskHandlers.getTasks(storage, auth)
   expect(tasks.tasks).toHaveLength(0) // Task moved to graveyard
 })

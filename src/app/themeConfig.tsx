@@ -4,12 +4,26 @@
  */
 
 import React from 'react'
-import { SunIcon, MoonIcon, StrawberryIcon, WaveIcon, ZapIcon, CoffeeIcon, FlowerIcon, LeafIcon, HeartIcon, SpaIcon, type ThemeFamily } from '@wolffm/task-ui-components'
+import {
+  SunIcon,
+  MoonIcon,
+  StrawberryIcon,
+  WaveIcon,
+  ZapIcon,
+  CoffeeIcon,
+  FlowerIcon,
+  LeafIcon,
+  HeartIcon,
+  SpaIcon,
+  type ThemeFamily
+} from '@wolffm/task-ui-components'
 import type { ThemeName } from './types'
+
+export type { ThemeFamily }
 
 // Base theme families (always available)
 export const BASE_THEME_FAMILIES: ThemeFamily[] = [
-  { 
+  {
     lightIcon: <SunIcon />,
     darkIcon: <MoonIcon />,
     lightTheme: 'light',
@@ -17,7 +31,7 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Light',
     darkLabel: 'Dark'
   },
-  { 
+  {
     lightIcon: <CoffeeIcon />,
     darkIcon: <CoffeeIcon />,
     lightTheme: 'coffee-light',
@@ -25,7 +39,7 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Coffee Light',
     darkLabel: 'Coffee Dark'
   },
-  { 
+  {
     lightIcon: <LeafIcon />,
     darkIcon: <LeafIcon />,
     lightTheme: 'nature-light',
@@ -33,7 +47,7 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Nature Light',
     darkLabel: 'Nature Dark'
   },
-  { 
+  {
     lightIcon: <FlowerIcon />,
     darkIcon: <FlowerIcon />,
     lightTheme: 'lavender-light',
@@ -41,7 +55,7 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Lavender Light',
     darkLabel: 'Lavender Dark'
   },
-  { 
+  {
     lightIcon: <StrawberryIcon />,
     darkIcon: <StrawberryIcon />,
     lightTheme: 'strawberry-light',
@@ -49,19 +63,19 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Strawberry Light',
     darkLabel: 'Strawberry Dark'
   },
-  { 
+  {
     lightIcon: <WaveIcon />,
     darkIcon: <WaveIcon />,
     lightTheme: 'ocean-light',
     darkTheme: 'ocean-dark',
     lightLabel: 'Ocean Light',
     darkLabel: 'Ocean Dark'
-  },
+  }
 ]
 
 // Experimental theme families (gated by preference)
 export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
-  { 
+  {
     lightIcon: <ZapIcon />,
     darkIcon: <ZapIcon />,
     lightTheme: 'cyberpunk-light',
@@ -69,7 +83,7 @@ export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
     lightLabel: 'Cyberpunk Light',
     darkLabel: 'Cyberpunk Dark'
   },
-  { 
+  {
     lightIcon: <HeartIcon />,
     darkIcon: <HeartIcon />,
     lightTheme: 'pink-light',
@@ -84,14 +98,14 @@ export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
     darkTheme: 'izakaya-dark',
     lightLabel: 'Izakaya Light',
     darkLabel: 'Izakaya Dark'
-  },
+  }
 ]
 
 /**
  * Get all theme families based on experimental preference
  */
 export function getThemeFamilies(experimentalEnabled: boolean): ThemeFamily[] {
-  return experimentalEnabled 
+  return experimentalEnabled
     ? [...BASE_THEME_FAMILIES, ...EXPERIMENTAL_THEME_FAMILIES]
     : BASE_THEME_FAMILIES
 }
@@ -101,15 +115,11 @@ export function getThemeFamilies(experimentalEnabled: boolean): ThemeFamily[] {
  */
 export function getThemeIcon(themeName: ThemeName, experimentalEnabled: boolean): React.ReactNode {
   const allFamilies = getThemeFamilies(experimentalEnabled)
-  
-  const family = allFamilies.find(f => 
-    f.lightTheme === themeName || f.darkTheme === themeName
-  )
-  
+
+  const family = allFamilies.find(f => f.lightTheme === themeName || f.darkTheme === themeName)
+
   if (!family) return <MoonIcon />
-  
+
   // Return appropriate icon based on light/dark variant
-  return themeName.endsWith('-dark') || themeName === 'dark' 
-    ? family.darkIcon 
-    : family.lightIcon
+  return themeName.endsWith('-dark') || themeName === 'dark' ? family.darkIcon : family.lightIcon
 }

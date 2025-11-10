@@ -18,17 +18,17 @@ export function LoadingSkeleton({ isDarkTheme }: LoadingSkeletonProps) {
           <div className="skeleton-header"></div>
           <div className="skeleton-theme-button"></div>
         </div>
-        
+
         {/* Boards */}
         <div className="skeleton-boards">
           <div className="skeleton-board"></div>
           <div className="skeleton-board"></div>
           <div className="skeleton-board-add"></div>
         </div>
-        
+
         {/* Input */}
         <div className="skeleton-input"></div>
-        
+
         {/* Tag filters */}
         <div className="skeleton-filters">
           <div className="skeleton-filter"></div>
@@ -36,7 +36,7 @@ export function LoadingSkeleton({ isDarkTheme }: LoadingSkeletonProps) {
           <div className="skeleton-filter"></div>
           <div className="skeleton-filter-add"></div>
         </div>
-        
+
         {/* Task column */}
         <div className="skeleton-column">
           <div className="skeleton-column-header"></div>

@@ -55,9 +55,9 @@ export function TaskLayout({
   onDragStart,
   onDragEnd,
   selectedIds,
-  onSelectionStart,
-  onSelectionMove,
-  onSelectionEnd,
+  onSelectionStart: _onSelectionStart,
+  onSelectionMove: _onSelectionMove,
+  onSelectionEnd: _onSelectionEnd,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -65,24 +65,24 @@ export function TaskLayout({
   sortTasksByAge,
   getSortIcon,
   getSortTitle,
-  deleteTag,
-  onDeletePersistedTag,
+  deleteTag: _deleteTag,
+  onDeletePersistedTag: _onDeletePersistedTag,
   showCompleteButton = true,
   showDeleteButton = true,
   showTagButton = false
 }: TaskLayoutProps) {
   // Helper function to render a tag column with header and tasks
   const renderTagColumn = (tag: string, tagTasks: Task[]) => (
-    <div 
-      key={tag} 
+    <div
+      key={tag}
       className={`task-app__tag-column ${dragOverTag === tag ? 'task-app__tag-column--drag-over' : ''}`}
-      onDragOver={(e) => onDragOver(e, tag)}
+      onDragOver={e => onDragOver(e, tag)}
       onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, tag)}
+      onDrop={e => onDrop(e, tag)}
     >
       <div className="task-app__tag-header-row">
         <h3 className="task-app__tag-header">#{tag}</h3>
-        <button 
+        <button
           className="task-app__sort-btn task-app__sort-btn--active"
           onClick={() => toggleSort(tag)}
           title={getSortTitle(sortDirections[tag] || 'desc')}
@@ -115,10 +115,10 @@ export function TaskLayout({
   // Helper function to get filtered tasks for a tag
   const getFilteredTagTasks = (tag: string, maxItems: number) => {
     let tagTasks = getTasksByTag(tasks, tag)
-    if (hasActiveFilters) {
+    if (hasActiveFilters && filters) {
       tagTasks = tagTasks.filter(t => {
         const taskTags = t.tag?.split(' ') || []
-        return filters!.some(f => taskTags.includes(f))
+        return filters.some(f => taskTags.includes(f))
       })
     }
     return tagTasks.slice(0, maxItems)
@@ -129,10 +129,10 @@ export function TaskLayout({
   // Apply multi-select filters to all tasks
   const hasActiveFilters = Array.isArray(filters) && filters.length > 0
   const filteredTasks = tasks.filter(t => {
-    if (!hasActiveFilters) return true
+    if (!hasActiveFilters || !filters) return true
     const taskTags = t.tag?.split(' ') || []
     // If any selected filter is present on the task, include it
-    return filters!.some(f => taskTags.includes(f))
+    return filters.some(f => taskTags.includes(f))
   })
 
   // Multiple tags: dynamic layout
@@ -141,15 +141,16 @@ export function TaskLayout({
   // Decide which top tags are visible. When a filter is active, only show
   // columns that have tasks matching the selected filters. This allows the
   // layout to collapse to a single column when filters reduce visible tags.
-  const visibleTopTags = hasActiveFilters
-    ? topTags.filter(tag => {
-        const tagTasks = getTasksByTag(tasks, tag)
-        return tagTasks.some(t => {
-          const taskTags = t.tag?.split(' ') || []
-          return filters!.some(f => taskTags.includes(f))
+  const visibleTopTags =
+    hasActiveFilters && filters
+      ? topTags.filter(tag => {
+          const tagTasks = getTasksByTag(tasks, tag)
+          return tagTasks.some(t => {
+            const taskTags = t.tag?.split(' ') || []
+            return filters.some(f => taskTags.includes(f))
+          })
         })
-      })
-    : topTags.slice(0, layoutConfig.useTags)
+      : topTags.slice(0, layoutConfig.useTags)
 
   // No tags: simple list (use visibleTopTags length so filters can collapse layout)
   if (visibleTopTags.length === 0) {
@@ -175,9 +176,9 @@ export function TaskLayout({
     )
   }
   const remainingTasks = getRemainingTasks(tasks, topTags, filters).filter(t => {
-    if (!hasActiveFilters) return true
+    if (!hasActiveFilters || !filters) return true
     const taskTags = t.tag?.split(' ') || []
-    return filters!.some(f => taskTags.includes(f))
+    return filters.some(f => taskTags.includes(f))
   })
 
   // Recalculate layout based on visible columns
@@ -188,26 +189,35 @@ export function TaskLayout({
       {visibleLayoutConfig.rows.length > 0 && (
         <>
           {visibleLayoutConfig.rows.map((row, rowIndex) => (
-            <div key={rowIndex} className={`task-app__tag-grid task-app__tag-grid--${row.columns}col`}>
+            <div
+              key={rowIndex}
+              className={`task-app__tag-grid task-app__tag-grid--${row.columns}col`}
+            >
               {row.tagIndices.map(tagIndex => {
                 const tag = visibleTopTags[tagIndex]
-                return tag ? renderTagColumn(tag, getFilteredTagTasks(tag, visibleLayoutConfig.maxPerColumn)) : null
+                return tag
+                  ? renderTagColumn(tag, getFilteredTagTasks(tag, visibleLayoutConfig.maxPerColumn))
+                  : null
               })}
             </div>
           ))}
         </>
       )}
-      
+
       {remainingTasks.length > 0 && (
         <div
           className={`task-app__remaining ${dragOverTag === 'other' ? 'task-app__tag-column--drag-over' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver(e as unknown as React.DragEvent, 'other') }}
-          onDragLeave={(e) => onDragLeave(e as unknown as React.DragEvent)}
-          onDrop={(e) => onDrop(e as unknown as React.DragEvent, 'other')}
+          onDragOver={e => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+            onDragOver(e as unknown as React.DragEvent, 'other')
+          }}
+          onDragLeave={e => onDragLeave(e as unknown as React.DragEvent)}
+          onDrop={e => onDrop(e as unknown as React.DragEvent, 'other')}
         >
           <div className="task-app__tag-header-row">
             <h3 className="task-app__remaining-header">Other Tasks</h3>
-            <button 
+            <button
               className="task-app__sort-btn task-app__sort-btn--active"
               onClick={() => toggleSort('other')}
               title={getSortTitle(sortDirections['other'] || 'desc')}

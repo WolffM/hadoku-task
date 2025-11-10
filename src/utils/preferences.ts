@@ -39,7 +39,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
  */
 export function cleanupOrphanedKeys(userType: string, sessionId: string): void {
   const currentVersion = window.localStorage.getItem(STORAGE_VERSION_KEY)
-  
+
   if (currentVersion !== STORAGE_VERSION) {
     logger.info('[Preferences] Storage version mismatch, cleaning up orphaned keys', {
       current: currentVersion,
@@ -76,9 +76,9 @@ export function migrateFromSessionStorage(
     const sessionComplete = sessionStorage.getItem('showCompleteButton')
     const sessionDelete = sessionStorage.getItem('showDeleteButton')
     const sessionTag = sessionStorage.getItem('showTagButton')
-    
+
     const migrations: Partial<UserPreferences> = {}
-    
+
     // Only migrate if localStorage doesn't have the value
     if (sessionTheme && !currentPreferences.theme) {
       migrations.theme = sessionTheme
@@ -92,9 +92,11 @@ export function migrateFromSessionStorage(
     if (sessionTag !== null && currentPreferences.showTagButton === undefined) {
       migrations.showTagButton = sessionTag === 'true'
     }
-    
+
     if (Object.keys(migrations).length > 0) {
-      logger.info('[Preferences] Migrating settings from sessionStorage to localStorage', { migrations })
+      logger.info('[Preferences] Migrating settings from sessionStorage to localStorage', {
+        migrations
+      })
 
       // Clean up old sessionStorage values
       sessionStorage.removeItem('theme')
@@ -107,7 +109,9 @@ export function migrateFromSessionStorage(
 
     return null
   } catch (error) {
-    logger.warn('[Preferences] Failed to migrate settings', { error: error instanceof Error ? error.message : String(error) })
+    logger.warn('[Preferences] Failed to migrate settings', {
+      error: error instanceof Error ? error.message : String(error)
+    })
     return null
   }
 }

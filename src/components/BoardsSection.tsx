@@ -24,6 +24,7 @@ export interface BoardsSectionProps {
   onCreateBoardClick: () => void
   onPendingOperation: (op: PendingTaskOperation | null) => void
   onInitialLoad: () => Promise<void>
+  onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
 }
 
 export function BoardsSection({
@@ -38,13 +39,15 @@ export function BoardsSection({
   onClearSelection,
   onCreateBoardClick,
   onPendingOperation,
-  onInitialLoad
+  onInitialLoad,
+  onShowToast
 }: BoardsSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
 
-  const boardsList = boards && boards.boards 
-    ? boards.boards.slice(0, MAX_BOARDS) 
-    : [{ id: 'main', name: 'main', tasks: [], tags: [] }]
+  const boardsList =
+    boards && boards.boards
+      ? boards.boards.slice(0, MAX_BOARDS)
+      : [{ id: 'main', name: 'main', tasks: [], tags: [] }]
 
   const canAddMoreBoards = !boards || (boards.boards && boards.boards.length < MAX_BOARDS)
 
@@ -62,8 +65,12 @@ export function BoardsSection({
     try {
       await Promise.race([onInitialLoad(), timeoutPromise])
       logger.info('[BoardsSection] Sync completed successfully')
+      onShowToast?.('Refresh successful', 'success')
     } catch (error) {
-      logger.error('[BoardsSection] Sync failed', { error: error instanceof Error ? error.message : String(error) })
+      logger.error('[BoardsSection] Sync failed', {
+        error: error instanceof Error ? error.message : String(error)
+      })
+      onShowToast?.('Refresh failed', 'error')
     } finally {
       setIsSyncing(false)
       button?.blur()
@@ -90,19 +97,19 @@ export function BoardsSection({
 
       <div className="task-app__board-actions">
         {canAddMoreBoards && (
-          <button 
+          <button
             className={`board-add-btn ${dragOverFilter === 'add-board' ? 'board-btn--drag-over' : ''}`}
             onClick={onCreateBoardClick}
-            onDragOver={(e) => {
+            onDragOver={e => {
               e.preventDefault()
               e.dataTransfer.dropEffect = 'move'
               onDragOverFilter('add-board')
             }}
             onDragLeave={() => onDragOverFilter(null)}
-            onDrop={(e) => {
+            onDrop={e => {
               e.preventDefault()
               onDragOverFilter(null)
-              
+
               const ids = getTaskIdsFromDragEvent(e.dataTransfer)
               if (ids.length > 0) {
                 onPendingOperation({ type: 'move-to-board', taskIds: ids })
@@ -110,9 +117,11 @@ export function BoardsSection({
               }
             }}
             aria-label="Create board"
-          >＋</button>
+          >
+            ＋
+          </button>
         )}
-        
+
         {userType !== 'public' && (
           <button
             className={`sync-btn ${isSyncing ? 'spinning' : ''}`}
@@ -121,7 +130,16 @@ export function BoardsSection({
             title="Sync from server"
             aria-label="Sync from server"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <polyline points="23 4 23 10 17 10"></polyline>
               <polyline points="1 20 1 14 7 14"></polyline>
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>

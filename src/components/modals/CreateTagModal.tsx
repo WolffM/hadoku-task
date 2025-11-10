@@ -57,10 +57,11 @@ export function CreateTagModal({
     >
       {pendingTaskOperation?.type === 'apply-tag' && pendingTaskOperation.taskIds.length > 0 && (
         <p className="modal-hint">
-          This tag will be applied to {pendingTaskOperation.taskIds.length} task{pendingTaskOperation.taskIds.length > 1 ? 's' : ''}
+          This tag will be applied to {pendingTaskOperation.taskIds.length} task
+          {pendingTaskOperation.taskIds.length > 1 ? 's' : ''}
         </p>
       )}
-      
+
       {existingTags.length > 0 && (
         <div className="modal-section">
           <label className="modal-label">Existing tags:</label>

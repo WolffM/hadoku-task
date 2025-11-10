@@ -22,7 +22,7 @@ export interface EditTagModalProps {
 
 export function EditTagModal({
   isOpen,
-  taskId,
+  taskId: _taskId,
   currentTag,
   editTagInput,
   boards,
@@ -81,7 +81,7 @@ export function EditTagModal({
             type="text"
             className="edit-tag-input"
             value={editTagInput}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={e => onInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter a tag"
             autoFocus

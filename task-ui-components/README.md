@@ -34,7 +34,7 @@ function App() {
       themeFamilies={THEME_FAMILIES}
       currentTheme={theme}
       onThemeChange={setTheme}
-      getThemeIcon={(theme) => {
+      getThemeIcon={theme => {
         const Icon = THEME_ICON_MAP[theme]
         return Icon ? <Icon /> : null
       }}
@@ -80,7 +80,7 @@ const THEME_FAMILIES = [
     darkTheme: 'dark',
     lightLabel: 'Light',
     darkLabel: 'Dark'
-  },
+  }
   // ... more themes
 ]
 
@@ -346,20 +346,22 @@ logger.info('[Auth] User logged in')
 
 ### Behavior
 
-| Mode | Development | Production (Admin) | Production (User) |
-|------|-------------|-------------------|------------------|
-| `logger.info()` | ✅ | ✅ | ❌ |
-| `logger.debug()` | ✅ | ✅ | ❌ |
-| `logger.component()` | ✅ | ✅ | ❌ |
-| `logger.theme()` | ✅ | ✅ | ❌ |
-| `logger.warn()` | ✅ | ✅ | ✅ |
-| `logger.error()` | ✅ | ✅ | ✅ |
+| Mode                 | Development | Production (Admin) | Production (User) |
+| -------------------- | ----------- | ------------------ | ----------------- |
+| `logger.info()`      | ✅          | ✅                 | ❌                |
+| `logger.debug()`     | ✅          | ✅                 | ❌                |
+| `logger.component()` | ✅          | ✅                 | ❌                |
+| `logger.theme()`     | ✅          | ✅                 | ❌                |
+| `logger.warn()`      | ✅          | ✅                 | ✅                |
+| `logger.error()`     | ✅          | ✅                 | ✅                |
 
 **Development Detection:**
+
 - Automatically enabled on `localhost` or `127.0.0.1`
 - Or when `import.meta.env.DEV` is true
 
 **Admin Mode:**
+
 - Call `logger.setAdminStatus(true)` after authentication
 - Enables all logs in production for debugging
 - Useful for troubleshooting production issues
@@ -368,27 +370,27 @@ logger.info('[Auth] User logged in')
 
 ### ThemePicker
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `currentTheme` | `string` | ✅ | Currently active theme name |
-| `isOpen` | `boolean` | ✅ | Whether the picker dropdown is visible |
-| `themeFamilies` | `ThemeFamily[]` | ✅ | Array of theme families to display |
-| `onThemeChange` | `(theme: string) => void` | ✅ | Callback when theme is selected |
-| `onToggle` | `() => void` | ✅ | Callback to toggle picker visibility |
-| `onSettingsClick` | `() => void` | ❌ | Optional callback for settings button |
-| `getThemeIcon` | `(theme: string) => ReactNode` | ❌ | Optional function to get icon for current theme |
-| `className` | `string` | ❌ | Optional CSS class for container |
+| Prop              | Type                           | Required | Description                                     |
+| ----------------- | ------------------------------ | -------- | ----------------------------------------------- |
+| `currentTheme`    | `string`                       | ✅       | Currently active theme name                     |
+| `isOpen`          | `boolean`                      | ✅       | Whether the picker dropdown is visible          |
+| `themeFamilies`   | `ThemeFamily[]`                | ✅       | Array of theme families to display              |
+| `onThemeChange`   | `(theme: string) => void`      | ✅       | Callback when theme is selected                 |
+| `onToggle`        | `() => void`                   | ✅       | Callback to toggle picker visibility            |
+| `onSettingsClick` | `() => void`                   | ❌       | Optional callback for settings button           |
+| `getThemeIcon`    | `(theme: string) => ReactNode` | ❌       | Optional function to get icon for current theme |
+| `className`       | `string`                       | ❌       | Optional CSS class for container                |
 
 ### ThemeFamily
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `lightIcon` | `ReactNode` | ❌ | Icon for light variant (auto-fallback if omitted) |
-| `darkIcon` | `ReactNode` | ❌ | Icon for dark variant (auto-fallback if omitted) |
-| `lightTheme` | `string` | ✅ | Theme name for light variant |
-| `darkTheme` | `string` | ✅ | Theme name for dark variant |
-| `lightLabel` | `string` | ✅ | Label for light variant (tooltip) |
-| `darkLabel` | `string` | ✅ | Label for dark variant (tooltip) |
+| Prop         | Type        | Required | Description                                       |
+| ------------ | ----------- | -------- | ------------------------------------------------- |
+| `lightIcon`  | `ReactNode` | ❌       | Icon for light variant (auto-fallback if omitted) |
+| `darkIcon`   | `ReactNode` | ❌       | Icon for dark variant (auto-fallback if omitted)  |
+| `lightTheme` | `string`    | ✅       | Theme name for light variant                      |
+| `darkTheme`  | `string`    | ✅       | Theme name for dark variant                       |
+| `lightLabel` | `string`    | ✅       | Label for light variant (tooltip)                 |
+| `darkLabel`  | `string`    | ✅       | Label for dark variant (tooltip)                  |
 
 ## License
 

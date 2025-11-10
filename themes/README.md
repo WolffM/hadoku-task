@@ -55,11 +55,11 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 ```html
 <!-- Set globally on html element -->
 <html data-theme="dark">
-
-<!-- Or on a specific container -->
-<div data-theme="strawberry-light">
-  <!-- Your content -->
-</div>
+  <!-- Or on a specific container -->
+  <div data-theme="strawberry-light">
+    <!-- Your content -->
+  </div>
+</html>
 ```
 
 ## CSS Variables
@@ -67,6 +67,7 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 Each theme defines ~50 variables:
 
 ### Colors
+
 - `--color-primary` (+ dark, light, bg, hover variants)
 - `--color-success` (+ dark, text variants)
 - `--color-danger` (+ dark, darker, light, text variants)
@@ -76,19 +77,23 @@ Each theme defines ~50 variables:
 - `--color-bg` (+ card, alt, overlay variants)
 
 ### Typography
+
 - `--font-family`
 - `--font-size-*` (xs, sm, md, base, lg)
 - `--font-weight-*` (normal, semibold, bold)
 - `--line-height-*` (normal, relaxed)
 
 ### Spacing
+
 - `--spacing-*` (xs, sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl)
 
 ### Layout
+
 - `--border-radius` (+ sm, lg variants)
 - `--shadow-*` (sm, md, modal, focus, focus-sm, focus-alt)
 
 ### Transitions
+
 - `--transition-fast`
 - `--transition-smooth`
 
@@ -129,7 +134,7 @@ function App() {
       themeFamilies={THEME_FAMILIES}
       currentTheme={theme}
       onThemeChange={setTheme}
-      getThemeIcon={(theme) => {
+      getThemeIcon={theme => {
         const Icon = THEME_ICON_MAP[theme]
         return Icon ? <Icon /> : null
       }}
@@ -159,8 +164,12 @@ function App() {
   }
 
   return (
-    <select value={theme} onChange={(e) => handleThemeChange(e.target.value as Theme)}>
-      {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
+    <select value={theme} onChange={e => handleThemeChange(e.target.value as Theme)}>
+      {THEMES.map(t => (
+        <option key={t} value={t}>
+          {t}
+        </option>
+      ))}
     </select>
   )
 }
@@ -169,6 +178,7 @@ function App() {
 ## Framework Examples
 
 ### Vue
+
 ```vue
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
@@ -195,6 +205,7 @@ const handleThemeChange = (newTheme: Theme) => {
 ```
 
 ### Vanilla JS
+
 ```javascript
 import { loadTheme, setTheme, THEMES } from '@wolffm/themes'
 import '@wolffm/themes/themes.css'
@@ -202,7 +213,7 @@ import '@wolffm/themes/themes.css'
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', () => {
   loadTheme()
-  
+
   // Theme switcher
   const select = document.getElementById('theme-select')
   THEMES.forEach(theme => {
@@ -211,8 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
     option.textContent = theme
     select.appendChild(option)
   })
-  
-  select.addEventListener('change', (e) => {
+
+  select.addEventListener('change', e => {
     setTheme(e.target.value)
   })
 })
@@ -223,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
 ### React Utilities (New in v1.1.3+)
 
 #### `useTheme(): { theme: Theme, setTheme: (theme: Theme) => void }`
+
 React hook for stateful theme management. Automatically saves to sessionStorage and syncs across tabs.
 
 ```tsx
@@ -230,6 +242,7 @@ const { theme, setTheme } = useTheme()
 ```
 
 #### `THEME_FAMILIES: ThemeFamily[]`
+
 Pre-configured array of all 9 theme families with icons and labels. Use with `ThemePicker` or `ConnectedThemePicker` components from `@wolffm/task-ui-components`.
 
 ```tsx
@@ -238,6 +251,7 @@ import { THEME_FAMILIES } from '@wolffm/themes'
 ```
 
 #### `THEME_ICON_MAP: Record<Theme, IconComponent>`
+
 Map of theme names to their corresponding icon components.
 
 ```tsx
@@ -248,27 +262,33 @@ const Icon = THEME_ICON_MAP['cyberpunk-dark']
 ### Core Functions
 
 #### `setTheme(theme: Theme): void`
+
 Apply a theme immediately. Sets `data-theme` attribute on `<html>` element.
 
 #### `getTheme(): Theme`
+
 Get the currently active theme.
 
 #### `saveTheme(theme: Theme): void`
+
 Save theme to sessionStorage and apply it.
 
 #### `loadTheme(): Theme`
+
 Load saved theme from sessionStorage, apply it, and return the theme name. Respects browser's `prefers-color-scheme` preference if no saved theme. Returns 'light' if no preference.
 
 #### `initTheme(): Theme`
+
 Convenience function. Same as `loadTheme()`.
 
 #### `clearTheme(): void`
+
 Remove saved theme and reset to 'light'.
 
 ### Types
 
 ```typescript
-type Theme = 
+type Theme =
   | 'light'
   | 'dark'
   | 'strawberry-light'
@@ -290,6 +310,7 @@ const THEMES: readonly Theme[]
 ## Browser Support
 
 Works in all modern browsers that support:
+
 - CSS Custom Properties (CSS Variables)
 - ES2022 modules
 - sessionStorage

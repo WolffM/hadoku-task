@@ -1,4 +1,4 @@
-import type { TasksFile, StatsFile, BoardsFile, Task } from '../domain/types'
+import type { TasksFile, BoardsFile, Task } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 import { logger } from '@wolffm/task-ui-components'
 
@@ -9,11 +9,16 @@ type TaskPatch = Partial<Omit<Task, 'id' | 'createdAt'>>
  * Sync API boards data to localStorage
  * Updates localStorage to match server state for offline access and cross-tab consistency
  */
-async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalStorageApi>, apiData: BoardsFile, userType: string, sessionId: string) {
+async function syncBoardsToLocalStorage(
+  localApi: ReturnType<typeof createLocalStorageApi>,
+  apiData: BoardsFile,
+  userType: string,
+  sessionId: string
+) {
   // For each board in API response, update localStorage
   for (const board of apiData.boards || []) {
     const boardId = board.id
-    
+
     // Update tasks for this board
     if (board.tasks && board.tasks.length > 0) {
       const tasksKey = `${userType}-${sessionId}-${boardId}-tasks`
@@ -24,14 +29,14 @@ async function syncBoardsToLocalStorage(localApi: ReturnType<typeof createLocalS
       }
       window.localStorage.setItem(tasksKey, JSON.stringify(tasksFile))
     }
-    
+
     // Update stats for this board if present
     if (board.stats) {
       const statsKey = `${userType}-${sessionId}-${boardId}-stats`
       window.localStorage.setItem(statsKey, JSON.stringify(board.stats))
     }
   }
-  
+
   // Update boards index
   const boardsKey = `${userType}-${sessionId}-boards`
   const boardsIndex = {
@@ -66,28 +71,34 @@ function adminHeaders(userType: string, sessionId?: string) {
  * - "public" is localStorage-only, no server sync
  * - All other user types (friend, admin, custom names) sync to server in background
  */
-export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', sessionId: string = 'public') {
+export function createApi(
+  userType: 'public' | 'friend' | 'admin' = 'public',
+  sessionId: string = 'public'
+) {
   const localStorage = createLocalStorageApi(userType, sessionId)
-  
+
   // Public mode: localStorage only, no server sync
   if (userType === 'public') {
     return localStorage
   }
-  
+
   // All other modes: Optimistic localStorage with explicit API sync on initial load only
   return {
     // Get boards - returns localStorage immediately (optimistic)
     async getBoards(): Promise<BoardsFile> {
       return await localStorage.getBoards()
     },
-    
+
     // Sync from API - called once on initial page load to get server state
     async syncFromApi(): Promise<void> {
       try {
         logger.info('[api] Syncing from API...')
-        const response = await fetch(`/task/api/boards?userType=${userType}&sessionId=${encodeURIComponent(sessionId)}`, {
-          headers: adminHeaders(userType, sessionId)
-        })
+        const response = await fetch(
+          `/task/api/boards?userType=${userType}&sessionId=${encodeURIComponent(sessionId)}`,
+          {
+            headers: adminHeaders(userType, sessionId)
+          }
+        )
 
         if (!response.ok) {
           throw new Error(`API returned ${response.status}`)
@@ -101,25 +112,34 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
           return
         }
 
-        logger.info('[api] Synced from API', { boards: apiData.boards.length, totalTasks: apiData.boards.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) })
+        logger.info('[api] Synced from API', {
+          boards: apiData.boards.length,
+          totalTasks: apiData.boards.reduce((sum, b) => sum + (b.tasks?.length || 0), 0)
+        })
 
         // Update localStorage with server state
         await syncBoardsToLocalStorage(localStorage, apiData, userType, sessionId)
       } catch (error) {
-        logger.error('[api] Sync from API failed', { error: error instanceof Error ? error.message : String(error) })
+        logger.error('[api] Sync from API failed', {
+          error: error instanceof Error ? error.message : String(error)
+        })
       }
     },
-    
-    async createTask(data: { title: string; tag?: string; id?: string; createdAt?: string }, boardId: string = 'main', suppressBroadcast: boolean = false) {
+
+    async createTask(
+      data: { title: string; tag?: string; id?: string; createdAt?: string },
+      boardId: string = 'main',
+      suppressBroadcast: boolean = false
+    ) {
       // Create task optimistically with client-generated ID (or use provided ID for moves)
       const localTask = await localStorage.createTask(data, boardId, suppressBroadcast)
-      
+
       // Send task to server WITH the client-generated ID so server uses same ID
       fetch('/task/api', {
         method: 'POST',
         headers: adminHeaders(userType, sessionId),
         body: JSON.stringify({
-          id: data.id || localTask.id,  // Use provided ID (for moves) or client-generated ID
+          id: data.id || localTask.id, // Use provided ID (for moves) or client-generated ID
           ...data,
           boardId
         })
@@ -130,11 +150,18 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
             if (serverResponse.id === localTask.id) {
               logger.info('[api] Background sync: createTask completed (ID matched)')
             } else {
-              logger.warn('[api] Server returned different ID (unexpected)', { client: localTask.id, server: serverResponse.id })
+              logger.warn('[api] Server returned different ID (unexpected)', {
+                client: localTask.id,
+                server: serverResponse.id
+              })
             }
           }
         })
-        .catch(err => logger.error('[api] Failed to sync createTask', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync createTask', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
 
       return localTask
     },
@@ -147,7 +174,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => logger.info('[api] Background sync: createTag completed'))
-        .catch(err => logger.error('[api] Failed to sync createTag', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync createTag', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
     async deleteTag(tag: string, boardId: string = 'main') {
@@ -159,11 +190,20 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ boardId, tag })
       })
         .then(() => logger.info('[api] Background sync: deleteTag completed'))
-        .catch(err => logger.error('[api] Failed to sync deleteTag', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync deleteTag', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
-    
-    async patchTask(id: string, patch: TaskPatch, boardId: string = 'main', suppressBroadcast: boolean = false) {
+
+    async patchTask(
+      id: string,
+      patch: TaskPatch,
+      boardId: string = 'main',
+      suppressBroadcast: boolean = false
+    ) {
       const result = await localStorage.patchTask(id, patch, boardId, suppressBroadcast)
       // Background server sync
       fetch(`/task/api/${id}`, {
@@ -172,7 +212,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ ...patch, boardId })
       })
         .then(() => logger.info('[api] Background sync: patchTask completed'))
-        .catch(err => logger.error('[api] Failed to sync patchTask', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync patchTask', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
 
@@ -188,7 +232,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
           if (!r.ok) throw new Error(`HTTP ${r.status}`)
           logger.info('[api] Background sync: completeTask completed')
         })
-        .catch(err => logger.error('[api] Failed to sync completeTask', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync completeTask', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
 
@@ -204,7 +252,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
           if (!r.ok) throw new Error(`HTTP ${r.status}`)
           logger.info('[api] Background sync: deleteTask completed')
         })
-        .catch(err => logger.error('[api] Failed to sync deleteTask', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync deleteTask', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
     },
 
     // Board operations
@@ -217,7 +269,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ id: boardId, name: boardId })
       })
         .then(() => logger.info('[api] Background sync: createBoard completed'))
-        .catch(err => logger.error('[api] Failed to sync createBoard', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync createBoard', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
 
@@ -229,7 +285,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         headers: adminHeaders(userType, sessionId)
       })
         .then(() => logger.info('[api] Background sync: deleteBoard completed'))
-        .catch(err => logger.error('[api] Failed to sync deleteBoard', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync deleteBoard', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
       return result
     },
 
@@ -249,7 +309,9 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
             return serverPrefs
           }
         } catch (err) {
-          logger.warn('[api] Failed to fetch preferences from server, using localStorage', { error: err instanceof Error ? err.message : String(err) })
+          logger.warn('[api] Failed to fetch preferences from server, using localStorage', {
+            error: err instanceof Error ? err.message : String(err)
+          })
         }
       }
 
@@ -269,7 +331,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
           body: JSON.stringify(prefs)
         })
           .then(() => logger.info('[api] Background sync: savePreferences completed'))
-          .catch(err => logger.error('[api] Failed to sync savePreferences', { error: err instanceof Error ? err.message : String(err) }))
+          .catch(err =>
+            logger.error('[api] Failed to sync savePreferences', {
+              error: err instanceof Error ? err.message : String(err)
+            })
+          )
       }
     },
 
@@ -285,7 +351,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ boardId, updates })
       })
         .then(() => logger.info('[api] Background sync: batchUpdateTags completed'))
-        .catch(err => logger.error('[api] Failed to sync batchUpdateTags', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync batchUpdateTags', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
     },
 
     async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]) {
@@ -299,7 +369,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
       })
         .then(() => logger.info('[api] Background sync: batchMoveTasks completed'))
-        .catch(err => logger.error('[api] Failed to sync batchMoveTasks', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync batchMoveTasks', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
 
       return result
     },
@@ -315,7 +389,11 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         body: JSON.stringify({ boardId, tag, taskIds })
       })
         .then(() => logger.info('[api] Background sync: batchClearTag completed'))
-        .catch(err => logger.error('[api] Failed to sync batchClearTag', { error: err instanceof Error ? err.message : String(err) }))
+        .catch(err =>
+          logger.error('[api] Failed to sync batchClearTag', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        )
     },
 
     // User Management
@@ -330,7 +408,9 @@ export function createApi(userType: 'public' | 'friend' | 'admin' = 'public', se
         })
         return response.ok
       } catch (err) {
-        logger.error('[api] Failed to validate key', { error: err instanceof Error ? err.message : String(err) })
+        logger.error('[api] Failed to validate key', {
+          error: err instanceof Error ? err.message : String(err)
+        })
         return false
       }
     }

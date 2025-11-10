@@ -16,14 +16,7 @@ export interface TagContextMenuProps {
   onDeleteTag: (tag: string) => Promise<void>
 }
 
-export function TagContextMenu({
-  isOpen,
-  tag,
-  x,
-  y,
-  onClose,
-  onDeleteTag
-}: TagContextMenuProps) {
+export function TagContextMenu({ isOpen, tag, x, y, onClose, onDeleteTag }: TagContextMenuProps) {
   const handleDelete = async () => {
     logger.info('[TagContextMenu] Delete Tag clicked', { tag })
     if (!tag) {
@@ -37,7 +30,10 @@ export function TagContextMenu({
       logger.info('[TagContextMenu] deleteTag completed successfully', { tag })
       onClose()
     } catch (err) {
-      logger.error('[TagContextMenu] Failed to delete tag', { error: err instanceof Error ? err.message : String(err), tag })
+      logger.error('[TagContextMenu] Failed to delete tag', {
+        error: err instanceof Error ? err.message : String(err),
+        tag
+      })
       alert((err as Error).message || 'Failed to delete tag')
     }
   }

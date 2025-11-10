@@ -6,7 +6,11 @@
 import { useState, useEffect } from 'react'
 import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
-import { DEFAULT_PREFERENCES, cleanupOrphanedKeys, migrateFromSessionStorage } from '../utils/preferences'
+import {
+  DEFAULT_PREFERENCES,
+  cleanupOrphanedKeys,
+  migrateFromSessionStorage
+} from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface UsePreferencesReturn {
@@ -21,7 +25,7 @@ export interface UsePreferencesReturn {
 /**
  * Hook to manage user preferences
  * Handles loading, saving, migrations, and storage cleanup
- * 
+ *
  * NOTE: Initial loading is now handled by App.tsx via session handshake.
  * This hook maintains preferences state and provides save functionality.
  */
@@ -39,7 +43,7 @@ export function usePreferences(
       // Don't auto-set to true - let the caller control this
       return
     }
-    
+
     const loadPreferences = async () => {
       // Clean up any orphaned keys from schema changes
       cleanupOrphanedKeys(userType, sessionId)
@@ -63,10 +67,10 @@ export function usePreferences(
           logger.info('[usePreferences] Applied preferences to state')
         }
       }
-      
+
       setPreferencesLoaded(true)
     }
-    
+
     void loadPreferences()
   }, [userType, sessionId, skipInitialLoad])
 
@@ -74,7 +78,7 @@ export function usePreferences(
   const savePreferences = async (updates: Partial<UserPreferences>) => {
     const newPrefs = { ...preferences, ...updates, updatedAt: new Date().toISOString() }
     setPreferences(newPrefs)
-    
+
     const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
     await api.savePreferences(newPrefs)
   }

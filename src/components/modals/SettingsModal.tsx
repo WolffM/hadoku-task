@@ -17,6 +17,7 @@ export interface SettingsModalProps {
   onClose: () => void
   onSavePreferences: (updates: Partial<UserPreferences>) => Promise<void>
   onValidateKey: (key: string) => Promise<boolean>
+  onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
 }
 
 export function SettingsModal({
@@ -27,7 +28,8 @@ export function SettingsModal({
   showTagButton,
   onClose,
   onSavePreferences,
-  onValidateKey
+  onValidateKey,
+  onShowToast
 }: SettingsModalProps) {
   const [newKey, setNewKey] = useState('')
   const [keyValidationError, setKeyValidationError] = useState<string | null>(null)
@@ -35,14 +37,18 @@ export function SettingsModal({
 
   const handleKeyChange = async () => {
     if (!newKey.trim() || isValidatingKey) return
-    
+
     setIsValidatingKey(true)
     setKeyValidationError(null)
-    
+
+    // Show toast that key is being validated
+    onShowToast?.('Validating access key...', 'info')
+
     const result = await validateAndChangeKey(newKey, onValidateKey)
-    
+
     if (!result.success) {
       setKeyValidationError(result.error || 'Failed to validate key')
+      onShowToast?.(result.error || 'Invalid access key', 'error')
       setIsValidatingKey(false)
     }
     // If successful, page will redirect
@@ -70,11 +76,11 @@ export function SettingsModal({
               autoComplete="key"
               className="settings-text-input"
               value={newKey}
-              onChange={(e) => {
+              onChange={e => {
                 setNewKey(e.target.value)
                 setKeyValidationError(null)
               }}
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter' && newKey && !isValidatingKey) {
                   handleKeyChange()
                 }
@@ -83,40 +89,36 @@ export function SettingsModal({
               disabled={isValidatingKey}
             />
             {newKey && (
-              <button 
+              <button
                 className="settings-field-button"
                 onClick={handleKeyChange}
                 disabled={isValidatingKey}
               >
-                {isValidatingKey ? (
-                  <span className="spinner"></span>
-                ) : (
-                  '↵'
-                )}
+                {isValidatingKey ? <span className="spinner"></span> : '↵'}
               </button>
             )}
           </div>
-          {keyValidationError && (
-            <span className="settings-error">{keyValidationError}</span>
-          )}
+          {keyValidationError && <span className="settings-error">{keyValidationError}</span>}
         </div>
       </div>
 
       {/* Preferences Section */}
       <div className="settings-section">
         <h4 className="settings-section-title">Preferences</h4>
-        
+
         <label className="settings-option">
           <input
             type="checkbox"
             checked={preferences.experimentalThemes || false}
-            onChange={(e) => {
+            onChange={e => {
               onSavePreferences({ experimentalThemes: e.target.checked })
             }}
           />
           <span className="settings-label">
             <strong>Experimental Themes</strong>
-            <span className="settings-description">Enable access to experimental theme options</span>
+            <span className="settings-description">
+              Enable access to experimental theme options
+            </span>
           </span>
         </label>
 
@@ -124,13 +126,15 @@ export function SettingsModal({
           <input
             type="checkbox"
             checked={preferences.alwaysVerticalLayout || false}
-            onChange={(e) => {
+            onChange={e => {
               onSavePreferences({ alwaysVerticalLayout: e.target.checked })
             }}
           />
           <span className="settings-label">
             <strong>Always Use Vertical Layout</strong>
-            <span className="settings-description">Use mobile-style vertical task layout on all devices</span>
+            <span className="settings-description">
+              Use mobile-style vertical task layout on all devices
+            </span>
           </span>
         </label>
 
@@ -138,13 +142,15 @@ export function SettingsModal({
           <input
             type="checkbox"
             checked={!showCompleteButton}
-            onChange={(e) => {
+            onChange={e => {
               onSavePreferences({ showCompleteButton: !e.target.checked })
             }}
           />
           <span className="settings-label">
             <strong>Disable Complete Button</strong>
-            <span className="settings-description">Hide the checkmark (✓) button on task items</span>
+            <span className="settings-description">
+              Hide the checkmark (✓) button on task items
+            </span>
           </span>
         </label>
 
@@ -152,7 +158,7 @@ export function SettingsModal({
           <input
             type="checkbox"
             checked={!showDeleteButton}
-            onChange={(e) => {
+            onChange={e => {
               onSavePreferences({ showDeleteButton: !e.target.checked })
             }}
           />
@@ -166,7 +172,7 @@ export function SettingsModal({
           <input
             type="checkbox"
             checked={showTagButton}
-            onChange={(e) => {
+            onChange={e => {
               onSavePreferences({ showTagButton: e.target.checked })
             }}
           />

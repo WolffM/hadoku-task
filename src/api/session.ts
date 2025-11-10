@@ -24,15 +24,15 @@ export function storeSessionId(sessionId: string): void {
 /**
  * Perform session handshake with server
  * Sends old and new sessionIds, receives preferences for the new session
- * 
+ *
  * For public users: skips handshake, maintains stable sessionId in localStorage
  */
 export async function performSessionHandshake(
   newSessionId: string,
   userType: string
-): Promise<any> {
+): Promise<null> {
   const oldSessionId = getStoredSessionId()
-  
+
   // Public users: don't perform handshake, use stable localStorage-based sessionId
   if (userType === 'public') {
     // If we have a stored sessionId, keep using it (stable across reloads)
@@ -50,11 +50,11 @@ export async function performSessionHandshake(
 
   // Authenticated users: perform handshake with server
   logger.info('[Session] Performing handshake...', { oldSessionId, newSessionId, userType })
-  
+
   try {
     const response = await fetch(`/task/api/session/handshake`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-User-Type': userType,
         'X-Session-Id': newSessionId
@@ -64,11 +64,11 @@ export async function performSessionHandshake(
         newSessionId
       })
     })
-    
+
     if (!response.ok) {
       throw new Error(`Handshake failed: ${response.status}`)
     }
-    
+
     const data = await response.json()
     logger.info('[Session] Handshake successful', { data })
 
@@ -77,7 +77,9 @@ export async function performSessionHandshake(
 
     return data.preferences
   } catch (error) {
-    logger.error('[Session] Handshake failed', { error: error instanceof Error ? error.message : String(error) })
+    logger.error('[Session] Handshake failed', {
+      error: error instanceof Error ? error.message : String(error)
+    })
     // Store the new sessionId anyway
     storeSessionId(newSessionId)
     // Return null to indicate no preferences available
@@ -90,9 +92,9 @@ export async function performSessionHandshake(
  */
 export function clearOldSessionStorage(oldSessionId: string, userType: string): void {
   if (!oldSessionId) return
-  
+
   const keysToRemove: string[] = []
-  
+
   // Find all keys matching the old session pattern
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
@@ -100,7 +102,7 @@ export function clearOldSessionStorage(oldSessionId: string, userType: string): 
       keysToRemove.push(key)
     }
   }
-  
+
   logger.info('[Session] Clearing old storage keys', { count: keysToRemove.length })
 
   // Remove them

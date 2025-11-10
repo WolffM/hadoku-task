@@ -13,7 +13,7 @@ const iconProps = {
   stroke: 'currentColor',
   strokeWidth: 2,
   strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
+  strokeLinejoin: 'round' as const
 }
 
 export const SunIcon = () => (
@@ -39,7 +39,10 @@ export const MoonIcon = () => (
 export const StrawberryIcon = () => (
   <svg {...iconProps}>
     {/* Heart-shaped body with sharp bottom tip */}
-    <path d="M12 21 C12 21 6.5 15 6.5 11 C6.5 8.5 8 7 10 7 C11 7 12 7.5 12 7.5 C12 7.5 13 7 14 7 C16 7 17.5 8.5 17.5 11 C17.5 15 12 21 12 21 Z" fill="currentColor" />
+    <path
+      d="M12 21 C12 21 6.5 15 6.5 11 C6.5 8.5 8 7 10 7 C11 7 12 7.5 12 7.5 C12 7.5 13 7 14 7 C16 7 17.5 8.5 17.5 11 C17.5 15 12 21 12 21 Z"
+      fill="currentColor"
+    />
     {/* Leaves on top */}
     <path d="M9.5 7.5 L9 5 L11 5.5 Z" fill="currentColor" />
     <path d="M14.5 7.5 L15 5 L13 5.5 Z" fill="currentColor" />
@@ -94,15 +97,26 @@ export const FlowerIcon = () => (
 export const HeartIcon = () => (
   <svg {...iconProps}>
     {/* Heart shape */}
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor" />
+    <path
+      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+      fill="currentColor"
+    />
   </svg>
 )
 
 export const LeafIcon = () => (
   <svg {...iconProps}>
     {/* Leaf shape with vein */}
-    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" fill="currentColor" />
-    <path d="M2 21c0-3 1.85-5.36 5.08-6C9 14.5 11 14 11 20" stroke="currentColor" strokeWidth="2" fill="none" />
+    <path
+      d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"
+      fill="currentColor"
+    />
+    <path
+      d="M2 21c0-3 1.85-5.36 5.08-6C9 14.5 11 14 11 20"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+    />
     {/* Leaf vein */}
     <path d="M11 8c3 2 5 4 7 7" stroke="white" strokeWidth="1.5" opacity="0.4" />
   </svg>
@@ -114,7 +128,14 @@ export const SettingsIcon = () => (
     <rect x="11" y="1" width="2" height="3" fill="currentColor" />
     <rect x="16.5" y="3.5" width="3" height="2" fill="currentColor" transform="rotate(45 18 4.5)" />
     <rect x="19" y="11" width="3" height="2" fill="currentColor" />
-    <rect x="16.5" y="18.5" width="3" height="2" fill="currentColor" transform="rotate(-45 18 19.5)" />
+    <rect
+      x="16.5"
+      y="18.5"
+      width="3"
+      height="2"
+      fill="currentColor"
+      transform="rotate(-45 18 19.5)"
+    />
     <rect x="11" y="20" width="2" height="3" fill="currentColor" />
     <rect x="4.5" y="18.5" width="3" height="2" fill="currentColor" transform="rotate(45 6 19.5)" />
     <rect x="2" y="11" width="3" height="2" fill="currentColor" />
@@ -131,10 +152,7 @@ export const SettingsIcon = () => (
 export const TagIcon = () => (
   <svg {...iconProps} width={16} height={16} viewBox="0 0 20 20">
     {/* Tag body - rectangular shape pointing right */}
-    <path
-      d="M2 4 L12 4 L16 10 L12 16 L2 16 Z"
-      fill="currentColor"
-    />
+    <path d="M2 4 L12 4 L16 10 L12 16 L2 16 Z" fill="currentColor" />
     {/* Hole in tag */}
     <circle cx="6" cy="10" r="1.5" fill="white" />
   </svg>
@@ -143,11 +161,34 @@ export const TagIcon = () => (
 export const SpaIcon = () => (
   <svg {...iconProps}>
     {/* Steam wisps */}
-    <path d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-    <path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-    <path d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
+    <path
+      d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.6"
+    />
+    <path
+      d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.6"
+    />
+    <path
+      d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      opacity="0.6"
+    />
     {/* Hot spring bowl */}
-    <path d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z" fill="none" stroke="currentColor" strokeWidth="2" />
+    <path
+      d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
     <ellipse cx="8" cy="14" rx="4" ry="1.5" fill="currentColor" opacity="0.3" />
     {/* Stones */}
     <circle cx="17" cy="18" r="2" fill="currentColor" opacity="0.4" />
@@ -220,7 +261,7 @@ export const FALLBACK_ICONS = [
   StarIcon,
   HexagonIcon,
   PentagonIcon,
-  OctagonIcon,
+  OctagonIcon
 ] as const
 
 /**

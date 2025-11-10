@@ -39,30 +39,34 @@ export function BoardButton({
     <button
       className={`board-btn ${isActive ? 'board-btn--active' : ''} ${isDragOver ? 'board-btn--drag-over' : ''}`}
       onClick={() => onSwitch(board.id)}
-      onContextMenu={(e) => {
+      onContextMenu={e => {
         e.preventDefault()
         if (isMainBoard) return // Don't allow deleting main board
         onContextMenu(board.id, e.clientX, e.clientY)
       }}
       {...(isMainBoard ? {} : longPressHandlers)}
       aria-pressed={isActive ? 'true' : 'false'}
-      onDragOver={(e) => {
+      onDragOver={e => {
         // Indicate this board can accept drops
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         onDragOverFilter(`board:${board.id}`)
       }}
-      onDragLeave={(e) => {
+      onDragLeave={_e => {
         onDragOverFilter(null)
       }}
-      onDrop={async (e) => {
+      onDrop={async e => {
         e.preventDefault()
         onDragOverFilter(null)
         const ids = getTaskIdsFromDragEvent(e.dataTransfer)
         if (ids.length === 0) return
         try {
           await onMoveTasksToBoard(board.id, ids)
-          try { onClearSelection() } catch {}
+          try {
+            onClearSelection()
+          } catch {
+            // Ignore selection clear errors
+          }
         } catch (err) {
           logger.error('[BoardButton] Failed moving tasks to board', {
             error: err instanceof Error ? err.message : String(err),

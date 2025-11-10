@@ -24,7 +24,7 @@ Create `src/styles/themes-only.css`:
 }
 
 /* Dark Theme */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --color-primary: #3b82f6;
   /* ... all variables ... */
 }
@@ -38,11 +38,16 @@ Create `src/theme/index.ts`:
 
 ```typescript
 export const THEMES = [
-  'light', 'dark', 'strawberry', 'ocean', 
-  'cyberpunk', 'coffee', 'lavender'
+  'light',
+  'dark',
+  'strawberry',
+  'ocean',
+  'cyberpunk',
+  'coffee',
+  'lavender'
 ] as const
 
-export type Theme = typeof THEMES[number]
+export type Theme = (typeof THEMES)[number]
 
 export function setTheme(theme: Theme) {
   if (theme === 'light') {
@@ -105,7 +110,7 @@ export default defineConfig({
         themes: 'src/styles/themes-only.css'
       },
       output: {
-        assetFileNames: (assetInfo) => {
+        assetFileNames: assetInfo => {
           if (assetInfo.name === 'themes-only.css') {
             return 'themes-only.css'
           }
@@ -123,10 +128,7 @@ In `tsconfig.json`, ensure theme utilities are included:
 
 ```json
 {
-  "include": [
-    "src/**/*",
-    "src/theme/**/*"
-  ]
+  "include": ["src/**/*", "src/theme/**/*"]
 }
 ```
 
@@ -135,16 +137,19 @@ In `tsconfig.json`, ensure theme utilities are included:
 After implementing the above:
 
 ### Install Package
+
 ```bash
 npm install @wolffm/task
 ```
 
 ### Import Themes CSS
+
 ```javascript
 import '@wolffm/task/themes.css'
 ```
 
 ### Use Theme Utilities
+
 ```typescript
 import { setTheme, THEMES } from '@wolffm/task/themes'
 
@@ -162,6 +167,7 @@ const theme = loadTheme()
 ```
 
 ### Apply to Custom Elements
+
 ```html
 <!-- Entire app -->
 <div data-theme="dark">
@@ -169,7 +175,7 @@ const theme = loadTheme()
 </div>
 
 <!-- Or set globally -->
-<html data-theme="cyberpunk">
+<html data-theme="cyberpunk"></html>
 ```
 
 ## Benefits
@@ -196,6 +202,7 @@ const theme = loadTheme()
 For maximum flexibility, consider:
 
 **@wolffm/themes** - Standalone theme package
+
 - Just CSS variables + utilities
 - No dependencies
 - Usable in any framework (React, Vue, Svelte, vanilla)

@@ -41,14 +41,15 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Build Task package
-        run: pnpm run build:all
-      
+      # Build in dependency order: UI Components → Themes → Task
+      - name: Build UI Components package
+        run: pnpm --filter @wolffm/task-ui-components run build
+
       - name: Build Themes package
         run: pnpm --filter @wolffm/themes run build
 
-      - name: Build UI Components package
-        run: pnpm --filter @wolffm/task-ui-components run build
+      - name: Build Task package
+        run: pnpm run build:all
 
       - name: Debug - Show changed files
         run: |
@@ -90,15 +91,17 @@ jobs:
             echo "✗ No changes in task package"
           fi
       
-      - name: Publish Themes package
-        if: steps.themes_changed.outputs.changed == 'true'
-        run: pnpm --filter @wolffm/themes publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      # Publish in dependency order: UI Components → Themes → Task
+      # This ensures dependencies are available before dependent packages
       - name: Publish UI Components package
         if: steps.ui_components_changed.outputs.changed == 'true'
         run: pnpm --filter @wolffm/task-ui-components publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Themes package
+        if: steps.themes_changed.outputs.changed == 'true'
+        run: pnpm --filter @wolffm/themes publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -120,23 +123,26 @@ jobs:
             exit 0
           fi
 
-          # Build array of updated packages
+          # Build array of updated packages in dependency order
           updated_packages="["
           first=true
 
-          if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
-            updated_packages="${updated_packages}\"@wolffm/themes\""
-            first=false
-          fi
-
+          # UI Components first (no dependencies)
           if [ "${{ steps.ui_components_changed.outputs.changed }}" = "true" ]; then
-            if [ "$first" = "false" ]; then
-              updated_packages="${updated_packages},"
-            fi
             updated_packages="${updated_packages}\"@wolffm/task-ui-components\""
             first=false
           fi
 
+          # Themes second (depends on UI Components)
+          if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
+            if [ "$first" = "false" ]; then
+              updated_packages="${updated_packages},"
+            fi
+            updated_packages="${updated_packages}\"@wolffm/themes\""
+            first=false
+          fi
+
+          # Task last (depends on both)
           if [ "${{ steps.task_changed.outputs.changed }}" = "true" ]; then
             if [ "$first" = "false" ]; then
               updated_packages="${updated_packages},"

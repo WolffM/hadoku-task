@@ -33,15 +33,15 @@ export function TagFilterButton({
   return (
     <button
       onClick={() => onToggle(tag)}
-      onContextMenu={(e) => {
+      onContextMenu={e => {
         e.preventDefault()
         onContextMenu(tag, e.clientX, e.clientY)
       }}
       {...longPressHandlers}
       className={`${isActive ? 'on' : ''} ${isDragOver ? 'task-app__filter-drag-over' : ''}`}
-      onDragOver={(e) => onDragOver(e, tag)}
+      onDragOver={e => onDragOver(e, tag)}
       onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, tag)}
+      onDrop={e => onDrop(e, tag)}
     >
       #{tag}
     </button>

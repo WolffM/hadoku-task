@@ -8,7 +8,7 @@
 type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG'
 
 interface LogContext {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 class Logger {
@@ -19,9 +19,10 @@ class Logger {
 
   private constructor() {
     // Check if running in development
-    this.isDevelopment = typeof window !== 'undefined'
-      ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      : false
+    this.isDevelopment =
+      typeof window !== 'undefined'
+        ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        : false
 
     // Try to restore admin status from storage
     this.checkAdminStatus()
@@ -126,7 +127,7 @@ class Logger {
   /**
    * Log preference change (development or admin only)
    */
-  preference(key: string, value: any) {
+  preference(key: string, value: unknown) {
     if (!this.shouldLog()) return
     this.info(`Preference changed: ${key}`, { value })
   }

@@ -13,6 +13,7 @@ Fast, focused task management with tags, filtering, and multi-user support. Buil
 Native Android app available! Built with Capacitor WebView wrapper.
 
 **Quick Download:**
+
 - 📥 [Latest APK](https://github.com/WolffM/hadoku-task-mobile/releases/latest/download/hadoku-task.apk)
 - 🔄 **Obtainium**: [Install Obtainium](https://github.com/ImranR98/Obtainium/releases/latest), then add URL: `https://github.com/WolffM/hadoku-task-mobile`
 
@@ -23,7 +24,7 @@ Native Android app available! Built with Capacitor WebView wrapper.
 ## ✨ Features
 
 - ⚡ **Quick Task Entry** - Type and press Enter
-- 🏷️ **Tag Support** - Organize with `#tags`  
+- 🏷️ **Tag Support** - Organize with `#tags`
 - 🔍 **Smart Filtering** - Filter by tag or view all
 - 🎯 **Drag & Drop** - Reorder tasks and move between boards
 - 🎨 **7 Themes** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender
@@ -51,6 +52,7 @@ npm run build:all
 ```
 
 **Output:**
+
 - Client: `dist/index.js` (~22KB gzipped), `dist/style.css` (~7KB gzipped)
 - Handlers: `dist/server/` (TypeScript compiled to JavaScript)
 
@@ -67,6 +69,7 @@ npm install @wolffm/task
 ### Basic Integration
 
 **Client-side:**
+
 ```javascript
 import { mount } from '@wolffm/task/frontend'
 import '@wolffm/task/style.css'
@@ -78,15 +81,24 @@ mount(document.getElementById('app'), {
 ```
 
 **Server-side (framework-agnostic):**
+
 ```typescript
 import { TaskHandlers, TaskStorage } from '@wolffm/task/api'
 
 // Implement storage for your environment (KV, filesystem, database, etc.)
 const storage: TaskStorage = {
-  getTasks: async (userType) => { /* your implementation */ },
-  saveTasks: async (userType, tasks) => { /* your implementation */ },
-  getStats: async (userType) => { /* your implementation */ },
-  saveStats: async (userType, stats) => { /* your implementation */ }
+  getTasks: async userType => {
+    /* your implementation */
+  },
+  saveTasks: async (userType, tasks) => {
+    /* your implementation */
+  },
+  getStats: async userType => {
+    /* your implementation */
+  },
+  saveStats: async (userType, stats) => {
+    /* your implementation */
+  }
 }
 
 // Use handlers with any framework (Express, Hono, Cloudflare Workers, etc.)
@@ -109,7 +121,7 @@ Fix bug #high-priority [Enter]           # Tagged task
 ### Task Actions
 
 - **✓** Mark complete
-- **×** Delete task  
+- **×** Delete task
 - **✎** Edit title
 - **+** Add tag
 - **Drag** Reorder or move between boards
@@ -119,7 +131,7 @@ Fix bug #high-priority [Enter]           # Tagged task
 Choose from 7 carefully crafted themes via the theme picker (top-right):
 
 - **☼ Light** - Clean blue and white
-- **☽ Dark** - Sophisticated midnight  
+- **☽ Dark** - Sophisticated midnight
 - **❖ Strawberry** - Sweet pink tones
 - **≈ Ocean** - Deep sea blues
 - **◆ Cyberpunk** - Neon dystopia
@@ -130,12 +142,12 @@ Choose from 7 carefully crafted themes via the theme picker (top-right):
 
 ## 📚 Documentation
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
+| Document                                    | Purpose                                      | Audience                            |
+| ------------------------------------------- | -------------------------------------------- | ----------------------------------- |
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, patterns, technical decisions | Developers integrating or extending |
-| **[API.md](docs/API.md)** | Complete endpoint reference | Backend implementers |
-| **[CHANGELOG.md](docs/CHANGELOG.md)** | Version history and changes | All users |
-| **[CONTRIBUTING.md](CONTRIBUTING.md)** | Contribution guidelines | Contributors |
+| **[API.md](docs/API.md)**                   | Complete endpoint reference                  | Backend implementers                |
+| **[CHANGELOG.md](docs/CHANGELOG.md)**       | Version history and changes                  | All users                           |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)**      | Contribution guidelines                      | Contributors                        |
 
 ### Quick Links
 
@@ -160,6 +172,7 @@ await TaskHandlers.createTask(storage, auth, input)
 ```
 
 **Deployment flexibility:**
+
 - ✅ Cloudflare Workers (KV storage)
 - ✅ Node.js + Express (filesystem storage)
 - ✅ Any framework that can call JavaScript functions
@@ -180,11 +193,13 @@ await TaskHandlers.createTask(storage, auth, input)
 **This micro-frontend delegates authentication to the parent application.**
 
 The task app:
+
 - ✅ Does NOT handle credentials or passwords
 - ✅ Receives `userType` and `sessionId` from parent
 - ✅ Uses these for storage namespacing only
 
 Your parent app must:
+
 - ✅ Handle user login/logout
 - ✅ Validate authentication keys
 - ✅ Provide correct `userType` and `sessionId`
@@ -197,6 +212,7 @@ Your parent app must:
 ## 🤝 Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
 - Development workflow
 - Code style guidelines
 - How to add features

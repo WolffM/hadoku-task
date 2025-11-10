@@ -40,36 +40,48 @@ export function TaskItem({
   const isDeleting = pendingOperations.has(`delete-${task.id}`)
 
   return (
-    <li 
+    <li
       className={`task-app__item ${selected ? 'selected' : ''}`}
       data-task-id={task.id}
       draggable={isDraggable}
-      onDragStart={onDragStart ? (e) => onDragStart(e, task.id) : undefined}
-      onDragEnd={(e) => {
+      onDragStart={onDragStart ? e => onDragStart(e, task.id) : undefined}
+      onDragEnd={e => {
         // Remove dragging class if present
         const el = e.currentTarget as HTMLElement
         el.classList.remove('dragging')
         // Call external onDragEnd if provided
         if (onDragEnd) {
-          try { onDragEnd(e) } catch {}
+          try {
+            onDragEnd(e)
+          } catch {
+            // Ignore drag end errors
+          }
         }
       }}
     >
       <div className="task-app__item-content">
-  <div className="task-app__item-title" title={task.title}>{task.title}</div>
+        <div className="task-app__item-title" title={task.title}>
+          {task.title}
+        </div>
 
         <div className="task-app__item-meta-row">
           {task.tag ? (
             <div className="task-app__item-tag">
-              {task.tag.split(' ').sort().map((tag: string) => `#${tag}`).join(' ')}
+              {task.tag
+                .split(' ')
+                .sort()
+                .map((tag: string) => `#${tag}`)
+                .join(' ')}
             </div>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
           <div className="task-app__item-age">{formatAge(task.createdAt)}</div>
         </div>
       </div>
       <div className="task-app__item-actions">
         {showTagButton && (
-          <button 
+          <button
             className="task-app__action-btn task-app__edit-tag-btn"
             onClick={() => onEditTag(task.id)}
             title="Edit tags"
@@ -79,7 +91,7 @@ export function TaskItem({
           </button>
         )}
         {showCompleteButton && (
-          <button 
+          <button
             className="task-app__action-btn task-app__complete-btn"
             onClick={() => onComplete(task.id)}
             title="Complete task"
@@ -89,7 +101,7 @@ export function TaskItem({
           </button>
         )}
         {showDeleteButton && (
-          <button 
+          <button
             className="task-app__action-btn task-app__delete-btn"
             onClick={() => onDelete(task.id)}
             title="Delete task"

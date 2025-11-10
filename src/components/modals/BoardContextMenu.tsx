@@ -29,9 +29,11 @@ export function BoardContextMenu({
 }: BoardContextMenuProps) {
   const handleDelete = async () => {
     if (!boardId) return
-    
+
     const boardName = boards?.boards?.find(b => b.id === boardId)?.name || boardId
-    if (confirm(`Delete board "${boardName}"? All tasks on this board will be permanently deleted.`)) {
+    if (
+      confirm(`Delete board "${boardName}"? All tasks on this board will be permanently deleted.`)
+    ) {
       try {
         await onDeleteBoard(boardId)
         onClose()

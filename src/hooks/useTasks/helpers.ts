@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@wolffm/task-ui-components'
+import type { Task, BoardsFile, Board } from '../../domain/types'
 
 /**
  * Generic operation wrapper that handles:
@@ -30,25 +31,29 @@ export async function withPendingOperation<T>(
   }
 
   // Add to pending operations
-  setPendingOps((prev) => new Set([...prev, operationKey]))
+  setPendingOps(prev => new Set([...prev, operationKey]))
 
   try {
     const result = await operation()
     return result
   } catch (error) {
     // Suppress 404 errors (task/resource already processed)
-    const is404 = suppress404 && (error as any)?.message?.includes('404')
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const is404 = suppress404 && errorMessage.includes('404')
     if (!is404) {
       if (onError) {
         onError(error as Error)
       } else {
-        logger.error('[withPendingOperation] Error in operation', { operationKey, error: error instanceof Error ? error.message : String(error) })
+        logger.error('[withPendingOperation] Error in operation', {
+          operationKey,
+          error: errorMessage
+        })
       }
     }
     return undefined
   } finally {
     // Remove from pending operations
-    setPendingOps((prev) => {
+    setPendingOps(prev => {
       const newSet = new Set(prev)
       newSet.delete(operationKey)
       return newSet
@@ -60,30 +65,27 @@ export async function withPendingOperation<T>(
  * Helper to switch board and load its tasks
  */
 export interface BoardSwitchResult {
-  tasks: any[] // Task array from the board
+  tasks: Task[]
   foundBoard: boolean
 }
 
-export function extractBoardTasks(
-  boards: any, // BoardsFile
-  boardId: string
-): BoardSwitchResult {
-  const board = boards?.boards?.find((b: any) => b.id === boardId)
+export function extractBoardTasks(boards: BoardsFile, boardId: string): BoardSwitchResult {
+  const board = boards?.boards?.find((b: Board) => b.id === boardId)
 
   if (board) {
     logger.info('[extractBoardTasks] Found board', {
       boardId,
-      taskCount: board.tasks?.length || 0,
+      taskCount: board.tasks?.length || 0
     })
     return {
-      tasks: (board.tasks || []).filter((t: any) => t.state === 'Active'),
-      foundBoard: true,
+      tasks: (board.tasks || []).filter((t: Task) => t.state === 'Active'),
+      foundBoard: true
     }
   } else {
     logger.info('[extractBoardTasks] Board not found', { boardId })
     return {
       tasks: [],
-      foundBoard: false,
+      foundBoard: false
     }
   }
 }

@@ -3,7 +3,7 @@
  * Displays app title and theme picker dropdown
  */
 
-import React, { type RefObject } from 'react'
+import React from 'react'
 import { SettingsIcon } from '@wolffm/task-ui-components'
 import { getThemeIcon, type ThemeFamily } from '../app/themeConfig'
 import type { ThemeName } from '../app/types'
@@ -29,8 +29,8 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <div className="task-app__header-container">
-      <h1 
-        className="task-app__header" 
+      <h1
+        className="task-app__header"
         onClick={onSettingsClick}
         style={{ cursor: 'pointer' }}
         title="Settings"
@@ -38,8 +38,8 @@ export function AppHeader({
         Tasks
       </h1>
       <div className="theme-picker">
-        <button 
-          className="theme-toggle-btn" 
+        <button
+          className="theme-toggle-btn"
           onClick={onThemePickerToggle}
           aria-label="Choose theme"
           title="Choose theme"
@@ -47,10 +47,7 @@ export function AppHeader({
           {getThemeIcon(theme, experimentalThemes)}
         </button>
         {showThemePicker && (
-          <div 
-            className="theme-picker__dropdown"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="theme-picker__dropdown" onClick={e => e.stopPropagation()}>
             <div className="theme-picker__pills">
               {THEME_FAMILIES.map((family, idx) => (
                 <div key={idx} className="theme-pill">
@@ -61,11 +58,9 @@ export function AppHeader({
                     title={family.lightLabel}
                     aria-label={family.lightLabel}
                   >
-                    <div className="theme-pill__icon">
-                      {family.lightIcon}
-                    </div>
+                    <div className="theme-pill__icon">{family.lightIcon}</div>
                   </button>
-                  
+
                   {/* Dark variant button */}
                   <button
                     className={`theme-pill__btn theme-pill__btn--dark ${theme === family.darkTheme ? 'active' : ''}`}
@@ -73,9 +68,7 @@ export function AppHeader({
                     title={family.darkLabel}
                     aria-label={family.darkLabel}
                   >
-                    <div className="theme-pill__icon">
-                      {family.darkIcon}
-                    </div>
+                    <div className="theme-pill__icon">{family.darkIcon}</div>
                   </button>
                 </div>
               ))}
@@ -95,12 +88,7 @@ export function AppHeader({
           </div>
         )}
       </div>
-      {showThemePicker && (
-        <div 
-          className="theme-picker__overlay"
-          onClick={onThemePickerToggle}
-        />
-      )}
+      {showThemePicker && <div className="theme-picker__overlay" onClick={onThemePickerToggle} />}
     </div>
   )
 }

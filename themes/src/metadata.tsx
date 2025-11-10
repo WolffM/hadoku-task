@@ -3,8 +3,8 @@
  * This file imports icons from @wolffm/task-ui-components
  */
 
-import React from 'react';
-import type { ThemeFamily } from '@wolffm/task-ui-components';
+import React from 'react'
+import type { ThemeFamily } from '@wolffm/task-ui-components'
 import {
   SunIcon,
   MoonIcon,
@@ -16,7 +16,7 @@ import {
   HeartIcon,
   LeafIcon,
   SpaIcon
-} from '@wolffm/task-ui-components';
+} from '@wolffm/task-ui-components'
 
 /**
  * Theme families configuration for all 9 theme pairs
@@ -95,15 +95,15 @@ export const THEME_FAMILIES: ThemeFamily[] = [
     lightIcon: <SpaIcon />,
     darkIcon: <SpaIcon />
   }
-];
+]
 
 /**
  * Theme icon mapping - maps each theme name to its icon component
  * Useful for getting the icon for a specific theme
  */
 export const THEME_ICON_MAP = {
-  'light': SunIcon,
-  'dark': MoonIcon,
+  light: SunIcon,
+  dark: MoonIcon,
   'strawberry-light': StrawberryIcon,
   'strawberry-dark': StrawberryIcon,
   'ocean-light': WaveIcon,
@@ -120,4 +120,4 @@ export const THEME_ICON_MAP = {
   'pink-dark': HeartIcon,
   'izakaya-light': SpaIcon,
   'izakaya-dark': SpaIcon
-} as const;
+} as const

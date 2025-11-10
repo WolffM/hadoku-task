@@ -10,8 +10,9 @@
 
 /* Shared button utilities */
 .task-app__btn-fade {
-  transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth);
+  transition:
+    opacity var(--transition-smooth),
+    background-color var(--transition-smooth);
 }
 
 .task-app__btn-fade:hover {
@@ -28,8 +29,9 @@
   font-size: var(--font-size-base);
   color: var(--color-text);
   opacity: 0.7;
-  transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth);
+  transition:
+    opacity var(--transition-smooth),
+    background-color var(--transition-smooth);
 }
 
 .task-app__info-btn:hover {
@@ -43,9 +45,10 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth),
-              filter var(--transition-smooth);
+  transition:
+    opacity var(--transition-smooth),
+    background-color var(--transition-smooth),
+    filter var(--transition-smooth);
   width: var(--size-action-btn-width);
   min-width: var(--size-action-btn-width);
   flex-shrink: 0;
@@ -154,9 +157,10 @@
   font-size: 20px;
   color: var(--color-danger);
   opacity: 0.7;
-  transition: opacity var(--transition-smooth),
-              background-color var(--transition-smooth),
-              color var(--transition-smooth);
+  transition:
+    opacity var(--transition-smooth),
+    background-color var(--transition-smooth),
+    color var(--transition-smooth);
   width: 28px;
   height: 28px;
   min-width: 28px;

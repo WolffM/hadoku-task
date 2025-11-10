@@ -42,6 +42,7 @@ interface TaskStorage {
 ```
 
 **Implementations:**
+
 - Cloudflare Workers KV
 - Filesystem (Node.js)
 - Database (SQL/NoSQL)
@@ -56,10 +57,12 @@ interface TaskStorage {
 Get all active tasks for a board.
 
 **Query Parameters:**
+
 - `userType` (optional): `public` | `friend` | `admin`
 - `boardId` (optional): Board ID (default: `main`)
 
 **Response:**
+
 ```json
 {
   "tasks": [
@@ -82,10 +85,12 @@ Get all active tasks for a board.
 Create a new task.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "title": "Task title",
@@ -95,6 +100,7 @@ Create a new task.
 ```
 
 **Response:**
+
 ```json
 {
   "id": "01HQ...",
@@ -112,13 +118,16 @@ Create a new task.
 Update a task's title or tags.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
+
 - `id`: Task ID (ULID format)
 
 **Body:**
+
 ```json
 {
   "title": "Updated title",
@@ -128,6 +137,7 @@ Update a task's title or tags.
 ```
 
 **Response:**
+
 ```json
 {
   "id": "01HQ...",
@@ -144,13 +154,16 @@ Update a task's title or tags.
 Mark a task as completed (moves to stats graveyard).
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
+
 - `id`: Task ID
 
 **Body:**
+
 ```json
 {
   "boardId": "main"
@@ -158,6 +171,7 @@ Mark a task as completed (moves to stats graveyard).
 ```
 
 **Response:**
+
 ```json
 {
   "ok": true,
@@ -172,13 +186,16 @@ Mark a task as completed (moves to stats graveyard).
 Permanently delete a task.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
+
 - `id`: Task ID
 
 **Body:**
+
 ```json
 {
   "boardId": "main"
@@ -186,6 +203,7 @@ Permanently delete a task.
 ```
 
 **Response:**
+
 ```json
 {
   "ok": true,
@@ -202,10 +220,12 @@ Permanently delete a task.
 Get all boards for the current user.
 
 **Query Parameters:**
+
 - `userType` (optional): `public` | `friend` | `admin`
 - `sessionId` (optional): Session identifier
 
 **Response:**
+
 ```json
 {
   "version": 1,
@@ -229,10 +249,12 @@ Get all boards for the current user.
 Create a new board.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "id": "project-x",
@@ -241,6 +263,7 @@ Create a new board.
 ```
 
 **Response:**
+
 ```json
 {
   "id": "project-x",
@@ -257,13 +280,16 @@ Create a new board.
 Delete a board and all its tasks.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
+
 - `id`: Board ID (cannot delete "main")
 
 **Response:**
+
 ```json
 {
   "success": true
@@ -271,6 +297,7 @@ Delete a board and all its tasks.
 ```
 
 **Error Response:**
+
 ```json
 {
   "error": "Cannot delete main board"
@@ -286,13 +313,16 @@ Delete a board and all its tasks.
 Create a persisted tag on a board.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
+
 - `id`: Board ID
 
 **Body:**
+
 ```json
 {
   "tag": "urgent"
@@ -300,6 +330,7 @@ Create a persisted tag on a board.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -314,10 +345,12 @@ Create a persisted tag on a board.
 Delete a persisted tag from a board.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "boardId": "main",
@@ -326,6 +359,7 @@ Delete a persisted tag from a board.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -342,10 +376,12 @@ Delete a persisted tag from a board.
 Update tags for multiple tasks.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "boardId": "main",
@@ -357,6 +393,7 @@ Update tags for multiple tasks.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -371,10 +408,12 @@ Update tags for multiple tasks.
 Move multiple tasks between boards.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "sourceBoardId": "main",
@@ -384,6 +423,7 @@ Move multiple tasks between boards.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -398,10 +438,12 @@ Move multiple tasks between boards.
 Remove a specific tag from multiple tasks.
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "boardId": "main",
@@ -411,6 +453,7 @@ Remove a specific tag from multiple tasks.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -427,10 +470,12 @@ Remove a specific tag from multiple tasks.
 Get user preferences (synced for non-public users).
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Response:**
+
 ```json
 {
   "version": 1,
@@ -449,10 +494,12 @@ Get user preferences (synced for non-public users).
 Save user preferences (syncs for non-public users).
 
 **Headers:**
+
 - `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
+
 ```json
 {
   "experimentalThemes": true,
@@ -461,6 +508,7 @@ Save user preferences (syncs for non-public users).
 ```
 
 **Response:**
+
 ```json
 {
   "ok": true
@@ -478,6 +526,7 @@ Validate an authentication key.
 > **Note**: Implement your own key validation logic. This endpoint is called when users enter a key in the settings modal.
 
 **Body:**
+
 ```json
 {
   "key": "user-provided-key"
@@ -485,6 +534,7 @@ Validate an authentication key.
 ```
 
 **Response (valid):**
+
 ```json
 {
   "valid": true
@@ -492,6 +542,7 @@ Validate an authentication key.
 ```
 
 **Response (invalid):**
+
 ```json
 {
   "valid": false
@@ -507,10 +558,12 @@ Validate an authentication key.
 Get task statistics for a board.
 
 **Query Parameters:**
+
 - `userType` (optional): `public` | `friend` | `admin`
 - `boardId` (optional): Board ID (default: `main`)
 
 **Response:**
+
 ```json
 {
   "version": 2,
@@ -540,6 +593,7 @@ Get task statistics for a board.
 All endpoints return errors in this format:
 
 **HTTP Status Codes:**
+
 - `200` - Success
 - `400` - Bad request (validation error)
 - `403` - Forbidden (permission denied)
@@ -547,6 +601,7 @@ All endpoints return errors in this format:
 - `500` - Server error
 
 **Error Response:**
+
 ```json
 {
   "error": "Error message describing what went wrong"
@@ -558,29 +613,32 @@ All endpoints return errors in this format:
 ## Data Types
 
 ### Task
+
 ```typescript
 interface Task {
-  id: string           // ULID format
+  id: string // ULID format
   title: string
-  tag?: string         // Space-separated tags
-  createdAt: string    // ISO 8601
-  updatedAt: string    // ISO 8601
-  closedAt?: string    // ISO 8601 (when completed/deleted)
+  tag?: string // Space-separated tags
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+  closedAt?: string // ISO 8601 (when completed/deleted)
 }
 ```
 
 ### Board
+
 ```typescript
 interface Board {
   id: string
   name: string
-  tags: string[]       // Persisted tags
+  tags: string[] // Persisted tags
   tasks: Task[]
   stats: StatsFile
 }
 ```
 
 ### StatsFile
+
 ```typescript
 interface StatsFile {
   version: number
@@ -599,12 +657,14 @@ interface StatsFile {
 ## Implementation Examples
 
 For complete integration examples with Express, Hono, and Cloudflare Workers, see:
+
 - [README.md - Installation](../README.md#installation)
 - [ARCHITECTURE.md - Server Architecture](ARCHITECTURE.md#server-architecture)
 
 ---
 
 **Related Documentation:**
+
 - [Architecture Overview](ARCHITECTURE.md)
 - [Contributing Guide](../CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)

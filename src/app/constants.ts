@@ -15,8 +15,8 @@ export const STORAGE_VERSION_KEY = 'task-storage-version'
 
 // Orphaned key patterns (for cleanup during migration)
 export const ORPHANED_KEY_PATTERNS = [
-  /^tasks-/,          // tasks-main, tasks-work
-  /^stats-/,          // stats-main, stats-work
-  /^boards$/,         // boards (without prefix)
-  /^preferences$/     // preferences (without prefix)
+  /^tasks-/, // tasks-main, tasks-work
+  /^stats-/, // stats-main, stats-work
+  /^boards$/, // boards (without prefix)
+  /^preferences$/ // preferences (without prefix)
 ]

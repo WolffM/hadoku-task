@@ -11,7 +11,8 @@ export interface BroadcastData {
   type: BroadcastType
   sessionId?: string
   userType?: string
-  [key: string]: any
+  boardId?: string
+  [key: string]: unknown
 }
 
 /**
@@ -32,7 +33,9 @@ export function deferredBroadcast(
       bc.postMessage({ type, ...data })
       bc.close()
     } catch (err) {
-      logger.error('[broadcast] Failed to broadcast', { error: err instanceof Error ? err.message : String(err) })
+      logger.error('[broadcast] Failed to broadcast', {
+        error: err instanceof Error ? err.message : String(err)
+      })
     }
   }, delayMs)
 }
