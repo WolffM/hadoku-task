@@ -11,7 +11,6 @@ export type {
   Board,
   BoardsFile,
   StatsFile,
-  StatsTaskRecord,
   ULID,
   UserType,
   AuthContext,

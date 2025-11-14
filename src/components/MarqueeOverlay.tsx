@@ -12,16 +12,13 @@ interface MarqueeOverlayProps {
 export function MarqueeOverlay({ rect, isSelecting }: MarqueeOverlayProps) {
   if (!isSelecting || !rect) return null
 
-  // Dynamic positioning requires inline styles
-  return (
-    <div
-      className="marquee-overlay"
-      style={{
-        left: `${rect.x}px`,
-        top: `${rect.y}px`,
-        width: `${rect.w}px`,
-        height: `${rect.h}px`
-      }}
-    />
-  )
+  // Use CSS custom properties for dynamic positioning
+  const style = {
+    '--marquee-left': `${rect.x}px`,
+    '--marquee-top': `${rect.y}px`,
+    '--marquee-width': `${rect.w}px`,
+    '--marquee-height': `${rect.h}px`
+  } as React.CSSProperties
+
+  return <div className="marquee-overlay" style={style} />
 }

@@ -4,9 +4,10 @@
  */
 
 import { logger } from '@wolffm/task-ui-components'
+import { isMobileApp } from './platform'
 
 /**
- * Validate a key and redirect to the authenticated page
+ * Validate a key and store it securely
  * @param key - The authentication key to validate
  * @param validateKeyFn - Function that validates the key (from API client)
  * @returns Promise with success status and optional error message
@@ -25,25 +26,44 @@ export async function validateAndChangeKey(
     const isValid = await validateKeyFn(trimmedKey)
 
     if (isValid) {
-      // Valid key - reload page with new key parameter
-      const url = new URL(window.location.href)
-      url.searchParams.set('key', trimmedKey)
-      const newUrl = url.toString()
+      // Store the key in sessionStorage (secure, not in URL)
+      sessionStorage.setItem('auth_key', trimmedKey)
+      logger.info('[Auth] Key validated and stored in sessionStorage')
 
-      // Notify parent window (mobile app) of URL change
-      if (window.parent !== window) {
-        logger.info('[Auth] Notifying mobile app of URL change', { url: newUrl })
-        window.parent.postMessage(
-          {
-            type: 'urlChange',
-            url: newUrl
-          },
-          '*'
-        )
+      // For mobile app: Notify about the auth change
+      if (isMobileApp()) {
+        logger.info('[Auth] Mobile app detected - dispatching authKeyChanged event')
+
+        // Dispatch event that mobile app can listen to
+        const event = new window.CustomEvent('authKeyChanged', {
+          detail: {
+            timestamp: Date.now()
+            // Don't include the actual key - mobile app doesn't need it
+          }
+        })
+        window.dispatchEvent(event)
+
+        // Also notify parent window via postMessage (for iframe-based mobile apps)
+        if (window.parent !== window) {
+          window.parent.postMessage(
+            {
+              type: 'authKeyChanged',
+              timestamp: Date.now()
+            },
+            '*'
+          )
+        }
+
+        // No URL change needed - key is in sessionStorage
+        // Page will re-render with new auth state
+        window.location.reload()
+        return { success: true }
+      } else {
+        // For web: Also use sessionStorage, just reload to pick up new auth
+        logger.info('[Auth] Web app - reloading to apply new auth')
+        window.location.reload()
+        return { success: true }
       }
-
-      window.location.href = newUrl
-      return { success: true }
     } else {
       return { success: false, error: 'Invalid key' }
     }
@@ -53,4 +73,20 @@ export async function validateAndChangeKey(
     })
     return { success: false, error: 'Failed to validate key' }
   }
+}
+
+/**
+ * Get the stored authentication key from sessionStorage
+ * @returns The stored key or null if not found
+ */
+export function getStoredAuthKey(): string | null {
+  return sessionStorage.getItem('auth_key')
+}
+
+/**
+ * Clear the stored authentication key
+ */
+export function clearStoredAuthKey(): void {
+  sessionStorage.removeItem('auth_key')
+  logger.info('[Auth] Cleared stored auth key')
 }

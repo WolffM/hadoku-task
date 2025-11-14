@@ -43,9 +43,9 @@
     // Get params from URL
     const params = new URLSearchParams(window.location.search)
     const userType = params.get('userType') || 'public'
-    const userName = params.get('userName') || null
+    const displayName = params.get('displayName') || null
     
-    console.log('[mount] Mounting with:', { userType, userName })
+    console.log('[mount] Mounting with:', { userType, displayName })
     
     // Mount the app
     mount(document.getElementById('app'), {
@@ -53,9 +53,9 @@
       apiUrl: '/task/api',
       environment: 'development',
       userType: userType,
-      userName: userName,
-      onKeyValidation: (isValid, validatedUserType, validatedUserName) => {
-        console.log('[mount] Key validation result:', { isValid, validatedUserType, validatedUserName })
+      displayName: displayName,
+      onKeyValidation: (isValid, validatedUserType, validatedDisplayName) => {
+        console.log('[mount] Key validation result:', { isValid, validatedUserType, validatedDisplayName })
       }
     })
   </script>

@@ -58,14 +58,7 @@ export function CreateBoardModal({
             {pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
           </p>
         )}
-      {validationError && (
-        <p
-          className="modal-error"
-          style={{ color: 'var(--error-color, #d32f2f)', marginTop: '0.5rem' }}
-        >
-          {validationError}
-        </p>
-      )}
+      {validationError && <p className="modal-error">{validationError}</p>}
     </Modal>
   )
 }

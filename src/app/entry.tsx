@@ -15,8 +15,8 @@ export interface TaskAppProps {
   environment?: string
   userType?: 'public' | 'friend' | 'admin'
   sessionId?: string
-  userName?: string // Display name for welcome message
-  onKeyValidation?: (isValid: boolean, userType?: string, userName?: string) => void // Callback when key is validated
+  displayName?: string // Display name for welcome message
+  onKeyValidation?: (isValid: boolean, userType?: string, displayName?: string) => void // Callback when key is validated
 }
 
 // Extend HTMLElement to include __root property

@@ -28,6 +28,10 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.task-app__header--clickable {
+  cursor: pointer;
+}
+
 /* Theme picker container */
 .theme-picker {
   position: relative;
@@ -311,6 +315,7 @@
   font-size: var(--font-size-sm);
   font-family: inherit;
   transition: all var(--transition-fast);
+  height: 38px; /* Fixed height to match button */
 }
 
 .settings-text-input:focus {
@@ -337,6 +342,10 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 40px;
+  height: 38px; /* Match input height exactly */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-field-button:hover {
@@ -399,9 +408,9 @@
   /* Add border for better visibility on light backgrounds */
   border: 1px solid var(--color-border);
   /* Fallback styling for browsers that don't support accent-color */
-  appearance: auto;
-  -webkit-appearance: checkbox;
   -moz-appearance: checkbox;
+  -webkit-appearance: checkbox;
+  appearance: auto;
 }
 
 .settings-label {
@@ -670,11 +679,16 @@
   background: var(--color-primary-hover);
   border: 2px dashed var(--color-primary);
   z-index: 60;
+  left: var(--marquee-left, 0);
+  top: var(--marquee-top, 0);
+  width: var(--marquee-width, 0);
+  height: var(--marquee-height, 0);
 }
 
 /* Disable user-select while marquee is active */
 .marquee-selecting,
 .marquee-selecting * {
+  -webkit-user-select: none !important;
   user-select: none !important;
 }
 

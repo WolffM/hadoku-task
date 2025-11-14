@@ -30,9 +30,8 @@ export function AppHeader({
   return (
     <div className="task-app__header-container">
       <h1
-        className="task-app__header"
+        className="task-app__header task-app__header--clickable"
         onClick={onSettingsClick}
-        style={{ cursor: 'pointer' }}
         title="Settings"
       >
         Tasks

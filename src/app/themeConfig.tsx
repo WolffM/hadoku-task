@@ -14,12 +14,21 @@ import {
   FlowerIcon,
   LeafIcon,
   HeartIcon,
-  SpaIcon,
-  type ThemeFamily
+  SpaIcon
 } from '@wolffm/task-ui-components'
 import type { ThemeName } from './types'
 
-export type { ThemeFamily }
+// Define a properly typed ThemeFamily for this app
+export interface ThemeFamily {
+  lightIcon: React.ReactNode
+  darkIcon: React.ReactNode
+  lightTheme: ThemeName
+  darkTheme: ThemeName
+  lightLabel: string
+  darkLabel: string
+}
+
+export type { ThemeFamily as ThemeFamilyGeneric }
 
 // Base theme families (always available)
 export const BASE_THEME_FAMILIES: ThemeFamily[] = [

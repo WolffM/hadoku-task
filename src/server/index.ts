@@ -34,7 +34,6 @@ export type {
   Board,
   BoardsFile,
   StatsFile,
-  StatsTaskRecord,
   UserType,
   ULID
 } from '../domain/types.js'

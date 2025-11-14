@@ -17,8 +17,8 @@ export interface Task {
   tag?: string | null
   state: 'Active' | 'Deleted' | 'Completed'
   createdAt: string // ISO 8601
-  updatedAt?: string | null // ISO 8601
-  closedAt?: string | null // ISO 8601
+  updatedAt?: string | null // ISO 8601 - when task was last modified (edit title/tag)
+  closedAt?: string | null // ISO 8601 - when task was completed or deleted
 }
 
 export interface TasksFile {
@@ -43,16 +43,6 @@ export interface BoardsFile {
   boards: Board[]
 }
 
-export interface StatsTaskRecord {
-  id: ULID
-  title: string
-  tag?: string | null
-  state: 'Active' | 'Deleted' | 'Completed'
-  createdAt: string
-  updatedAt?: string | null
-  closedAt?: string | null
-}
-
 export interface StatsFile {
   version: 2
   updatedAt: string
@@ -68,7 +58,8 @@ export interface StatsFile {
     id?: ULID
   }>
   // Persistent snapshot of every task ever seen (by id)
-  tasks: Record<ULID, StatsTaskRecord>
+  // Uses Task type directly to avoid duplication
+  tasks: Record<ULID, Task>
 }
 
 export interface AuthContext {
@@ -95,7 +86,7 @@ export interface UserPreferences {
   updatedAt: string
   experimentalThemes?: boolean
   alwaysVerticalLayout?: boolean
-  userName?: string // Display name for user
+  displayName?: string // Display name for user
   // Device-specific settings (localStorage only)
   theme?: string
   showCompleteButton?: boolean

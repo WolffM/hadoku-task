@@ -25,7 +25,7 @@ interface UseSessionInitializationProps {
 export function useSessionInitialization({
   userType,
   propsSessionId,
-  preferences,
+  preferences: _preferences,
   effectiveSessionId,
   setEffectiveSessionId,
   setPreferences,
@@ -93,18 +93,16 @@ export function useSessionInitialization({
           clearOldSessionStorage(oldSessionId, userType)
         }
 
-        // Show welcome toast for authenticated users (only if they have a name or are non-public)
-        if (userType !== 'public') {
-          const userName = preferences.userName
-          if (userName) {
-            showToast(`Welcome back, ${userName}`, 'success')
-          } else if (userType === 'admin') {
-            showToast('Welcome back, Admin', 'success')
-          } else if (userType === 'friend') {
-            showToast('Welcome back!', 'success')
-          }
-          // Don't show any toast if userName is empty/undefined for friend users
+        // Show welcome toast for authenticated users AFTER preferences are loaded
+        // Use the final preferences (either from localStorage or server)
+        const finalPrefs = hasLocalData ? localPrefs : serverPreferences
+        const displayName = finalPrefs?.displayName
+
+        if (displayName) {
+          // Only show toast if user has a display name
+          showToast(`Welcome back, ${displayName}`, 'success')
         }
+        // Don't show any toast if display name is empty/undefined
       }
 
       // Set the effective sessionId for all hooks to use (only if different)

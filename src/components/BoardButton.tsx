@@ -45,7 +45,7 @@ export function BoardButton({
         onContextMenu(board.id, e.clientX, e.clientY)
       }}
       {...(isMainBoard ? {} : longPressHandlers)}
-      aria-pressed={isActive ? 'true' : 'false'}
+      aria-pressed={isActive}
       onDragOver={e => {
         // Indicate this board can accept drops
         e.preventDefault()

@@ -97,7 +97,6 @@ export function AppModals({
   showDeleteButton,
   showTagButton,
   userType,
-  userName,
   effectiveSessionId: _effectiveSessionId,
   toasts,
   onCloseConfirmClearTag,
@@ -112,7 +111,6 @@ export function AppModals({
   onCloseSettingsModal,
   onSavePreferences,
   onValidateKey,
-  onUpdateUserName,
   onShowToast,
   onCloseEditTagModal,
   onConfirmEditTag,
@@ -161,11 +159,9 @@ export function AppModals({
         showDeleteButton={showDeleteButton}
         showTagButton={showTagButton}
         userType={userType}
-        userName={userName}
         onClose={onCloseSettingsModal}
         onSavePreferences={onSavePreferences}
         onValidateKey={onValidateKey}
-        onUpdateUserName={onUpdateUserName}
         onShowToast={onShowToast}
       />
 

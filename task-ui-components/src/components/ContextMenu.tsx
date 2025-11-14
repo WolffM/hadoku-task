@@ -4,6 +4,7 @@
  */
 
 import React from 'react'
+import '../context-menu.css'
 
 export interface ContextMenuItem {
   label: string
@@ -23,16 +24,14 @@ export interface ContextMenuProps {
 export function ContextMenu({ isOpen, x, y, items, className = 'context-menu' }: ContextMenuProps) {
   if (!isOpen) return null
 
+  // Use CSS custom properties for dynamic positioning
+  const style = {
+    '--context-menu-x': `${x}px`,
+    '--context-menu-y': `${y}px`
+  } as React.CSSProperties
+
   return (
-    <div
-      className={className}
-      style={{
-        position: 'fixed',
-        left: `${x}px`,
-        top: `${y}px`,
-        zIndex: 1000
-      }}
-    >
+    <div className={className} style={style}>
       {items.map((item, index) => (
         <button
           key={index}

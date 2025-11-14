@@ -1,0 +1,11 @@
+/**
+ * ContextMenu Component Styles
+ * Generic context menu with dynamic positioning
+ */
+
+.context-menu {
+  position: fixed;
+  left: var(--context-menu-x, 0);
+  top: var(--context-menu-y, 0);
+  z-index: var(--context-menu-z-index, 1000);
+}

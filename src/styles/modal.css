@@ -46,6 +46,12 @@
   margin-top: 0;
 }
 
+.modal-error {
+  color: var(--error-color, var(--color-danger, #d32f2f));
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-md);
+}
+
 /* Modal Input */
 .modal-input {
   width: 100%;
