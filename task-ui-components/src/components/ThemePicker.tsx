@@ -7,6 +7,7 @@
 import React from 'react'
 import type { ThemePickerProps } from '../types'
 import { SettingsIcon, MoonIcon, getFallbackIcon } from './ThemeIcons'
+import '../theme-picker.css'
 
 /**
  * ThemePicker - Dropdown theme selector with optional settings button

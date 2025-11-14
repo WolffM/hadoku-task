@@ -2,6 +2,36 @@
 
 Beautiful, reusable UI components for task management applications.
 
+## Installation
+
+```bash
+npm install @wolffm/task-ui-components
+```
+
+## SSR Configuration (Astro/Next.js)
+
+If using this package in an SSR environment (Astro, Next.js, etc.), add this one-time configuration:
+
+```js
+// astro.config.mjs
+export default defineConfig({
+  vite: {
+    ssr: {
+      noExternal: ['@wolffm/task-ui-components']
+    }
+  }
+})
+```
+
+```js
+// next.config.js
+module.exports = {
+  transpilePackages: ['@wolffm/task-ui-components']
+}
+```
+
+This allows the package to bundle its CSS automatically. **This is a one-time setup** - all future component updates will work automatically without additional configuration.
+
 ## Components
 
 ### ThemePicker
@@ -38,12 +68,11 @@ npm install @wolffm/task-ui-components
 
 ### Quick Start with @wolffm/themes (Recommended)
 
-The easiest way to use the ThemePicker is with the `@wolffm/themes` package, which provides pre-configured theme families with icons:
+The easiest way to use the ThemePicker is with the `@wolffm/themes` package:
 
 ```tsx
 import { ConnectedThemePicker } from '@wolffm/task-ui-components'
 import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
-import '@wolffm/task-ui-components/theme-picker.css'
 import '@wolffm/themes/themes.css'
 
 function App() {
@@ -63,13 +92,14 @@ function App() {
 }
 ```
 
+**Note:** CSS is automatically imported by components - no manual CSS imports needed!
+
 ### Using ConnectedThemePicker (Stateful)
 
-`ConnectedThemePicker` manages its own open/close state, making it simpler to use:
+`ConnectedThemePicker` manages its own open/close state:
 
 ```tsx
 import { ConnectedThemePicker } from '@wolffm/task-ui-components'
-import '@wolffm/task-ui-components/theme-picker.css'
 
 function App() {
   const [theme, setTheme] = useState('light')
@@ -90,7 +120,6 @@ For full control over the picker's state:
 
 ```tsx
 import { ThemePicker, SunIcon, MoonIcon } from '@wolffm/task-ui-components'
-import '@wolffm/task-ui-components/theme-picker.css'
 
 const THEME_FAMILIES = [
   {
@@ -123,11 +152,10 @@ function App() {
 
 ### With Automatic Fallback Icons (No Icons Needed!)
 
-Perfect when using your own theme system without the `@wolffm/themes` package:
+Perfect when using your own theme system:
 
 ```tsx
 import { ThemePicker } from '@wolffm/task-ui-components'
-import '@wolffm/task-ui-components/theme-picker.css'
 import './my-custom-themes.css' // Your own theme CSS
 
 const THEME_FAMILIES = [

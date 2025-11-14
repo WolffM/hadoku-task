@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { Toast } from './Toast'
+import '../toaster.css'
 
 export interface ToastState {
   id: number
