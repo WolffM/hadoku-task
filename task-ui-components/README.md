@@ -1,6 +1,6 @@
 # @wolffm/task-ui-components
 
-Beautiful, reusable UI components for task management applications.
+Reusable UI components for task management applications.
 
 ## Installation
 
