@@ -37,7 +37,6 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "version:patch": "pnpm version patch --no-git-tag-version",
-    "version:smart": "node scripts/version-manager.js",
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky"
   },

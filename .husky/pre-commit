@@ -1,33 +1,69 @@
+#!/bin/sh
 echo "🔍 Running pre-commit checks..."
 
-# Run linting
-echo "📋 Running ESLint..."
-pnpm run lint
+# Auto-format code with Prettier
+echo "✨ Auto-formatting code..."
+pnpm run format
 if [ $? -ne 0 ]; then
-  echo "❌ ESLint failed. Please fix the errors before committing."
-  echo "💡 Tip: Run 'pnpm run lint:fix' to auto-fix some issues"
+  echo "❌ Prettier formatting failed"
   exit 1
 fi
 
-# Run prettier check
-echo "✨ Checking code formatting..."
-pnpm run format:check
-if [ $? -ne 0 ]; then
-  echo "❌ Code formatting check failed. Please format your code before committing."
-  echo "💡 Tip: Run 'pnpm run format' to auto-format all files"
+# Auto-fix ESLint issues
+echo "📋 Auto-fixing ESLint issues..."
+pnpm run lint:fix
+
+# Check if there are still ESLint errors (not warnings)
+echo "📋 Checking for ESLint errors..."
+if ! pnpm run lint 2>&1 | grep -q "0 errors"; then
+  echo "❌ ESLint errors found. Please fix them before committing."
+  pnpm run lint
   exit 1
 fi
+
+# Stage any auto-fixed files
+git add -u
 
 echo "✅ Linting and formatting checks passed!"
+
+# Helper function to bump version in a directory
+bump_version() {
+  local dir=$1
+  local current_version=$(node -p "require('./$dir/package.json').version")
+  local major=$(echo $current_version | cut -d. -f1)
+  local minor=$(echo $current_version | cut -d. -f2)
+  local patch=$(echo $current_version | cut -d. -f3)
+
+  # Rollover at .20
+  if [ $patch -eq 20 ]; then
+    new_minor=$((minor + 1))
+    new_version="$major.$new_minor.0"
+    echo "🚀 Rolling over to minor version: $new_version"
+  else
+    new_patch=$((patch + 1))
+    new_version="$major.$minor.$new_patch"
+    echo "📈 Incrementing patch version: $new_version"
+  fi
+
+  # Update package.json
+  node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('./$dir/package.json', 'utf8'));
+pkg.version = '$new_version';
+fs.writeFileSync('./$dir/package.json', JSON.stringify(pkg, null, 2) + '\n');
+"
+
+  echo "✅ Version updated: $current_version → $new_version"
+}
 
 # Check if themes package changed
 if git diff --cached --name-only | grep -q "^themes/"; then
   echo "📦 Themes package changed, bumping version..."
   cd themes
-  pnpm run version:smart
+  bump_version "."
   pnpm install
   pnpm run build
-  git add package.json package-lock.json
+  git add package.json pnpm-lock.yaml
   cd ..
 fi
 
@@ -35,21 +71,23 @@ fi
 if git diff --cached --name-only | grep -q "^task-ui-components/"; then
   echo "📦 UI Components package changed, bumping version..."
   cd task-ui-components
-  pnpm run version:smart
+  bump_version "."
   pnpm install
   pnpm run build
-  git add package.json package-lock.json
+  git add package.json pnpm-lock.yaml
   cd ..
 fi
 
 # Check if task package changed (root package - exclude sub-packages)
 if git diff --cached --name-only | grep -qv "^themes/" | grep -qv "^task-ui-components/"; then
   echo "📦 Task package changed, bumping version..."
-  pnpm run version:smart
+  bump_version "."
   pnpm run build:all
-  node scripts/trim-changelog.js
-  git add package.json package-lock.json docs/CHANGELOG.md
+  if [ -f "scripts/trim-changelog.js" ]; then
+    node scripts/trim-changelog.js
+    git add docs/CHANGELOG.md
+  fi
+  git add package.json pnpm-lock.yaml
 fi
 
 echo "✅ All pre-commit checks passed!"
-
