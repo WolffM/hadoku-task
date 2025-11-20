@@ -13,11 +13,11 @@
   },
   "files": [
     "dist",
-    "src/style.css",
+    "src/themes.css",
     "README.md"
   ],
   "exports": {
-    "./style.css": "./src/style.css",
+    "./style.css": "./src/themes.css",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
