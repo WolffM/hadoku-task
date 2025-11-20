@@ -1,6 +1,6 @@
 # @wolffm/themes
 
-24 beautiful color themes using CSS custom properties. Framework-agnostic and ready to use in any web project.
+Beautiful color themes using CSS custom properties. Framework-agnostic and ready to use in any web project.
 
 ## Themes
 

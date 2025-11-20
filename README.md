@@ -236,4 +236,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Version**: 3.1.8 | **Author**: WolffM
+**Author**: WolffM
