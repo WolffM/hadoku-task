@@ -26,11 +26,14 @@ export async function validateAndChangeKey(
     const isValid = await validateKeyFn(trimmedKey)
 
     if (isValid) {
-      // Store the key in sessionStorage (secure, not in URL)
-      sessionStorage.setItem('auth_key', trimmedKey)
-      logger.info('[Auth] Key validated and stored in sessionStorage')
+      // Reload with ?key= parameter so parent site can validate and set userType/sessionId
+      logger.info('[Auth] Key validated - reloading with key parameter')
 
-      // For mobile app: Notify about the auth change
+      // Get current URL and add/update the key parameter
+      const url = new URL(window.location.href)
+      url.searchParams.set('key', trimmedKey)
+
+      // For mobile app: Notify about the auth change before reload
       if (isMobileApp()) {
         logger.info('[Auth] Mobile app detected - dispatching authKeyChanged event')
 
@@ -53,17 +56,11 @@ export async function validateAndChangeKey(
             '*'
           )
         }
-
-        // No URL change needed - key is in sessionStorage
-        // Page will re-render with new auth state
-        window.location.reload()
-        return { success: true }
-      } else {
-        // For web: Also use sessionStorage, just reload to pick up new auth
-        logger.info('[Auth] Web app - reloading to apply new auth')
-        window.location.reload()
-        return { success: true }
       }
+
+      // Reload with the key in URL so parent site can process it
+      window.location.href = url.toString()
+      return { success: true }
     } else {
       return { success: false, error: 'Invalid key' }
     }
@@ -73,20 +70,4 @@ export async function validateAndChangeKey(
     })
     return { success: false, error: 'Failed to validate key' }
   }
-}
-
-/**
- * Get the stored authentication key from sessionStorage
- * @returns The stored key or null if not found
- */
-export function getStoredAuthKey(): string | null {
-  return sessionStorage.getItem('auth_key')
-}
-
-/**
- * Clear the stored authentication key
- */
-export function clearStoredAuthKey(): void {
-  sessionStorage.removeItem('auth_key')
-  logger.info('[Auth] Cleared stored auth key')
 }
