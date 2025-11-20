@@ -28,7 +28,7 @@ npm install @wolffm/themes
 ### Import CSS
 
 ```javascript
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 ```
 
 ### Use Theme Utilities
@@ -123,7 +123,7 @@ Each theme defines ~50 variables:
 ```tsx
 import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
 import { ConnectedThemePicker } from '@wolffm/task-ui-components'
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 import '@wolffm/task-ui-components/theme-picker.css'
 
 function App() {
@@ -148,7 +148,7 @@ function App() {
 ```tsx
 import { useEffect, useState } from 'react'
 import { loadTheme, setTheme, THEMES, type Theme } from '@wolffm/themes'
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 
 function App() {
   const [theme, setThemeState] = useState<Theme>('light')
@@ -183,7 +183,7 @@ function App() {
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { loadTheme, setTheme, THEMES, type Theme } from '@wolffm/themes'
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 
 const theme = ref<Theme>('light')
 
@@ -208,7 +208,7 @@ const handleThemeChange = (newTheme: Theme) => {
 
 ```javascript
 import { loadTheme, setTheme, THEMES } from '@wolffm/themes'
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', () => {

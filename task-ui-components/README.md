@@ -73,7 +73,7 @@ The easiest way to use the ThemePicker is with the `@wolffm/themes` package:
 ```tsx
 import { ConnectedThemePicker } from '@wolffm/task-ui-components'
 import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
-import '@wolffm/themes/themes.css'
+import '@wolffm/themes/style.css'
 
 function App() {
   const { theme, setTheme } = useTheme()
@@ -156,7 +156,7 @@ Perfect when using your own theme system:
 
 ```tsx
 import { ThemePicker } from '@wolffm/task-ui-components'
-import './my-custom-themes.css' // Your own theme CSS
+import './my-custom-style.css' // Your own theme CSS
 
 const THEME_FAMILIES = [
   {

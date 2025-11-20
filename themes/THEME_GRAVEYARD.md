@@ -276,7 +276,7 @@ The Kitsune Theme Contest had 4 contestants competing for a permanent spot in th
 If you want to restore any of these themes:
 
 1. Copy the CSS from this document
-2. Add it back to `themes/src/themes.css`
+2. Add it back to `themes/src/style.css`
 3. Add the theme names to `THEMES` array in `themes/src/index.ts`
 4. Update `ThemeName` type in `src/app/types.ts`
 5. Add theme family entry in `src/app/themeConfig.tsx`

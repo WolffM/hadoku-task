@@ -91,7 +91,7 @@ export function loadTheme(): Theme {
       "types": "./dist/theme/index.d.ts",
       "default": "./dist/theme/index.js"
     },
-    "./themes.css": "./dist/themes-only.css"
+    "./style.css": "./dist/themes-only.css"
   }
 }
 ```
@@ -145,7 +145,7 @@ npm install @wolffm/task
 ### Import Themes CSS
 
 ```javascript
-import '@wolffm/task/themes.css'
+import '@wolffm/task/style.css'
 ```
 
 ### Use Theme Utilities
