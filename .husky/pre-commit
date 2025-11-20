@@ -15,14 +15,13 @@ pnpm run format
 
 echo "✅ Linting and formatting complete!"
 
-# Bump version if src/, package.json, or build config changed
-echo "📦 Checking if version bump is needed..."
-
-if git diff --cached --name-only | grep -q -E "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
-  echo "🔄 Code or build config changes detected, bumping version..."
+# Function to bump version for a package
+bump_package_version() {
+  local pkg_path=$1
+  local pkg_name=$2
 
   # Read current version from package.json
-  current_version=$(node -p "require('./package.json').version")
+  current_version=$(node -p "require('$pkg_path/package.json').version")
   major=$(echo $current_version | cut -d. -f1)
   minor=$(echo $current_version | cut -d. -f2)
   patch=$(echo $current_version | cut -d. -f3)
@@ -31,28 +30,61 @@ if git diff --cached --name-only | grep -q -E "^(src/|package\.json|vite\.config
   if [ $patch -eq 20 ]; then
     new_minor=$((minor + 1))
     new_version="$major.$new_minor.0"
-    echo "🚀 Rolling over to minor version"
+    echo "🚀 $pkg_name: Rolling over to minor version"
   else
     new_patch=$((patch + 1))
     new_version="$major.$minor.$new_patch"
-    echo "📈 Incrementing patch version"
+    echo "📈 $pkg_name: Incrementing patch version"
   fi
 
   # Update package.json with new version
   node -e "
 const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const pkg = JSON.parse(fs.readFileSync('$pkg_path/package.json', 'utf8'));
 pkg.version = '$new_version';
-fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+fs.writeFileSync('$pkg_path/package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
 
-  echo "✅ Version bumped: $current_version → $new_version"
+  echo "✅ $pkg_name: Version bumped: $current_version → $new_version"
 
-  # Update lock file
+  # Stage the package.json
+  git add "$pkg_path/package.json"
+}
+
+# Get all changed files
+changed_files=$(git diff --cached --name-only)
+
+# Check if version bump is needed for workspace packages
+echo "📦 Checking if version bump is needed..."
+
+bumped_any=false
+
+# Check themes package
+if echo "$changed_files" | grep -q -E "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+  echo "🔄 Themes package changes detected, bumping version..."
+  bump_package_version "./themes" "@wolffm/themes"
+  bumped_any=true
+fi
+
+# Check task-ui-components package
+if echo "$changed_files" | grep -q -E "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+  echo "🔄 Task UI Components package changes detected, bumping version..."
+  bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
+  bumped_any=true
+fi
+
+# Check root package (main task package)
+if echo "$changed_files" | grep -q -E "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
+  echo "🔄 Root package changes detected, bumping version..."
+  bump_package_version "." "@wolffm/task"
+  bumped_any=true
+fi
+
+# Update lock file if any version was bumped
+if [ "$bumped_any" = true ]; then
+  echo "🔄 Updating lock file..."
   pnpm install --lockfile-only
-
-  # Stage the version changes
-  git add package.json pnpm-lock.yaml
+  git add pnpm-lock.yaml
 else
   echo "ℹ️  No code changes detected, skipping version bump"
 fi

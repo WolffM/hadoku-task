@@ -50,6 +50,12 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
    git commit -m "Add feature: description of what you added"
    ```
 
+   **Note:** Pre-commit hooks will automatically:
+   - Run ESLint and auto-fix any linting issues
+   - Format code with Prettier
+   - Bump package versions if source code changed (see below)
+   - Stage all changes for commit
+
 2. **Push to your fork**:
 
    ```bash
@@ -60,6 +66,21 @@ Thank you for your interest in contributing to Hadoku Task Manager! This documen
    - Clear title describing the change
    - Description of what was changed and why
    - Any relevant issue numbers (e.g., "Fixes #123")
+
+### Automatic Version Bumping
+
+This project uses Husky pre-commit hooks to automatically bump package versions when source code changes are detected:
+
+- **Root package** (`@wolffm/task`): Bumped when files in `src/`, `package.json`, or build configs change
+- **Themes package** (`@wolffm/themes`): Bumped when files in `themes/src/`, `themes/package.json`, or theme build configs change
+- **UI Components package** (`@wolffm/task-ui-components`): Bumped when files in `task-ui-components/src/`, `task-ui-components/package.json`, or UI build configs change
+
+**Version bump rules:**
+
+- Patch versions increment automatically (e.g., `1.2.3` → `1.2.4`)
+- At patch `.20`, automatically rolls over to next minor version (e.g., `1.2.20` → `1.3.0`)
+- Only packages with actual source changes are bumped
+- Documentation-only changes do NOT trigger version bumps
 
 ## Coding Guidelines
 
