@@ -2,8 +2,8 @@ import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import App from './App'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import '@wolffm/themes/themes.css'
-import '../styles/index.css'
+import '@wolffm/themes/style.css'
+import '../styles/style.css'
 import { logger } from '@wolffm/task-ui-components'
 
 // Service Worker disabled - parent app handles GitHub integration

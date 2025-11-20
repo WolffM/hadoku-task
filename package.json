@@ -22,7 +22,7 @@
       "default": "./dist/server/index.js"
     },
     "./frontend": "./dist/index.js",
-    "./style.css": "./dist/task.css"
+    "./style.css": "./dist/style.css"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",

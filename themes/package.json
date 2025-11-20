@@ -17,7 +17,7 @@
     "README.md"
   ],
   "exports": {
-    "./themes.css": "./src/themes.css",
+    "./style.css": "./src/themes.css",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

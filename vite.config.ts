@@ -21,7 +21,10 @@ export default defineConfig({
     },
     rollupOptions: {
       // React is provided by hadoku-site via import maps, so externalize it
-      external: ['react', 'react-dom/client', 'react/jsx-runtime']
+      external: ['react', 'react-dom/client', 'react/jsx-runtime'],
+      output: {
+        assetFileNames: 'style.css'
+      }
     },
     target: 'es2022'
   }
