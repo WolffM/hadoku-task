@@ -37,6 +37,7 @@ src/**/*.d.ts.map
 # Backup files
 *.old.*
 *.backup.*
+.husky/*.backup
 
 # Note: task/data is intentionally committed for personal backup/sync
 package-lock.json

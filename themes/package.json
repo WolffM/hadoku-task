@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "description": "16 beautiful themes (8 base themes with light/dark variants) using CSS custom properties - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink",
   "type": "module",
   "repository": {
@@ -50,7 +50,7 @@
     }
   },
   "devDependencies": {
-    "@types/react": "^19.2.2",
+    "@types/react": "^19.2.6",
     "@wolffm/task-ui-components": "workspace:*",
     "typescript": "^5.6.3"
   }

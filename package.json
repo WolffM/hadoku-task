@@ -1,8 +1,9 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.6",
+  "version": "3.4.7",
   "description": "API definitions and business logic for the Task application.",
   "type": "module",
+  "packageManager": "pnpm@10.23.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WolffM/hadoku-task.git"
@@ -51,11 +52,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "@typescript-eslint/eslint-plugin": "^8.46.4",
-    "@typescript-eslint/parser": "^8.46.4",
-    "@vitejs/plugin-react": "^5.1.0",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
@@ -63,6 +64,6 @@
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "typescript": "^5.6.3",
-    "vite": "^7.1.12"
+    "vite": "^7.2.4"
   }
 }
