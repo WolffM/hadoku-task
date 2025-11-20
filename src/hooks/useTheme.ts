@@ -55,7 +55,9 @@ export function useTheme(
   // Auto-enable experimental themes if initialTheme is experimental
   useEffect(() => {
     if (initialTheme && isExperimentalTheme(initialTheme) && !preferences.experimentalThemes) {
-      logger.info(`[useTheme] Auto-enabling experimental themes for mount parameter: ${initialTheme}`)
+      logger.info(
+        `[useTheme] Auto-enabling experimental themes for mount parameter: ${initialTheme}`
+      )
       savePreferences({ experimentalThemes: true })
     }
   }, [initialTheme, preferences.experimentalThemes, savePreferences])
@@ -103,7 +105,13 @@ export function useTheme(
 
     // Priority 3: System preference (lowest priority)
     return defaultTheme as ThemeName
-  }, [initialTheme, preferences.theme, preferences.experimentalThemes, defaultTheme, preferencesLoaded])
+  }, [
+    initialTheme,
+    preferences.theme,
+    preferences.experimentalThemes,
+    defaultTheme,
+    preferencesLoaded
+  ])
 
   const setTheme = useCallback(
     (newTheme: ThemeName) => savePreferences({ theme: newTheme }),

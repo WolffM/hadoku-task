@@ -348,7 +348,7 @@ import { mount, TaskAppProps } from '@wolffm/task/frontend'
 
 const props: TaskAppProps = {
   userType: 'friend',
-  sessionId: 'user-session-123',
+  sessionId: 'user-session-123'
 }
 
 const container = document.getElementById('task-app')

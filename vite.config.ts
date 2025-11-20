@@ -11,10 +11,7 @@ export default defineConfig({
       writeBundle() {
         const dest = resolve(__dirname, 'dist/app/entry.d.ts')
         mkdirSync(dirname(dest), { recursive: true })
-        copyFileSync(
-          resolve(__dirname, 'src/app/entry.d.ts'),
-          dest
-        )
+        copyFileSync(resolve(__dirname, 'src/app/entry.d.ts'), dest)
       }
     }
   ],
