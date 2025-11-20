@@ -28,7 +28,8 @@
   "scripts": {
     "build": "vite build && tsc --emitDeclarationOnly && node scripts/fix-imports.cjs && pnpm run copy-css",
     "copy-css": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/task-ui-components.css', 'dist/styles.css'); fs.copyFileSync('src/theme-picker.css', 'dist/theme-picker.css'); fs.copyFileSync('src/toaster.css', 'dist/toaster.css'); fs.copyFileSync('src/context-menu.css', 'dist/context-menu.css')\"",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "_comment": "copy-css requires source CSS files: theme-picker.css, toaster.css, context-menu.css (validated in CI)"
   },
   "keywords": [
     "theme-picker",

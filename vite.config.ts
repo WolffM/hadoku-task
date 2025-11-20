@@ -6,6 +6,9 @@ import { resolve, dirname } from 'path'
 export default defineConfig({
   plugins: [
     react(),
+    // Copy manually-maintained type definitions to dist
+    // IMPORTANT: src/app/entry.d.ts must be committed to the repo
+    // (see .gitignore exception and docs/BUILD_REQUIREMENTS.md)
     {
       name: 'copy-types',
       writeBundle() {

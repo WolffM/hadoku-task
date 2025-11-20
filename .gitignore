@@ -8,14 +8,15 @@ dist-ssr/
 *.local
 *.log*
 
-# TypeScript compilation artifacts
+# TypeScript compilation artifacts (auto-generated)
 src/**/*.js
 src/**/*.d.ts
 src/**/*.js.map
 src/**/*.d.ts.map
 
-# Exception: manually maintained type definitions
-!src/app/entry.d.ts
+# IMPORTANT: Exceptions for manually-maintained files that MUST be committed
+# These files are required by the build process and are validated in CI
+!src/app/entry.d.ts          # Type definitions for package exports (used by vite.config.ts)
 
 # Editor directories and files
 .vscode/*

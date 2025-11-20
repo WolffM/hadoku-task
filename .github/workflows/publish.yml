@@ -40,7 +40,61 @@ jobs:
         run: pnpm install --frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      # Validate that required manually-maintained files exist
+      - name: Validate required source files
+        run: |
+          echo "Checking for required manually-maintained files..."
+          missing_files=0
+
+          # Check for entry.d.ts (required by vite.config.ts copy-types plugin)
+          if [ ! -f "src/app/entry.d.ts" ]; then
+            echo "❌ ERROR: src/app/entry.d.ts is missing!"
+            echo "   This file should be committed (exception in .gitignore)"
+            missing_files=1
+          else
+            echo "✓ src/app/entry.d.ts exists"
+          fi
+
+          # Check that CSS files exist in task-ui-components (required by copy-css script)
+          if [ ! -f "task-ui-components/src/theme-picker.css" ]; then
+            echo "❌ ERROR: task-ui-components/src/theme-picker.css is missing!"
+            missing_files=1
+          else
+            echo "✓ task-ui-components/src/theme-picker.css exists"
+          fi
+
+          if [ ! -f "task-ui-components/src/toaster.css" ]; then
+            echo "❌ ERROR: task-ui-components/src/toaster.css is missing!"
+            missing_files=1
+          else
+            echo "✓ task-ui-components/src/toaster.css exists"
+          fi
+
+          if [ ! -f "task-ui-components/src/context-menu.css" ]; then
+            echo "❌ ERROR: task-ui-components/src/context-menu.css is missing!"
+            missing_files=1
+          else
+            echo "✓ task-ui-components/src/context-menu.css exists"
+          fi
+
+          # Check themes CSS file
+          if [ ! -f "themes/src/style.css" ]; then
+            echo "❌ ERROR: themes/src/style.css is missing!"
+            missing_files=1
+          else
+            echo "✓ themes/src/style.css exists"
+          fi
+
+          if [ $missing_files -eq 1 ]; then
+            echo ""
+            echo "💡 Tip: Check .gitignore for overly broad ignore patterns"
+            echo "    that might be excluding required source files."
+            exit 1
+          fi
+
+          echo "✅ All required source files present"
+
       # Build in dependency order: UI Components → Themes → Task
       - name: Build UI Components package
         run: pnpm --filter @wolffm/task-ui-components run build
