@@ -21,7 +21,10 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
-    "./frontend": "./dist/index.js",
+    "./frontend": {
+      "types": "./dist/app/entry.d.ts",
+      "default": "./dist/index.js"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
