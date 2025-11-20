@@ -14,6 +14,9 @@ src/**/*.d.ts
 src/**/*.js.map
 src/**/*.d.ts.map
 
+# Exception: manually maintained type definitions
+!src/app/entry.d.ts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
