@@ -6,6 +6,7 @@ import '@wolffm/themes/style.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/task-ui-components'
 
+// Task App Entry Point
 // Service Worker disabled - parent app handles GitHub integration
 
 // Props interface for configuration from hadoku-site

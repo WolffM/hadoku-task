@@ -1,6 +1,7 @@
 /**
  * @wolffm/task-ui-components
  * Reusable UI components for task management applications
+ * Production-ready and fully typed
  */
 
 // Main components
