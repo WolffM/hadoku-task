@@ -4,7 +4,7 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 
 ## Theme Structure Overview
 
-Each theme requires **26 color variables** + **6 shadow variables** = **32 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
+Each theme requires **27 color variables** + **6 shadow variables** = **33 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
 ### Color Variables Count:
 
@@ -14,13 +14,13 @@ Each theme requires **26 color variables** + **6 shadow variables** = **32 total
 - Neutral colors: 3
 - Text colors: 4
 - Border colors: 2
-- Background colors: 4
-- **Total: 26 color variables**
+- Background colors: 5
+- **Total: 27 color variables**
 
 ### Additional Variables:
 
 - Shadow variables: 6
-- **Grand Total: 32 variables per theme**
+- **Grand Total: 33 variables per theme**
 
 ### The 5 Main Colors (From Palette)
 
@@ -40,7 +40,7 @@ These are the only colors you need to select from the input palette. **Be creati
    - Lightest color for light themes
    - Darkest color for dark themes
 
-All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
+All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
 
 ---
 
@@ -98,7 +98,7 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 - `--color-border` - **ALT:** Default border color (derived from neutral)
 - `--color-border-light` - **ALT:** Lighter border (derived from neutral-light)
 
-#### 7. Background Colors (4 variables)
+#### 7. Background Colors (5 variables)
 
 **Purpose:** Page and component backgrounds
 
@@ -108,6 +108,7 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
   - Or lighten/darken bg by 3-5%
   - Or add subtle hue shift for character
 - `--color-bg-alt` - **ALT:** Alternative background (slightly different from bg)
+- `--color-bg-hover` - **ALT:** Hover state background (subtle, between bg and bg-alt)
 - `--color-bg-overlay` - **ALT:** Modal/overlay background (semi-transparent)
 
 #### 8. Shadows (6 variables)
@@ -127,7 +128,7 @@ All other 27 variables (21 colors + 6 shadows) are **derived** from these 5 main
 
 ### Alt Colors (Derived or Selected Creatively)
 
-You have two approaches for deriving the 21 alt colors (+ 6 shadows):
+You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 
 **Option A: Algorithmic (Recommended for AI)**
 
@@ -208,7 +209,7 @@ Given a color list like:
 
 **Pro Tip:** Success and Danger should be visually distinct from Primary AND from each other. Test them side-by-side!
 
-### Step 3: Generate 21 Alt Colors + 6 Shadows
+### Step 3: Generate 22 Alt Colors + 6 Shadows
 
 Use color manipulation functions:
 
@@ -249,6 +250,7 @@ Use color manipulation functions:
 --color-bg-card: lighten(bg, 5%)            // dark theme
 --color-bg-alt: darken(bg, 2%)              // light theme
 --color-bg-alt: darken(bg, 5%)              // dark theme
+--color-bg-hover: mix(bg, bg-alt, 50%)      // subtle hover state
 --color-bg-overlay: rgba(text, 0.5)
 
 --color-border: mix(neutral, bg, 70%)
@@ -300,7 +302,7 @@ Ensure WCAG AA compliance:
   --color-neutral: #e0e0e0; /* Light gray */
   --color-bg: #ffffff; /* Pure white */
 
-  /* ===== 21 ALT COLORS + 6 SHADOWS (derived) ===== */
+  /* ===== 22 ALT COLORS + 6 SHADOWS (derived) ===== */
 
   /* From Primary */
   --color-primary-dark: #e65a2a; /* darken 10% */
@@ -330,6 +332,7 @@ Ensure WCAG AA compliance:
 
   --color-bg-card: #f4f4f4; /* lighten bg 3% */
   --color-bg-alt: #f9f9f9; /* darken bg 2% */
+  --color-bg-hover: #f7f7f7; /* between bg and bg-alt */
   --color-bg-overlay: rgba(45, 45, 45, 0.5);
 
   /* Borders (from neutral + bg) */
@@ -381,8 +384,8 @@ function getContrastText(bg: string): 'light' | 'dark' {
 
 Before submitting a new theme, verify:
 
-- [ ] All 26 color variables are defined
-- [ ] All 6 shadow variables are defined (32 total)
+- [ ] All 27 color variables are defined
+- [ ] All 6 shadow variables are defined (33 total)
 - [ ] Primary text has ≥4.5:1 contrast on main background
 - [ ] Theme works in both light and dark variants
 - [ ] Hover states are visually distinct but subtle

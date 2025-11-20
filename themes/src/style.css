@@ -51,6 +51,7 @@
   --color-bg: #f8fafc;
   --color-bg-card: #ffffff;
   --color-bg-alt: #fafafa;
+  --color-bg-hover: #f1f5f9;
   --color-bg-overlay: rgba(15, 23, 42, 0.5);
 
   /* Spacing */
@@ -131,6 +132,7 @@
   --color-bg: #0f172a;
   --color-bg-card: #1e293b;
   --color-bg-alt: #0c1322;
+  --color-bg-hover: #1e293b;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -174,6 +176,7 @@
   --color-bg: #fffbfc;
   --color-bg-card: #fff5f8;
   --color-bg-alt: #fff0f4;
+  --color-bg-hover: #ffe0e9;
   --color-bg-overlay: rgba(255, 107, 157, 0.3);
 
   --shadow-sm: 0 1px 2px rgba(255, 107, 157, 0.08);
@@ -217,6 +220,7 @@
   --color-bg: #1a0d14;
   --color-bg-card: #2d1620;
   --color-bg-alt: #150a10;
+  --color-bg-hover: #3d1e2b;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -260,6 +264,7 @@
   --color-bg: #f0f9ff;
   --color-bg-card: #ffffff;
   --color-bg-alt: #e0f2fe;
+  --color-bg-hover: #cffafe;
   --color-bg-overlay: rgba(8, 47, 73, 0.3);
 
   --shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
@@ -303,6 +308,7 @@
   --color-bg: #082f49;
   --color-bg-card: #0c4a6e;
   --color-bg-alt: #164e63;
+  --color-bg-hover: #0e7490;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -346,6 +352,7 @@
   --color-bg: #fafafe;
   --color-bg-card: #ffffff;
   --color-bg-alt: #f5f3ff;
+  --color-bg-hover: #f0e5ff;
   --color-bg-overlay: rgba(26, 26, 46, 0.4);
 
   --shadow-sm: 0 1px 3px rgba(255, 0, 110, 0.12);
@@ -389,6 +396,7 @@
   --color-bg: #020617;
   --color-bg-card: #0c1929;
   --color-bg-alt: #1e293b;
+  --color-bg-hover: #0f172a;
   --color-bg-overlay: rgba(0, 0, 0, 0.8);
 
   --shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
@@ -432,6 +440,7 @@
   --color-bg: #fffbeb;
   --color-bg-card: #ffffff;
   --color-bg-alt: #fef3c7;
+  --color-bg-hover: #fed7aa;
   --color-bg-overlay: rgba(28, 25, 23, 0.3);
 
   --shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
@@ -475,6 +484,7 @@
   --color-bg: #1c1917;
   --color-bg-card: #292524;
   --color-bg-alt: #3e3933;
+  --color-bg-hover: #44403c;
   --color-bg-overlay: rgba(0, 0, 0, 0.75);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -518,6 +528,7 @@
   --color-bg: #fafafa;
   --color-bg-card: #faf5ff;
   --color-bg-alt: #f3e8ff;
+  --color-bg-hover: #e9d5ff;
   --color-bg-overlay: rgba(192, 132, 252, 0.25);
 
   --shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
@@ -561,6 +572,7 @@
   --color-bg: #1a0f1e;
   --color-bg-card: #2d1b3d;
   --color-bg-alt: #3f2551;
+  --color-bg-hover: #581c87;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -604,6 +616,7 @@
   --color-bg: #fffafc;
   --color-bg-card: #ffffff;
   --color-bg-alt: #fff0f5;
+  --color-bg-hover: #ffd9e0;
   --color-bg-overlay: rgba(255, 105, 180, 0.2);
 
   --shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
@@ -647,6 +660,7 @@
   --color-bg: #0d0012;
   --color-bg-card: #1a0a18;
   --color-bg-alt: #2a1828;
+  --color-bg-hover: #4a0e47;
   --color-bg-overlay: rgba(0, 0, 0, 0.8);
 
   --shadow-sm: 0 1px 2px rgba(255, 16, 240, 0.3);
@@ -690,6 +704,7 @@
   --color-bg: #f9f7ee;
   --color-bg-card: #ffffff;
   --color-bg-alt: #f5f2e8;
+  --color-bg-hover: #ebe7dc;
   --color-bg-overlay: rgba(44, 44, 44, 0.5);
 
   --shadow-sm: 0 1px 2px rgba(107, 190, 78, 0.08);
@@ -733,6 +748,7 @@
   --color-bg: #1e1c17;
   --color-bg-card: #2a2720;
   --color-bg-alt: #15130f;
+  --color-bg-hover: #3a342a;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -883,6 +899,7 @@
   --color-bg: #f2e6cd;
   --color-bg-card: #f1c8c8;
   --color-bg-alt: #d8b888;
+  --color-bg-hover: #d1b1ce;
   --color-bg-overlay: rgba(42, 42, 42, 0.45);
 
   --shadow-sm: 0 1px 2px rgba(65, 186, 174, 0.08);
@@ -1030,6 +1047,7 @@
   --color-bg: #101d26;
   --color-bg-card: #1a2730;
   --color-bg-alt: #282832;
+  --color-bg-hover: #3a3a47;
   --color-bg-overlay: rgba(232, 230, 232, 0.45);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);

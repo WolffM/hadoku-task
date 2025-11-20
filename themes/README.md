@@ -74,7 +74,7 @@ Each theme defines ~50 variables:
 - `--color-neutral` (+ light, lighter variants)
 - `--color-text` (+ secondary, tertiary, muted variants)
 - `--color-border` (+ light variant)
-- `--color-bg` (+ card, alt, overlay variants)
+- `--color-bg` (+ card, alt, hover, overlay variants)
 
 ### Typography
 
