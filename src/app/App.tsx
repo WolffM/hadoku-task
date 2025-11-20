@@ -33,7 +33,8 @@ export default function App(props: TaskAppProps = {}) {
   const {
     userType = 'public',
     sessionId: propsSessionId = 'public',
-    onKeyValidation: _onKeyValidation
+    onKeyValidation: _onKeyValidation,
+    theme: initialTheme
   } = props
 
   // Refs
@@ -81,7 +82,7 @@ export default function App(props: TaskAppProps = {}) {
     setTheme,
     isThemeReady,
     isInitialThemeLoad
-  } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded)
+  } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded, initialTheme)
 
   // Compute mobile layout
   const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false

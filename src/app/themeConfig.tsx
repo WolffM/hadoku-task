@@ -120,6 +120,15 @@ export function getThemeFamilies(experimentalEnabled: boolean): ThemeFamily[] {
 }
 
 /**
+ * Check if a theme is experimental
+ */
+export function isExperimentalTheme(themeName: string): boolean {
+  return EXPERIMENTAL_THEME_FAMILIES.some(
+    f => f.lightTheme === themeName || f.darkTheme === themeName
+  )
+}
+
+/**
  * Get icon for a specific theme
  */
 export function getThemeIcon(themeName: ThemeName, experimentalEnabled: boolean): React.ReactNode {

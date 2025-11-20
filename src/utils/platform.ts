@@ -18,17 +18,3 @@ export function isMobileApp(): boolean {
     !!win.cordova // Cordova framework
   )
 }
-
-/**
- * Check if running in development mode
- */
-export function isDevelopment(): boolean {
-  return import.meta.env.DEV
-}
-
-/**
- * Check if running in production mode
- */
-export function isProduction(): boolean {
-  return import.meta.env.PROD
-}

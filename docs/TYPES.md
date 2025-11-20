@@ -336,17 +336,8 @@ Props for mounting the task app frontend.
 ```typescript
 interface TaskAppProps {
   basename?: string // Base URL path
-  apiUrl?: string // API endpoint URL
-  environment?: string // Environment (dev/prod)
   userType?: 'public' | 'friend' | 'admin' // User type
   sessionId?: string // Session ID
-  userName?: string // Initial display name
-  onKeyValidation?: (
-    // Key validation callback
-    isValid: boolean,
-    userType?: string,
-    userName?: string
-  ) => void
 }
 ```
 
@@ -358,7 +349,6 @@ import { mount, TaskAppProps } from '@wolffm/task/frontend'
 const props: TaskAppProps = {
   userType: 'friend',
   sessionId: 'user-session-123',
-  userName: 'John Doe'
 }
 
 const container = document.getElementById('task-app')

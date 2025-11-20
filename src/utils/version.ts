@@ -22,12 +22,4 @@ export function logPackageVersions(): void {
   }
 
   logger.info('📦 Package Versions:', versions)
-
-  // Log environment info for debugging cache issues
-  logger.info('🌍 Environment:', {
-    isDev: import.meta.env.DEV,
-    mode: import.meta.env.MODE,
-    buildTime: new Date().toISOString(),
-    userAgent: navigator.userAgent.substring(0, 50) + '...'
-  })
 }

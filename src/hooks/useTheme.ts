@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback, type RefObject } from 'react'
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
-import { getThemeFamilies, type ThemeFamily } from '../app/themeConfig'
+import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface UseThemeReturn {
@@ -38,7 +38,8 @@ export function useTheme(
   preferences: UserPreferences,
   savePreferences: (updates: Partial<UserPreferences>) => Promise<void>,
   containerRef: RefObject<HTMLDivElement>,
-  preferencesLoaded: boolean = true
+  preferencesLoaded: boolean = true,
+  initialTheme?: string
 ): UseThemeReturn {
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [isThemeReady, setIsThemeReady] = useState(false)
@@ -51,14 +52,29 @@ export function useTheme(
     window.matchMedia('(prefers-color-scheme: dark)').matches
   const defaultTheme = systemPrefersDark ? 'dark' : 'light'
 
+  // Auto-enable experimental themes if initialTheme is experimental
+  useEffect(() => {
+    if (initialTheme && isExperimentalTheme(initialTheme) && !preferences.experimentalThemes) {
+      logger.info(`[useTheme] Auto-enabling experimental themes for mount parameter: ${initialTheme}`)
+      savePreferences({ experimentalThemes: true })
+    }
+  }, [initialTheme, preferences.experimentalThemes, savePreferences])
+
   // Compute theme families based on experimental preferences
   const THEME_FAMILIES = useMemo(
     () => getThemeFamilies(preferences.experimentalThemes || false),
     [preferences.experimentalThemes]
   )
 
-  // Validate and sanitize theme - fallback to default if theme is invalid or unavailable
+  // Validate and sanitize theme - prioritize initialTheme from mount params, then preferences
   const theme = useMemo(() => {
+    // Priority 1: Mount parameter theme (highest priority)
+    if (initialTheme && isThemeAvailable(initialTheme, preferences.experimentalThemes || false)) {
+      logger.info(`[useTheme] Using theme from mount parameter: ${initialTheme}`)
+      return initialTheme as ThemeName
+    }
+
+    // Priority 2: User preferences
     const requestedTheme = preferences.theme
 
     // Check if the requested theme is available
@@ -85,9 +101,9 @@ export function useTheme(
       return fallbackTheme as ThemeName
     }
 
-    // No theme specified, use system preference
+    // Priority 3: System preference (lowest priority)
     return defaultTheme as ThemeName
-  }, [preferences.theme, preferences.experimentalThemes, defaultTheme, preferencesLoaded])
+  }, [initialTheme, preferences.theme, preferences.experimentalThemes, defaultTheme, preferencesLoaded])
 
   const setTheme = useCallback(
     (newTheme: ThemeName) => savePreferences({ theme: newTheme }),

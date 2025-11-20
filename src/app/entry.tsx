@@ -9,14 +9,16 @@ import { logger } from '@wolffm/task-ui-components'
 // Task App Entry Point
 // Service Worker disabled - parent app handles GitHub integration
 
+// Re-export types for parent app
+export type { ThemeName } from './types'
+
 // Props interface for configuration from hadoku-site
 export interface TaskAppProps {
   basename?: string
-  apiUrl?: string
-  environment?: string
   userType?: 'public' | 'friend' | 'admin'
   sessionId?: string
   displayName?: string // Display name for welcome message
+  theme?: string // Theme to apply (overrides user preferences)
   onKeyValidation?: (isValid: boolean, userType?: string, displayName?: string) => void // Callback when key is validated
 }
 
