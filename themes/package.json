@@ -25,7 +25,6 @@
   },
   "scripts": {
     "build": "tsc && node scripts/fix-imports.cjs",
-    "version:smart": "node scripts/version-manager.cjs",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [
