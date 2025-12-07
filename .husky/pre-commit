@@ -59,23 +59,60 @@ echo "📦 Checking if version bump is needed..."
 
 bumped_any=false
 
-# Check themes package
-if echo "$changed_files" | grep -q -E "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
-  echo "🔄 Themes package changes detected, bumping version..."
-  bump_package_version "./themes" "@wolffm/themes"
-  bumped_any=true
+# Track which packages need bumping
+bump_ui_components=false
+bump_themes=false
+bump_task=false
+
+# Check task-ui-components package (no dependencies, check first)
+if echo "$changed_files" | grep -q -E "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+  echo "🔄 Task UI Components package changes detected"
+  bump_ui_components=true
 fi
 
-# Check task-ui-components package
-if echo "$changed_files" | grep -q -E "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
-  echo "🔄 Task UI Components package changes detected, bumping version..."
-  bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
-  bumped_any=true
+# Check themes package (depends on task-ui-components)
+if echo "$changed_files" | grep -q -E "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+  echo "🔄 Themes package changes detected"
+  bump_themes=true
 fi
 
 # Check root package (main task package)
 if echo "$changed_files" | grep -q -E "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
-  echo "🔄 Root package changes detected, bumping version..."
+  echo "🔄 Root package changes detected"
+  bump_task=true
+fi
+
+# DEPENDENCY CHAIN: If a dependency is bumped, dependents must also bump
+# This ensures workspace:* resolves to the newly published version
+#
+# Dependency tree:
+#   task-ui-components (no deps)
+#   └── themes (depends on task-ui-components)
+#   └── task (depends on task-ui-components AND themes)
+#
+if [ "$bump_ui_components" = true ]; then
+  echo "📦 task-ui-components changed → bumping dependent packages (themes, task)"
+  bump_themes=true
+  bump_task=true
+fi
+
+if [ "$bump_themes" = true ]; then
+  echo "📦 themes changed → bumping dependent package (task)"
+  bump_task=true
+fi
+
+# Now perform the actual bumps
+if [ "$bump_ui_components" = true ]; then
+  bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
+  bumped_any=true
+fi
+
+if [ "$bump_themes" = true ]; then
+  bump_package_version "./themes" "@wolffm/themes"
+  bumped_any=true
+fi
+
+if [ "$bump_task" = true ]; then
   bump_package_version "." "@wolffm/task"
   bumped_any=true
 fi
