@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.12] - 2025-12-15
+
+### 🎨 New Semantic Theme Variables
+
+**Version Bumps:**
+
+- **@wolffm/task**: 3.4.11 → 3.4.12
+- **@wolffm/themes**: 1.1.18 → 1.1.19
+
+#### **@wolffm/themes - New Color Variables**
+
+Added 4 new semantic color variables across all 18 themes to support badges and status indicators:
+
+**New Variables:**
+
+| Variable             | Purpose                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| `--color-success-bg` | Background for success badges (10-15% opacity of success color) |
+| `--color-warning`    | Warning/intermediate state foreground (typically amber/yellow)  |
+| `--color-warning-bg` | Background for warning badges (10-15% opacity of warning color) |
+| `--color-muted-bg`   | Background for unknown/neutral badges                           |
+
+**Documentation Updates:**
+
+- Updated `README.md` with new CSS variable documentation
+- Updated `THEME_CREATION_GUIDE.md`:
+  - Color variable count: 27 → 31 colors (33 → 37 total with shadows)
+  - Added Warning Colors section (2 variables)
+  - Added `--color-success-bg` to Success Colors section
+  - Added `--color-muted-bg` to Neutral Colors section
+  - Updated theme checklist
+
+---
+
 ## [3.3.3] - 2025-11-08
 
 ### 🎨 React Integration & Package Enhancements

@@ -4,23 +4,24 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 
 ## Theme Structure Overview
 
-Each theme requires **27 color variables** + **6 shadow variables** = **33 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
+Each theme requires **31 color variables** + **6 shadow variables** = **37 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
 ### Color Variables Count:
 
 - Primary colors: 5
-- Success colors: 3
+- Success colors: 4
+- Warning colors: 2
 - Danger colors: 5
-- Neutral colors: 3
+- Neutral colors: 4 (includes muted-bg)
 - Text colors: 4
 - Border colors: 2
 - Background colors: 5
-- **Total: 27 color variables**
+- **Total: 31 color variables**
 
 ### Additional Variables:
 
 - Shadow variables: 6
-- **Grand Total: 33 variables per theme**
+- **Grand Total: 37 variables per theme**
 
 ### The 5 Main Colors (From Palette)
 
@@ -40,7 +41,7 @@ These are the only colors you need to select from the input palette. **Be creati
    - Lightest color for light themes
    - Darkest color for dark themes
 
-All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
+All other 32 variables (26 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
 
 ---
 
@@ -56,15 +57,23 @@ All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main
 - `--color-primary-bg` - **ALT:** Very subtle background (5-10% opacity)
 - `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
 
-#### 2. Success Colors (3 variables)
+#### 2. Success Colors (4 variables)
 
 **Purpose:** Positive actions, completed tasks, checkmarks
 
 - `--color-success` - **MAIN:** Success/completion indicator
 - `--color-success-dark` - **ALT:** Darker shade (~10-15% darker, or pick complementary from palette)
 - `--color-success-text` - **ALT:** Text on success backgrounds (white or black for contrast)
+- `--color-success-bg` - **ALT:** Background for success badges (10-15% opacity of success color)
 
-#### 3. Danger Colors (5 variables)
+#### 3. Warning Colors (2 variables)
+
+**Purpose:** Intermediate states, caution indicators, pending actions
+
+- `--color-warning` - **MAIN:** Warning/caution indicator (typically amber/yellow)
+- `--color-warning-bg` - **ALT:** Background for warning badges (10-15% opacity of warning color)
+
+#### 4. Danger Colors (5 variables)
 
 **Purpose:** Destructive actions, errors, warnings
 
@@ -74,15 +83,16 @@ All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main
 - `--color-danger-light` - **ALT:** Light tint/background shade
 - `--color-danger-text` - **ALT:** Text color on danger backgrounds (auto-calculated)
 
-#### 4. Neutral Colors (3 variables)
+#### 5. Neutral Colors (4 variables)
 
-**Purpose:** Non-critical UI elements, disabled states
+**Purpose:** Non-critical UI elements, disabled states, unknown/neutral badges
 
 - `--color-neutral` - **MAIN:** Neutral gray or muted color
 - `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
 - `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
+- `--color-muted-bg` - **ALT:** Background for neutral/unknown badges
 
-#### 5. Text Colors (4 variables)
+#### 6. Text Colors (4 variables)
 
 **Purpose:** All text hierarchy
 
@@ -91,14 +101,14 @@ All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main
 - `--color-text-tertiary` - **ALT:** Tertiary text (60% opacity)
 - `--color-text-muted` - **ALT:** Least prominent text (40% opacity)
 
-#### 6. Border Colors (2 variables)
+#### 7. Border Colors (2 variables)
 
 **Purpose:** UI element boundaries
 
 - `--color-border` - **ALT:** Default border color (derived from neutral)
 - `--color-border-light` - **ALT:** Lighter border (derived from neutral-light)
 
-#### 7. Background Colors (5 variables)
+#### 8. Background Colors (5 variables)
 
 **Purpose:** Page and component backgrounds
 
@@ -111,7 +121,7 @@ All other 28 variables (22 colors + 6 shadows) are **derived** from these 5 main
 - `--color-bg-hover` - **ALT:** Hover state background (subtle, between bg and bg-alt)
 - `--color-bg-overlay` - **ALT:** Modal/overlay background (semi-transparent)
 
-#### 8. Shadows (6 variables)
+#### 9. Shadows (6 variables)
 
 **Purpose:** Depth and elevation
 
@@ -384,12 +394,12 @@ function getContrastText(bg: string): 'light' | 'dark' {
 
 Before submitting a new theme, verify:
 
-- [ ] All 27 color variables are defined
-- [ ] All 6 shadow variables are defined (33 total)
+- [ ] All 31 color variables are defined
+- [ ] All 6 shadow variables are defined (37 total)
 - [ ] Primary text has ≥4.5:1 contrast on main background
 - [ ] Theme works in both light and dark variants
 - [ ] Hover states are visually distinct but subtle
-- [ ] Success/Danger colors are clearly different from Primary
+- [ ] Success/Warning/Danger colors are clearly different from Primary
 - [ ] Focus rings are visible on all backgrounds
 - [ ] Theme name follows kebab-case convention: `theme-name-light` / `theme-name-dark`
 

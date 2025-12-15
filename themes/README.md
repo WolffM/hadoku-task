@@ -69,9 +69,11 @@ Each theme defines ~50 variables:
 ### Colors
 
 - `--color-primary` (+ dark, light, bg, hover variants)
-- `--color-success` (+ dark, text variants)
+- `--color-success` (+ dark, text, bg variants)
+- `--color-warning` (+ bg variant)
 - `--color-danger` (+ dark, darker, light, text variants)
 - `--color-neutral` (+ light, lighter variants)
+- `--color-muted-bg` - background for neutral/unknown badges
 - `--color-text` (+ secondary, tertiary, muted variants)
 - `--color-border` (+ light variant)
 - `--color-bg` (+ card, alt, hover, overlay variants)
