@@ -1,0 +1,40 @@
+/* Theme modifications based on light */
+[data-theme='light-custom'] {
+  --color-primary: #99b9ff; /* modified */
+  --color-primary-dark: #4d84ff; /* modified */
+  --color-primary-light: hsla(231, 21%, 95%, 0.5); /* modified */
+  --color-primary-bg: #d4e2fc; /* modified */
+  --color-primary-hover: hsla(221, 100%, 60%, 0.08); /* modified */
+  --color-success: #99ffc2; /* modified */
+  --color-success-dark: #5cff9d; /* modified */
+  --color-success-text: #000000;
+  --color-success-bg: hsla(144, 100%, 80%, 0.1); /* modified */
+  --color-success-hover: hsla(144, 100%, 80%, 0.06); /* modified */
+  --color-warning: #ffb433; /* modified */
+  --color-warning-bg: hsla(38, 100%, 60%, 0.1); /* modified */
+  --color-warning-text: #000000;
+  --color-warning-hover: hsla(38, 100%, 60%, 0.06); /* modified */
+  --color-danger: #ff6633; /* modified */
+  --color-danger-dark: #ff4000; /* modified */
+  --color-danger-darker: #cc3300; /* modified */
+  --color-danger-light: #fadbd1; /* modified */
+  --color-danger-text: #000000;
+  --color-danger-hover: rgba(255, 102, 51, 0.06); /* modified */
+  --color-neutral: #a6b0bf; /* modified */
+  --color-neutral-light: #e4e5e7; /* modified */
+  --color-neutral-lighter: #ffffff; /* modified */
+  --color-neutral-text: #000000;
+  --color-neutral-hover: rgba(166, 176, 191, 0.06); /* modified */
+  --color-muted-bg: #d6d8db; /* modified */
+  --color-text: #05112e; /* modified */
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-border: #d0d7de;
+  --color-border-light: #e2e8f0;
+  --color-bg: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #fafafa;
+  --color-bg-hover: #f1f5f9;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
+}

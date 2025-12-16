@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme Editor | @wolffm/themes</title>
+  <link rel="stylesheet" href="../src/style.css">
+  <style>
+    /* ===== Editor Chrome (uses fixed colors to not conflict with themes) ===== */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-family);
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      min-height: 100vh;
+    }
+
+    .editor-layout.panel-closed {
+      grid-template-columns: 220px 1fr 0;
+    }
+
+    /* ===== Left Sidebar: Theme Selector ===== */
+    .theme-sidebar {
+      background: #1a1a1a;
+      color: #f5f5f5;
+      padding: 16px;
+      border-right: 1px solid #333;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .theme-sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+    }
+
+    .theme-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .theme-list li {
+      margin-bottom: 4px;
+    }
+
+    .theme-btn {
+      width: 100%;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .theme-btn:hover {
+      background: #2a2a2a;
+      color: #fff;
+    }
+
+    .theme-btn.active {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    .theme-family {
+      margin-bottom: 12px;
+    }
+
+    .theme-family-name {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 4px;
+      padding-left: 4px;
+    }
+
+    /* ===== Main Content: Showcase ===== */
+    .showcase {
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    .showcase h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      color: var(--color-text);
+    }
+
+    .showcase-subtitle {
+      color: var(--color-text-secondary);
+      margin-bottom: 32px;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .count {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--color-text-muted);
+      background: var(--color-bg-alt);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* Color Swatches Grid */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .swatch {
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .swatch:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .swatch.selected {
+      outline: 3px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .swatch.modified {
+      border-color: var(--color-warning);
+      border-width: 2px;
+    }
+
+    .swatch.modified .swatch-name::after {
+      content: ' (modified)';
+      color: var(--color-warning);
+      font-weight: normal;
+      font-size: 9px;
+    }
+
+    .swatch-color {
+      height: 60px;
+      position: relative;
+    }
+
+    .swatch-color::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+    }
+
+    .swatch-info {
+      padding: 8px;
+      background: var(--color-bg-card);
+    }
+
+    .swatch-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 2px;
+    }
+
+    .swatch-value {
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--color-text-muted);
+    }
+
+    /* Example Components */
+    .examples-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      align-items: center;
+    }
+
+    .example-btn {
+      padding: 8px 16px;
+      border-radius: var(--border-radius);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+    }
+
+    .example-btn.primary {
+      background: var(--color-primary);
+      color: var(--color-primary-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-btn.primary:hover {
+      background: var(--color-primary-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    .example-btn.success {
+      background: var(--color-success);
+      color: var(--color-success-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-btn.success:hover {
+      background: var(--color-success-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    .example-btn.warning {
+      background: var(--color-warning);
+      color: var(--color-warning-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-btn.warning:hover {
+      filter: brightness(0.9);
+      box-shadow: var(--shadow-md);
+    }
+
+    .example-btn.danger {
+      background: var(--color-danger);
+      color: var(--color-danger-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-btn.danger:hover {
+      background: var(--color-danger-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    .example-btn.neutral {
+      background: var(--color-neutral);
+      color: var(--color-neutral-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-btn.neutral:hover {
+      background: var(--color-neutral-light);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Ghost/outline button variants using hover colors */
+    .example-btn.ghost-primary {
+      background: transparent;
+      color: var(--color-primary);
+      border: 1px solid var(--color-primary);
+    }
+
+    .example-btn.ghost-primary:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .example-btn.ghost-success {
+      background: transparent;
+      color: var(--color-success);
+      border: 1px solid var(--color-success);
+    }
+
+    .example-btn.ghost-success:hover {
+      background: var(--color-success-hover);
+    }
+
+    .example-btn.ghost-warning {
+      background: transparent;
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning);
+    }
+
+    .example-btn.ghost-warning:hover {
+      background: var(--color-warning-hover);
+    }
+
+    .example-btn.ghost-danger {
+      background: transparent;
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger);
+    }
+
+    .example-btn.ghost-danger:hover {
+      background: var(--color-danger-hover);
+    }
+
+    .example-btn.ghost-neutral {
+      background: transparent;
+      color: var(--color-neutral);
+      border: 1px solid var(--color-neutral);
+    }
+
+    .example-btn.ghost-neutral:hover {
+      background: var(--color-neutral-hover);
+    }
+
+    /* Editing highlight animation */
+    @keyframes editingPulse {
+      0%, 100% { outline-color: var(--color-primary); }
+      50% { outline-color: var(--color-primary-light); }
+    }
+
+    .editing-highlight {
+      outline: 3px solid var(--color-primary);
+      outline-offset: 4px;
+      animation: editingPulse 1.5s ease-in-out infinite;
+      position: relative;
+    }
+
+    .editing-highlight::before {
+      content: 'Editing';
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-primary);
+      color: var(--color-primary-text);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 100;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge.success {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+    }
+
+    .badge.warning {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+    }
+
+    .badge.danger {
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+    }
+
+    .badge.muted {
+      background: var(--color-muted-bg);
+      color: var(--color-text-secondary);
+    }
+
+    /* Text Samples */
+    .text-samples {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .text-sample {
+      padding: 8px 12px;
+      background: var(--color-bg-card);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .text-sample:hover {
+      background: var(--color-bg-hover);
+    }
+
+    /* Background Demo */
+    .bg-demo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .bg-card {
+      padding: 16px;
+      border-radius: var(--border-radius-lg);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .bg-card:hover {
+      transform: scale(1.02);
+    }
+
+    .bg-card h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+    }
+
+    .bg-card p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    /* Shadow Demo */
+    .shadow-demo {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .shadow-card {
+      padding: 20px;
+      background: var(--color-bg-card);
+      border-radius: var(--border-radius-lg);
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .shadow-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .shadow-card .name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    /* Component Demo Section */
+    .component-demo {
+      background: var(--color-bg-card);
+      border-radius: var(--border-radius-lg);
+      padding: 24px;
+      border: 1px solid var(--color-border);
+    }
+
+    .demo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .demo-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .demo-form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-size: 14px;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
+    }
+
+    .demo-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    /* ===== Right Panel: Color Editor ===== */
+    .editor-panel {
+      background: #1a1a1a;
+      color: #f5f5f5;
+      border-left: 1px solid #333;
+      padding: 20px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      transition: width 0.2s, padding 0.2s;
+    }
+
+    .editor-panel.hidden {
+      width: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .close-btn:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .var-name {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--color-primary);
+      background: #2a2a2a;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+
+    .color-preview-large {
+      width: 100%;
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      position: relative;
+      cursor: pointer;
+      border: 2px solid #333;
+    }
+
+    .color-preview-large:hover::after {
+      content: 'Click to pick color';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    .color-preview-large input[type="color"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .editor-section {
+      margin-bottom: 24px;
+    }
+
+    .editor-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin: 0 0 8px 0;
+    }
+
+    .hex-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    .hex-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .slider-group {
+      margin-bottom: 12px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .slider-value {
+      color: #fff;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      border: 2px solid #333;
+    }
+
+    .hue-slider {
+      background: linear-gradient(to right,
+        hsl(0, 100%, 50%),
+        hsl(60, 100%, 50%),
+        hsl(120, 100%, 50%),
+        hsl(180, 100%, 50%),
+        hsl(240, 100%, 50%),
+        hsl(300, 100%, 50%),
+        hsl(360, 100%, 50%)
+      );
+    }
+
+    .saturation-slider {
+      background: linear-gradient(to right, #888, currentColor);
+    }
+
+    .lightness-slider {
+      background: linear-gradient(to right, #000, #888, #fff);
+    }
+
+    .alpha-slider {
+      background: linear-gradient(to right, transparent, currentColor),
+        repeating-conic-gradient(#808080 0% 25%, #fff 0% 50%) 50% / 10px 10px;
+    }
+
+    /* Action Buttons */
+    .panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #333;
+    }
+
+    .action-btn {
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+
+    .action-btn.primary {
+      background: var(--color-primary);
+      color: var(--color-primary-text);
+    }
+
+    .action-btn.primary:hover {
+      background: var(--color-primary-dark);
+    }
+
+    .action-btn.secondary {
+      background: #333;
+      color: #fff;
+    }
+
+    .action-btn.secondary:hover {
+      background: #444;
+    }
+
+    .action-btn.danger {
+      background: var(--color-danger);
+      color: var(--color-danger-text);
+    }
+
+    .action-btn.danger:hover {
+      background: var(--color-danger-dark);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Modification indicator */
+    .modification-count {
+      background: var(--color-danger);
+      color: var(--color-danger-text);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+
+    /* All Variables List */
+    .all-vars-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+
+    .var-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .var-item:hover {
+      background: #2a2a2a;
+    }
+
+    .var-item.modified {
+      background: var(--color-primary-hover);
+    }
+
+    .var-item .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      flex-shrink: 0;
+    }
+
+    .var-item .var-label {
+      flex: 1;
+      font-family: monospace;
+      color: #aaa;
+    }
+
+    /* Submit Theme Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.show .modal {
+      transform: translateY(0);
+    }
+
+    .modal h3 {
+      margin: 0 0 8px 0;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    .modal p {
+      color: #888;
+      font-size: 14px;
+      margin: 0 0 20px 0;
+    }
+
+    .modal-field {
+      margin-bottom: 16px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .modal-field input,
+    .modal-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .modal-field input:focus,
+    .modal-field textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .modal-field textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .modal-field .hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    .submit-status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .submit-status.loading {
+      background: var(--color-primary-bg);
+      color: var(--color-primary);
+    }
+
+    .submit-status.success {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+    }
+
+    .submit-status.error {
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-layout panel-closed" id="layout">
+    <!-- Left: Theme Selector -->
+    <aside class="theme-sidebar">
+      <h2>Select Theme</h2>
+      <div id="themeList"></div>
+
+      <h2 style="margin-top: 32px;">Modified<span class="modification-count" id="modCount">0</span></h2>
+      <div class="all-vars-list" id="modifiedVars"></div>
+    </aside>
+
+    <!-- Center: Showcase -->
+    <main class="showcase">
+      <h1>Theme Color Editor</h1>
+      <p class="showcase-subtitle">Click any color swatch or element to edit. Changes preview instantly.</p>
+
+      <!-- Primary Colors -->
+      <section class="section">
+        <h3 class="section-title">Primary Colors <span class="count">5 vars</span></h3>
+        <div class="swatch-grid" id="primarySwatches"></div>
+        <div class="examples-row">
+          <button class="example-btn primary" data-vars="--color-primary">Primary Button</button>
+          <button class="example-btn ghost-primary" data-vars="--color-primary-hover">Ghost Primary</button>
+          <a href="#" style="color: var(--color-primary); text-decoration: underline;" data-vars="--color-primary">Primary Link</a>
+          <div style="background: var(--color-primary-bg); padding: 8px 16px; border-radius: 6px;" data-vars="--color-primary-bg">Primary Background</div>
+        </div>
+      </section>
+
+      <!-- Success Colors -->
+      <section class="section">
+        <h3 class="section-title">Success Colors <span class="count">5 vars</span></h3>
+        <div class="swatch-grid" id="successSwatches"></div>
+        <div class="examples-row">
+          <button class="example-btn success" data-vars="--color-success,--color-success-text">Success Button</button>
+          <button class="example-btn ghost-success" data-vars="--color-success-hover">Ghost Success</button>
+          <span class="badge success" data-vars="--color-success,--color-success-bg">Completed</span>
+          <span class="badge success" data-vars="--color-success,--color-success-bg">+5 tasks</span>
+        </div>
+      </section>
+
+      <!-- Warning Colors -->
+      <section class="section">
+        <h3 class="section-title">Warning Colors <span class="count">4 vars</span></h3>
+        <div class="swatch-grid" id="warningSwatches"></div>
+        <div class="examples-row">
+          <button class="example-btn warning" data-vars="--color-warning">Warning Button</button>
+          <button class="example-btn ghost-warning" data-vars="--color-warning-hover">Ghost Warning</button>
+          <span class="badge warning" data-vars="--color-warning,--color-warning-bg">Pending</span>
+          <span class="badge warning" data-vars="--color-warning,--color-warning-bg">In Progress</span>
+        </div>
+      </section>
+
+      <!-- Danger Colors -->
+      <section class="section">
+        <h3 class="section-title">Danger Colors <span class="count">6 vars</span></h3>
+        <div class="swatch-grid" id="dangerSwatches"></div>
+        <div class="examples-row">
+          <button class="example-btn danger" data-vars="--color-danger,--color-danger-text">Delete</button>
+          <button class="example-btn ghost-danger" data-vars="--color-danger-hover">Ghost Danger</button>
+          <span class="badge danger" data-vars="--color-danger,--color-danger-light">Error</span>
+          <span style="color: var(--color-danger);" data-vars="--color-danger">Error message text</span>
+        </div>
+      </section>
+
+      <!-- Neutral Colors -->
+      <section class="section">
+        <h3 class="section-title">Neutral Colors <span class="count">6 vars</span></h3>
+        <div class="swatch-grid" id="neutralSwatches"></div>
+        <div class="examples-row">
+          <button class="example-btn neutral" data-vars="--color-neutral">Neutral Button</button>
+          <button class="example-btn ghost-neutral" data-vars="--color-neutral-hover">Ghost Neutral</button>
+          <span class="badge muted" data-vars="--color-muted-bg,--color-text-secondary">Unknown</span>
+          <span class="badge muted" data-vars="--color-muted-bg,--color-text-secondary">Archived</span>
+        </div>
+      </section>
+
+      <!-- Text Colors -->
+      <section class="section">
+        <h3 class="section-title">Text Colors <span class="count">4 vars</span></h3>
+        <div class="swatch-grid" id="textSwatches"></div>
+        <div class="text-samples">
+          <div class="text-sample" data-vars="--color-text" style="color: var(--color-text);">
+            <strong>Primary Text</strong> - Main content and headings
+          </div>
+          <div class="text-sample" data-vars="--color-text-secondary" style="color: var(--color-text-secondary);">
+            <strong>Secondary Text</strong> - Descriptions and subtitles
+          </div>
+          <div class="text-sample" data-vars="--color-text-tertiary" style="color: var(--color-text-tertiary);">
+            <strong>Tertiary Text</strong> - Less important information
+          </div>
+          <div class="text-sample" data-vars="--color-text-muted" style="color: var(--color-text-muted);">
+            <strong>Muted Text</strong> - Hints and placeholders
+          </div>
+        </div>
+      </section>
+
+      <!-- Border Colors -->
+      <section class="section">
+        <h3 class="section-title">Border Colors <span class="count">2 vars</span></h3>
+        <div class="swatch-grid" id="borderSwatches"></div>
+        <div class="examples-row">
+          <div style="border: 2px solid var(--color-border); padding: 12px 20px; border-radius: 8px;" data-vars="--color-border">Default Border</div>
+          <div style="border: 2px solid var(--color-border-light); padding: 12px 20px; border-radius: 8px;" data-vars="--color-border-light">Light Border</div>
+        </div>
+      </section>
+
+      <!-- Background Colors -->
+      <section class="section">
+        <h3 class="section-title">Background Colors <span class="count">5 vars</span></h3>
+        <div class="swatch-grid" id="bgSwatches"></div>
+        <div class="bg-demo">
+          <div class="bg-card" style="background: var(--color-bg); border: 1px solid var(--color-border);" data-vars="--color-bg">
+            <h4>--color-bg</h4>
+            <p>Main page background</p>
+          </div>
+          <div class="bg-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border);" data-vars="--color-bg-card">
+            <h4>--color-bg-card</h4>
+            <p>Card/panel surfaces</p>
+          </div>
+          <div class="bg-card" style="background: var(--color-bg-alt); border: 1px solid var(--color-border);" data-vars="--color-bg-alt">
+            <h4>--color-bg-alt</h4>
+            <p>Alternative background</p>
+          </div>
+          <div class="bg-card" style="background: var(--color-bg-hover); border: 1px solid var(--color-border);" data-vars="--color-bg-hover">
+            <h4>--color-bg-hover</h4>
+            <p>Hover states</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Shadows -->
+      <section class="section">
+        <h3 class="section-title">Shadows <span class="count">6 vars</span></h3>
+        <div class="shadow-demo">
+          <div class="shadow-card" style="box-shadow: var(--shadow-sm);" data-vars="--shadow-sm">
+            <div class="name">--shadow-sm</div>
+          </div>
+          <div class="shadow-card" style="box-shadow: var(--shadow-md);" data-vars="--shadow-md">
+            <div class="name">--shadow-md</div>
+          </div>
+          <div class="shadow-card" style="box-shadow: var(--shadow-modal);" data-vars="--shadow-modal">
+            <div class="name">--shadow-modal</div>
+          </div>
+          <div class="shadow-card" style="box-shadow: var(--shadow-focus);" data-vars="--shadow-focus">
+            <div class="name">--shadow-focus</div>
+          </div>
+          <div class="shadow-card" style="box-shadow: var(--shadow-focus-sm);" data-vars="--shadow-focus-sm">
+            <div class="name">--shadow-focus-sm</div>
+          </div>
+          <div class="shadow-card" style="box-shadow: var(--shadow-focus-alt);" data-vars="--shadow-focus-alt">
+            <div class="name">--shadow-focus-alt</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Full Component Demo -->
+      <section class="section">
+        <h3 class="section-title">Component Demo</h3>
+        <div class="component-demo">
+          <div class="demo-header">
+            <span class="demo-title">Create New Task</span>
+            <div style="display: flex; gap: 8px;">
+              <span class="badge success">Active</span>
+              <span class="badge warning">Draft</span>
+            </div>
+          </div>
+          <div class="demo-form">
+            <div class="form-group">
+              <label>Task Name</label>
+              <input type="text" placeholder="Enter task name..." value="Design new landing page">
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <input type="text" placeholder="Add description..." value="Create mockups for the homepage redesign">
+            </div>
+          </div>
+          <div class="demo-actions">
+            <button class="example-btn primary">Save Task</button>
+            <button class="example-btn neutral">Cancel</button>
+            <button class="example-btn danger" style="margin-left: auto;">Delete</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Right: Editor Panel -->
+    <aside class="editor-panel hidden" id="editorPanel">
+      <div class="panel-header">
+        <span class="panel-title">Edit Color</span>
+        <button class="close-btn" onclick="closePanel()">&times;</button>
+      </div>
+
+      <div class="var-name" id="currentVarName">--color-primary</div>
+      <div id="cascadeNote" style="display: none; background: var(--color-primary-bg); border: 1px solid var(--color-primary); border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; font-size: 11px; color: var(--color-primary);">
+        <strong>Root Color</strong> - Changes will auto-update related variants
+        <div id="cascadeVars" style="margin-top: 4px; color: var(--color-primary-dark);"></div>
+      </div>
+
+      <div class="color-preview-large" id="colorPreview">
+        <input type="color" id="colorPicker" onchange="handleColorPick(this.value)">
+      </div>
+
+      <div class="editor-section">
+        <h4>Hex Value</h4>
+        <input type="text" class="hex-input" id="hexInput" placeholder="#000000" onchange="handleHexInput(this.value)">
+      </div>
+
+      <div class="editor-section">
+        <h4>HSL Adjustments</h4>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Hue</span>
+            <span class="slider-value" id="hueValue">0°</span>
+          </div>
+          <input type="range" class="hue-slider" id="hueSlider" min="0" max="360" value="0" oninput="handleSliderChange()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Saturation</span>
+            <span class="slider-value" id="satValue">0%</span>
+          </div>
+          <input type="range" class="saturation-slider" id="satSlider" min="0" max="100" value="0" oninput="handleSliderChange()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Lightness</span>
+            <span class="slider-value" id="lightValue">0%</span>
+          </div>
+          <input type="range" class="lightness-slider" id="lightSlider" min="0" max="100" value="0" oninput="handleSliderChange()">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Alpha</span>
+            <span class="slider-value" id="alphaValue">100%</span>
+          </div>
+          <input type="range" class="alpha-slider" id="alphaSlider" min="0" max="100" value="100" oninput="handleSliderChange()">
+        </div>
+      </div>
+
+      <div class="panel-actions">
+        <button class="action-btn primary" onclick="copyCurrentVar()">Copy Variable</button>
+        <button class="action-btn secondary" onclick="resetCurrentVar()">Reset to Original</button>
+      </div>
+
+      <div class="panel-actions" style="border-top: none; padding-top: 0;">
+        <button class="action-btn primary" onclick="exportCSS()">Export All Changes as CSS</button>
+        <button class="action-btn primary" onclick="openSubmitModal()" style="background: var(--color-success); color: var(--color-success-text);">Submit Theme PR</button>
+        <button class="action-btn danger" onclick="resetAll()">Reset All Changes</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
+  <!-- Submit Theme Modal -->
+  <div class="modal-overlay" id="submitModal">
+    <div class="modal">
+      <h3>Submit Theme as Pull Request</h3>
+      <p>Your theme will be submitted for review and inclusion in the theme library.</p>
+
+      <div class="modal-field">
+        <label>Theme Name *</label>
+        <input type="text" id="themeName" placeholder="e.g., sunset-glow" />
+        <div class="hint">Lowercase letters, numbers, and hyphens only</div>
+      </div>
+
+      <div class="modal-field">
+        <label>Your Name (optional)</label>
+        <input type="text" id="authorName" placeholder="e.g., Jane Doe" />
+      </div>
+
+      <div class="modal-field">
+        <label>Description (optional)</label>
+        <textarea id="themeDescription" placeholder="Describe your theme..."></textarea>
+      </div>
+
+      <div id="submitStatus" class="submit-status" style="display: none;"></div>
+
+      <div class="modal-actions">
+        <button class="action-btn secondary" onclick="closeSubmitModal()">Cancel</button>
+        <button class="action-btn primary" id="submitBtn" onclick="submitTheme()">Submit Theme</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Configuration =====
+    const THEMES = [
+      'light', 'dark',
+      'strawberry-light', 'strawberry-dark',
+      'ocean-light', 'ocean-dark',
+      'cyberpunk-light', 'cyberpunk-dark',
+      'coffee-light', 'coffee-dark',
+      'lavender-light', 'lavender-dark',
+      'nature-light', 'nature-dark',
+      'pink-light', 'pink-dark',
+      'izakaya-light', 'izakaya-dark',
+      'light-custom'
+    ];
+
+    const COLOR_VARS = {
+      primary: ['--color-primary', '--color-primary-dark', '--color-primary-light', '--color-primary-bg', '--color-primary-hover'],
+      success: ['--color-success', '--color-success-dark', '--color-success-text', '--color-success-bg', '--color-success-hover'],
+      warning: ['--color-warning', '--color-warning-bg', '--color-warning-text', '--color-warning-hover'],
+      danger: ['--color-danger', '--color-danger-dark', '--color-danger-darker', '--color-danger-light', '--color-danger-text', '--color-danger-hover'],
+      neutral: ['--color-neutral', '--color-neutral-light', '--color-neutral-lighter', '--color-neutral-text', '--color-neutral-hover', '--color-muted-bg'],
+      text: ['--color-text', '--color-text-secondary', '--color-text-tertiary', '--color-text-muted'],
+      border: ['--color-border', '--color-border-light'],
+      bg: ['--color-bg', '--color-bg-card', '--color-bg-alt', '--color-bg-hover', '--color-bg-overlay']
+    };
+
+    // ===== State =====
+    let currentTheme = 'light';
+    let currentVar = null;
+    let modifications = {};
+    let originalValues = {};
+    let highlightedElement = null;
+
+    // Define which variables are "root" colors that should cascade to related vars
+    const CASCADE_MAP = {
+      '--color-primary': {
+        '--color-primary-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 15) }),
+        '--color-primary-light': (h, s, l, isDark) => isDark
+          ? ({ h, s: Math.max(0, s - 30), l: Math.max(0, l - 30) })
+          : ({ h, s: Math.min(100, s - 20), l: Math.min(100, l + 25) }),
+        '--color-primary-bg': (h, s, l, isDark) => isDark
+          ? ({ h, s: Math.max(0, s - 40), l: 15, a: 100 })
+          : ({ h, s: Math.min(100, s - 10), l: 97, a: 100 }),
+        '--color-primary-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 8 })
+      },
+      '--color-success': {
+        '--color-success-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 12) }),
+        '--color-success-bg': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 10 }),
+        '--color-success-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
+      },
+      '--color-warning': {
+        '--color-warning-bg': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 10 }),
+        '--color-warning-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
+      },
+      '--color-danger': {
+        '--color-danger-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 10) }),
+        '--color-danger-darker': (h, s, l) => ({ h, s, l: Math.max(0, l - 20) }),
+        '--color-danger-light': (h, s, l, isDark) => isDark
+          ? ({ h, s: Math.max(0, s - 30), l: Math.max(0, l - 35) })
+          : ({ h, s: Math.min(100, s - 20), l: Math.min(100, l + 30) }),
+        '--color-danger-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
+      },
+      '--color-neutral': {
+        '--color-neutral-light': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.max(0, l - 15) })
+          : ({ h, s: Math.max(0, s - 10), l: Math.min(100, l + 20) }),
+        '--color-neutral-lighter': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.max(0, l - 25) })
+          : ({ h, s: Math.max(0, s - 15), l: Math.min(100, l + 30) }),
+        '--color-neutral-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 }),
+        '--color-muted-bg': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.max(0, l - 15) })
+          : ({ h, s: Math.max(0, s - 10), l: Math.min(100, l + 15) })
+      },
+      '--color-bg': {
+        '--color-bg-card': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.min(100, l + 3) })
+          : ({ h, s, l: Math.min(100, l + 2) }),
+        '--color-bg-alt': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.max(0, l - 2) })
+          : ({ h, s, l: Math.max(0, l - 3) }),
+        '--color-bg-hover': (h, s, l, isDark) => isDark
+          ? ({ h, s, l: Math.min(100, l + 5) })
+          : ({ h, s, l: Math.max(0, l - 4) })
+      }
+    };
+
+    // ===== Initialize =====
+    function init() {
+      renderThemeList();
+      renderSwatches();
+      setupClickHandlers();
+      saveOriginalValues();
+    }
+
+    function renderThemeList() {
+      const container = document.getElementById('themeList');
+      const families = [
+        { name: 'Default', themes: ['light', 'dark'] },
+        { name: 'Strawberry', themes: ['strawberry-light', 'strawberry-dark'] },
+        { name: 'Ocean', themes: ['ocean-light', 'ocean-dark'] },
+        { name: 'Cyberpunk', themes: ['cyberpunk-light', 'cyberpunk-dark'] },
+        { name: 'Coffee', themes: ['coffee-light', 'coffee-dark'] },
+        { name: 'Lavender', themes: ['lavender-light', 'lavender-dark'] },
+        { name: 'Nature', themes: ['nature-light', 'nature-dark'] },
+        { name: 'Pink', themes: ['pink-light', 'pink-dark'] },
+        { name: 'Izakaya', themes: ['izakaya-light', 'izakaya-dark'] }
+      ];
+
+      container.innerHTML = families.map(f => `
+        <div class="theme-family">
+          <div class="theme-family-name">${f.name}</div>
+          ${f.themes.map(t => `
+            <button class="theme-btn ${t === currentTheme ? 'active' : ''}" onclick="setTheme('${t}')">${t}</button>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    function renderSwatches() {
+      Object.entries(COLOR_VARS).forEach(([category, vars]) => {
+        const container = document.getElementById(`${category}Swatches`);
+        if (!container) return;
+
+        container.innerHTML = vars.map(varName => `
+          <div class="swatch" data-var="${varName}" onclick="openPanel('${varName}')">
+            <div class="swatch-color" style="background: var(${varName});"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">${varName.replace('--color-', '')}</div>
+              <div class="swatch-value" id="val-${varName}">${getVarValue(varName)}</div>
+            </div>
+          </div>
+        `).join('');
+      });
+    }
+
+    function setupClickHandlers() {
+      document.querySelectorAll('[data-vars]').forEach(el => {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          const vars = el.dataset.vars.split(',');
+          openPanel(vars[0]);
+        });
+      });
+    }
+
+    function saveOriginalValues() {
+      const allVars = Object.values(COLOR_VARS).flat();
+      allVars.forEach(varName => {
+        originalValues[varName] = getVarValue(varName);
+      });
+    }
+
+    // ===== Theme Management =====
+    function setTheme(theme) {
+      currentTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+
+      // Clear inline modifications when switching themes
+      Object.keys(modifications).forEach(varName => {
+        document.documentElement.style.removeProperty(varName);
+      });
+      modifications = {};
+
+      // Re-save original values
+      saveOriginalValues();
+
+      // Update UI
+      renderThemeList();
+      renderSwatches();
+      updateModCount();
+
+      if (currentVar) {
+        updatePanelForVar(currentVar);
+      }
+    }
+
+    // ===== Color Utilities =====
+    function getVarValue(varName) {
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    function setVar(varName, value, skipCascade = false) {
+      document.documentElement.style.setProperty(varName, value);
+      modifications[varName] = value;
+      updateModCount();
+      updateSwatchValue(varName, value);
+
+      // Handle cascading for root colors
+      if (!skipCascade && CASCADE_MAP[varName]) {
+        const hexValue = colorToHex(value);
+        const hsl = hexToHsl(hexValue);
+        const isDark = currentTheme.includes('dark');
+
+        Object.entries(CASCADE_MAP[varName]).forEach(([childVar, deriveFn]) => {
+          const derived = deriveFn(hsl.h, hsl.s, hsl.l, isDark);
+          let newColor;
+          if (derived.a !== undefined && derived.a < 100) {
+            newColor = `hsla(${Math.round(derived.h)}, ${Math.round(derived.s)}%, ${Math.round(derived.l)}%, ${derived.a / 100})`;
+          } else {
+            newColor = hslToHex(derived.h, derived.s, derived.l);
+          }
+          setVar(childVar, newColor, true); // Skip cascade to avoid infinite loop
+        });
+      }
+
+      // Also update text contrast for colors with text variants
+      if (!skipCascade) {
+        updateContrastText(varName, value);
+      }
+    }
+
+    // Auto-calculate text color for good contrast
+    function updateContrastText(varName, value) {
+      const textVarMap = {
+        '--color-primary': '--color-primary-text',
+        '--color-success': '--color-success-text',
+        '--color-warning': '--color-warning-text',
+        '--color-danger': '--color-danger-text',
+        '--color-neutral': '--color-neutral-text'
+      };
+
+      if (textVarMap[varName]) {
+        const textColor = getContrastColor(value);
+        document.documentElement.style.setProperty(textVarMap[varName], textColor);
+        // Don't add to modifications - this is auto-calculated
+      }
+    }
+
+    // Calculate whether to use white or black text based on luminance
+    function getContrastColor(color) {
+      const hex = colorToHex(color).replace('#', '');
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      // Calculate relative luminance
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5 ? '#000000' : '#ffffff';
+    }
+
+    function updateSwatchValue(varName, value) {
+      const el = document.getElementById(`val-${varName}`);
+      if (el) el.textContent = value;
+
+      const swatch = document.querySelector(`[data-var="${varName}"]`);
+      if (swatch) {
+        swatch.classList.toggle('modified', !!modifications[varName]);
+        // Update the swatch color preview
+        const colorDiv = swatch.querySelector('.swatch-color');
+        if (colorDiv) {
+          colorDiv.style.background = value;
+        }
+      }
+    }
+
+    function updateModCount() {
+      const count = Object.keys(modifications).length;
+      document.getElementById('modCount').textContent = count;
+
+      const container = document.getElementById('modifiedVars');
+      if (count === 0) {
+        container.innerHTML = '<div style="color: #666; font-size: 12px; padding: 8px;">No modifications yet</div>';
+      } else {
+        container.innerHTML = Object.entries(modifications).map(([varName, value]) => `
+          <div class="var-item modified" onclick="openPanel('${varName}')">
+            <div class="color-dot" style="background: ${value};"></div>
+            <span class="var-label">${varName.replace('--color-', '')}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // ===== Panel Management =====
+    function openPanel(varName) {
+      currentVar = varName;
+      document.getElementById('layout').classList.remove('panel-closed');
+      document.getElementById('editorPanel').classList.remove('hidden');
+
+      // Highlight selected swatch
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      const swatch = document.querySelector(`[data-var="${varName}"]`);
+      if (swatch) swatch.classList.add('selected');
+
+      // Highlight all elements that use this variable
+      highlightElementsUsingVar(varName);
+
+      updatePanelForVar(varName);
+    }
+
+    function closePanel() {
+      document.getElementById('layout').classList.add('panel-closed');
+      document.getElementById('editorPanel').classList.add('hidden');
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      clearHighlights();
+      currentVar = null;
+    }
+
+    function highlightElementsUsingVar(varName) {
+      clearHighlights();
+
+      // Find elements with data-vars that include this variable
+      document.querySelectorAll('[data-vars]').forEach(el => {
+        const vars = el.dataset.vars.split(',');
+        if (vars.includes(varName)) {
+          el.classList.add('editing-highlight');
+        }
+      });
+
+      // Also highlight the swatch
+      const swatch = document.querySelector(`[data-var="${varName}"]`);
+      if (swatch) {
+        swatch.classList.add('editing-highlight');
+      }
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.editing-highlight').forEach(el => {
+        el.classList.remove('editing-highlight');
+      });
+    }
+
+    function updatePanelForVar(varName) {
+      document.getElementById('currentVarName').textContent = varName;
+
+      const value = getVarValue(varName);
+      const hexValue = colorToHex(value);
+
+      document.getElementById('colorPreview').style.background = value;
+      document.getElementById('colorPicker').value = hexValue.slice(0, 7);
+      document.getElementById('hexInput').value = value;
+
+      const hsl = hexToHsl(hexValue);
+      document.getElementById('hueSlider').value = hsl.h;
+      document.getElementById('satSlider').value = hsl.s;
+      document.getElementById('lightSlider').value = hsl.l;
+      document.getElementById('alphaSlider').value = hsl.a;
+
+      updateSliderLabels(hsl);
+
+      // Show cascade info if this is a root color
+      const cascadeNote = document.getElementById('cascadeNote');
+      const cascadeVars = document.getElementById('cascadeVars');
+
+      if (CASCADE_MAP[varName]) {
+        const childVars = Object.keys(CASCADE_MAP[varName]);
+        cascadeNote.style.display = 'block';
+        cascadeVars.textContent = childVars.map(v => v.replace('--color-', '')).join(', ');
+      } else {
+        cascadeNote.style.display = 'none';
+      }
+    }
+
+    function updateSliderLabels(hsl) {
+      document.getElementById('hueValue').textContent = `${Math.round(hsl.h)}°`;
+      document.getElementById('satValue').textContent = `${Math.round(hsl.s)}%`;
+      document.getElementById('lightValue').textContent = `${Math.round(hsl.l)}%`;
+      document.getElementById('alphaValue').textContent = `${Math.round(hsl.a)}%`;
+    }
+
+    // ===== Color Conversion =====
+    function colorToHex(color) {
+      if (color.startsWith('#')) return color;
+      if (color.startsWith('rgb')) {
+        const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (match) {
+          const r = parseInt(match[1]).toString(16).padStart(2, '0');
+          const g = parseInt(match[2]).toString(16).padStart(2, '0');
+          const b = parseInt(match[3]).toString(16).padStart(2, '0');
+          const a = match[4] ? Math.round(parseFloat(match[4]) * 255).toString(16).padStart(2, '0') : 'ff';
+          return `#${r}${g}${b}${a === 'ff' ? '' : a}`;
+        }
+      }
+      // Fallback: create temp element
+      const temp = document.createElement('div');
+      temp.style.color = color;
+      document.body.appendChild(temp);
+      const computed = getComputedStyle(temp).color;
+      document.body.removeChild(temp);
+      return colorToHex(computed);
+    }
+
+    function hexToHsl(hex) {
+      hex = hex.replace('#', '');
+      const r = parseInt(hex.slice(0, 2), 16) / 255;
+      const g = parseInt(hex.slice(2, 4), 16) / 255;
+      const b = parseInt(hex.slice(4, 6), 16) / 255;
+      const a = hex.length > 6 ? parseInt(hex.slice(6, 8), 16) / 255 * 100 : 100;
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+
+      return { h: h * 360, s: s * 100, l: l * 100, a };
+    }
+
+    function hslToHex(h, s, l, a = 100) {
+      h /= 360;
+      s /= 100;
+      l /= 100;
+
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+
+      const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+
+      if (a < 100) {
+        return hex + Math.round(a * 2.55).toString(16).padStart(2, '0');
+      }
+      return hex;
+    }
+
+    // ===== Event Handlers =====
+    function handleColorPick(value) {
+      if (!currentVar) return;
+      setVar(currentVar, value);
+      updatePanelForVar(currentVar);
+    }
+
+    function handleHexInput(value) {
+      if (!currentVar) return;
+      if (/^#?[0-9a-fA-F]{6,8}$/.test(value)) {
+        const hex = value.startsWith('#') ? value : '#' + value;
+        setVar(currentVar, hex);
+        updatePanelForVar(currentVar);
+      }
+    }
+
+    function handleSliderChange() {
+      if (!currentVar) return;
+      const h = parseFloat(document.getElementById('hueSlider').value);
+      const s = parseFloat(document.getElementById('satSlider').value);
+      const l = parseFloat(document.getElementById('lightSlider').value);
+      const a = parseFloat(document.getElementById('alphaSlider').value);
+
+      updateSliderLabels({ h, s, l, a });
+
+      let color;
+      if (a < 100) {
+        color = `hsla(${h}, ${s}%, ${l}%, ${a / 100})`;
+      } else {
+        color = hslToHex(h, s, l);
+      }
+
+      setVar(currentVar, color);
+      document.getElementById('colorPreview').style.background = color;
+      document.getElementById('hexInput').value = color;
+      document.getElementById('colorPicker').value = hslToHex(h, s, l).slice(0, 7);
+    }
+
+    // ===== Actions =====
+    function copyCurrentVar() {
+      if (!currentVar) return;
+      const value = getVarValue(currentVar);
+      navigator.clipboard.writeText(`${currentVar}: ${value};`);
+      showToast('Copied to clipboard!');
+    }
+
+    function resetCurrentVar() {
+      if (!currentVar || !originalValues[currentVar]) return;
+
+      // Reset the current variable
+      document.documentElement.style.removeProperty(currentVar);
+      delete modifications[currentVar];
+
+      // If this is a root color, also reset all cascaded child variables
+      let resetCount = 1;
+      if (CASCADE_MAP[currentVar]) {
+        const childVars = Object.keys(CASCADE_MAP[currentVar]);
+        childVars.forEach(childVar => {
+          if (modifications[childVar]) {
+            document.documentElement.style.removeProperty(childVar);
+            delete modifications[childVar];
+            updateSwatchValue(childVar, getVarValue(childVar));
+            resetCount++;
+          }
+        });
+
+        // Also reset the auto-calculated text color if applicable
+        const textVarMap = {
+          '--color-primary': '--color-primary-text',
+          '--color-success': '--color-success-text',
+          '--color-warning': '--color-warning-text',
+          '--color-danger': '--color-danger-text',
+          '--color-neutral': '--color-neutral-text'
+        };
+        if (textVarMap[currentVar]) {
+          document.documentElement.style.removeProperty(textVarMap[currentVar]);
+        }
+      }
+
+      updateModCount();
+      updatePanelForVar(currentVar);
+      updateSwatchValue(currentVar, getVarValue(currentVar));
+
+      if (resetCount > 1) {
+        showToast(`Reset ${resetCount} variables to original`);
+      } else {
+        showToast('Reset to original');
+      }
+    }
+
+    function resetAll() {
+      if (!confirm('Reset all modifications?')) return;
+      Object.keys(modifications).forEach(varName => {
+        document.documentElement.style.removeProperty(varName);
+      });
+      modifications = {};
+      updateModCount();
+      renderSwatches();
+      if (currentVar) updatePanelForVar(currentVar);
+      showToast('All changes reset');
+    }
+
+    function exportCSS() {
+      const count = Object.keys(modifications).length;
+      if (count === 0) {
+        showToast('No modifications to export');
+        return;
+      }
+
+      let css = `/* Theme modifications based on ${currentTheme} */\n`;
+      css += `[data-theme='${currentTheme}-custom'] {\n`;
+
+      // Include all current theme values, with modifications overriding
+      const allVars = Object.values(COLOR_VARS).flat();
+      allVars.forEach(varName => {
+        const value = getVarValue(varName);
+        const isModified = modifications[varName];
+        css += `  ${varName}: ${value};${isModified ? ' /* modified */' : ''}\n`;
+      });
+
+      css += `}\n`;
+
+      navigator.clipboard.writeText(css);
+      showToast(`Copied ${count} modifications as CSS!`);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ===== Submit Theme Functions =====
+    // TODO: Update this URL to your deployed Cloudflare Worker
+    const WORKER_URL = 'https://api.hadoku.me';
+
+    function openSubmitModal() {
+      const count = Object.keys(modifications).length;
+      if (count === 0) {
+        showToast('No modifications to submit');
+        return;
+      }
+
+      // Pre-fill theme name based on current theme
+      document.getElementById('themeName').value = currentTheme + '-custom';
+      document.getElementById('authorName').value = '';
+      document.getElementById('themeDescription').value = '';
+      document.getElementById('submitStatus').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = 'Submit Theme';
+      document.getElementById('submitModal').classList.add('show');
+    }
+
+    function closeSubmitModal() {
+      document.getElementById('submitModal').classList.remove('show');
+    }
+
+    function generateThemeCSS(themeName) {
+      let css = `/* Theme: ${themeName} */\n`;
+      css += `/* Based on: ${currentTheme} */\n`;
+      css += `/* Created: ${new Date().toISOString().split('T')[0]} */\n\n`;
+      css += `[data-theme='${themeName}'] {\n`;
+
+      const allVars = Object.values(COLOR_VARS).flat();
+      allVars.forEach(varName => {
+        const value = getVarValue(varName);
+        css += `  ${varName}: ${value};\n`;
+      });
+
+      css += `}\n`;
+      return css;
+    }
+
+    async function submitTheme() {
+      const themeName = document.getElementById('themeName').value.trim();
+      const authorName = document.getElementById('authorName').value.trim();
+      const description = document.getElementById('themeDescription').value.trim();
+
+      // Validate theme name
+      if (!themeName) {
+        showSubmitStatus('error', 'Theme name is required');
+        return;
+      }
+
+      if (!/^[a-z0-9-]+$/.test(themeName)) {
+        showSubmitStatus('error', 'Theme name must be lowercase letters, numbers, and hyphens only');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      showSubmitStatus('loading', 'Creating pull request...');
+
+      try {
+        const css = generateThemeCSS(themeName);
+
+        const response = await fetch(`${WORKER_URL}/submit-theme`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            themeName,
+            baseTheme: currentTheme,
+            authorName: authorName || 'Anonymous',
+            description: description || `Custom theme based on ${currentTheme}`,
+            css,
+            modifications: Object.keys(modifications).length
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create PR');
+        }
+
+        showSubmitStatus('success', `
+          Pull request created!<br>
+          <a href="${result.prUrl}" target="_blank" style="color: var(--color-success); text-decoration: underline;">
+            View PR #${result.prNumber}
+          </a>
+        `);
+
+        submitBtn.textContent = 'Submitted!';
+
+      } catch (error) {
+        showSubmitStatus('error', `Error: ${error.message}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Theme';
+      }
+    }
+
+    function showSubmitStatus(type, message) {
+      const status = document.getElementById('submitStatus');
+      status.style.display = 'block';
+      status.className = `submit-status ${type}`;
+      status.innerHTML = message;
+    }
+
+    // Close modal on overlay click
+    document.getElementById('submitModal').addEventListener('click', (e) => {
+      if (e.target.id === 'submitModal') {
+        closeSubmitModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('submitModal').classList.contains('show')) {
+        closeSubmitModal();
+      }
+    });
+
+    // ===== Start =====
+    init();
+  </script>
+</body>
+</html>

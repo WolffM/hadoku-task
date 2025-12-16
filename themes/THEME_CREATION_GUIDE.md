@@ -4,24 +4,24 @@ This guide helps AI systems generate new color themes for the @wolffm/themes pac
 
 ## Theme Structure Overview
 
-Each theme requires **31 color variables** + **6 shadow variables** = **37 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
+Each theme requires **34 color variables** + **6 shadow variables** = **40 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
 ### Color Variables Count:
 
-- Primary colors: 5
+- Primary colors: 6 (includes text)
 - Success colors: 4
-- Warning colors: 2
+- Warning colors: 3 (includes text)
 - Danger colors: 5
-- Neutral colors: 4 (includes muted-bg)
+- Neutral colors: 5 (includes text and muted-bg)
 - Text colors: 4
 - Border colors: 2
 - Background colors: 5
-- **Total: 31 color variables**
+- **Total: 34 color variables**
 
 ### Additional Variables:
 
 - Shadow variables: 6
-- **Grand Total: 37 variables per theme**
+- **Grand Total: 40 variables per theme**
 
 ### The 5 Main Colors (From Palette)
 
@@ -41,13 +41,13 @@ These are the only colors you need to select from the input palette. **Be creati
    - Lightest color for light themes
    - Darkest color for dark themes
 
-All other 32 variables (26 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
+All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
 
 ---
 
 ### Required Variables by Category
 
-#### 1. Primary Colors (5 variables)
+#### 1. Primary Colors (6 variables)
 
 **Purpose:** Main interactive elements, buttons, links
 
@@ -56,6 +56,7 @@ All other 32 variables (26 colors + 6 shadows) are **derived** from these 5 main
 - `--color-primary-light` - **ALT:** Light tint for light themes / dark shade for dark themes
 - `--color-primary-bg` - **ALT:** Very subtle background (5-10% opacity)
 - `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
+- `--color-primary-text` - **ALT:** Text on primary backgrounds (white or black for contrast)
 
 #### 2. Success Colors (4 variables)
 
@@ -66,12 +67,13 @@ All other 32 variables (26 colors + 6 shadows) are **derived** from these 5 main
 - `--color-success-text` - **ALT:** Text on success backgrounds (white or black for contrast)
 - `--color-success-bg` - **ALT:** Background for success badges (10-15% opacity of success color)
 
-#### 3. Warning Colors (2 variables)
+#### 3. Warning Colors (3 variables)
 
 **Purpose:** Intermediate states, caution indicators, pending actions
 
 - `--color-warning` - **MAIN:** Warning/caution indicator (typically amber/yellow)
 - `--color-warning-bg` - **ALT:** Background for warning badges (10-15% opacity of warning color)
+- `--color-warning-text` - **ALT:** Text on warning backgrounds (usually black for yellow/amber)
 
 #### 4. Danger Colors (5 variables)
 
@@ -83,13 +85,14 @@ All other 32 variables (26 colors + 6 shadows) are **derived** from these 5 main
 - `--color-danger-light` - **ALT:** Light tint/background shade
 - `--color-danger-text` - **ALT:** Text color on danger backgrounds (auto-calculated)
 
-#### 5. Neutral Colors (4 variables)
+#### 5. Neutral Colors (5 variables)
 
 **Purpose:** Non-critical UI elements, disabled states, unknown/neutral badges
 
 - `--color-neutral` - **MAIN:** Neutral gray or muted color
 - `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
 - `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
+- `--color-neutral-text` - **ALT:** Text on neutral backgrounds (white or black for contrast)
 - `--color-muted-bg` - **ALT:** Background for neutral/unknown badges
 
 #### 6. Text Colors (4 variables)
@@ -394,8 +397,8 @@ function getContrastText(bg: string): 'light' | 'dark' {
 
 Before submitting a new theme, verify:
 
-- [ ] All 31 color variables are defined
-- [ ] All 6 shadow variables are defined (37 total)
+- [ ] All 34 color variables are defined
+- [ ] All 6 shadow variables are defined (40 total)
 - [ ] Primary text has ≥4.5:1 contrast on main background
 - [ ] Theme works in both light and dark variants
 - [ ] Hover states are visually distinct but subtle

@@ -68,11 +68,11 @@ Each theme defines ~50 variables:
 
 ### Colors
 
-- `--color-primary` (+ dark, light, bg, hover variants)
+- `--color-primary` (+ dark, light, bg, hover, text variants)
 - `--color-success` (+ dark, text, bg variants)
-- `--color-warning` (+ bg variant)
+- `--color-warning` (+ bg, text variants)
 - `--color-danger` (+ dark, darker, light, text variants)
-- `--color-neutral` (+ light, lighter variants)
+- `--color-neutral` (+ light, lighter, text variants)
 - `--color-muted-bg` - background for neutral/unknown badges
 - `--color-text` (+ secondary, tertiary, muted variants)
 - `--color-border` (+ light variant)
@@ -230,6 +230,40 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 })
 ```
+
+## Theme Editor (Development Tool)
+
+A standalone theme editor is included for creating and customizing themes. It displays all 34 color variables and 6 shadow variables with interactive controls.
+
+### Opening the Editor
+
+```bash
+# Open directly in browser (no server needed)
+open themes/dev/editor.html
+
+# Or use a local server
+npx serve themes/dev
+```
+
+### Features
+
+- **Theme Selector** - Switch between all 18 themes instantly
+- **Color Showcase** - See all variables organized by category (primary, success, warning, danger, neutral, text, border, backgrounds, shadows)
+- **Live Component Demo** - Buttons, badges, cards, and forms using all theme colors
+- **Click-to-Edit** - Click any color swatch to open the editor panel
+- **Color Controls** - HSL sliders (hue, saturation, lightness, alpha) plus hex input
+- **Live Preview** - Changes update instantly as you adjust values
+- **Export CSS** - Copy your modifications as a complete CSS theme block
+- **Reset** - Reset individual variables or all changes
+
+### Workflow
+
+1. Open `themes/dev/editor.html` in your browser
+2. Select a base theme to start from
+3. Click any color swatch to edit it
+4. Adjust using sliders or enter a hex value
+5. Click "Copy CSS Theme" to export your modifications
+6. Paste the CSS into `src/style.css` as a new theme
 
 ## API Reference
 
