@@ -1,0 +1,216 @@
+/**
+ * Bento Component Styles
+ * Styles for BentoGrid, BentoCard, MetallicSurface, and ShimmerOverlay
+ */
+
+/* ===== BENTO GRID ===== */
+.bento-grid {
+  display: grid;
+  gap: var(--bento-gap, 1rem);
+  padding: 1rem;
+  width: 100%;
+  max-width: var(--bento-max-width, 1400px);
+  margin: 0 auto;
+
+  /* Mobile first: single column */
+  grid-template-columns: 1fr;
+  grid-auto-rows: minmax(120px, auto);
+}
+
+/* Small tablets: 2 columns */
+@media (min-width: 640px) {
+  .bento-grid {
+    grid-template-columns: repeat(var(--bento-cols-sm, 2), 1fr);
+    gap: calc(var(--bento-gap, 1rem) * 1.25);
+    padding: 1.5rem;
+  }
+}
+
+/* Tablets: 3 columns */
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(var(--bento-cols-md, 3), 1fr);
+  }
+}
+
+/* Desktop: 4 columns */
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(var(--bento-cols-lg, 4), 1fr);
+    gap: calc(var(--bento-gap, 1rem) * 1.5);
+    padding: 2rem;
+  }
+}
+
+/* Large desktop: 6 columns */
+@media (min-width: 1400px) {
+  .bento-grid {
+    grid-template-columns: repeat(var(--bento-cols-xl, 6), 1fr);
+  }
+}
+
+/* ===== BENTO CARD ===== */
+.bento-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg, 16px);
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
+  transition:
+    transform var(--transition-fast, 0.15s) ease,
+    box-shadow var(--transition-fast, 0.15s) ease;
+
+  /* GPU acceleration for smooth animations */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.bento-card[role='button'] {
+  cursor: pointer;
+}
+
+.bento-card[role='button']:hover:not(.bento-card--disabled) {
+  transform: scale(1.02) translateZ(0);
+  box-shadow: var(--shadow-modal, 0 8px 40px rgba(0, 0, 0, 0.15));
+}
+
+.bento-card[role='button']:active:not(.bento-card--disabled) {
+  transform: scale(0.98) translateZ(0);
+}
+
+.bento-card:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--shadow-focus, 0 0 0 3px rgba(37, 99, 235, 0.2)),
+    var(--shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
+}
+
+/* Card Sizes */
+.bento-card--default {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.bento-card--wide {
+  grid-column: span 1;
+}
+
+@media (min-width: 640px) {
+  .bento-card--wide {
+    grid-column: span 2;
+  }
+}
+
+.bento-card--tall {
+  grid-row: span 2;
+}
+
+.bento-card--large {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+@media (min-width: 640px) {
+  .bento-card--large {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+}
+
+.bento-card--hero {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 768px) {
+  .bento-card--hero {
+    grid-column: span 3;
+  }
+}
+
+/* Disabled State (preloading) */
+.bento-card--disabled {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* ===== METALLIC SURFACE ===== */
+.metallic-surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--metallic-radius, var(--border-radius-lg, 16px));
+
+  /* Base metallic gradient */
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+}
+
+/* Noise texture overlay for brushed metal effect */
+.metallic-surface--noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Highlight reflection effect */
+.metallic-surface--highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 50% 50% at 20% 20%, var(--highlight) 0%, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ===== SHIMMER OVERLAY ===== */
+.shimmer-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.shimmer-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .bento-card,
+  .bento-card[role='button']:hover:not(.bento-card--disabled),
+  .bento-card[role='button']:active:not(.bento-card--disabled) {
+    transform: none;
+    transition: none;
+  }
+
+  .shimmer-overlay::after {
+    animation: none;
+    opacity: 0.1;
+    left: 0;
+  }
+}
