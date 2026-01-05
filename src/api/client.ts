@@ -1,4 +1,4 @@
-import type { TasksFile, BoardsFile, Task } from '../domain/types'
+import type { TasksFile, BoardsFile, Task, CreateTaskInput } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
@@ -178,14 +178,7 @@ export function createApi(
     },
 
     async createTask(
-      data: {
-        title: string
-        tag?: string
-        id?: string
-        createdAt?: string
-        startTime?: string | null
-        endTime?: string | null
-      },
+      data: CreateTaskInput,
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ) {

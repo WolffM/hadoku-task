@@ -3,7 +3,15 @@
  * Provides the same interface as the server API but stores data locally
  */
 
-import type { TasksFile, StatsFile, Task, BoardsFile, Board, AuthContext } from '../domain/types'
+import type {
+  TasksFile,
+  StatsFile,
+  Task,
+  BoardsFile,
+  Board,
+  AuthContext,
+  CreateTaskInput
+} from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
@@ -87,14 +95,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async createTask(
-      data: {
-        title: string
-        tag?: string
-        id?: string
-        createdAt?: string
-        startTime?: string | null
-        endTime?: string | null
-      },
+      data: CreateTaskInput,
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ): Promise<Task> {
