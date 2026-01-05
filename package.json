@@ -1,7 +1,7 @@
 {
   "name": "@wolffm/task",
   "version": "3.4.18",
-  "description": "API definitions and business logic for the Task application.",
+  "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
   "repository": {
