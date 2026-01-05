@@ -5,12 +5,36 @@
 import React, { useState, useRef } from 'react'
 import { useEffect } from 'react'
 import type { Task } from '../../domain/types'
+import { splitTags, formatError } from '../../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 interface UseDragAndDropProps {
   tasks: Task[]
   onTaskUpdate: (taskId: string, updates: { tag: string }) => Promise<void>
   onBulkUpdate: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
+}
+
+/**
+ * Build tag updates for a list of task IDs
+ * @param tasks - All tasks to search in
+ * @param ids - Task IDs to update
+ * @param getNewTag - Function that returns new tag string or null to skip
+ */
+function buildTagUpdates(
+  tasks: Task[],
+  ids: string[],
+  getNewTag: (existingTags: string[], task: Task) => string | null
+): Array<{ taskId: string; tag: string }> {
+  const updates: Array<{ taskId: string; tag: string }> = []
+  for (const id of ids) {
+    const task = tasks.find(t => t.id === id)
+    if (!task) continue
+    const existingTags = splitTags(task.tag)
+    const newTag = getNewTag(existingTags, task)
+    if (newTag === null) continue
+    updates.push({ taskId: id, tag: newTag })
+  }
+  return updates
 }
 
 export function useDragAndDrop({
@@ -342,18 +366,11 @@ export function useDragAndDrop({
       taskCount: ids.length
     })
 
-    // Build list of tag updates
-    const updates: Array<{ taskId: string; tag: string }> = []
-    for (const id of ids) {
-      const task = tasks.find(t => t.id === id)
-      if (!task) continue
-      const existingTags = task.tag?.split(' ').filter(Boolean) || []
-
+    // Build list of tag updates using helper
+    const updates = buildTagUpdates(tasks, ids, existingTags => {
       if (targetTag === 'other') {
         // remove all tags
-        if (existingTags.length === 0) continue
-        updates.push({ taskId: id, tag: '' })
-        continue
+        return existingTags.length === 0 ? null : ''
       }
 
       // Add targetTag if missing
@@ -366,9 +383,8 @@ export function useDragAndDrop({
         newTags = newTags.filter(t => t !== srcTag)
       }
 
-      const updatedTags = newTags.join(' ').trim()
-      updates.push({ taskId: id, tag: updatedTags })
-    }
+      return newTags.join(' ').trim()
+    })
 
     logger.info('[useDragAndDrop] onDrop: updating tasks', { updateCount: updates.length })
     try {
@@ -383,7 +399,7 @@ export function useDragAndDrop({
       }
     } catch (error) {
       logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       alert((error as Error).message || 'Failed to add tags')
     }
@@ -412,21 +428,14 @@ export function useDragAndDrop({
 
     logger.info('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
 
-    // Build list of tag updates
-    const updates: Array<{ taskId: string; tag: string }> = []
-    for (const id of ids) {
-      const task = tasks.find(t => t.id === id)
-      if (!task) continue
-
-      const existingTags = task.tag?.split(' ').filter(Boolean) || []
+    // Build list of tag updates using helper
+    const updates = buildTagUpdates(tasks, ids, existingTags => {
       if (existingTags.includes(filterTag)) {
-        logger.info('[useDragAndDrop] Task already has tag', { taskId: id, filterTag })
-        continue // Tag already exists
+        logger.info('[useDragAndDrop] Task already has tag', { filterTag })
+        return null // Tag already exists, skip
       }
-
-      const updatedTags = [...existingTags, filterTag].join(' ')
-      updates.push({ taskId: id, tag: updatedTags })
-    }
+      return [...existingTags, filterTag].join(' ')
+    })
 
     if (updates.length === 0) {
       logger.info('[useDragAndDrop] No updates needed - all tasks already have this tag')
@@ -447,7 +456,7 @@ export function useDragAndDrop({
       }
     } catch (error) {
       logger.error('[useDragAndDrop] Failed to add tag via filter drop', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       alert((error as Error).message || 'Failed to add tag')
     }

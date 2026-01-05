@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@wolffm/task-ui-components'
+import { formatError } from '../domain/utils/tags'
 
 export type BroadcastType = 'tasks-updated' | 'boards-updated'
 
@@ -34,7 +35,7 @@ export function deferredBroadcast(
       bc.close()
     } catch (err) {
       logger.error('[broadcast] Failed to broadcast', {
-        error: err instanceof Error ? err.message : String(err)
+        error: formatError(err)
       })
     }
   }, delayMs)

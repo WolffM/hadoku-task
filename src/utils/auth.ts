@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@wolffm/task-ui-components'
+import { formatError } from '../domain/utils/tags'
 import { isMobileApp } from './platform'
 
 /**
@@ -66,7 +67,7 @@ export async function validateAndChangeKey(
     }
   } catch (err) {
     logger.error('[Auth] Key validation failed', {
-      error: err instanceof Error ? err.message : String(err)
+      error: formatError(err)
     })
     return { success: false, error: 'Failed to validate key' }
   }

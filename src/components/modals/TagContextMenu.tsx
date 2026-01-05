@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { ContextMenu } from '../ContextMenu'
+import { formatError } from '../../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface TagContextMenuProps {
@@ -31,7 +32,7 @@ export function TagContextMenu({ isOpen, tag, x, y, onClose, onDeleteTag }: TagC
       onClose()
     } catch (err) {
       logger.error('[TagContextMenu] Failed to delete tag', {
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
         tag
       })
       alert((err as Error).message || 'Failed to delete tag')

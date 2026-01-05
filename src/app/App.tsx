@@ -20,11 +20,13 @@ import { useToast, logger } from '@wolffm/task-ui-components'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader } from '../components/AppHeader'
 import { BoardsSection } from '../components/BoardsSection'
+import { ViewSwitcher, type ViewType } from '../components/ViewSwitcher'
 import { TagFiltersSection } from '../components/TagFiltersSection'
 import { TaskLayout } from '../components/TaskLayout'
+import { CalendarDayView } from '../components/calendar/CalendarDayView'
 import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
-import { getTopTags, getAllTags } from '../domain/utils/tags'
+import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
@@ -55,6 +57,8 @@ export default function App(props: TaskAppProps = {}) {
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
+  const [currentView, setCurrentView] = useState<ViewType>('board')
+  const [calendarDate, setCalendarDate] = useState(() => new Date())
 
   // Initialize effectiveSessionId immediately for public users to prevent storage churn
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
@@ -215,7 +219,7 @@ export default function App(props: TaskAppProps = {}) {
       }
     } catch (error) {
       logger.warn('[App] Failed to fetch fresh preferences', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       // Modal still opens with current preferences - graceful degradation
     }
@@ -226,7 +230,7 @@ export default function App(props: TaskAppProps = {}) {
     logger.info('[App] Saving preferences', { keys: Object.keys(prefs) })
 
     // Update local state immediately for responsive UI
-    setPreferences((prev: UserPreferences) => ({ ...prev, ...prefs }))
+    setPreferences({ ...preferences, ...prefs, updatedAt: new Date().toISOString() })
 
     // Save to localStorage AND sync to server (for non-public users)
     // This happens in api.savePreferences() - it:
@@ -307,77 +311,94 @@ export default function App(props: TaskAppProps = {}) {
           onShowToast={showToast}
         />
 
-        <div className="task-app__controls">
-          <input
-            ref={inputRef}
-            className="task-app__input"
-            placeholder={placeholder}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handlers.handleAddTask((e.target as HTMLInputElement).value)
-              }
-              if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault()
-                inputRef.current?.focus()
-              }
-            }}
+        <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
+
+        {currentView === 'board' ? (
+          <>
+            <div className="task-app__controls">
+              <input
+                ref={inputRef}
+                className="task-app__input"
+                placeholder={placeholder}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handlers.handleAddTask((e.target as HTMLInputElement).value)
+                  }
+                  if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault()
+                    inputRef.current?.focus()
+                  }
+                }}
+              />
+            </div>
+
+            <TagFiltersSection
+              tags={allTags}
+              selectedFilters={selectedFilters}
+              dragOverFilter={dragAndDrop.dragOverFilter}
+              onToggleFilter={tag => {
+                setSelectedFilters(prev => {
+                  const copy = new Set(prev)
+                  if (copy.has(tag)) copy.delete(tag)
+                  else copy.add(tag)
+                  return copy
+                })
+              }}
+              onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
+              onDragOver={dragAndDrop.onFilterDragOver}
+              onDragLeave={dragAndDrop.onFilterDragLeave}
+              onDrop={dragAndDrop.onFilterDrop}
+              onCreateTagClick={() => {
+                modals.setInputValue('')
+                modals.setShowNewTagDialog(true)
+              }}
+              onPendingOperation={modals.setPendingTaskOperation}
+            />
+
+            <TaskLayout
+              tasks={tasks}
+              topTags={topTags}
+              isMobile={isMobile}
+              filters={Array.from(selectedFilters)}
+              selectedIds={dragAndDrop.selectedIds}
+              onSelectionStart={dragAndDrop.selectionStartHandler}
+              onSelectionMove={dragAndDrop.selectionMoveHandler}
+              onSelectionEnd={dragAndDrop.selectionEndHandler}
+              sortDirections={sortHook.sortDirections}
+              dragOverTag={dragAndDrop.dragOverTag}
+              pendingOperations={pendingOperations}
+              onComplete={completeTask}
+              onDelete={deleteTask}
+              onEditTag={handlers.handleEditTag}
+              onDragStart={dragAndDrop.onDragStart}
+              onDragEnd={dragAndDrop.onDragEnd}
+              onDragOver={dragAndDrop.onDragOver}
+              onDragLeave={dragAndDrop.onDragLeave}
+              onDrop={dragAndDrop.onDrop}
+              toggleSort={sortHook.toggleSort}
+              sortTasksByAge={sortHook.sortTasksByAge}
+              getSortIcon={sortHook.getSortIcon}
+              getSortTitle={sortHook.getSortTitle}
+              deleteTag={handlers.handleDeleteTag}
+              onDeletePersistedTag={deleteTagOnBoard}
+              showCompleteButton={showCompleteButton}
+              showDeleteButton={showDeleteButton}
+              showTagButton={showTagButton}
+            />
+          </>
+        ) : (
+          <CalendarDayView
+            tasks={tasks}
+            selectedDate={calendarDate}
+            onDateChange={setCalendarDate}
+            onCreateTask={handlers.handleAddTask}
+            onUpdateTask={updateTaskTags}
+            onDeleteTask={deleteTask}
+            onEditTag={handlers.handleEditTag}
+            pendingOperations={pendingOperations}
           />
-        </div>
-
-        <TagFiltersSection
-          tags={allTags}
-          selectedFilters={selectedFilters}
-          dragOverFilter={dragAndDrop.dragOverFilter}
-          onToggleFilter={tag => {
-            setSelectedFilters(prev => {
-              const copy = new Set(prev)
-              if (copy.has(tag)) copy.delete(tag)
-              else copy.add(tag)
-              return copy
-            })
-          }}
-          onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
-          onDragOver={dragAndDrop.onFilterDragOver}
-          onDragLeave={dragAndDrop.onFilterDragLeave}
-          onDrop={dragAndDrop.onFilterDrop}
-          onCreateTagClick={() => {
-            modals.setInputValue('')
-            modals.setShowNewTagDialog(true)
-          }}
-          onPendingOperation={modals.setPendingTaskOperation}
-        />
-
-        <TaskLayout
-          tasks={tasks}
-          topTags={topTags}
-          isMobile={isMobile}
-          filters={Array.from(selectedFilters)}
-          selectedIds={dragAndDrop.selectedIds}
-          onSelectionStart={dragAndDrop.selectionStartHandler}
-          onSelectionMove={dragAndDrop.selectionMoveHandler}
-          onSelectionEnd={dragAndDrop.selectionEndHandler}
-          sortDirections={sortHook.sortDirections}
-          dragOverTag={dragAndDrop.dragOverTag}
-          pendingOperations={pendingOperations}
-          onComplete={completeTask}
-          onDelete={deleteTask}
-          onEditTag={handlers.handleEditTag}
-          onDragStart={dragAndDrop.onDragStart}
-          onDragEnd={dragAndDrop.onDragEnd}
-          onDragOver={dragAndDrop.onDragOver}
-          onDragLeave={dragAndDrop.onDragLeave}
-          onDrop={dragAndDrop.onDrop}
-          toggleSort={sortHook.toggleSort}
-          sortTasksByAge={sortHook.sortTasksByAge}
-          getSortIcon={sortHook.getSortIcon}
-          getSortTitle={sortHook.getSortTitle}
-          deleteTag={handlers.handleDeleteTag}
-          onDeletePersistedTag={deleteTagOnBoard}
-          showCompleteButton={showCompleteButton}
-          showDeleteButton={showDeleteButton}
-          showTagButton={showTagButton}
-        />
+        )}
 
         <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />
 

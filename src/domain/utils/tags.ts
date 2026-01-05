@@ -12,6 +12,16 @@ export function splitTags(tagString: string | null | undefined): string[] {
 }
 
 /**
+ * Format tags for display with # prefix (e.g., "#work #urgent")
+ */
+export function formatTagsForDisplay(tagString: string | null | undefined): string {
+  return splitTags(tagString)
+    .sort()
+    .map(tag => `#${tag}`)
+    .join(' ')
+}
+
+/**
  * Format error for logging
  */
 export function formatError(error: unknown): string {

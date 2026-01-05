@@ -4,6 +4,11 @@
  */
 
 import type { TasksFile, StatsFile, BoardsFile } from '../../domain/types'
+import {
+  createDefaultTasks,
+  createDefaultStats,
+  createDefaultBoards
+} from '../../domain/utils/defaults'
 
 export class LocalStorageStorage {
   constructor(
@@ -15,24 +20,35 @@ export class LocalStorageStorage {
   // Note: Always use the userType from constructor, not the one passed to methods
   // This ensures data stays in the same localStorage location regardless of authContext
 
+  private getKey(
+    type: 'tasks' | 'stats' | 'boards',
+    sessionId: string | undefined,
+    boardId?: string | undefined
+  ): string {
+    if (type === 'boards') {
+      return `${this.userType}-${sessionId || this.sessionId}-boards`
+    }
+    return `${this.userType}-${sessionId || this.sessionId}-${boardId || 'main'}-${type}`
+  }
+
   private getTasksKey(
-    userType: string,
+    _userType: string,
     sessionId: string | undefined,
     boardId: string | undefined
   ): string {
-    return `${this.userType}-${sessionId || this.sessionId}-${boardId || 'main'}-tasks`
+    return this.getKey('tasks', sessionId, boardId)
   }
 
   private getStatsKey(
-    userType: string,
+    _userType: string,
     sessionId: string | undefined,
     boardId: string | undefined
   ): string {
-    return `${this.userType}-${sessionId || this.sessionId}-${boardId || 'main'}-stats`
+    return this.getKey('stats', sessionId, boardId)
   }
 
-  private getBoardsKey(userType: string, sessionId: string | undefined): string {
-    return `${this.userType}-${sessionId || this.sessionId}-boards`
+  private getBoardsKey(_userType: string, sessionId: string | undefined): string {
+    return this.getKey('boards', sessionId)
   }
 
   // --- Tasks Operations ---
@@ -50,11 +66,7 @@ export class LocalStorageStorage {
     }
 
     // Return empty tasks file if not found
-    return {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      tasks: []
-    }
+    return createDefaultTasks()
   }
 
   async saveTasks(
@@ -83,18 +95,7 @@ export class LocalStorageStorage {
     }
 
     // Return empty stats file if not found
-    return {
-      version: 2,
-      updatedAt: new Date().toISOString(),
-      counters: {
-        created: 0,
-        completed: 0,
-        edited: 0,
-        deleted: 0
-      },
-      timeline: [],
-      tasks: {}
-    }
+    return createDefaultStats()
   }
 
   async saveStats(
@@ -119,18 +120,7 @@ export class LocalStorageStorage {
     }
 
     // Return default main board if not found
-    const defaultBoards: BoardsFile = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      boards: [
-        {
-          id: 'main',
-          name: 'Main',
-          tasks: [],
-          tags: []
-        }
-      ]
-    }
+    const defaultBoards = createDefaultBoards()
 
     // Save the default board so it persists
     await this.saveBoards(userType, defaultBoards, sessionId)

@@ -7,7 +7,7 @@ import type { Task } from '../domain/types'
 import type { SortDirection } from '../hooks/useTaskSort'
 import { TaskItem } from './TaskItem'
 import { getLayoutConfig } from '../utils/layout'
-import { getTasksByTag, getRemainingTasks } from '../domain/utils/tags'
+import { splitTags, getTasksByTag, getRemainingTasks } from '../domain/utils/tags'
 
 interface TaskLayoutProps {
   tasks: Task[]
@@ -71,6 +71,26 @@ export function TaskLayout({
   showDeleteButton = true,
   showTagButton = false
 }: TaskLayoutProps) {
+  // Helper to render TaskItems with consistent props
+  const renderTaskItems = (taskList: Task[], direction: SortDirection) =>
+    sortTasksByAge(taskList, direction).map(task => (
+      <TaskItem
+        key={task.id}
+        task={task}
+        isDraggable={true}
+        pendingOperations={pendingOperations}
+        onComplete={onComplete}
+        onDelete={onDelete}
+        onEditTag={onEditTag}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        selected={selectedIds?.has(task.id) ?? false}
+        showCompleteButton={showCompleteButton}
+        showDeleteButton={showDeleteButton}
+        showTagButton={showTagButton}
+      />
+    ))
+
   // Helper function to render a tag column with header and tasks
   const renderTagColumn = (tag: string, tagTasks: Task[]) => (
     <div
@@ -91,23 +111,7 @@ export function TaskLayout({
         </button>
       </div>
       <ul className="task-app__list task-app__list--column">
-        {sortTasksByAge(tagTasks, sortDirections[tag] || 'desc').map(task => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            isDraggable={true}
-            pendingOperations={pendingOperations}
-            onComplete={onComplete}
-            onDelete={onDelete}
-            onEditTag={onEditTag}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            selected={selectedIds ? selectedIds.has(task.id) : false}
-            showCompleteButton={showCompleteButton}
-            showDeleteButton={showDeleteButton}
-            showTagButton={showTagButton}
-          />
-        ))}
+        {renderTaskItems(tagTasks, sortDirections[tag] || 'desc')}
       </ul>
     </div>
   )
@@ -117,7 +121,7 @@ export function TaskLayout({
     let tagTasks = getTasksByTag(tasks, tag)
     if (hasActiveFilters && filters) {
       tagTasks = tagTasks.filter(t => {
-        const taskTags = t.tag?.split(' ') || []
+        const taskTags = splitTags(t.tag)
         return filters.some(f => taskTags.includes(f))
       })
     }
@@ -130,7 +134,7 @@ export function TaskLayout({
   const hasActiveFilters = Array.isArray(filters) && filters.length > 0
   const filteredTasks = tasks.filter(t => {
     if (!hasActiveFilters || !filters) return true
-    const taskTags = t.tag?.split(' ') || []
+    const taskTags = splitTags(t.tag)
     // If any selected filter is present on the task, include it
     return filters.some(f => taskTags.includes(f))
   })
@@ -146,7 +150,7 @@ export function TaskLayout({
       ? topTags.filter(tag => {
           const tagTasks = getTasksByTag(tasks, tag)
           return tagTasks.some(t => {
-            const taskTags = t.tag?.split(' ') || []
+            const taskTags = splitTags(t.tag)
             return filters.some(f => taskTags.includes(f))
           })
         })
@@ -154,30 +158,11 @@ export function TaskLayout({
 
   // No tags: simple list (use visibleTopTags length so filters can collapse layout)
   if (visibleTopTags.length === 0) {
-    return (
-      <ul className="task-app__list">
-        {filteredTasks.map(task => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            pendingOperations={pendingOperations}
-            onComplete={onComplete}
-            onDelete={onDelete}
-            onEditTag={onEditTag}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            selected={selectedIds ? selectedIds.has(task.id) : false}
-            showCompleteButton={showCompleteButton}
-            showDeleteButton={showDeleteButton}
-            showTagButton={showTagButton}
-          />
-        ))}
-      </ul>
-    )
+    return <ul className="task-app__list">{renderTaskItems(filteredTasks, 'desc')}</ul>
   }
   const remainingTasks = getRemainingTasks(tasks, topTags, filters).filter(t => {
     if (!hasActiveFilters || !filters) return true
-    const taskTags = t.tag?.split(' ') || []
+    const taskTags = splitTags(t.tag)
     return filters.some(f => taskTags.includes(f))
   })
 
@@ -226,22 +211,7 @@ export function TaskLayout({
             </button>
           </div>
           <ul className="task-app__list">
-            {sortTasksByAge(remainingTasks, sortDirections['other'] || 'desc').map(task => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                pendingOperations={pendingOperations}
-                onComplete={onComplete}
-                onDelete={onDelete}
-                onEditTag={onEditTag}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-                selected={selectedIds ? selectedIds.has(task.id) : false}
-                showCompleteButton={showCompleteButton}
-                showDeleteButton={showDeleteButton}
-                showTagButton={showTagButton}
-              />
-            ))}
+            {renderTaskItems(remainingTasks, sortDirections['other'] || 'desc')}
           </ul>
         </div>
       )}

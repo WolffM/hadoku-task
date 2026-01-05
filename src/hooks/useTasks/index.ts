@@ -111,7 +111,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       }
     } catch (err) {
       logger.error('[useTasks] Failed to setup BroadcastChannel', {
-        error: err instanceof Error ? err.message : String(err)
+        error: formatError(err)
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,7 +238,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
         logger.info('[useTasks] deleteTag END (no tasks to clear)')
       } catch (error) {
         logger.error('[useTasks] deleteTag ERROR', {
-          error: error instanceof Error ? error.message : String(error)
+          error: formatError(error)
         })
         // Note: alert() may also be blocked - log instead
         logger.error('[useTasks] deleteTag: Please fix this error', {
@@ -264,7 +264,7 @@ export function useTasks({ userType, sessionId }: UseTasksProps) {
       logger.info('[useTasks] deleteTag END')
     } catch (error) {
       logger.error('[useTasks] deleteTag ERROR', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       alert((error as Error).message || 'Failed to remove tag from tasks')
     }

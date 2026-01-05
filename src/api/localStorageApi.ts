@@ -8,6 +8,7 @@ import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
 import { deferredBroadcast } from '../utils/broadcast'
+import { createDefaultTasks, createDefaultStats } from '../domain/utils/defaults'
 import { logger } from '@wolffm/task-ui-components'
 
 /**
@@ -57,19 +58,8 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       })
 
       // Initialize empty tasks/stats for new board
-      await storage.saveTasks(userType, sessionId, boardId, {
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        tasks: []
-      })
-
-      await storage.saveStats(userType, sessionId, boardId, {
-        version: 2,
-        updatedAt: new Date().toISOString(),
-        counters: { created: 0, completed: 0, edited: 0, deleted: 0 },
-        timeline: [],
-        tasks: {}
-      })
+      await storage.saveTasks(userType, sessionId, boardId, createDefaultTasks())
+      await storage.saveStats(userType, sessionId, boardId, createDefaultStats())
 
       // Broadcast update
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })

@@ -14,7 +14,7 @@ import { useEffect, type RefObject } from 'react'
  * @param excludeSelector - Optional CSS selector for elements to exclude from outside clicks
  */
 export function useClickOutside(
-  ref: RefObject<HTMLElement>,
+  ref: RefObject<HTMLElement | null>,
   isOpen: boolean,
   onClose: () => void,
   excludeSelector?: string

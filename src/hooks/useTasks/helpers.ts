@@ -5,6 +5,7 @@
 
 import { logger } from '@wolffm/task-ui-components'
 import type { Task, BoardsFile, Board } from '../../domain/types'
+import { formatError } from '../../domain/utils/tags'
 
 /**
  * Generic operation wrapper that handles:
@@ -38,7 +39,7 @@ export async function withPendingOperation<T>(
     return result
   } catch (error) {
     // Suppress 404 errors (task/resource already processed)
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorMessage = formatError(error)
     const is404 = suppress404 && errorMessage.includes('404')
     if (!is404) {
       if (onError) {

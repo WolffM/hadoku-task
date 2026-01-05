@@ -1,4 +1,5 @@
 import { logger } from '@wolffm/task-ui-components'
+import { formatError } from '../domain/utils/tags'
 
 /**
  * Generate a unique session ID for this browser tab/session
@@ -78,7 +79,7 @@ export async function performSessionHandshake(
     return data.preferences
   } catch (error) {
     logger.error('[Session] Handshake failed', {
-      error: error instanceof Error ? error.message : String(error)
+      error: formatError(error)
     })
     // Store the new sessionId anyway
     storeSessionId(newSessionId)

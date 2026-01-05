@@ -11,7 +11,7 @@ import { logger } from '@wolffm/task-ui-components'
 interface UseTaskHandlersProps {
   tasks: Task[]
   boards: BoardsFile | null
-  inputRef: React.RefObject<HTMLInputElement>
+  inputRef: React.RefObject<HTMLInputElement | null>
   addTask: (input: string) => Promise<boolean | undefined>
   deleteTag: (tag: string) => Promise<void>
   updateTaskTags: (taskId: string, updates: { tag: string }) => Promise<void>
@@ -67,7 +67,7 @@ export function useTaskHandlers({
   }
 
   const handleDeleteTag = (tag: string) => {
-    const tagTasks = tasks.filter(t => t.tag?.split(' ').includes(tag))
+    const tagTasks = tasks.filter(t => splitTags(t.tag).includes(tag))
     setConfirmClearTag({ tag, count: tagTasks.length })
   }
 

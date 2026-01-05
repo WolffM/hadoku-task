@@ -7,7 +7,7 @@ import React from 'react'
 import { Modal } from '@wolffm/task-ui-components'
 import type { Task } from '../../domain/types'
 import type { PendingTaskOperation } from '../../hooks/useModalState'
-import { getAllTags } from '../../domain/utils/tags'
+import { getAllTags, formatError } from '../../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface CreateTagModalProps {
@@ -35,7 +35,7 @@ export function CreateTagModal({
       await onConfirm(inputValue)
     } catch (err) {
       logger.error('[CreateTagModal] Failed to create tag', {
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
         tagName: inputValue
       })
     }

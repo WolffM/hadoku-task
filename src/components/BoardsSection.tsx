@@ -9,6 +9,7 @@ import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { MAX_BOARDS } from '../app/constants'
+import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface BoardsSectionProps {
@@ -68,7 +69,7 @@ export function BoardsSection({
       onShowToast?.('Refresh successful', 'success')
     } catch (error) {
       logger.error('[BoardsSection] Sync failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: formatError(error)
       })
       onShowToast?.('Refresh failed', 'error')
     } finally {

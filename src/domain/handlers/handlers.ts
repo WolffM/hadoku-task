@@ -15,6 +15,7 @@ import type {
   ULID
 } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
+import { splitTags } from '../utils/tags.js'
 import {
   findTaskOrThrow,
   findBoardOrThrow,
@@ -477,7 +478,7 @@ export async function batchClearTag(
       let clearedCount = 0
       const updatedTasksList = tasks.tasks.map(task => {
         if (input.taskIds.includes(task.id) && task.tag) {
-          const existingTags = task.tag.split(' ').filter(Boolean)
+          const existingTags = splitTags(task.tag)
           const updatedTags = existingTags.filter(t => t !== input.tag)
           clearedCount++
           return {

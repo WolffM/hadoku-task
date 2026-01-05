@@ -5,6 +5,7 @@
 
 import type { UserPreferences } from '../domain/types'
 import { STORAGE_VERSION, STORAGE_VERSION_KEY, ORPHANED_KEY_PATTERNS } from '../app/constants'
+import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 /**
@@ -110,7 +111,7 @@ export function migrateFromSessionStorage(
     return null
   } catch (error) {
     logger.warn('[Preferences] Failed to migrate settings', {
-      error: error instanceof Error ? error.message : String(error)
+      error: formatError(error)
     })
     return null
   }

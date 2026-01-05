@@ -1,5 +1,6 @@
 import type { TasksFile, BoardsFile, Task } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
+import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/task-ui-components'
 
 // Type for task updates (partial Task without id and createdAt)
@@ -78,6 +79,35 @@ function adminHeaders(userType: string, sessionId?: string) {
 }
 
 /**
+ * Fire-and-forget server sync with consistent logging
+ * Used for optimistic updates where localStorage is source of truth
+ */
+function backgroundSync(
+  url: string,
+  options: globalThis.RequestInit,
+  operation: string,
+  context: Record<string, unknown>
+): void {
+  fetch(url, options)
+    .then(r => {
+      if (!r.ok) {
+        logger.warn(`[api] ${operation}: Server sync returned error`, {
+          status: r.status,
+          ...context
+        })
+      }
+      return r
+    })
+    .then(() => logger.info(`[api] ${operation}: Server sync completed`, context))
+    .catch(err =>
+      logger.error(`[api] ${operation}: Server sync failed`, {
+        ...context,
+        error: formatError(err)
+      })
+    )
+}
+
+/**
  * Create optimistic API client
  * - All user types use localStorage for immediate updates
  * - "public" is localStorage-only, no server sync
@@ -141,7 +171,7 @@ export function createApi(
       } catch (error) {
         const duration = now() - startTime
         logger.error('[api] syncFromApi: Sync from API failed', {
-          error: error instanceof Error ? error.message : String(error),
+          error: formatError(error),
           durationMs: Math.round(duration)
         })
       }
@@ -205,7 +235,7 @@ export function createApi(
         .catch(err => {
           logger.error('[api] createTask: Server sync failed', {
             taskId: localTask.id,
-            error: err instanceof Error ? err.message : String(err)
+            error: formatError(err)
           })
         })
 
@@ -216,29 +246,16 @@ export function createApi(
       const result = await localStorage.createTag(tag, boardId)
       logger.info('[api] createTag: Created locally', { tag, boardId })
 
-      // Background server sync
-      fetch(`/task/api/tags`, {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId, tag })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] createTag: Server sync returned error', {
-              status: r.status,
-              tag
-            })
-          }
-          return r
-        })
-        .then(() => logger.info('[api] createTag: Server sync completed', { tag, boardId }))
-        .catch(err =>
-          logger.error('[api] createTag: Server sync failed', {
-            tag,
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/tags`,
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId, tag })
+        },
+        'createTag',
+        { tag, boardId }
+      )
       return result
     },
     async deleteTag(tag: string, boardId: string = 'main') {
@@ -246,29 +263,16 @@ export function createApi(
       const result = await localStorage.deleteTag(tag, boardId)
       logger.info('[api] deleteTag: Deleted locally', { tag, boardId })
 
-      // Background server sync
-      fetch(`/task/api/tags/delete`, {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId, tag })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] deleteTag: Server sync returned error', {
-              status: r.status,
-              tag
-            })
-          }
-          return r
-        })
-        .then(() => logger.info('[api] deleteTag: Server sync completed', { tag, boardId }))
-        .catch(err =>
-          logger.error('[api] deleteTag: Server sync failed', {
-            tag,
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/tags/delete`,
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId, tag })
+        },
+        'deleteTag',
+        { tag, boardId }
+      )
       return result
     },
 
@@ -288,29 +292,16 @@ export function createApi(
       const result = await localStorage.patchTask(id, patch, boardId, suppressBroadcast)
       logger.info('[api] patchTask: Patched locally', { taskId: id, boardId })
 
-      // Background server sync
-      fetch(`/task/api/${id}`, {
-        method: 'PATCH',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ ...patch, boardId })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] patchTask: Server sync returned error', {
-              status: r.status,
-              taskId: id
-            })
-          }
-          return r
-        })
-        .then(() => logger.info('[api] patchTask: Server sync completed', { taskId: id, boardId }))
-        .catch(err =>
-          logger.error('[api] patchTask: Server sync failed', {
-            taskId: id,
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/${id}`,
+        {
+          method: 'PATCH',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ ...patch, boardId })
+        },
+        'patchTask',
+        { taskId: id, boardId }
+      )
       return result
     },
 
@@ -319,29 +310,16 @@ export function createApi(
       const result = await localStorage.completeTask(id, boardId)
       logger.info('[api] completeTask: Completed locally', { taskId: id, boardId })
 
-      // Background server sync
-      fetch(`/task/api/${id}/complete`, {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] completeTask: Server sync returned error', {
-              status: r.status,
-              taskId: id
-            })
-            throw new Error(`HTTP ${r.status}`)
-          }
-          logger.info('[api] completeTask: Server sync completed', { taskId: id, boardId })
-        })
-        .catch(err =>
-          logger.error('[api] completeTask: Server sync failed', {
-            taskId: id,
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/${id}/complete`,
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId })
+        },
+        'completeTask',
+        { taskId: id, boardId }
+      )
       return result
     },
 
@@ -350,29 +328,16 @@ export function createApi(
       await localStorage.deleteTask(id, boardId, suppressBroadcast)
       logger.info('[api] deleteTask: Deleted locally', { taskId: id, boardId })
 
-      // Background server sync
-      fetch(`/task/api/${id}`, {
-        method: 'DELETE',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] deleteTask: Server sync returned error', {
-              status: r.status,
-              taskId: id
-            })
-            throw new Error(`HTTP ${r.status}`)
-          }
-          logger.info('[api] deleteTask: Server sync completed', { taskId: id, boardId })
-        })
-        .catch(err =>
-          logger.error('[api] deleteTask: Server sync failed', {
-            taskId: id,
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/${id}`,
+        {
+          method: 'DELETE',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId })
+        },
+        'deleteTask',
+        { taskId: id, boardId }
+      )
     },
 
     // Board operations
@@ -381,28 +346,16 @@ export function createApi(
       const result = await localStorage.createBoard(boardId)
       logger.info('[api] createBoard: Created locally', { boardId })
 
-      // Background server sync
-      fetch('/task/api/boards', {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ id: boardId, name: boardId })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] createBoard: Server sync returned error', {
-              status: r.status,
-              boardId
-            })
-          }
-          return r
-        })
-        .then(() => logger.info('[api] createBoard: Server sync completed', { boardId }))
-        .catch(err =>
-          logger.error('[api] createBoard: Server sync failed', {
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        '/task/api/boards',
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ id: boardId, name: boardId })
+        },
+        'createBoard',
+        { boardId }
+      )
       return result
     },
 
@@ -411,27 +364,15 @@ export function createApi(
       const result = await localStorage.deleteBoard(boardId)
       logger.info('[api] deleteBoard: Deleted locally', { boardId })
 
-      // Background server sync
-      fetch(`/task/api/boards/${encodeURIComponent(boardId)}`, {
-        method: 'DELETE',
-        headers: adminHeaders(userType, sessionId)
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] deleteBoard: Server sync returned error', {
-              status: r.status,
-              boardId
-            })
-          }
-          return r
-        })
-        .then(() => logger.info('[api] deleteBoard: Server sync completed', { boardId }))
-        .catch(err =>
-          logger.error('[api] deleteBoard: Server sync failed', {
-            boardId,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        `/task/api/boards/${encodeURIComponent(boardId)}`,
+        {
+          method: 'DELETE',
+          headers: adminHeaders(userType, sessionId)
+        },
+        'deleteBoard',
+        { boardId }
+      )
       return result
     },
 
@@ -440,35 +381,33 @@ export function createApi(
       logger.info('[api] getPreferences: Starting', { userType })
 
       // For non-public users, always fetch from server to ensure sync across devices/tabs
-      if (userType !== 'public') {
-        try {
-          const response = await fetch('/task/api/preferences', {
-            headers: adminHeaders(userType, sessionId)
+      // Note: userType is guaranteed to be non-public here due to early return above
+      try {
+        const response = await fetch('/task/api/preferences', {
+          headers: adminHeaders(userType, sessionId)
+        })
+        if (response.ok) {
+          const serverPrefs = await response.json()
+          logger.info('[api] getPreferences: Fetched from server', {
+            hasPrefs: !!serverPrefs,
+            keys: serverPrefs ? Object.keys(serverPrefs) : []
           })
-          if (response.ok) {
-            const serverPrefs = await response.json()
-            logger.info('[api] getPreferences: Fetched from server', {
-              hasPrefs: !!serverPrefs,
-              keys: serverPrefs ? Object.keys(serverPrefs) : []
-            })
-            // Also save to localStorage for offline access and instant local updates
-            await localStorage.savePreferences(serverPrefs)
-            return serverPrefs
-          } else {
-            logger.warn('[api] getPreferences: Server returned error', { status: response.status })
-          }
-        } catch (err) {
-          logger.warn('[api] getPreferences: Server fetch failed, using localStorage', {
-            error: err instanceof Error ? err.message : String(err)
-          })
+          // Also save to localStorage for offline access and instant local updates
+          await localStorage.savePreferences(serverPrefs)
+          return serverPrefs
+        } else {
+          logger.warn('[api] getPreferences: Server returned error', { status: response.status })
         }
+      } catch (err) {
+        logger.warn('[api] getPreferences: Server fetch failed, using localStorage', {
+          error: formatError(err)
+        })
       }
 
-      // Fallback to localStorage (for public users or if server fails)
+      // Fallback to localStorage if server fails
       const localPrefs = await localStorage.getPreferences()
-      logger.info('[api] getPreferences: Using localStorage', {
-        hasPrefs: !!localPrefs,
-        isPublic: userType === 'public'
+      logger.info('[api] getPreferences: Using localStorage fallback', {
+        hasPrefs: !!localPrefs
       })
       return localPrefs
     },
@@ -484,29 +423,18 @@ export function createApi(
       await localStorage.savePreferences(prefs)
       logger.info('[api] savePreferences: Saved to localStorage')
 
-      // For non-public users, sync to server in background
+      // Sync to server in background (userType is guaranteed non-public here)
       // This enables cross-device/tab sync via getPreferences()
-      if (userType !== 'public') {
-        fetch('/task/api/preferences', {
+      backgroundSync(
+        '/task/api/preferences',
+        {
           method: 'PUT',
           headers: adminHeaders(userType, sessionId),
           body: JSON.stringify(prefs)
-        })
-          .then(r => {
-            if (!r.ok) {
-              logger.warn('[api] savePreferences: Server sync returned error', {
-                status: r.status
-              })
-            }
-            return r
-          })
-          .then(() => logger.info('[api] savePreferences: Server sync completed'))
-          .catch(err =>
-            logger.error('[api] savePreferences: Server sync failed', {
-              error: err instanceof Error ? err.message : String(err)
-            })
-          )
-      }
+        },
+        'savePreferences',
+        {}
+      )
     },
 
     // Batch operations
@@ -521,34 +449,16 @@ export function createApi(
       logger.info('[api] batchUpdateTags: Updated locally', { boardId, count: updates.length })
 
       // 2. BACKGROUND: Sync to server (fire-and-forget)
-      fetch('/task/api/batch-tag', {
-        method: 'PATCH',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId, updates })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] batchUpdateTags: Server sync returned error', {
-              status: r.status,
-              boardId,
-              count: updates.length
-            })
-          }
-          return r
-        })
-        .then(() =>
-          logger.info('[api] batchUpdateTags: Server sync completed', {
-            boardId,
-            count: updates.length
-          })
-        )
-        .catch(err =>
-          logger.error('[api] batchUpdateTags: Server sync failed', {
-            boardId,
-            count: updates.length,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        '/task/api/batch-tag',
+        {
+          method: 'PATCH',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId, updates })
+        },
+        'batchUpdateTags',
+        { boardId, count: updates.length }
+      )
     },
 
     async batchMoveTasks(sourceBoardId: string, targetBoardId: string, taskIds: string[]) {
@@ -567,37 +477,16 @@ export function createApi(
       })
 
       // 2. BACKGROUND: Sync to server (fire-and-forget)
-      fetch('/task/api/batch-move', {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] batchMoveTasks: Server sync returned error', {
-              status: r.status,
-              sourceBoardId,
-              targetBoardId,
-              count: taskIds.length
-            })
-          }
-          return r
-        })
-        .then(() =>
-          logger.info('[api] batchMoveTasks: Server sync completed', {
-            sourceBoardId,
-            targetBoardId,
-            count: taskIds.length
-          })
-        )
-        .catch(err =>
-          logger.error('[api] batchMoveTasks: Server sync failed', {
-            sourceBoardId,
-            targetBoardId,
-            count: taskIds.length,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        '/task/api/batch-move',
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
+        },
+        'batchMoveTasks',
+        { sourceBoardId, targetBoardId, count: taskIds.length }
+      )
 
       return result
     },
@@ -614,37 +503,16 @@ export function createApi(
       logger.info('[api] batchClearTag: Cleared locally', { boardId, tag, count: taskIds.length })
 
       // 2. BACKGROUND: Sync to server (fire-and-forget)
-      fetch('/task/api/batch-clear-tag', {
-        method: 'POST',
-        headers: adminHeaders(userType, sessionId),
-        body: JSON.stringify({ boardId, tag, taskIds })
-      })
-        .then(r => {
-          if (!r.ok) {
-            logger.warn('[api] batchClearTag: Server sync returned error', {
-              status: r.status,
-              boardId,
-              tag,
-              count: taskIds.length
-            })
-          }
-          return r
-        })
-        .then(() =>
-          logger.info('[api] batchClearTag: Server sync completed', {
-            boardId,
-            tag,
-            count: taskIds.length
-          })
-        )
-        .catch(err =>
-          logger.error('[api] batchClearTag: Server sync failed', {
-            boardId,
-            tag,
-            count: taskIds.length,
-            error: err instanceof Error ? err.message : String(err)
-          })
-        )
+      backgroundSync(
+        '/task/api/batch-clear-tag',
+        {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ boardId, tag, taskIds })
+        },
+        'batchClearTag',
+        { boardId, tag, count: taskIds.length }
+      )
     },
 
     // User Management
@@ -663,7 +531,7 @@ export function createApi(
         return isValid
       } catch (err) {
         logger.error('[api] validateKey: Failed', {
-          error: err instanceof Error ? err.message : String(err)
+          error: formatError(err)
         })
         return false
       }

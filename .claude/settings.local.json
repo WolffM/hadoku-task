@@ -1,6 +1,15 @@
 {
   "permissions": {
-    "allow": ["Bash(cat:*)", "Bash(pnpm run build:*)", "Bash(pnpm install:*)"],
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm run lint)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
     "deny": [],
     "ask": []
   }

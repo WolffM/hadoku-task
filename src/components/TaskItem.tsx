@@ -5,6 +5,7 @@
 import React from 'react'
 import type { Task } from '../domain/types'
 import { formatAge } from '../utils/formatters'
+import { formatTagsForDisplay } from '../domain/utils/tags'
 import { TagIcon } from '@wolffm/task-ui-components'
 
 interface TaskItemProps {
@@ -66,13 +67,7 @@ export function TaskItem({
 
         <div className="task-app__item-meta-row">
           {task.tag ? (
-            <div className="task-app__item-tag">
-              {task.tag
-                .split(' ')
-                .sort()
-                .map((tag: string) => `#${tag}`)
-                .join(' ')}
-            </div>
+            <div className="task-app__item-tag">{formatTagsForDisplay(task.tag)}</div>
           ) : (
             <div />
           )}

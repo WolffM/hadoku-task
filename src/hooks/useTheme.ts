@@ -37,7 +37,7 @@ function isThemeAvailable(themeName: string | undefined, experimentalEnabled: bo
 export function useTheme(
   preferences: UserPreferences,
   savePreferences: (updates: Partial<UserPreferences>) => Promise<void>,
-  containerRef: RefObject<HTMLDivElement>,
+  containerRef: RefObject<HTMLDivElement | null>,
   preferencesLoaded: boolean = true,
   initialTheme?: string
 ): UseThemeReturn {

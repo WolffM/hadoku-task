@@ -2,26 +2,9 @@
  * Type definitions for @wolffm/task frontend exports
  */
 
-// Theme names
-export type ThemeName =
-  | 'light'
-  | 'dark'
-  | 'coffee-light'
-  | 'coffee-dark'
-  | 'nature-light'
-  | 'nature-dark'
-  | 'lavender-light'
-  | 'lavender-dark'
-  | 'strawberry-light'
-  | 'strawberry-dark'
-  | 'ocean-light'
-  | 'ocean-dark'
-  | 'cyberpunk-light'
-  | 'cyberpunk-dark'
-  | 'pink-light'
-  | 'pink-dark'
-  | 'izakaya-light'
-  | 'izakaya-dark'
+// Import and re-export ThemeName from types.ts (single source of truth)
+import type { ThemeName } from './types'
+export type { ThemeName }
 
 // Props interface for configuration from parent app
 export interface TaskAppProps {

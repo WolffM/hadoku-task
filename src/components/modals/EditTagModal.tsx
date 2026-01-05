@@ -8,7 +8,7 @@ import { Modal } from '@wolffm/task-ui-components'
 import type { BoardsFile } from '../../domain/types'
 import { splitTags } from '../../domain/utils/tags'
 
-interface EditTagModalProps {
+export interface EditTagModalProps {
   isOpen: boolean
   taskId: string | null
   currentTag: string | null
