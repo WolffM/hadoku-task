@@ -70,13 +70,18 @@ Get all active tasks for a board.
       "id": "01HQ...",
       "title": "Task title",
       "tag": "work home",
+      "state": "Active",
       "createdAt": "2025-10-27T12:00:00Z",
       "updatedAt": "2025-10-27T12:00:00Z",
-      "closedAt": null
+      "closedAt": null,
+      "startTime": "2025-10-27T14:00:00Z",
+      "endTime": "2025-10-27T15:00:00Z"
     }
   ]
 }
 ```
+
+**Note:** `startTime` and `endTime` are optional. Tasks without these fields are classic board tasks that won't appear in calendar views.
 
 ---
 
@@ -95,9 +100,19 @@ Create a new task.
 {
   "title": "Task title",
   "tag": "work",
-  "boardId": "main"
+  "boardId": "main",
+  "startTime": "2025-10-27T14:00:00Z",
+  "endTime": "2025-10-27T15:00:00Z"
 }
 ```
+
+| Field       | Type           | Required | Description                               |
+| ----------- | -------------- | -------- | ----------------------------------------- |
+| `title`     | string         | Yes      | Task title                                |
+| `tag`       | string         | No       | Space-separated tags                      |
+| `boardId`   | string         | No       | Target board (default: "main")            |
+| `startTime` | string \| null | No       | Scheduled start time (ISO 8601)           |
+| `endTime`   | string \| null | No       | Scheduled end time or deadline (ISO 8601) |
 
 **Response:**
 
@@ -107,7 +122,9 @@ Create a new task.
   "title": "Task title",
   "tag": "work",
   "createdAt": "2025-10-27T12:00:00Z",
-  "updatedAt": "2025-10-27T12:00:00Z"
+  "updatedAt": "2025-10-27T12:00:00Z",
+  "startTime": "2025-10-27T14:00:00Z",
+  "endTime": "2025-10-27T15:00:00Z"
 }
 ```
 
@@ -115,7 +132,7 @@ Create a new task.
 
 ### PATCH `/:id`
 
-Update a task's title or tags.
+Update a task's title, tags, or scheduling.
 
 **Headers:**
 
@@ -132,9 +149,19 @@ Update a task's title or tags.
 {
   "title": "Updated title",
   "tag": "new-tag",
-  "boardId": "main"
+  "boardId": "main",
+  "startTime": "2025-10-27T16:00:00Z",
+  "endTime": null
 }
 ```
+
+| Field       | Type           | Required | Description                    |
+| ----------- | -------------- | -------- | ------------------------------ |
+| `title`     | string         | No       | New task title                 |
+| `tag`       | string         | No       | New tags (space-separated)     |
+| `boardId`   | string         | No       | Board ID (default: "main")     |
+| `startTime` | string \| null | No       | New start time (null to clear) |
+| `endTime`   | string \| null | No       | New end time (null to clear)   |
 
 **Response:**
 
@@ -143,7 +170,9 @@ Update a task's title or tags.
   "id": "01HQ...",
   "title": "Updated title",
   "tag": "new-tag",
-  "updatedAt": "2025-10-27T12:30:00Z"
+  "updatedAt": "2025-10-27T12:30:00Z",
+  "startTime": "2025-10-27T16:00:00Z",
+  "endTime": null
 }
 ```
 

@@ -1,6 +1,6 @@
-# Architecture
+# Architecture & Strategy
 
-Deep dive into the system design, patterns, and technical decisions behind Hadoku Task Manager.
+This is the **authoritative reference** for Hadoku Task Manager's system design, architectural decisions, and strategic direction. All major technical decisions are documented here.
 
 > **Audience**: Developers integrating, extending, or understanding the system architecture.
 
@@ -400,7 +400,7 @@ src/styles/
 
 ### Theme System
 
-**7 complete themes with ~45 CSS variables each:**
+**12 theme families (24 variants with light/dark) with ~45 CSS variables each:**
 
 ```css
 :root {
@@ -502,7 +502,7 @@ data/
 ### Bundle Sizes
 
 - **Client**: ~95KB raw, ~22KB gzipped
-- **CSS**: ~40KB raw, ~7KB gzipped (includes all 7 themes)
+- **CSS**: ~40KB raw, ~7KB gzipped (includes all theme families)
 - **Initial load**: ~50-100ms on average connection
 
 ### Runtime Performance
@@ -752,6 +752,40 @@ if (userType === 'admin') {
 - ✅ Easier testing (mock at different levels)
 - ✅ Better code organization
 - ✅ Reduced component complexity
+
+---
+
+## Calendar & Scheduling (Planned)
+
+### Data Model
+
+Tasks optionally include `startTime` and `endTime` fields (ISO 8601 format, matching `createdAt`/`updatedAt`/`closedAt`).
+
+**Scheduling modes:**
+
+- **Neither field** - Classic board task (existing behavior)
+- **startTime only** - Open-ended event, starts at specific time
+- **endTime only** - Deadline/due date
+- **Both fields** - Fully scheduled time block
+
+Tasks without scheduling fields appear only in board view. Tasks with scheduling appear in both board view and calendar view.
+
+### View Architecture
+
+The app uses a **view-agnostic data layer** - tasks are stored the same way regardless of how they're displayed.
+
+**Planned views:**
+
+- **Board View** - Existing tag-based column layout (current)
+- **Day View** - Calendar-style day visualization (planned)
+- **Week View** - Weekly calendar grid (future)
+- **Month View** - Monthly overview (future)
+
+**Key principle:** All views operate on the same board's tasks. A task created in calendar view appears in board view and vice versa.
+
+### View Switcher
+
+A view mode selector will be added to the header area, allowing users to toggle between Board and Calendar views while staying on the same board.
 
 ---
 

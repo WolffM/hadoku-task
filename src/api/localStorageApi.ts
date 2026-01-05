@@ -97,7 +97,14 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async createTask(
-      data: { title: string; tag?: string; id?: string; createdAt?: string },
+      data: {
+        title: string
+        tag?: string
+        id?: string
+        createdAt?: string
+        startTime?: string | null
+        endTime?: string | null
+      },
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ): Promise<Task> {
@@ -135,14 +142,21 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async patchTask(
       id: string,
-      updates: Partial<Pick<Task, 'title' | 'tag'>>,
+      updates: Partial<Pick<Task, 'title' | 'tag' | 'startTime' | 'endTime'>>,
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ): Promise<Task> {
-      // Filter out null values - handler expects string | undefined, not null
-      const cleanUpdates: { title?: string; tag?: string } = {}
+      // Filter out undefined values - handler expects explicit values or null
+      const cleanUpdates: {
+        title?: string
+        tag?: string
+        startTime?: string | null
+        endTime?: string | null
+      } = {}
       if (updates.title !== undefined) cleanUpdates.title = updates.title
       if (updates.tag !== undefined && updates.tag !== null) cleanUpdates.tag = updates.tag
+      if (updates.startTime !== undefined) cleanUpdates.startTime = updates.startTime
+      if (updates.endTime !== undefined) cleanUpdates.endTime = updates.endTime
 
       // Use handler
       await TaskHandlers.updateTask(storage, authContext, id, cleanUpdates, boardId)

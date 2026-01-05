@@ -19,6 +19,9 @@ export interface Task {
   createdAt: string // ISO 8601
   updatedAt?: string | null // ISO 8601 - when task was last modified (edit title/tag)
   closedAt?: string | null // ISO 8601 - when task was completed or deleted
+  // Calendar scheduling (optional - tasks without these appear only in board view)
+  startTime?: string | null // ISO 8601 - scheduled start time
+  endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }
 
 export interface TasksFile {
@@ -72,11 +75,15 @@ export interface CreateTaskInput {
   title: string
   tag?: string
   createdAt?: string // Original creation timestamp (optional, for preserving when moving tasks)
+  startTime?: string | null // ISO 8601 - scheduled start time
+  endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }
 
 export interface UpdateTaskInput {
   title?: string
   tag?: string
+  startTime?: string | null // ISO 8601 - scheduled start time
+  endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }
 
 // User preferences (device-specific, stored in localStorage)

@@ -107,7 +107,9 @@ export async function createTask(
       title: input.title,
       tag: input.tag ?? null,
       state: 'Active',
-      createdAt
+      createdAt,
+      startTime: input.startTime ?? null,
+      endTime: input.endTime ?? null
     }
 
     return {

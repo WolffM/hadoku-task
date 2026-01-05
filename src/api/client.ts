@@ -148,7 +148,14 @@ export function createApi(
     },
 
     async createTask(
-      data: { title: string; tag?: string; id?: string; createdAt?: string },
+      data: {
+        title: string
+        tag?: string
+        id?: string
+        createdAt?: string
+        startTime?: string | null
+        endTime?: string | null
+      },
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ) {

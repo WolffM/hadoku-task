@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### 📅 Calendar Data Support (Phase 1)
+
+**Data layer preparation for calendar functionality.**
+
+#### **Task Interface Changes**
+
+Added optional scheduling fields to the `Task` interface:
+
+| Field       | Type           | Description                             |
+| ----------- | -------------- | --------------------------------------- |
+| `startTime` | string \| null | ISO 8601 scheduled start time           |
+| `endTime`   | string \| null | ISO 8601 scheduled end time or deadline |
+
+**Flexible scheduling modes:**
+
+- Neither field → Classic board task (existing behavior)
+- `startTime` only → Open-ended event
+- `endTime` only → Deadline/due date
+- Both fields → Fully scheduled time block
+
+Tasks with scheduling fields will appear in both board and calendar views (calendar UI coming in Phase 2).
+
+#### **API Changes**
+
+- `POST /` (Create Task): Now accepts optional `startTime` and `endTime`
+- `PATCH /:id` (Update Task): Now accepts optional `startTime` and `endTime` (null to clear)
+
+#### **Documentation Cleanup**
+
+Deleted redundant/outdated docs:
+
+- `docs/THEME_EXPORT_GUIDE.md` - feature already implemented in @wolffm/themes
+- `docs/TYPES.md` - duplicates TypeScript source definitions
+- `docs/BUILD_REQUIREMENTS.md` - merged into CONTRIBUTING.md
+- `.husky/HUSKY_SETUP.md` - merged into .husky/README.md
+
+Updated remaining docs:
+
+- ARCHITECTURE.md → authoritative strategy document with calendar section
+- Fixed theme count: "7 themes" → "12 theme families"
+- Trimmed CONTRIBUTING.md, .husky/README.md, themes/THEME_GRAVEYARD.md
+
+---
+
 ## [3.4.12] - 2025-12-15
 
 ### 🎨 New Semantic Theme Variables
