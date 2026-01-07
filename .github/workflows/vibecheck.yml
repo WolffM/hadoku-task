@@ -1,9 +1,9 @@
-# vibeCop Analysis Workflow
+# vibeCheck Analysis Workflow
 #
-# This workflow runs vibeCop static analysis on your repository.
-# For more info: https://github.com/WolffM/vibecop
+# This workflow runs vibeCheck static analysis on your repository.
+# For more info: https://github.com/WolffM/vibeCheck
 
-name: vibeCop Analysis
+name: vibeCheck Analysis
 
 on:
   # Run weekly on Monday at 3am UTC
@@ -39,8 +39,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run vibeCop
-        uses: WolffM/vibecop@main
+      - name: Run vibeCheck
+        uses: WolffM/vibeCheck@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           cadence: ${{ github.event.inputs.cadence || 'weekly' }}
