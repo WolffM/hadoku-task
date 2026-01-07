@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.18",
+  "version": "3.4.20",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
@@ -65,5 +65,10 @@
     "prettier": "^3.6.2",
     "typescript": "^5.6.3",
     "vite": "^7.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "4.1.1"
+    }
   }
 }
