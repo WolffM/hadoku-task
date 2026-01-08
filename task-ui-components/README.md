@@ -34,35 +34,29 @@ This allows the package to bundle its CSS automatically. **This is a one-time se
 
 ## Components
 
-### ThemePicker
+### ThemePicker (Overview)
 
 A gorgeous theme picker with light/dark pill design. Fully customizable to work with any theme system.
 
-### Modal
+### Modal (Overview)
 
 Generic modal dialog with keyboard shortcuts, customizable actions, and optional input field.
 
-### ContextMenu
+### ContextMenu (Overview)
 
 Position-based context menu with customizable items and danger states.
 
-### LoadingSkeleton
+### LoadingSkeleton (Overview)
 
 Flexible loading skeleton with multiple layouts (default, minimal, custom) and dark theme support.
 
-### SettingsModal
+### SettingsModal (Overview)
 
 Generic settings dialog with section-based organization and multiple field types (toggle, text, password, select, button, custom).
 
 ### Toast & Toaster
 
 Toast notification system with success, error, and info variants.
-
-## Installation
-
-```bash
-npm install @wolffm/task-ui-components
-```
 
 ## Usage
 
@@ -448,7 +442,7 @@ MIT
 
 ## Additional Components Documentation
 
-### Modal
+### Modal (API Reference)
 
 Generic modal dialog with keyboard shortcuts and customizable actions.
 
@@ -512,7 +506,7 @@ confirmDisabled={!value.trim()}>
 
 ---
 
-### ContextMenu
+### ContextMenu (API Reference)
 
 Position-based context menu for right-click or contextual actions.
 
@@ -583,7 +577,7 @@ className="my-context-menu"
 
 ---
 
-### LoadingSkeleton
+### LoadingSkeleton (API Reference)
 
 Flexible loading skeleton with multiple layout options.
 
@@ -621,7 +615,7 @@ return <div>Content loaded!</div>
 
 ---
 
-### SettingsModal
+### SettingsModal (API Reference)
 
 Generic settings dialog with section-based organization.
 
