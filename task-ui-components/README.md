@@ -462,7 +462,7 @@ Generic modal dialog with keyboard shortcuts and customizable actions.
 
 **Usage:**
 
-\`\`\`tsx
+```tsx
 import { Modal } from '@wolffm/task-ui-components'
 
 function MyComponent() {
@@ -482,13 +482,12 @@ inputValue={value}
 onInputChange={setValue}
 inputPlaceholder="Enter name..."
 confirmLabel="Create"
-confirmDisabled={!value.trim()} >
-
-<p>Enter a name for your new item.</p>
+confirmDisabled={!value.trim()}>
+  <p>Enter a name for your new item.</p>
 </Modal>
 )
 }
-\`\`\`
+```
 
 **Props:**
 
@@ -497,7 +496,7 @@ confirmDisabled={!value.trim()} >
 | \`isOpen\`           | \`boolean\`                 | ✅        | Whether modal is visible               |
 | \`title\`            | \`string\`                  | ✅        | Modal title                            |
 | \`onClose\`          | \`() => void\`              | ✅        | Close callback                         |
-| \`onConfirm\`        | \`() => void \\             | Promise\` | ❌                                     | Confirm callback |
+| \`onConfirm\`        | \`() => void \| Promise<void>\` | ❌        | Confirm callback                       |
 | \`children\`         | \`ReactNode\`               | ❌        | Modal content                          |
 | \`inputValue\`       | \`string\`                  | ❌        | Input field value                      |
 | \`onInputChange\`    | \`(value: string) => void\` | ❌        | Input change callback                  |
@@ -527,7 +526,7 @@ Position-based context menu for right-click or contextual actions.
 
 **Usage:**
 
-\`\`\`tsx
+```tsx
 import { ContextMenu, type ContextMenuItem } from '@wolffm/task-ui-components'
 
 function MyComponent() {
@@ -561,7 +560,7 @@ className="my-context-menu"
 </div>
 )
 }
-\`\`\`
+```
 
 **Props:**
 
@@ -596,7 +595,7 @@ Flexible loading skeleton with multiple layout options.
 
 **Usage:**
 
-\`\`\`tsx
+```tsx
 import { LoadingSkeleton } from '@wolffm/task-ui-components'
 
 function MyComponent() {
@@ -609,7 +608,7 @@ return <LoadingSkeleton isDarkTheme={isDark} layout="minimal" />
 
 return <div>Content loaded!</div>
 }
-\`\`\`
+```
 
 **Props:**
 
@@ -635,7 +634,7 @@ Generic settings dialog with section-based organization.
 
 **Usage:**
 
-\`\`\`tsx
+```tsx
 import { SettingsModal, type SettingsSection } from '@wolffm/task-ui-components'
 
 function MyApp() {
@@ -679,7 +678,7 @@ onClose={() => setIsOpen(false)}
 />
 )
 }
-\`\`\`
+```
 
 **Props:**
 
@@ -694,7 +693,7 @@ onClose={() => setIsOpen(false)}
 
 **Field Types:**
 
-\`\`\`typescript
+```typescript
 // Toggle field
 {
 type: 'toggle',
@@ -769,4 +768,4 @@ description?: string,
 render: () => ReactNode,
 disabled?: boolean
 }
-\`\`\`
+```
