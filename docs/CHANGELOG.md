@@ -430,7 +430,7 @@ if (patch === 20) {
 - **Proper positioning:** Dropdown positioned relative to button, overlay separate
 - **Consistent pattern:** Same click-outside approach as SettingsModal
 
-### ✅ Benefits
+### ✅ Theme Picker Benefits
 
 1. **Reliable click-outside:** Works regardless of drag selection or other event handlers
 2. **Consistent UX:** Same behavior as settings modal and other dropdowns
@@ -582,7 +582,7 @@ useTasks({ userType, sessionId })
 
 - `src/utils/preferences.ts` - Update cleanupOrphanedKeys to use sessionId
 
-### ✅ Benefits
+### ✅ sessionId Refactor Benefits
 
 1. **Stable localStorage keys** - Keys won't break when parent changes userId
 2. **Simpler architecture** - Two identifiers instead of three
@@ -767,7 +767,7 @@ export function getTasksByTagExclusive(tasks: Task[], tag: string, topTags: stri
 - `list_code_usages` - Symbol reference checking
 - TypeScript compiler validation
 
-### 📦 Build Output
+### 📦 Build Output (Dead Code Cleanup)
 
 ```
 No change to bundle sizes (removed code was never imported/bundled)
@@ -853,7 +853,7 @@ No change to bundle sizes (removed code was never imported/bundled)
 - ✅ **Accessible** - Maintains all native checkbox functionality
 - ✅ **No custom styling needed** - Leverages modern CSS standard
 
-### 📦 Build Output
+### 📦 Build Output (Checkbox Fix)
 
 ```
 CSS: 43.15 kB (+0.11 kB) │ gzip: 7.09 kB
