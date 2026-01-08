@@ -868,5 +868,5 @@ For versions prior to 3.0.37, please refer to git commit history.
 ---
 
 **Package:** `@wolffm/task`  
-**Repository:** https://github.com/WolffM/hadoku-task  
-**Registry:** https://npm.pkg.github.com
+**Repository:** <https://github.com/WolffM/hadoku-task>  
+**Registry:** <https://npm.pkg.github.com>
