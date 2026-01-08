@@ -2,7 +2,7 @@
 
 **A minimalist, portable task tracking micro-frontend**
 
-Live at: https://hadoku.me/task/
+Live at: <https://hadoku.me/task/>
 
 Fast, focused task management with tags, filtering, and multi-user support. Built as a reusable micro-frontend with framework-agnostic API handlers. Perfect for embedding in larger applications or using standalone.
 
@@ -230,8 +230,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
-- **Web Repository**: https://github.com/WolffM/hadoku-task
-- **Mobile Repository**: https://github.com/WolffM/hadoku-task-mobile
+- **Web Repository**: <https://github.com/WolffM/hadoku-task>
+- **Mobile Repository**: <https://github.com/WolffM/hadoku-task-mobile>
 - **Example Deployment**: [hadoku.me/task](https://hadoku.me/task)
 - **NPM Package**: `@wolffm/task`
 - **Android APK**: [Latest Release](https://github.com/WolffM/hadoku-task-mobile/releases/latest)

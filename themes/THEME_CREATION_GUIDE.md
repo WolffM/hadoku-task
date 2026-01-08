@@ -431,6 +431,6 @@ Before submitting a new theme, verify:
 
 ## Resources
 
-- WCAG Contrast Checker: https://webaim.org/resources/contrastchecker/
-- Color Harmonies: https://color.adobe.com
+- WCAG Contrast Checker: <https://webaim.org/resources/contrastchecker/>
+- Color Harmonies: <https://color.adobe.com>
 - Palette Extraction: Use image processing to extract dominant colors
