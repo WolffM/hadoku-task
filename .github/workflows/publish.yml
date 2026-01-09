@@ -110,6 +110,7 @@ jobs:
           echo "---"
 
       # Fallback version bump check - ensures version was incremented even if pre-commit hook failed
+      # IMPORTANT: These patterns must match the pre-commit hook patterns in .husky/pre-commit
       - name: Verify version bump (fallback check)
         id: version_check
         run: |
@@ -135,28 +136,40 @@ jobs:
 
           version_issues=0
 
-          # Check task-ui-components if it has changes
-          if git diff --name-only HEAD~1 HEAD | grep -q "^task-ui-components/"; then
+          # Check task-ui-components if SOURCE files changed (matches pre-commit hook pattern)
+          # Pattern: task-ui-components/(src/|package.json|tsconfig.|vite.config.)
+          if git diff --name-only HEAD~1 HEAD | grep -qE "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+            echo "📦 task-ui-components source files changed, checking version..."
             if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
               echo "::error::task-ui-components version was not bumped! Pre-commit hook may have failed."
               version_issues=1
             fi
+          else
+            echo "ℹ️  task-ui-components: no source changes (skipping version check)"
           fi
 
-          # Check themes if it has changes
-          if git diff --name-only HEAD~1 HEAD | grep -q "^themes/"; then
+          # Check themes if SOURCE files changed (matches pre-commit hook pattern)
+          # Pattern: themes/(src/|package.json|tsconfig.|vite.config.)
+          if git diff --name-only HEAD~1 HEAD | grep -qE "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+            echo "📦 themes source files changed, checking version..."
             if ! check_version_published "@wolffm/themes" "./themes"; then
               echo "::error::themes version was not bumped! Pre-commit hook may have failed."
               version_issues=1
             fi
+          else
+            echo "ℹ️  themes: no source changes (skipping version check)"
           fi
 
-          # Check task package if it has changes (files outside themes/ and task-ui-components/)
-          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -q .; then
+          # Check task package if SOURCE files changed (matches pre-commit hook pattern)
+          # Pattern: (src/|package.json|vite.config.|tsconfig.) at root level
+          if git diff --name-only HEAD~1 HEAD | grep -qE "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
+            echo "📦 task source files changed, checking version..."
             if ! check_version_published "@wolffm/task" "."; then
               echo "::error::task version was not bumped! Pre-commit hook may have failed."
               version_issues=1
             fi
+          else
+            echo "ℹ️  task: no source changes (skipping version check)"
           fi
 
           if [ $version_issues -eq 1 ]; then
@@ -173,7 +186,7 @@ jobs:
             exit 1
           fi
 
-          echo "✅ All changed packages have new versions"
+          echo "✅ All changed packages have new versions (or no source changes requiring bump)"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
