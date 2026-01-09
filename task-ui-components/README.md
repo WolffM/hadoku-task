@@ -460,49 +460,50 @@ Generic modal dialog with keyboard shortcuts and customizable actions.
 import { Modal } from '@wolffm/task-ui-components'
 
 function MyComponent() {
-const [isOpen, setIsOpen] = useState(false)
-const [value, setValue] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+  const [value, setValue] = useState('')
 
-return (
-<Modal
-isOpen={isOpen}
-title="Create Item"
-onClose={() => setIsOpen(false)}
-onConfirm={async () => {
-await createItem(value)
-setIsOpen(false)
-}}
-inputValue={value}
-onInputChange={setValue}
-inputPlaceholder="Enter name..."
-confirmLabel="Create"
-confirmDisabled={!value.trim()}>
-  <p>Enter a name for your new item.</p>
-</Modal>
-)
+  return (
+    <Modal
+      isOpen={isOpen}
+      title="Create Item"
+      onClose={() => setIsOpen(false)}
+      onConfirm={async () => {
+        await createItem(value)
+        setIsOpen(false)
+      }}
+      inputValue={value}
+      onInputChange={setValue}
+      inputPlaceholder="Enter name..."
+      confirmLabel="Create"
+      confirmDisabled={!value.trim()}
+    >
+      <p>Enter a name for your new item.</p>
+    </Modal>
+  )
 }
 ```
 
 **Props:**
 
-| Prop                 | Type                        | Required  | Description                            |
-| -------------------- | --------------------------- | --------- | -------------------------------------- | ---------------- |
-| \`isOpen\`           | \`boolean\`                 | ✅        | Whether modal is visible               |
-| \`title\`            | \`string\`                  | ✅        | Modal title                            |
-| \`onClose\`          | \`() => void\`              | ✅        | Close callback                         |
-| \`onConfirm\`        | \`() => void \| Promise<void>\` | ❌        | Confirm callback                       |
-| \`children\`         | \`ReactNode\`               | ❌        | Modal content                          |
-| \`inputValue\`       | \`string\`                  | ❌        | Input field value                      |
-| \`onInputChange\`    | \`(value: string) => void\` | ❌        | Input change callback                  |
-| \`inputPlaceholder\` | \`string\`                  | ❌        | Input placeholder                      |
-| \`confirmLabel\`     | \`string\`                  | ❌        | Confirm button text (default: Confirm) |
-| \`cancelLabel\`      | \`string\`                  | ❌        | Cancel button text (default: Cancel)   |
-| \`confirmDisabled\`  | \`boolean\`                 | ❌        | Disable confirm button                 |
-| \`confirmDanger\`    | \`boolean\`                 | ❌        | Danger styling for confirm             |
-| \`showCancel\`       | \`boolean\`                 | ❌        | Show cancel button (default: true)     |
-| \`showConfirm\`      | \`boolean\`                 | ❌        | Show confirm button (default: true)    |
-| \`className\`        | \`string\`                  | ❌        | Custom CSS class                       |
-| \`overlayClassName\` | \`string\`                  | ❌        | Custom overlay CSS class               |
+| Prop                 | Type                            | Required | Description                            |
+| -------------------- | ------------------------------- | -------- | -------------------------------------- |
+| \`isOpen\`           | \`boolean\`                     | ✅       | Whether modal is visible               |
+| \`title\`            | \`string\`                      | ✅       | Modal title                            |
+| \`onClose\`          | \`() => void\`                  | ✅       | Close callback                         |
+| \`onConfirm\`        | \`() => void \| Promise<void>\` | ❌       | Confirm callback                       |
+| \`children\`         | \`ReactNode\`                   | ❌       | Modal content                          |
+| \`inputValue\`       | \`string\`                      | ❌       | Input field value                      |
+| \`onInputChange\`    | \`(value: string) => void\`     | ❌       | Input change callback                  |
+| \`inputPlaceholder\` | \`string\`                      | ❌       | Input placeholder                      |
+| \`confirmLabel\`     | \`string\`                      | ❌       | Confirm button text (default: Confirm) |
+| \`cancelLabel\`      | \`string\`                      | ❌       | Cancel button text (default: Cancel)   |
+| \`confirmDisabled\`  | \`boolean\`                     | ❌       | Disable confirm button                 |
+| \`confirmDanger\`    | \`boolean\`                     | ❌       | Danger styling for confirm             |
+| \`showCancel\`       | \`boolean\`                     | ❌       | Show cancel button (default: true)     |
+| \`showConfirm\`      | \`boolean\`                     | ❌       | Show confirm button (default: true)    |
+| \`className\`        | \`string\`                      | ❌       | Custom CSS class                       |
+| \`overlayClassName\` | \`string\`                      | ❌       | Custom overlay CSS class               |
 
 ---
 
@@ -524,35 +525,36 @@ Position-based context menu for right-click or contextual actions.
 import { ContextMenu, type ContextMenuItem } from '@wolffm/task-ui-components'
 
 function MyComponent() {
-const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
-const items: ContextMenuItem[] = [
-{
-label: 'Edit',
-onClick: () => handleEdit()
-},
-{
-label: 'Delete',
-onClick: () => handleDelete(),
-isDanger: true
-}
-]
+  const items: ContextMenuItem[] = [
+    {
+      label: 'Edit',
+      onClick: () => handleEdit()
+    },
+    {
+      label: 'Delete',
+      onClick: () => handleDelete(),
+      isDanger: true
+    }
+  ]
 
-return (
-
-<div onContextMenu={e => {
-e.preventDefault()
-setMenu({ x: e.clientX, y: e.clientY })
-}}>
-<ContextMenu
-isOpen={!!menu}
-x={menu?.x || 0}
-y={menu?.y || 0}
-items={items}
-className="my-context-menu"
-/>
-</div>
-)
+  return (
+    <div
+      onContextMenu={e => {
+        e.preventDefault()
+        setMenu({ x: e.clientX, y: e.clientY })
+      }}
+    >
+      <ContextMenu
+        isOpen={!!menu}
+        x={menu?.x || 0}
+        y={menu?.y || 0}
+        items={items}
+        className="my-context-menu"
+      />
+    </div>
+  )
 }
 ```
 
@@ -593,14 +595,14 @@ Flexible loading skeleton with multiple layout options.
 import { LoadingSkeleton } from '@wolffm/task-ui-components'
 
 function MyComponent() {
-const [isLoading, setIsLoading] = useState(true)
-const isDark = useTheme() === 'dark'
+  const [isLoading, setIsLoading] = useState(true)
+  const isDark = useTheme() === 'dark'
 
-if (isLoading) {
-return <LoadingSkeleton isDarkTheme={isDark} layout="minimal" />
-}
+  if (isLoading) {
+    return <LoadingSkeleton isDarkTheme={isDark} layout="minimal" />
+  }
 
-return <div>Content loaded!</div>
+  return <div>Content loaded!</div>
 }
 ```
 
@@ -632,45 +634,39 @@ Generic settings dialog with section-based organization.
 import { SettingsModal, type SettingsSection } from '@wolffm/task-ui-components'
 
 function MyApp() {
-const [isOpen, setIsOpen] = useState(false)
-const [darkMode, setDarkMode] = useState(false)
-const [language, setLanguage] = useState('en')
+  const [isOpen, setIsOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
+  const [language, setLanguage] = useState('en')
 
-const sections: SettingsSection[] = [
-{
-id: 'display',
-title: 'Display Settings',
-fields: [
-{
-type: 'toggle',
-id: 'darkMode',
-label: 'Dark Mode',
-description: 'Use dark color scheme',
-value: darkMode,
-onChange: setDarkMode
-},
-{
-type: 'select',
-id: 'language',
-label: 'Language',
-value: language,
-onChange: setLanguage,
-options: [
-{ value: 'en', label: 'English' },
-{ value: 'es', label: 'Spanish' }
-]
-}
-]
-}
-]
+  const sections: SettingsSection[] = [
+    {
+      id: 'display',
+      title: 'Display Settings',
+      fields: [
+        {
+          type: 'toggle',
+          id: 'darkMode',
+          label: 'Dark Mode',
+          description: 'Use dark color scheme',
+          value: darkMode,
+          onChange: setDarkMode
+        },
+        {
+          type: 'select',
+          id: 'language',
+          label: 'Language',
+          value: language,
+          onChange: setLanguage,
+          options: [
+            { value: 'en', label: 'English' },
+            { value: 'es', label: 'Spanish' }
+          ]
+        }
+      ]
+    }
+  ]
 
-return (
-<SettingsModal
-isOpen={isOpen}
-sections={sections}
-onClose={() => setIsOpen(false)}
-/>
-)
+  return <SettingsModal isOpen={isOpen} sections={sections} onClose={() => setIsOpen(false)} />
 }
 ```
 

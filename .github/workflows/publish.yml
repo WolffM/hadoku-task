@@ -108,7 +108,75 @@ jobs:
           echo "Files changed in this push:"
           git diff --name-only HEAD~1 HEAD
           echo "---"
-      
+
+      # Fallback version bump check - ensures version was incremented even if pre-commit hook failed
+      - name: Verify version bump (fallback check)
+        id: version_check
+        run: |
+          echo "🔍 Checking if version was properly bumped..."
+
+          # Function to check if a package version was published
+          check_version_published() {
+            local pkg_name=$1
+            local pkg_path=$2
+            local current_version=$(node -p "require('$pkg_path/package.json').version")
+
+            echo "Checking $pkg_name@$current_version..."
+
+            # Try to fetch the package info from registry
+            if npm view "$pkg_name@$current_version" version 2>/dev/null | grep -q "$current_version"; then
+              echo "⚠️  $pkg_name@$current_version already exists in registry!"
+              return 1
+            else
+              echo "✓ $pkg_name@$current_version is a new version"
+              return 0
+            fi
+          }
+
+          version_issues=0
+
+          # Check task-ui-components if it has changes
+          if git diff --name-only HEAD~1 HEAD | grep -q "^task-ui-components/"; then
+            if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
+              echo "::error::task-ui-components version was not bumped! Pre-commit hook may have failed."
+              version_issues=1
+            fi
+          fi
+
+          # Check themes if it has changes
+          if git diff --name-only HEAD~1 HEAD | grep -q "^themes/"; then
+            if ! check_version_published "@wolffm/themes" "./themes"; then
+              echo "::error::themes version was not bumped! Pre-commit hook may have failed."
+              version_issues=1
+            fi
+          fi
+
+          # Check task package if it has changes (files outside themes/ and task-ui-components/)
+          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -q .; then
+            if ! check_version_published "@wolffm/task" "."; then
+              echo "::error::task version was not bumped! Pre-commit hook may have failed."
+              version_issues=1
+            fi
+          fi
+
+          if [ $version_issues -eq 1 ]; then
+            echo ""
+            echo "❌ VERSION BUMP MISSING!"
+            echo ""
+            echo "The pre-commit hook should have auto-bumped the version but didn't."
+            echo "Possible causes:"
+            echo "  1. Husky hooks not installed (run 'pnpm prepare')"
+            echo "  2. Git hooks bypassed with --no-verify"
+            echo "  3. Pre-commit script failed on Windows (bash compatibility)"
+            echo ""
+            echo "To fix: manually bump version with 'pnpm version:patch' and push again."
+            exit 1
+          fi
+
+          echo "✅ All changed packages have new versions"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check if themes package changed
         id: themes_changed
         run: |
