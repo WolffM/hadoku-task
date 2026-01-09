@@ -4,7 +4,7 @@ echo "🔍 Running pre-commit checks..."
 # Auto-fix linting and formatting issues
 echo "📋 Running ESLint auto-fix..."
 pnpm run lint:fix
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
   echo "❌ ESLint found errors that could not be auto-fixed."
   echo "💡 Please fix the errors manually before committing."
   exit 1
@@ -27,7 +27,7 @@ bump_package_version() {
   patch=$(echo $current_version | cut -d. -f3)
 
   # Rollover at .20 to keep patch numbers manageable
-  if [ $patch -eq 20 ]; then
+  if [[ $patch -eq 20 ]]; then
     new_minor=$((minor + 1))
     new_version="$major.$new_minor.0"
     echo "🚀 $pkg_name: Rolling over to minor version"
@@ -90,35 +90,35 @@ fi
 #   └── themes (depends on task-ui-components)
 #   └── task (depends on task-ui-components AND themes)
 #
-if [ "$bump_ui_components" = true ]; then
+if [[ "$bump_ui_components" = true ]]; then
   echo "📦 task-ui-components changed → bumping dependent packages (themes, task)"
   bump_themes=true
   bump_task=true
 fi
 
-if [ "$bump_themes" = true ]; then
+if [[ "$bump_themes" = true ]]; then
   echo "📦 themes changed → bumping dependent package (task)"
   bump_task=true
 fi
 
 # Now perform the actual bumps
-if [ "$bump_ui_components" = true ]; then
+if [[ "$bump_ui_components" = true ]]; then
   bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
   bumped_any=true
 fi
 
-if [ "$bump_themes" = true ]; then
+if [[ "$bump_themes" = true ]]; then
   bump_package_version "./themes" "@wolffm/themes"
   bumped_any=true
 fi
 
-if [ "$bump_task" = true ]; then
+if [[ "$bump_task" = true ]]; then
   bump_package_version "." "@wolffm/task"
   bumped_any=true
 fi
 
 # Update lock file if any version was bumped
-if [ "$bumped_any" = true ]; then
+if [[ "$bumped_any" = true ]]; then
   echo "🔄 Updating lock file..."
   pnpm install --lockfile-only
   git add pnpm-lock.yaml
