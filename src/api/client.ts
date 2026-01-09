@@ -303,12 +303,13 @@ export function createApi(
       const result = await localStorage.completeTask(id, boardId)
       logger.info('[api] completeTask: Completed locally', { taskId: id, boardId })
 
+      // boardId must be passed as query parameter per OpenAPI spec
+      const completeUrl = `/task/api/${id}/complete?boardId=${encodeURIComponent(boardId)}`
       backgroundSync(
-        `/task/api/${id}/complete`,
+        completeUrl,
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
-          body: JSON.stringify({ boardId })
+          headers: adminHeaders(userType, sessionId)
         },
         'completeTask',
         { taskId: id, boardId }
@@ -321,12 +322,13 @@ export function createApi(
       await localStorage.deleteTask(id, boardId, suppressBroadcast)
       logger.info('[api] deleteTask: Deleted locally', { taskId: id, boardId })
 
+      // boardId must be passed as query parameter per OpenAPI spec
+      const deleteUrl = `/task/api/${id}?boardId=${encodeURIComponent(boardId)}`
       backgroundSync(
-        `/task/api/${id}`,
+        deleteUrl,
         {
           method: 'DELETE',
-          headers: adminHeaders(userType, sessionId),
-          body: JSON.stringify({ boardId })
+          headers: adminHeaders(userType, sessionId)
         },
         'deleteTask',
         { taskId: id, boardId }

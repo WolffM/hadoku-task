@@ -191,12 +191,14 @@ Mark a task as completed (moves to stats graveyard).
 
 - `id`: Task ID
 
-**Body:**
+**Query Parameters:**
 
-```json
-{
-  "boardId": "main"
-}
+- `boardId` (optional): Board ID (default: `main`)
+
+**Example:**
+
+```
+POST /task/api/01HQ.../complete?boardId=work
 ```
 
 **Response:**
@@ -223,12 +225,14 @@ Permanently delete a task.
 
 - `id`: Task ID
 
-**Body:**
+**Query Parameters:**
 
-```json
-{
-  "boardId": "main"
-}
+- `boardId` (optional): Board ID (default: `main`)
+
+**Example:**
+
+```
+DELETE /task/api/01HQ...?boardId=work
 ```
 
 **Response:**
