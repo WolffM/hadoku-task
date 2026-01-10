@@ -549,11 +549,11 @@ Modular UI rendering with clear responsibilities
 
 ### 6. CSS Design Tokens
 
-**Centralized theme configuration with custom properties**
+Centralized theme configuration with custom properties
 
 ### 7. Optimistic Updates
 
-**Instant UI feedback with background server sync**
+Instant UI feedback with background server sync
 
 ---
 
