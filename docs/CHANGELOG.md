@@ -212,7 +212,7 @@ Fixed critical ESM compatibility issue in `@wolffm/task-ui-components` that bloc
 
 **Package Structure:**
 
-```
+```text
 task-ui-components/
 ├── src/
 │   ├── components/ThemePicker.tsx    # Extracted from main app
@@ -381,13 +381,13 @@ if (patch === 20) {
 
 **Old System:**
 
-```
+```text
 3.0.38 → 3.0.39 → 3.0.40 → 3.0.41 → ... → 3.0.63 → 3.0.64 ...
 ```
 
 **New System (from this point forward):**
 
-```
+```text
 3.0.38 → 3.0.39 → 3.0.40 → ... → 3.0.20 → 3.1.0 → 3.1.1 → ... → 3.1.20 → 3.2.0
 ```
 
@@ -461,7 +461,7 @@ if (patch === 20) {
 
 **Build Output:**
 
-```
+```text
 dist/style.css   43.15 kB │ gzip:  7.08 kB (+0.08 kB)
 dist/index.js   108.55 kB │ gzip: 24.71 kB (-0.02 kB)
 ```
@@ -611,7 +611,7 @@ useTasks({ userType, sessionId })
 
 ### 📊 Build Output
 
-```
+```text
 dist/style.css   43.07 kB │ gzip:  7.07 kB
 dist/index.js   108.26 kB │ gzip: 24.69 kB (+0.05 kB)
 ```
@@ -769,7 +769,7 @@ export function getTasksByTagExclusive(tasks: Task[], tag: string, topTags: stri
 
 ### 📦 Build Output (Dead Code Cleanup)
 
-```
+```text
 No change to bundle sizes (removed code was never imported/bundled)
 ```
 
@@ -855,7 +855,7 @@ No change to bundle sizes (removed code was never imported/bundled)
 
 ### 📦 Build Output (Checkbox Fix)
 
-```
+```text
 CSS: 43.15 kB (+0.11 kB) │ gzip: 7.09 kB
 ```
 

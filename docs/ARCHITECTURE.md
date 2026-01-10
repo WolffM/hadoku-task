@@ -157,7 +157,7 @@ app.post('/task/api', async (req, res) => {
 
 ### Component Hierarchy
 
-```
+```text
 App (main orchestrator)
 ├── Theme State Management
 ├── User Management
@@ -228,7 +228,7 @@ if (userType !== 'public') {
 
 ### File Structure
 
-```
+```text
 src/
 ├── api/                      # API client layer
 │   ├── client.ts            # Optimistic API with extensive logging
@@ -386,7 +386,7 @@ const storage = {
 
 **Modular CSS files for separation of concerns:**
 
-```
+```text
 src/styles/
 ├── variables.css       # Design tokens + 7 theme definitions
 ├── base.css           # CSS reset and base styles
@@ -480,7 +480,7 @@ document.documentElement.setAttribute('data-theme', 'dark')
 
 **Per-board storage:**
 
-```
+```text
 data/
   {userType}/
     {sessionId}/
@@ -634,7 +634,7 @@ test('full CRUD workflow', async () => {
 
 ### Client Bundle
 
-```
+```text
 dist/
 ├── index.js          # React app (~95KB / ~22KB gzipped)
 └── style.css         # All themes (~40KB / ~7KB gzipped)
@@ -642,7 +642,7 @@ dist/
 
 ### Server Handlers
 
-```
+```text
 dist/server/
 ├── index.js          # Exports (TaskHandlers, TaskStorage)
 ├── handlers.js       # Pure business logic

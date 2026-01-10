@@ -185,7 +185,7 @@ You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 
 Given a color list like:
 
-```
+```text
 #e4bea6, #f6e9e1, #d2936b, #d3c2b7, #f0bb9a, #312843, #544573,
 #0e0b13, #363636, #6553cc, #9a8edd, #4130a2, #7c74ab, #7f5b55,
 #a6817a, #513a36, #6a6a6a, #9f99a9, #c6c3cc, #787085, #a1a1a1
@@ -202,7 +202,7 @@ Given a color list like:
 
 #### For Light Theme:
 
-```
+```css
 --color-primary: [Most vibrant/saturated color - your theme's identity]
 --color-success: [Any bright, positive color - can be cyan, yellow, green, orange]
 --color-danger: [Contrasting bold color - pick what feels right]
@@ -212,7 +212,7 @@ Given a color list like:
 
 #### For Dark Theme:
 
-```
+```css
 --color-primary: [Brightest saturated color that pops]
 --color-success: [Bright accent - yellow, neon, cyan work great]
 --color-danger: [Bold color that contrasts with primary - purple, pink, etc.]
@@ -292,7 +292,7 @@ Ensure WCAG AA compliance:
 
 ### Input Palette:
 
-```
+```text
 #ff6b35, #f7931e, #fdc830, #004e89, #1a659e,
 #f4f4f4, #2d2d2d, #1a1a1a, #ffffff, #e0e0e0
 ```

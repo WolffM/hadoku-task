@@ -112,7 +112,7 @@ const newTask = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
 
 ### Creating Tasks
 
-```
+```text
 Buy groceries [Enter]                    # Plain task
 Buy groceries #home [Enter]              # With tag
 Fix bug #high-priority [Enter]           # Tagged task
