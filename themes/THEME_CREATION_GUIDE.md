@@ -143,7 +143,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 
 You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 
-**Option A: Algorithmic (Recommended for AI)**
+#### Option A: Algorithmic (Recommended for AI)
 
 - **Darker shades** - darken(main, 10-30%)
 - **Lighter tints** - lighten(main, 10-40%) or adjust alpha
@@ -151,7 +151,7 @@ You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 - **Borders** - Desaturate and adjust brightness
 - **Shadows** - Use primary or black with alpha
 
-**Option B: Creative Selection (Recommended for Designers)**
+#### Option B: Creative Selection (Recommended for Designers)
 
 - Pick complementary colors from the input palette
 - Add subtle hue shifts to create mood

@@ -323,7 +323,7 @@ logger.error('[App] Failed to save task', {
 
 #### **📝 Files Modified Summary**
 
-**Total: 20+ files across 4 categories**
+##### Total: 20+ files across 4 categories
 
 1. **Hooks** (4 files)
    - useTasks, useDragAndDrop, usePreferences, helpers
