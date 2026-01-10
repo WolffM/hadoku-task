@@ -21,7 +21,7 @@ bump_package_version() {
   local pkg_name=$2
 
   # Read current version from package.json
-  current_version=$(node -p "require('$pkg_path/package.json').version")
+  current_version=$(node -p "require('${pkg_path}/package.json').version")
   major=$(echo $current_version | cut -d. -f1)
   minor=$(echo $current_version | cut -d. -f2)
   patch=$(echo $current_version | cut -d. -f3)
@@ -40,7 +40,7 @@ bump_package_version() {
   # Update package.json with new version
   node -e "
 const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('$pkg_path/package.json', 'utf8'));
+const pkg = JSON.parse(fs.readFileSync('${pkg_path}/package.json', 'utf8'));
 pkg.version = '$new_version';
 fs.writeFileSync('$pkg_path/package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
@@ -65,7 +65,7 @@ bump_themes=false
 bump_task=false
 
 # Check task-ui-components package (no dependencies, check first)
-if echo "$changed_files" | grep -q -E "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
+if echo "${changed_files}" | grep -q -E "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
   echo "🔄 Task UI Components package changes detected"
   bump_ui_components=true
 fi
@@ -77,7 +77,7 @@ if echo "$changed_files" | grep -q -E "^themes/(src/|package\.json|tsconfig\.|vi
 fi
 
 # Check root package (main task package)
-if echo "$changed_files" | grep -q -E "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
+if echo "${changed_files}" | grep -q -E "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
   echo "🔄 Root package changes detected"
   bump_task=true
 fi
@@ -102,7 +102,7 @@ if [[ "$bump_themes" = true ]]; then
 fi
 
 # Now perform the actual bumps
-if [[ "$bump_ui_components" = true ]]; then
+if [[ "${bump_ui_components}" = true ]]; then
   bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
   bumped_any=true
 fi
@@ -118,7 +118,7 @@ if [[ "$bump_task" = true ]]; then
 fi
 
 # Update lock file if any version was bumped
-if [[ "$bumped_any" = true ]]; then
+if [[ "${bumped_any}" = true ]]; then
   echo "🔄 Updating lock file..."
   pnpm install --lockfile-only
   git add pnpm-lock.yaml
