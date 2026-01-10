@@ -129,14 +129,14 @@ app.post('/task/api', async (req, res) => {
 
 ### Why This Works
 
-**Pure functions = maximum reusability**
+#### Pure functions = maximum reusability
 
 - No Express/Hono/framework dependencies
 - Works in any JavaScript runtime (Node.js, Workers, Deno)
 - Easy to test (mock the Storage interface)
 - Reusable across different parent apps
 
-**Storage abstraction = deployment flexibility**
+#### Storage abstraction = deployment flexibility
 
 - Cloudflare Workers KV (production)
 - Filesystem (development)
@@ -529,31 +529,31 @@ data/
 
 ### 1. Universal Adapter Pattern
 
-**Separation of business logic from framework routing**
+Separation of business logic from framework routing
 
 ### 2. Storage Interface Pattern
 
-**Abstract storage implementation from business logic**
+Abstract storage implementation from business logic
 
 ### 3. Pure Handler Functions
 
-**Business logic without side effects for testability**
+Business logic without side effects for testability
 
 ### 4. Custom Hooks Pattern
 
-**Extract stateful React logic into reusable hooks**
+Extract stateful React logic into reusable hooks
 
 ### 5. Component Composition
 
-**Modular UI rendering with clear responsibilities**
+Modular UI rendering with clear responsibilities
 
 ### 6. CSS Design Tokens
 
-**Centralized theme configuration with custom properties**
+Centralized theme configuration with custom properties
 
 ### 7. Optimistic Updates
 
-**Instant UI feedback with background server sync**
+Instant UI feedback with background server sync
 
 ---
 

@@ -1,6 +1,6 @@
 ﻿# Hadoku Task Manager
 
-**A minimalist, portable task tracking micro-frontend**
+## A minimalist, portable task tracking micro-frontend
 
 Live at: <https://hadoku.me/task/>
 
