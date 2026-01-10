@@ -21,7 +21,7 @@ Complete endpoint documentation for implementing the Task Manager backend.
 
 All authenticated endpoints should include:
 
-```
+```http
 X-User-Type: public | friend | admin
 X-Session-Id: <unique-session-identifier>
 ```
