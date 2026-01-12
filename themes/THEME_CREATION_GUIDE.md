@@ -212,11 +212,13 @@ Given a color list like:
 
 #### For Dark Theme:
 
+<!-- prettier-ignore -->
 ```css
---color-primary:
-  [Brightest saturated color that pops] --color-success: [Bright accent - yellow, neon,
-  cyan work great] --color-danger: [Bold color that contrasts with primary - purple, pink,
-  etc.] --color-neutral: [Mid-tone gray] --color-bg: [Darkest color - can be pure black or tinted];
+--color-primary: [Brightest saturated color that pops]
+--color-success: [Bright accent - yellow, neon, cyan work great]
+--color-danger: [Bold color that contrasts with primary - purple, pink, etc.]
+--color-neutral: [Mid-tone gray]
+--color-bg: [Darkest color - can be pure black or tinted]
 ```
 
 **Pro Tip:** Success and Danger should be visually distinct from Primary AND from each other. Test them side-by-side!
