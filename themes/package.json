@@ -24,7 +24,7 @@
     }
   },
   "scripts": {
-    "build": "tsc && node scripts/fix-imports.cjs",
+    "build": "tsc && node ../scripts/fix-imports.cjs dist",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [

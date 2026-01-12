@@ -25,7 +25,8 @@ import {
   updateBatchMoveStats,
   closeTask,
   withTaskOperation,
-  withBoardOperation
+  withBoardOperation,
+  modifyBoardTags
 } from './handlers-utils.js'
 
 // --- Read Operations ---
@@ -278,8 +279,7 @@ export async function createTag(
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
-    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId)
-
+    const { board } = findBoardOrThrow(boards, input.boardId)
     const existingTags = board.tags || []
 
     // Check if tag already exists
@@ -290,13 +290,16 @@ export async function createTag(
       }
     }
 
-    const updatedBoard = {
-      ...board,
-      tags: [...existingTags, input.tag]
-    }
+    const { updatedBoards } = modifyBoardTags(
+      boards,
+      input.boardId,
+      (tags, tag) => [...tags, tag],
+      input.tag,
+      timestamp
+    )
 
     return {
-      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      updatedBoards,
       result: { ok: true, message: `Tag ${input.tag} added to board ${input.boardId}` }
     }
   })
@@ -311,17 +314,16 @@ export async function deleteTag(
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
-    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId)
-
-    const existingTags = board.tags || []
-
-    const updatedBoard = {
-      ...board,
-      tags: existingTags.filter((t: string) => t !== input.tag)
-    }
+    const { updatedBoards } = modifyBoardTags(
+      boards,
+      input.boardId,
+      (tags, tag) => tags.filter((t: string) => t !== tag),
+      input.tag,
+      timestamp
+    )
 
     return {
-      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      updatedBoards,
       result: { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` }
     }
   })

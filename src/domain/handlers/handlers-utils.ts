@@ -274,3 +274,29 @@ export async function withBoardOperation<T>(
 
   return result
 }
+
+/**
+ * Helper to modify board tags
+ * Consolidates common logic for tag operations (add/remove)
+ */
+export function modifyBoardTags(
+  boards: BoardsFile,
+  boardId: string,
+  tagOperation: (existingTags: string[], tag: string) => string[],
+  tag: string,
+  timestamp: string
+): { updatedBoards: BoardsFile; board: Board } {
+  const { board, index: boardIndex } = findBoardOrThrow(boards, boardId)
+  const existingTags = board.tags || []
+  const updatedTags = tagOperation(existingTags, tag)
+
+  const updatedBoard = {
+    ...board,
+    tags: updatedTags
+  }
+
+  return {
+    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+    board: updatedBoard
+  }
+}
