@@ -287,7 +287,8 @@ export async function withBoardOperation<T>(
  * @param tag - The tag to add or remove
  * @param timestamp - ISO timestamp for the update
  * @param options - Optional configuration
- * @param options.skipIfExists - If true, skip operation and return unchanged boards if tag already exists
+ * @param options.skipIfExists - If true, skip operation and return unchanged boards if tag already exists.
+ *                                Only meaningful for add operations; has no effect on remove operations.
  * @returns Object containing updated boards file and whether modification was made
  */
 export function modifyBoardTags(
