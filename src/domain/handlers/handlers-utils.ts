@@ -286,17 +286,29 @@ export async function withBoardOperation<T>(
  *                       Example: (tags, tag) => tags.filter(t => t !== tag) for removing
  * @param tag - The tag to add or remove
  * @param timestamp - ISO timestamp for the update
- * @returns Object containing updated boards file
+ * @param options - Optional configuration
+ * @param options.skipIfExists - If true, skip operation and return unchanged boards if tag already exists
+ * @returns Object containing updated boards file and whether modification was made
  */
 export function modifyBoardTags(
   boards: BoardsFile,
   boardId: string,
   tagOperation: (existingTags: string[], tag: string) => string[],
   tag: string,
-  timestamp: string
-): { updatedBoards: BoardsFile } {
+  timestamp: string,
+  options?: { skipIfExists?: boolean }
+): { updatedBoards: BoardsFile; modified: boolean } {
   const { board, index: boardIndex } = findBoardOrThrow(boards, boardId)
   const existingTags = board.tags || []
+
+  // Check if we should skip the operation
+  if (options?.skipIfExists && existingTags.includes(tag)) {
+    return {
+      updatedBoards: boards,
+      modified: false
+    }
+  }
+
   const updatedTags = tagOperation(existingTags, tag)
 
   const updatedBoard = {
@@ -305,6 +317,7 @@ export function modifyBoardTags(
   }
 
   return {
-    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp)
+    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+    modified: true
   }
 }
