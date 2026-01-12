@@ -278,6 +278,15 @@ export async function withBoardOperation<T>(
 /**
  * Helper to modify board tags
  * Consolidates common logic for tag operations (add/remove)
+ *
+ * @param boards - Current boards file
+ * @param boardId - ID of the board to modify
+ * @param tagOperation - Callback function that receives existing tags and a tag, and returns modified tags
+ *                       Example: (tags, tag) => [...tags, tag] for adding
+ *                       Example: (tags, tag) => tags.filter(t => t !== tag) for removing
+ * @param tag - The tag to add or remove
+ * @param timestamp - ISO timestamp for the update
+ * @returns Object containing updated boards file and the modified board
  */
 export function modifyBoardTags(
   boards: BoardsFile,

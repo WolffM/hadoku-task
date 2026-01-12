@@ -12,6 +12,23 @@ export interface ToastProps {
   onClose: () => void
 }
 
+/**
+ * Helper function to render SVG icon wrapper with consistent styling
+ */
+const renderIcon = (children: React.ReactNode) => (
+  <svg
+    className="toast__icon"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    {children}
+  </svg>
+)
+
 export function Toast({ message, type = 'info', duration = 3000, onClose }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false)
 
@@ -33,20 +50,6 @@ export function Toast({ message, type = 'info', duration = 3000, onClose }: Toas
       clearTimeout(hideTimer)
     }
   }, [duration, onClose])
-
-  const renderIcon = (children: React.ReactNode) => (
-    <svg
-      className="toast__icon"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      {children}
-    </svg>
-  )
 
   const getIcon = () => {
     switch (type) {

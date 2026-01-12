@@ -15,6 +15,17 @@ const distDir = process.argv[2]
   ? path.resolve(process.cwd(), process.argv[2])
   : path.join(__dirname, '..', 'dist');
 
+// Validate that the directory exists
+if (!fs.existsSync(distDir)) {
+  console.error(`Error: Directory '${distDir}' does not exist.`);
+  process.exit(1);
+}
+
+if (!fs.statSync(distDir).isDirectory()) {
+  console.error(`Error: '${distDir}' is not a directory.`);
+  process.exit(1);
+}
+
 function addJsExtensions(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
 
