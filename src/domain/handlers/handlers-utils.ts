@@ -286,7 +286,7 @@ export async function withBoardOperation<T>(
  *                       Example: (tags, tag) => tags.filter(t => t !== tag) for removing
  * @param tag - The tag to add or remove
  * @param timestamp - ISO timestamp for the update
- * @returns Object containing updated boards file and the modified board
+ * @returns Object containing updated boards file
  */
 export function modifyBoardTags(
   boards: BoardsFile,
@@ -294,7 +294,7 @@ export function modifyBoardTags(
   tagOperation: (existingTags: string[], tag: string) => string[],
   tag: string,
   timestamp: string
-): { updatedBoards: BoardsFile; board: Board } {
+): { updatedBoards: BoardsFile } {
   const { board, index: boardIndex } = findBoardOrThrow(boards, boardId)
   const existingTags = board.tags || []
   const updatedTags = tagOperation(existingTags, tag)
@@ -305,7 +305,6 @@ export function modifyBoardTags(
   }
 
   return {
-    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
-    board: updatedBoard
+    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp)
   }
 }
