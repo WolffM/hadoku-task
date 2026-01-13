@@ -234,7 +234,7 @@ jobs:
           const fs = require('fs');
           const pkg = JSON.parse(fs.readFileSync('${pkg_path}/package.json', 'utf8'));
           pkg.version = '$new_version';
-          fs.writeFileSync('$pkg_path/package.json', JSON.stringify(pkg, null, 2) + '\n');
+          fs.writeFileSync('${pkg_path}/package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
           
             echo "✅ $pkg_name: Version bumped: $current_version → $new_version"
