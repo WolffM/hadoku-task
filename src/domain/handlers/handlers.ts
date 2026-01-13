@@ -19,13 +19,13 @@ import { splitTags } from '../utils/tags.js'
 import {
   findTaskOrThrow,
   findBoardOrThrow,
-  updateBoardAtIndex,
   extractTasksFromBoard,
   prepareTasksForBoard,
   updateBatchMoveStats,
   closeTask,
   withTaskOperation,
-  withBoardOperation
+  withBoardOperation,
+  modifyBoardTags
 } from './handlers-utils.js'
 
 // --- Read Operations ---
@@ -278,26 +278,23 @@ export async function createTag(
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
-    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId)
-
-    const existingTags = board.tags || []
-
-    // Check if tag already exists
-    if (existingTags.includes(input.tag)) {
-      return {
-        updatedBoards: boards, // No changes needed
-        result: { ok: true, message: `Tag ${input.tag} already exists` }
-      }
-    }
-
-    const updatedBoard = {
-      ...board,
-      tags: [...existingTags, input.tag]
-    }
+    const { updatedBoards, modified } = modifyBoardTags(
+      boards,
+      input.boardId,
+      (tags, tag) => [...tags, tag],
+      input.tag,
+      timestamp,
+      { skipIfExists: true }
+    )
 
     return {
-      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
-      result: { ok: true, message: `Tag ${input.tag} added to board ${input.boardId}` }
+      updatedBoards,
+      result: {
+        ok: true,
+        message: modified
+          ? `Tag ${input.tag} added to board ${input.boardId}`
+          : `Tag ${input.tag} already exists`
+      }
     }
   })
 }
@@ -311,17 +308,16 @@ export async function deleteTag(
   input: { boardId: string; tag: string }
 ): Promise<{ ok: boolean; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
-    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId)
-
-    const existingTags = board.tags || []
-
-    const updatedBoard = {
-      ...board,
-      tags: existingTags.filter((t: string) => t !== input.tag)
-    }
+    const { updatedBoards } = modifyBoardTags(
+      boards,
+      input.boardId,
+      (tags, tag) => tags.filter((t: string) => t !== tag),
+      input.tag,
+      timestamp
+    )
 
     return {
-      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      updatedBoards,
       result: { ok: true, message: `Tag ${input.tag} removed from board ${input.boardId}` }
     }
   })
@@ -511,15 +507,16 @@ export async function batchClearTag(
 
   // Then, remove tag from board metadata using board operation pattern
   await withBoardOperation(storage, auth, (boards, timestamp) => {
-    const { board, index: boardIndex } = findBoardOrThrow(boards, input.boardId)
-    const existingBoardTags = board.tags || []
-    const updatedBoard = {
-      ...board,
-      tags: existingBoardTags.filter(t => t !== input.tag)
-    }
+    const { updatedBoards } = modifyBoardTags(
+      boards,
+      input.boardId,
+      (tags, tag) => tags.filter(t => t !== tag),
+      input.tag,
+      timestamp
+    )
 
     return {
-      updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+      updatedBoards,
       result: { ok: true }
     }
   })

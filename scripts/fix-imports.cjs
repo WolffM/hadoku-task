@@ -1,12 +1,30 @@
 /**
  * Post-build script to add .js extensions to relative imports for ESM compatibility
  * This is required because TypeScript doesn't automatically add extensions when compiling to ESM
+ * 
+ * Usage: node fix-imports.cjs [dist-directory]
+ * If no directory is provided, assumes ../dist relative to the script location
+ * If a directory is provided, it's resolved relative to the current working directory
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const distDir = path.join(__dirname, '..', 'dist');
+// Accept dist directory as command line argument or default to ../dist relative to script
+const distDir = process.argv[2] 
+  ? path.resolve(process.cwd(), process.argv[2])
+  : path.join(__dirname, '..', 'dist');
+
+// Validate that the directory exists
+if (!fs.existsSync(distDir)) {
+  console.error(`Error: Directory '${distDir}' does not exist.`);
+  process.exit(1);
+}
+
+if (!fs.statSync(distDir).isDirectory()) {
+  console.error(`Error: '${distDir}' is not a directory.`);
+  process.exit(1);
+}
 
 function addJsExtensions(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');

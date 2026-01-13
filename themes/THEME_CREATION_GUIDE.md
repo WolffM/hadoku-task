@@ -212,6 +212,7 @@ Given a color list like:
 
 #### For Dark Theme:
 
+<!-- prettier-ignore -->
 ```css
 --color-primary: [Brightest saturated color that pops]
 --color-success: [Bright accent - yellow, neon, cyan work great]

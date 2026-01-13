@@ -274,3 +274,51 @@ export async function withBoardOperation<T>(
 
   return result
 }
+
+/**
+ * Helper to modify board tags
+ * Consolidates common logic for tag operations (add/remove)
+ *
+ * @param boards - Current boards file
+ * @param boardId - ID of the board to modify
+ * @param tagOperation - Callback function that receives existing tags and a tag, and returns modified tags
+ *                       Example: (tags, tag) => [...tags, tag] for adding
+ *                       Example: (tags, tag) => tags.filter(t => t !== tag) for removing
+ * @param tag - The tag to add or remove
+ * @param timestamp - ISO timestamp for the update
+ * @param options - Optional configuration
+ * @param options.skipIfExists - If true, skip operation and return unchanged boards if tag already exists.
+ *                                Only meaningful for add operations; has no effect on remove operations.
+ * @returns Object containing updated boards file and whether modification was made
+ */
+export function modifyBoardTags(
+  boards: BoardsFile,
+  boardId: string,
+  tagOperation: (existingTags: string[], tag: string) => string[],
+  tag: string,
+  timestamp: string,
+  options?: { skipIfExists?: boolean }
+): { updatedBoards: BoardsFile; modified: boolean } {
+  const { board, index: boardIndex } = findBoardOrThrow(boards, boardId)
+  const existingTags = board.tags || []
+
+  // Check if we should skip the operation
+  if (options?.skipIfExists && existingTags.includes(tag)) {
+    return {
+      updatedBoards: boards,
+      modified: false
+    }
+  }
+
+  const updatedTags = tagOperation(existingTags, tag)
+
+  const updatedBoard = {
+    ...board,
+    tags: updatedTags
+  }
+
+  return {
+    updatedBoards: updateBoardAtIndex(boards, boardIndex, updatedBoard, timestamp),
+    modified: true
+  }
+}

@@ -10,4 +10,5 @@
 @import './main.css';
 @import './modal.css';
 @import './calendar.css';
+@import '@wolffm/task-ui-components/theme-picker.css';
 @import '@wolffm/task-ui-components/toaster.css';
