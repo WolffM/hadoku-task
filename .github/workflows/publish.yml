@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
-  contents: read
+  contents: write  # Changed from 'read' to allow auto-bumping versions
   packages: write
 
 jobs:
@@ -135,14 +135,18 @@ jobs:
           }
 
           version_issues=0
+          needs_ui_bump=false
+          needs_themes_bump=false
+          needs_task_bump=false
 
           # Check task-ui-components if SOURCE files changed (matches pre-commit hook pattern)
           # Pattern: task-ui-components/(src/|package.json|tsconfig.|vite.config.)
           if git diff --name-only HEAD~1 HEAD | grep -qE "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
             echo "📦 task-ui-components source files changed, checking version..."
             if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
-              echo "::error::task-ui-components version was not bumped! Pre-commit hook may have failed."
+              echo "::warning::task-ui-components version was not bumped! Will auto-bump."
               version_issues=1
+              needs_ui_bump=true
             fi
           else
             echo "ℹ️  task-ui-components: no source changes (skipping version check)"
@@ -153,8 +157,9 @@ jobs:
           if git diff --name-only HEAD~1 HEAD | grep -qE "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
             echo "📦 themes source files changed, checking version..."
             if ! check_version_published "@wolffm/themes" "./themes"; then
-              echo "::error::themes version was not bumped! Pre-commit hook may have failed."
+              echo "::warning::themes version was not bumped! Will auto-bump."
               version_issues=1
+              needs_themes_bump=true
             fi
           else
             echo "ℹ️  themes: no source changes (skipping version check)"
@@ -165,28 +170,139 @@ jobs:
           if git diff --name-only HEAD~1 HEAD | grep -qE "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
             echo "📦 task source files changed, checking version..."
             if ! check_version_published "@wolffm/task" "."; then
-              echo "::error::task version was not bumped! Pre-commit hook may have failed."
+              echo "::warning::task version was not bumped! Will auto-bump."
               version_issues=1
+              needs_task_bump=true
             fi
           else
             echo "ℹ️  task: no source changes (skipping version check)"
           fi
 
+          # Export flags for the auto-bump step
+          echo "version_issues=$version_issues" >> $GITHUB_OUTPUT
+          echo "needs_ui_bump=$needs_ui_bump" >> $GITHUB_OUTPUT
+          echo "needs_themes_bump=$needs_themes_bump" >> $GITHUB_OUTPUT
+          echo "needs_task_bump=$needs_task_bump" >> $GITHUB_OUTPUT
+
           if [ $version_issues -eq 1 ]; then
             echo ""
-            echo "❌ VERSION BUMP MISSING!"
+            echo "⚠️  VERSION BUMP MISSING - Will auto-bump in next step"
             echo ""
             echo "The pre-commit hook should have auto-bumped the version but didn't."
             echo "Possible causes:"
             echo "  1. Husky hooks not installed (run 'pnpm prepare')"
             echo "  2. Git hooks bypassed with --no-verify"
-            echo "  3. Pre-commit script failed on Windows (bash compatibility)"
+            echo "  3. Commit made by automation (Copilot, bot, etc.)"
             echo ""
-            echo "To fix: manually bump version with 'pnpm version:patch' and push again."
-            exit 1
+            echo "✨ CI will auto-bump versions and continue..."
+          else
+            echo "✅ All changed packages have new versions (or no source changes requiring bump)"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Auto-bump versions if pre-commit hook was bypassed
+      - name: Auto-bump versions
+        if: steps.version_check.outputs.version_issues == '1'
+        run: |
+          echo "🤖 Auto-bumping versions that were missed by pre-commit hook..."
+          
+          # Function to bump version for a package (matches pre-commit hook logic)
+          bump_package_version() {
+            local pkg_path=$1
+            local pkg_name=$2
+          
+            # Read current version from package.json
+            current_version=$(node -p "require('${pkg_path}/package.json').version")
+            major=$(echo "$current_version" | cut -d. -f1)
+            minor=$(echo "$current_version" | cut -d. -f2)
+            patch=$(echo "$current_version" | cut -d. -f3)
+          
+            # Rollover at .20 to keep patch numbers manageable
+            if [[ $patch -eq 20 ]]; then
+              new_minor=$((minor + 1))
+              new_version="$major.$new_minor.0"
+              echo "🚀 $pkg_name: Rolling over to minor version"
+            else
+              new_patch=$((patch + 1))
+              new_version="$major.$minor.$new_patch"
+              echo "📈 $pkg_name: Incrementing patch version"
+            fi
+          
+            # Update package.json with new version
+            node -e "
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('${pkg_path}/package.json', 'utf8'));
+          pkg.version = '$new_version';
+          fs.writeFileSync('$pkg_path/package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          
+            echo "✅ $pkg_name: Version bumped: $current_version → $new_version"
+          }
+
+          # Handle dependency chain: if ui-components bumps, themes and task must also bump
+          needs_ui_bump="${{ steps.version_check.outputs.needs_ui_bump }}"
+          needs_themes_bump="${{ steps.version_check.outputs.needs_themes_bump }}"
+          needs_task_bump="${{ steps.version_check.outputs.needs_task_bump }}"
+
+          # If ui-components needs bump, dependents must also bump
+          if [[ "$needs_ui_bump" = "true" ]]; then
+            echo "📦 task-ui-components changed → bumping dependent packages (themes, task)"
+            needs_themes_bump=true
+            needs_task_bump=true
           fi
 
-          echo "✅ All changed packages have new versions (or no source changes requiring bump)"
+          # If themes needs bump, task must also bump
+          if [[ "$needs_themes_bump" = "true" ]]; then
+            echo "📦 themes changed → bumping dependent package (task)"
+            needs_task_bump=true
+          fi
+
+          # Perform bumps in dependency order
+          if [[ "$needs_ui_bump" = "true" ]]; then
+            bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
+          fi
+
+          if [[ "$needs_themes_bump" = "true" ]]; then
+            bump_package_version "./themes" "@wolffm/themes"
+          fi
+
+          if [[ "$needs_task_bump" = "true" ]]; then
+            bump_package_version "." "@wolffm/task"
+          fi
+
+          # Update lock file
+          echo "🔄 Updating lock file..."
+          pnpm install --lockfile-only
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Commit and push changes
+          git add -A
+          git commit -m "chore: auto-bump versions (pre-commit hook was bypassed)"
+          git push
+
+          echo "✅ Versions auto-bumped and pushed successfully!"
+          echo ""
+          echo "🔄 Rebuilding with new versions..."
+
+      # Rebuild if versions were auto-bumped
+      - name: Rebuild after version bump
+        if: steps.version_check.outputs.version_issues == '1'
+        run: |
+          echo "🔨 Rebuilding packages with new versions..."
+          
+          # Reinstall to pick up new versions
+          pnpm install --frozen-lockfile
+          
+          # Rebuild in dependency order
+          pnpm --filter @wolffm/task-ui-components run build
+          pnpm --filter @wolffm/themes run build
+          pnpm run build:all
+          
+          echo "✅ Rebuild complete!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
