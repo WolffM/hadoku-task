@@ -6,19 +6,19 @@
 .task-app__drag-over {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
-  box-shadow: var(--shadow-focus-alt);
+  box-shadow: var(--hdk-shadow-focus-alt);
 }
 
 .task-app__dynamic-layout {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3xl);
+  gap: var(--hdk-space-3xl);
 }
 
 /* Tag grid */
 .task-app__tag-grid {
   display: grid;
-  gap: var(--spacing-xl);
+  gap: var(--hdk-space-xl);
 }
 
 .task-app__tag-grid--2col {
@@ -38,8 +38,8 @@
 .task-app__tag-column {
   /* Minimal default: no border or background to keep layout clean */
   border: none;
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  border-radius: var(--hdk-radius);
+  padding: var(--hdk-space-lg);
   background: transparent;
   transition: all var(--transition-smooth);
 }
@@ -50,7 +50,7 @@
 .task-app__tag-column--drag-over {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
-  box-shadow: var(--shadow-focus-alt);
+  box-shadow: var(--hdk-shadow-focus-alt);
 }
 
 /* Only show special hover/dashed when actively dragging over a column */
@@ -64,7 +64,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--hdk-space-md);
   padding-right: 80px; /* Width of 2 action buttons (64px) + small gap (4px) to align above timestamp */
 }
 
@@ -75,7 +75,7 @@
 }
 
 .task-app__tag-header {
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   color: var(--color-primary);
 }
 
@@ -83,8 +83,8 @@
 .task-app__remaining {
   /* Minimal default like tag columns */
   border: none;
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  border-radius: var(--hdk-radius);
+  padding: var(--hdk-space-lg);
   background: transparent;
   transition: all var(--transition-smooth);
 }
@@ -92,9 +92,9 @@
 /* No hover surface for remaining area - only highlight on drag-over */
 
 .task-app__remaining-header {
-  font-size: var(--font-size-base);
+  font-size: var(--hdk-text-base);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--hdk-space-lg);
 }
 
 /* When the remaining area is a drop target, show a rounded box similar to tag columns */
@@ -102,5 +102,5 @@
   /* Blue highlight only when actively dragging over */
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
-  box-shadow: var(--shadow-focus-alt);
+  box-shadow: var(--hdk-shadow-focus-alt);
 }

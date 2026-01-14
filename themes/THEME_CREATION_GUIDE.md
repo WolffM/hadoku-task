@@ -2,6 +2,18 @@
 
 This guide helps AI systems generate new color themes for the @wolffm/themes package by analyzing color palettes and mapping them to our standardized theme structure.
 
+## Tailwind v4 Compatibility Note
+
+All spacing, typography, radius, and shadow variables use the `--hdk-*` namespace to avoid collisions with Tailwind v4's internal CSS variables. Color variables (`--color-*`) don't conflict and remain unchanged.
+
+| Variable Type | Naming Convention       | Example           |
+| ------------- | ----------------------- | ----------------- |
+| Spacing       | `--hdk-space-*`         | `--hdk-space-md`  |
+| Font Size     | `--hdk-text-*`          | `--hdk-text-sm`   |
+| Border Radius | `--hdk-radius-*`        | `--hdk-radius-lg` |
+| Shadows       | `--hdk-shadow-*`        | `--hdk-shadow-sm` |
+| Colors        | `--color-*` (unchanged) | `--color-primary` |
+
 ## Theme Structure Overview
 
 Each theme requires **34 color variables** + **6 shadow variables** = **40 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
@@ -128,12 +140,12 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 
 **Purpose:** Depth and elevation
 
-- `--shadow-sm` - **ALT:** Subtle shadow (derived from primary or black)
-- `--shadow-md` - **ALT:** Medium shadow
-- `--shadow-modal` - **ALT:** Strong shadow for modals
-- `--shadow-focus` - **ALT:** Focus ring (primary at 20-40% opacity)
-- `--shadow-focus-sm` - **ALT:** Small focus ring
-- `--shadow-focus-alt` - **ALT:** Alternative focus ring
+- `--hdk-shadow-sm` - **ALT:** Subtle shadow (derived from primary or black)
+- `--hdk-shadow-md` - **ALT:** Medium shadow
+- `--hdk-shadow-lg` - **ALT:** Strong shadow for modals/dialogs
+- `--hdk-shadow-focus` - **ALT:** Focus ring (primary at 20-40% opacity)
+- `--hdk-shadow-focus-sm` - **ALT:** Small focus ring
+- `--hdk-shadow-focus-alt` - **ALT:** Alternative focus ring
 
 ---
 
@@ -271,12 +283,12 @@ Use color manipulation functions:
 --color-border-light: mix(neutral, bg, 50%)
 
 // === Shadows (from primary or black) ===
---shadow-sm: 0 1px 2px rgba(primary, 0.08)      // or rgba(0,0,0,0.4) for dark
---shadow-md: 0 2px 4px rgba(primary, 0.12)
---shadow-modal: 0 8px 24px rgba(primary, 0.2)
---shadow-focus: 0 0 0 3px rgba(primary, 0.25)
---shadow-focus-sm: 0 0 0 2px rgba(primary, 0.25)
---shadow-focus-alt: 0 0 0 2px rgba(primary, 0.15)
+--hdk-shadow-sm: 0 1px 2px rgba(primary, 0.08)      // or rgba(0,0,0,0.4) for dark
+--hdk-shadow-md: 0 2px 4px rgba(primary, 0.12)
+--hdk-shadow-lg: 0 8px 24px rgba(primary, 0.2)
+--hdk-shadow-focus: 0 0 0 3px rgba(primary, 0.25)
+--hdk-shadow-focus-sm: 0 0 0 2px rgba(primary, 0.25)
+--hdk-shadow-focus-alt: 0 0 0 2px rgba(primary, 0.15)
 ```
 
 ### Step 4: Validate Contrast
@@ -354,12 +366,12 @@ Ensure WCAG AA compliance:
   --color-border-light: #efefef; /* mix(neutral, bg, 50%) */
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(255, 107, 53, 0.08);
-  --shadow-md: 0 2px 4px rgba(255, 107, 53, 0.12);
-  --shadow-modal: 0 8px 24px rgba(255, 107, 53, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(255, 107, 53, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 107, 53, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 107, 53, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(255, 107, 53, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(255, 107, 53, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 107, 53, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 53, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 53, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 53, 0.15);
 }
 ```
 
@@ -398,14 +410,15 @@ function getContrastText(bg: string): 'light' | 'dark' {
 
 Before submitting a new theme, verify:
 
-- [ ] All 34 color variables are defined
-- [ ] All 6 shadow variables are defined (40 total)
+- [ ] All 34 color variables are defined (`--color-*`)
+- [ ] All 6 shadow variables are defined (`--hdk-shadow-*`)
 - [ ] Primary text has ≥4.5:1 contrast on main background
 - [ ] Theme works in both light and dark variants
 - [ ] Hover states are visually distinct but subtle
 - [ ] Success/Warning/Danger colors are clearly different from Primary
 - [ ] Focus rings are visible on all backgrounds
 - [ ] Theme name follows kebab-case convention: `theme-name-light` / `theme-name-dark`
+- [ ] Uses `--hdk-*` namespace for spacing, text, radius, and shadow variables
 
 ---
 

@@ -151,7 +151,7 @@
 
     .swatch:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     .swatch.selected {
@@ -212,7 +212,7 @@
 
     .example-btn {
       padding: 8px 16px;
-      border-radius: var(--border-radius);
+      border-radius: var(--hdk-radius);
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
@@ -223,56 +223,56 @@
     .example-btn.primary {
       background: var(--color-primary);
       color: var(--color-primary-text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--hdk-shadow-sm);
     }
 
     .example-btn.primary:hover {
       background: var(--color-primary-dark);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     .example-btn.success {
       background: var(--color-success);
       color: var(--color-success-text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--hdk-shadow-sm);
     }
 
     .example-btn.success:hover {
       background: var(--color-success-dark);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     .example-btn.warning {
       background: var(--color-warning);
       color: var(--color-warning-text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--hdk-shadow-sm);
     }
 
     .example-btn.warning:hover {
       filter: brightness(0.9);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     .example-btn.danger {
       background: var(--color-danger);
       color: var(--color-danger-text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--hdk-shadow-sm);
     }
 
     .example-btn.danger:hover {
       background: var(--color-danger-dark);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     .example-btn.neutral {
       background: var(--color-neutral);
       color: var(--color-neutral-text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--hdk-shadow-sm);
     }
 
     .example-btn.neutral:hover {
       background: var(--color-neutral-light);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--hdk-shadow-md);
     }
 
     /* Ghost/outline button variants using hover colors */
@@ -394,7 +394,7 @@
     .text-sample {
       padding: 8px 12px;
       background: var(--color-bg-card);
-      border-radius: var(--border-radius);
+      border-radius: var(--hdk-radius);
       cursor: pointer;
       transition: background 0.15s;
     }
@@ -413,7 +413,7 @@
 
     .bg-card {
       padding: 16px;
-      border-radius: var(--border-radius-lg);
+      border-radius: var(--hdk-radius-lg);
       cursor: pointer;
       transition: transform 0.15s;
     }
@@ -444,7 +444,7 @@
     .shadow-card {
       padding: 20px;
       background: var(--color-bg-card);
-      border-radius: var(--border-radius-lg);
+      border-radius: var(--hdk-radius-lg);
       text-align: center;
       cursor: pointer;
       transition: transform 0.15s;
@@ -463,7 +463,7 @@
     /* Component Demo Section */
     .component-demo {
       background: var(--color-bg-card);
-      border-radius: var(--border-radius-lg);
+      border-radius: var(--hdk-radius-lg);
       padding: 24px;
       border: 1px solid var(--color-border);
     }
@@ -500,7 +500,7 @@
       width: 100%;
       padding: 8px 12px;
       border: 1px solid var(--color-border);
-      border-radius: var(--border-radius);
+      border-radius: var(--hdk-radius);
       background: var(--color-bg);
       color: var(--color-text);
       font-size: 14px;
@@ -509,7 +509,7 @@
     .form-group input:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: var(--shadow-focus);
+      box-shadow: var(--hdk-shadow-focus);
     }
 
     .demo-actions {
@@ -1067,23 +1067,23 @@
       <section class="section">
         <h3 class="section-title">Shadows <span class="count">6 vars</span></h3>
         <div class="shadow-demo">
-          <div class="shadow-card" style="box-shadow: var(--shadow-sm);" data-vars="--shadow-sm">
-            <div class="name">--shadow-sm</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-sm);" data-vars="--hdk-shadow-sm">
+            <div class="name">--hdk-shadow-sm</div>
           </div>
-          <div class="shadow-card" style="box-shadow: var(--shadow-md);" data-vars="--shadow-md">
-            <div class="name">--shadow-md</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-md);" data-vars="--hdk-shadow-md">
+            <div class="name">--hdk-shadow-md</div>
           </div>
-          <div class="shadow-card" style="box-shadow: var(--shadow-modal);" data-vars="--shadow-modal">
-            <div class="name">--shadow-modal</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-lg);" data-vars="--hdk-shadow-lg">
+            <div class="name">--hdk-shadow-lg</div>
           </div>
-          <div class="shadow-card" style="box-shadow: var(--shadow-focus);" data-vars="--shadow-focus">
-            <div class="name">--shadow-focus</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-focus);" data-vars="--hdk-shadow-focus">
+            <div class="name">--hdk-shadow-focus</div>
           </div>
-          <div class="shadow-card" style="box-shadow: var(--shadow-focus-sm);" data-vars="--shadow-focus-sm">
-            <div class="name">--shadow-focus-sm</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-focus-sm);" data-vars="--hdk-shadow-focus-sm">
+            <div class="name">--hdk-shadow-focus-sm</div>
           </div>
-          <div class="shadow-card" style="box-shadow: var(--shadow-focus-alt);" data-vars="--shadow-focus-alt">
-            <div class="name">--shadow-focus-alt</div>
+          <div class="shadow-card" style="box-shadow: var(--hdk-shadow-focus-alt);" data-vars="--hdk-shadow-focus-alt">
+            <div class="name">--hdk-shadow-focus-alt</div>
           </div>
         </div>
       </section>

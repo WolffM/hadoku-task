@@ -1,7 +1,7 @@
 {
   "name": "@wolffm/themes",
-  "version": "1.3.1",
-  "description": "18 beautiful themes with OKLCH metallic gradient support - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
+  "version": "2.0.1",
+  "description": "18 beautiful themes with OKLCH metallic gradient support and Tailwind v4 compatibility - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,10 +14,12 @@
   "files": [
     "dist",
     "src/style.css",
+    "src/tailwind-integration.css",
     "README.md"
   ],
   "exports": {
     "./style.css": "./src/style.css",
+    "./tailwind-integration.css": "./src/tailwind-integration.css",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -33,6 +35,7 @@
     "design-tokens",
     "dark-mode",
     "color-schemes",
+    "tailwind-v4",
     "hadoku"
   ],
   "author": "WolffM",

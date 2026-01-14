@@ -59,9 +59,9 @@
   padding: 14px 20px;
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border-light, #e5e7eb);
-  border-radius: var(--border-radius-lg, 8px);
+  border-radius: var(--hdk-radius-lg, 8px);
   box-shadow: var(
-    --shadow-md,
+    --hdk-shadow-md,
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06)
   );

@@ -2,21 +2,21 @@
  * ThemePicker Component Styles
  * Beautiful theme picker with light/dark pill design
  *
- * Required CSS Variables (should be defined by your theme system):
+ * Required CSS Variables (should be defined by @wolffm/themes):
  * --color-text
  * --color-primary
  * --color-primary-hover
  * --color-primary-bg
  * --color-bg-card
  * --color-text-secondary
- * --shadow-focus-sm
- * --shadow-md
- * --shadow-modal
+ * --hdk-shadow-focus-sm
+ * --hdk-shadow-md
+ * --hdk-shadow-lg
  * --transition-fast (e.g., 0.15s ease)
- * --spacing-sm (e.g., 8px)
- * --spacing-md (e.g., 12px)
- * --spacing-lg (e.g., 16px)
- * --font-size-lg (e.g., 18px)
+ * --hdk-space-sm (e.g., 8px)
+ * --hdk-space-md (e.g., 12px)
+ * --hdk-space-lg (e.g., 16px)
+ * --hdk-text-lg (e.g., 18px)
  * --font-weight-semibold (e.g., 600)
  */
 
@@ -28,9 +28,9 @@
 .theme-toggle-btn {
   background: none;
   border: none;
-  font-size: var(--font-size-lg, 18px);
+  font-size: var(--hdk-text-lg, 18px);
   cursor: pointer;
-  padding: var(--spacing-sm, 8px);
+  padding: var(--hdk-space-sm, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,7 +55,7 @@
 
 .theme-toggle-btn:focus {
   outline: none;
-  box-shadow: var(--shadow-focus-sm, 0 0 0 2px rgba(0, 0, 0, 0.2));
+  box-shadow: var(--hdk-shadow-focus-sm, 0 0 0 2px rgba(0, 0, 0, 0.2));
 }
 
 /* Theme picker overlay - covers entire viewport for click-outside detection */
@@ -73,11 +73,11 @@
 .theme-picker__dropdown {
   position: absolute;
   top: 0;
-  left: calc(100% + var(--spacing-md, 12px));
+  left: calc(100% + var(--hdk-space-md, 12px));
   z-index: 100;
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-md, 12px); /* Spacing between pill tower and settings button */
+  gap: var(--hdk-space-md, 12px); /* Spacing between pill tower and settings button */
 }
 
 /* Theme pill tower - has the shadow */
@@ -87,7 +87,7 @@
   gap: 0; /* No gap - pancake stack */
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.15)); /* Shadow on pill tower only */
+  box-shadow: var(--hdk-shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15)); /* Shadow on pill tower only */
 }
 
 /* Theme pill - contains light and dark buttons */
@@ -110,7 +110,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--spacing-lg, 16px) * 1.2); /* 20% bigger total (10% + 10%) */
+  padding: calc(var(--hdk-space-lg, 16px) * 1.2); /* 20% bigger total (10% + 10%) */
   border: none;
   background: transparent;
   cursor: pointer;
@@ -208,7 +208,7 @@
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
   border-radius: 50%; /* Circular */
-  box-shadow: var(--shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--hdk-shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
   flex-shrink: 0;
 }
 
@@ -216,7 +216,7 @@
   background: var(--color-primary-bg, rgba(59, 130, 246, 0.1));
   color: var(--color-primary, #3b82f6);
   transform: rotate(45deg);
-  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.15));
+  box-shadow: var(--hdk-shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
 }
 
 .theme-picker__settings-icon svg {

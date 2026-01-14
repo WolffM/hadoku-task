@@ -53,10 +53,10 @@
 .bento-card {
   position: relative;
   overflow: hidden;
-  border-radius: var(--border-radius-lg, 16px);
+  border-radius: var(--hdk-radius-lg, 16px);
   background: var(--color-bg-card, #ffffff);
   border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-  box-shadow: var(--shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--hdk-shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
   transition:
     transform var(--transition-fast, 0.15s) ease,
     box-shadow var(--transition-fast, 0.15s) ease;
@@ -72,7 +72,7 @@
 
 .bento-card[role='button']:hover:not(.bento-card--disabled) {
   transform: scale(1.02) translateZ(0);
-  box-shadow: var(--shadow-modal, 0 8px 40px rgba(0, 0, 0, 0.15));
+  box-shadow: var(--hdk-shadow-lg, 0 8px 40px rgba(0, 0, 0, 0.15));
 }
 
 .bento-card[role='button']:active:not(.bento-card--disabled) {
@@ -82,8 +82,8 @@
 .bento-card:focus-visible {
   outline: none;
   box-shadow:
-    var(--shadow-focus, 0 0 0 3px rgba(37, 99, 235, 0.2)),
-    var(--shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
+    var(--hdk-shadow-focus, 0 0 0 3px rgba(37, 99, 235, 0.2)),
+    var(--hdk-shadow-md, 0 4px 24px rgba(0, 0, 0, 0.1));
 }
 
 /* Card Sizes */
@@ -138,7 +138,7 @@
 .metallic-surface {
   position: relative;
   overflow: hidden;
-  border-radius: var(--metallic-radius, var(--border-radius-lg, 16px));
+  border-radius: var(--metallic-radius, var(--hdk-radius-lg, 16px));
 
   /* Base metallic gradient */
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);

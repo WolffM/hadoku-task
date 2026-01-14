@@ -434,13 +434,13 @@ document.documentElement.setAttribute('data-theme', 'dark')
 
 ### Design Token Philosophy
 
-**All values use CSS custom properties:**
+**All values use CSS custom properties (namespaced for Tailwind v4 compatibility):**
 
 - ✅ Colors: `var(--color-primary)`
-- ✅ Spacing: `var(--spacing-md)`
-- ✅ Typography: `var(--font-size-body)`
-- ✅ Borders: `var(--border-radius)`
-- ✅ Shadows: `var(--shadow-card)`
+- ✅ Spacing: `var(--hdk-space-md)`
+- ✅ Typography: `var(--hdk-text-base)`
+- ✅ Borders: `var(--hdk-radius)`
+- ✅ Shadows: `var(--hdk-shadow-md)`
 
 **Benefits:**
 

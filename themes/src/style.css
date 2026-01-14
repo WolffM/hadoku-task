@@ -1,14 +1,29 @@
 /**
  * Hadoku Theme System
- * 8 beautiful color themes + variants using CSS custom properties
- * 
+ * Beautiful color themes using CSS custom properties
+ *
  * Usage: Set data-theme attribute on html element or container
  * Example: <html data-theme="dark">
- * 
+ *
  * Themes: light (default), dark, strawberry-light, strawberry-dark,
  *         ocean-light, ocean-dark, cyberpunk-light, cyberpunk-dark,
  *         coffee-light, coffee-dark, lavender-light, lavender-dark,
- *         nature-light, nature-dark, pink-light, pink-dark
+ *         nature-light, nature-dark, pink-light, pink-dark,
+ *         izakaya-light, izakaya-dark, light-custom
+ *
+ * TAILWIND v4 COMPATIBILITY
+ * =========================
+ * Variables are namespaced with --hdk-* prefix to avoid collisions with
+ * Tailwind v4's internal CSS variables (--spacing-*, --radius-*, etc.).
+ *
+ * Variable Namespaces:
+ *   --hdk-space-*   : Spacing (xs, sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl)
+ *   --hdk-text-*    : Font sizes (xs, sm, md, base, lg)
+ *   --hdk-radius-*  : Border radius (sm, [default], lg)
+ *   --hdk-shadow-*  : Shadows (sm, md, lg, focus, focus-sm, focus-alt)
+ *   --color-*       : Colors (no conflict with Tailwind, kept as-is)
+ *
+ * For Tailwind integration, see tailwind-integration.css or docs.
  */
 
 /* ===== METALLIC GRADIENT SYSTEM ===== */
@@ -92,25 +107,25 @@
   --color-bg-hover: #f1f5f9;
   --color-bg-overlay: rgba(15, 23, 42, 0.5);
 
-  /* Spacing */
-  --spacing-xs: 2px;
-  --spacing-sm: 4px;
-  --spacing-md: 8px;
-  --spacing-lg: 12px;
-  --spacing-xl: 16px;
-  --spacing-2xl: 20px;
-  --spacing-3xl: 24px;
-  --spacing-4xl: 40px;
-  --spacing-5xl: 60px;
+  /* Spacing (namespaced to avoid Tailwind v4 collision with max-w-*, etc.) */
+  --hdk-space-xs: 2px;
+  --hdk-space-sm: 4px;
+  --hdk-space-md: 8px;
+  --hdk-space-lg: 12px;
+  --hdk-space-xl: 16px;
+  --hdk-space-2xl: 20px;
+  --hdk-space-3xl: 24px;
+  --hdk-space-4xl: 40px;
+  --hdk-space-5xl: 60px;
 
-  /* Typography */
+  /* Typography (namespaced for Tailwind v4 compatibility) */
   --font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 15px;
-  --font-size-base: 16px;
-  --font-size-lg: 24px;
+  --hdk-text-xs: 12px;
+  --hdk-text-sm: 14px;
+  --hdk-text-md: 15px;
+  --hdk-text-base: 16px;
+  --hdk-text-lg: 24px;
 
   --font-weight-normal: 400;
   --font-weight-semibold: 500;
@@ -119,18 +134,18 @@
   --line-height-normal: 1.4;
   --line-height-relaxed: 1.5;
 
-  /* Layout */
-  --border-radius: 6px;
-  --border-radius-sm: 4px;
-  --border-radius-lg: 8px;
+  /* Layout (namespaced for Tailwind v4 compatibility) */
+  --hdk-radius-sm: 4px;
+  --hdk-radius: 6px;
+  --hdk-radius-lg: 8px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.08);
-  --shadow-modal: 0 4px 12px rgba(15, 23, 42, 0.15);
-  --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.2);
-  --shadow-focus-sm: 0 0 0 2px rgba(37, 99, 235, 0.2);
-  --shadow-focus-alt: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  /* Shadows (namespaced for Tailwind v4 compatibility) */
+  --hdk-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --hdk-shadow-md: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --hdk-shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(37, 99, 235, 0.1);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
@@ -190,12 +205,12 @@
   --color-bg-hover: #1e293b;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(251, 113, 133, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(251, 113, 133, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(251, 113, 133, 0.2);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(251, 113, 133, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(251, 113, 133, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(251, 113, 133, 0.2);
 }
 
 /* ===== STRAWBERRY LIGHT THEME ===== */
@@ -251,12 +266,12 @@
   --color-bg-hover: #ffe0e9;
   --color-bg-overlay: rgba(255, 107, 157, 0.3);
 
-  --shadow-sm: 0 1px 2px rgba(255, 107, 157, 0.08);
-  --shadow-md: 0 2px 4px rgba(255, 107, 157, 0.12);
-  --shadow-modal: 0 8px 24px rgba(255, 107, 157, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(255, 107, 157, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(255, 107, 157, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 107, 157, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.15);
 }
 
 /* ===== STRAWBERRY DARK THEME ===== */
@@ -312,12 +327,12 @@
   --color-bg-hover: #3d1e2b;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.2);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.2);
 }
 
 /* ===== OCEAN LIGHT THEME ===== */
@@ -373,12 +388,12 @@
   --color-bg-hover: #cffafe;
   --color-bg-overlay: rgba(8, 47, 73, 0.3);
 
-  --shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
-  --shadow-md: 0 2px 4px rgba(6, 182, 212, 0.12);
-  --shadow-modal: 0 8px 24px rgba(6, 182, 212, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(6, 182, 212, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(6, 182, 212, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
 }
 
 /* ===== OCEAN DARK THEME ===== */
@@ -434,12 +449,12 @@
   --color-bg-hover: #0e7490;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
 }
 
 /* ===== CYBERPUNK LIGHT THEME ===== */
@@ -495,12 +510,12 @@
   --color-bg-hover: #f0e5ff;
   --color-bg-overlay: rgba(26, 26, 46, 0.4);
 
-  --shadow-sm: 0 1px 3px rgba(255, 0, 110, 0.12);
-  --shadow-md: 0 2px 6px rgba(255, 0, 110, 0.18);
-  --shadow-modal: 0 8px 24px rgba(255, 0, 110, 0.25);
-  --shadow-focus: 0 0 0 3px rgba(255, 0, 110, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 0, 110, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 0, 110, 0.2);
+  --hdk-shadow-sm: 0 1px 3px rgba(255, 0, 110, 0.12);
+  --hdk-shadow-md: 0 2px 6px rgba(255, 0, 110, 0.18);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 0, 110, 0.25);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 0, 110, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 0, 110, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 0, 110, 0.2);
 }
 
 /* ===== CYBERPUNK DARK THEME ===== */
@@ -556,12 +571,12 @@
   --color-bg-hover: #0f172a;
   --color-bg-overlay: rgba(0, 0, 0, 0.8);
 
-  --shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
-  --shadow-md: 0 2px 4px rgba(34, 211, 238, 0.3);
-  --shadow-modal: 0 8px 24px rgba(34, 211, 238, 0.4);
-  --shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
-  --shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
-  --shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
+  --hdk-shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
+  --hdk-shadow-md: 0 2px 4px rgba(34, 211, 238, 0.3);
+  --hdk-shadow-lg: 0 8px 24px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
 }
 
 /* ===== COFFEE LIGHT THEME ===== */
@@ -617,12 +632,12 @@
   --color-bg-hover: #fed7aa;
   --color-bg-overlay: rgba(28, 25, 23, 0.3);
 
-  --shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
-  --shadow-md: 0 2px 4px rgba(234, 88, 12, 0.12);
-  --shadow-modal: 0 8px 24px rgba(234, 88, 12, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(234, 88, 12, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(234, 88, 12, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
 }
 
 /* ===== COFFEE DARK THEME ===== */
@@ -678,12 +693,12 @@
   --color-bg-hover: #44403c;
   --color-bg-overlay: rgba(0, 0, 0, 0.75);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.8);
-  --shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
+  --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
 }
 
 /* ===== LAVENDER LIGHT THEME ===== */
@@ -739,12 +754,12 @@
   --color-bg-hover: #e9d5ff;
   --color-bg-overlay: rgba(192, 132, 252, 0.25);
 
-  --shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
-  --shadow-md: 0 2px 4px rgba(192, 132, 252, 0.1);
-  --shadow-modal: 0 8px 24px rgba(192, 132, 252, 0.15);
-  --shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
-  --shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
-  --shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
+  --hdk-shadow-md: 0 2px 4px rgba(192, 132, 252, 0.1);
+  --hdk-shadow-lg: 0 8px 24px rgba(192, 132, 252, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
 }
 
 /* ===== LAVENDER DARK THEME ===== */
@@ -800,12 +815,12 @@
   --color-bg-hover: #581c87;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.3);
-  --shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.3);
-  --shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.2);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.2);
 }
 
 /* ===== PINK LIGHT THEME ===== */
@@ -861,12 +876,12 @@
   --color-bg-hover: #ffd9e0;
   --color-bg-overlay: rgba(255, 105, 180, 0.2);
 
-  --shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
-  --shadow-md: 0 2px 4px rgba(255, 105, 180, 0.12);
-  --shadow-modal: 0 8px 24px rgba(255, 105, 180, 0.15);
-  --shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(255, 105, 180, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 105, 180, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
 }
 
 /* ===== PINK DARK THEME ===== */
@@ -922,12 +937,12 @@
   --color-bg-hover: #4a0e47;
   --color-bg-overlay: rgba(0, 0, 0, 0.8);
 
-  --shadow-sm: 0 1px 2px rgba(255, 16, 240, 0.3);
-  --shadow-md: 0 2px 4px rgba(255, 16, 240, 0.4);
-  --shadow-modal: 0 8px 24px rgba(255, 16, 240, 0.5);
-  --shadow-focus: 0 0 0 3px rgba(255, 16, 240, 0.4);
-  --shadow-focus-sm: 0 0 0 2px rgba(255, 16, 240, 0.4);
-  --shadow-focus-alt: 0 0 0 2px rgba(255, 16, 240, 0.3);
+  --hdk-shadow-sm: 0 1px 2px rgba(255, 16, 240, 0.3);
+  --hdk-shadow-md: 0 2px 4px rgba(255, 16, 240, 0.4);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 16, 240, 0.5);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 16, 240, 0.4);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 16, 240, 0.4);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 16, 240, 0.3);
 }
 
 /* ===== NATURE LIGHT THEME ===== */
@@ -983,12 +998,12 @@
   --color-bg-hover: #ebe7dc;
   --color-bg-overlay: rgba(44, 44, 44, 0.5);
 
-  --shadow-sm: 0 1px 2px rgba(107, 190, 78, 0.08);
-  --shadow-md: 0 2px 4px rgba(107, 190, 78, 0.12);
-  --shadow-modal: 0 8px 24px rgba(107, 190, 78, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(107, 190, 78, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(107, 190, 78, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(107, 190, 78, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(107, 190, 78, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(107, 190, 78, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(107, 190, 78, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(107, 190, 78, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(107, 190, 78, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(107, 190, 78, 0.15);
 }
 
 /* ===== NATURE DARK THEME ===== */
@@ -1044,12 +1059,12 @@
   --color-bg-hover: #3a342a;
   --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.8);
-  --shadow-focus: 0 0 0 3px rgba(95, 175, 75, 0.35);
-  --shadow-focus-sm: 0 0 0 2px rgba(95, 175, 75, 0.35);
-  --shadow-focus-alt: 0 0 0 2px rgba(95, 175, 75, 0.25);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
+  --hdk-shadow-focus: 0 0 0 3px rgba(95, 175, 75, 0.35);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(95, 175, 75, 0.35);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(95, 175, 75, 0.25);
 }
 /* ARCHIVED: Kitsune Theme Contest Losers - see THEME_GRAVEYARD.md */
 
@@ -1080,12 +1095,12 @@
   --color-bg-card: #DBDFDE;
   --color-bg-alt: #D5DAD9;
   --color-bg-overlay: rgba(45, 45, 45, 0.50);
-  --shadow-sm: 0 1px 2px rgba(50, 194, 172, 0.08);
-  --shadow-md: 0 2px 4px rgba(50, 194, 172, 0.12);
-  --shadow-modal: 0 8px 24px rgba(50, 194, 172, 0.20);
-  --shadow-focus: 0 0 0 3px rgba(50, 194, 172, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(50, 194, 172, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(50, 194, 172, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(50, 194, 172, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(50, 194, 172, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(50, 194, 172, 0.20);
+  --hdk-shadow-focus: 0 0 0 3px rgba(50, 194, 172, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(50, 194, 172, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(50, 194, 172, 0.15);
 } */
 
 /* [data-theme="kitsune-springs-b-light"] {
@@ -1115,12 +1130,12 @@
   --color-bg-card: #E9D0C2;
   --color-bg-alt: #E2C6B7;
   --color-bg-overlay: rgba(45, 45, 45, 0.50);
-  --shadow-sm: 0 1px 2px rgba(187, 112, 218, 0.08);
-  --shadow-md: 0 2px 4px rgba(187, 112, 218, 0.12);
-  --shadow-modal: 0 8px 24px rgba(187, 112, 218, 0.20);
-  --shadow-focus: 0 0 0 3px rgba(187, 112, 218, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(187, 112, 218, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(187, 112, 218, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(187, 112, 218, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(187, 112, 218, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(187, 112, 218, 0.20);
+  --hdk-shadow-focus: 0 0 0 3px rgba(187, 112, 218, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(187, 112, 218, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(187, 112, 218, 0.15);
 } */
 
 /* [data-theme="kitsune-springs-c-light"] {
@@ -1150,12 +1165,12 @@
   --color-bg-card: #E3D6D0;
   --color-bg-alt: #DACDC6;
   --color-bg-overlay: rgba(45, 45, 45, 0.50);
-  --shadow-sm: 0 1px 2px rgba(224, 107, 73, 0.08);
-  --shadow-md: 0 2px 4px rgba(224, 107, 73, 0.12);
-  --shadow-modal: 0 8px 24px rgba(224, 107, 73, 0.20);
-  --shadow-focus: 0 0 0 3px rgba(224, 107, 73, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(224, 107, 73, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(224, 107, 73, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(224, 107, 73, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(224, 107, 73, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(224, 107, 73, 0.20);
+  --hdk-shadow-focus: 0 0 0 3px rgba(224, 107, 73, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(224, 107, 73, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(224, 107, 73, 0.15);
 } */
 
 /* Izakaya Theme - Winner of Kitsune Theme Contest */
@@ -1212,12 +1227,12 @@
   --color-bg-hover: #d1b1ce;
   --color-bg-overlay: rgba(42, 42, 42, 0.45);
 
-  --shadow-sm: 0 1px 2px rgba(65, 186, 174, 0.08);
-  --shadow-md: 0 2px 4px rgba(65, 186, 174, 0.12);
-  --shadow-modal: 0 8px 24px rgba(65, 186, 174, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(65, 186, 174, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(65, 186, 174, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(65, 186, 174, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
 }
 
 /* [data-theme="kitsune-springs-a-dark"] {
@@ -1247,12 +1262,12 @@
   --color-bg-card: #141010;
   --color-bg-alt: #070303;
   --color-bg-overlay: rgba(237, 237, 237, 0.50);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.65);
-  --shadow-focus: 0 0 0 3px rgba(212, 92, 60, 0.35);
-  --shadow-focus-sm: 0 0 0 2px rgba(212, 92, 60, 0.35);
-  --shadow-focus-alt: 0 0 0 2px rgba(212, 92, 60, 0.20);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.65);
+  --hdk-shadow-focus: 0 0 0 3px rgba(212, 92, 60, 0.35);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(212, 92, 60, 0.35);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(212, 92, 60, 0.20);
 } */
 
 /* [data-theme="kitsune-springs-b-dark"] {
@@ -1282,12 +1297,12 @@
   --color-bg-card: #2F2729;
   --color-bg-alt: #221D1F;
   --color-bg-overlay: rgba(237, 237, 237, 0.50);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.65);
-  --shadow-focus: 0 0 0 3px rgba(191, 102, 59, 0.35);
-  --shadow-focus-sm: 0 0 0 2px rgba(191, 102, 59, 0.35);
-  --shadow-focus-alt: 0 0 0 2px rgba(191, 102, 59, 0.20);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.65);
+  --hdk-shadow-focus: 0 0 0 3px rgba(191, 102, 59, 0.35);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(191, 102, 59, 0.35);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(191, 102, 59, 0.20);
 } */
 
 /* [data-theme="kitsune-springs-c-dark"] {
@@ -1317,12 +1332,12 @@
   --color-bg-card: #3A2B23;
   --color-bg-alt: #2A1F1A;
   --color-bg-overlay: rgba(237, 237, 237, 0.50);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.65);
-  --shadow-focus: 0 0 0 3px rgba(46, 202, 185, 0.35);
-  --shadow-focus-sm: 0 0 0 2px rgba(46, 202, 185, 0.35);
-  --shadow-focus-alt: 0 0 0 2px rgba(46, 202, 185, 0.20);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.50);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.65);
+  --hdk-shadow-focus: 0 0 0 3px rgba(46, 202, 185, 0.35);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(46, 202, 185, 0.35);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(46, 202, 185, 0.20);
 } */
 
 [data-theme='izakaya-dark'] {
@@ -1377,12 +1392,12 @@
   --color-bg-hover: #3a3a47;
   --color-bg-overlay: rgba(232, 230, 232, 0.45);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.55);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.7);
-  --shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.32);
-  --shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.32);
-  --shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.18);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.55);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.32);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.32);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.18);
 }
 
 /* ===== LIGHT CUSTOM THEME (User Submitted) ===== */
@@ -1438,10 +1453,10 @@
   --color-bg-hover: #f1f5f9;
   --color-bg-overlay: rgba(15, 23, 42, 0.5);
 
-  --shadow-sm: 0 1px 2px rgba(153, 185, 255, 0.08);
-  --shadow-md: 0 2px 4px rgba(153, 185, 255, 0.12);
-  --shadow-modal: 0 8px 24px rgba(153, 185, 255, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(153, 185, 255, 0.25);
-  --shadow-focus-sm: 0 0 0 2px rgba(153, 185, 255, 0.25);
-  --shadow-focus-alt: 0 0 0 2px rgba(153, 185, 255, 0.15);
+  --hdk-shadow-sm: 0 1px 2px rgba(153, 185, 255, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(153, 185, 255, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(153, 185, 255, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(153, 185, 255, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(153, 185, 255, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(153, 185, 255, 0.15);
 }

@@ -12,7 +12,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 .task-app__list--column {
@@ -20,9 +20,9 @@
 }
 
 .task-app__list--column .task-app__item {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--hdk-space-md);
   padding: 0; /* remove padding so action buttons reach top-to-bottom */
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
 }
 
 /* Individual task item */
@@ -30,9 +30,9 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--color-border-light);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--hdk-radius-lg);
   background: var(--color-bg-card);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--hdk-shadow-sm);
   cursor: grab;
   transition: box-shadow var(--transition-smooth);
   overflow: hidden;
@@ -40,7 +40,7 @@
 }
 
 .task-app__item:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--hdk-shadow-md);
 }
 
 .task-app__item:active {
@@ -51,7 +51,7 @@
 .task-app__item-content {
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-lg);
+  padding: var(--hdk-space-lg);
   flex: 1;
   min-width: 0;
 }
@@ -59,13 +59,13 @@
 .task-app__item-title-row {
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 .task-app__item-title {
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-normal);
-  margin: 0 0 var(--spacing-xs) 0;
+  margin: 0 0 var(--hdk-space-xs) 0;
   /* Clamp to two lines and then ellipsis */
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -84,21 +84,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 .task-app__item-age {
-  font-size: var(--font-size-xs);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-tertiary);
   margin-left: auto;
-  padding-left: var(--spacing-md);
+  padding-left: var(--hdk-space-md);
   flex-shrink: 0;
 }
 
 .task-app__item-tag {
-  font-size: var(--font-size-xs);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-secondary);
-  margin-top: var(--spacing-xs);
+  margin-top: var(--hdk-space-xs);
   /* Do not allow tags to wrap; truncate with ellipsis if they exceed available space */
   white-space: nowrap;
   overflow: hidden;

@@ -19,47 +19,47 @@
 /* Modal Card - The actual dialog content container */
 .modal-card {
   background-color: var(--color-bg-card);
-  padding: var(--spacing-3xl);
-  border-radius: var(--border-radius-md);
+  padding: var(--hdk-space-3xl);
+  border-radius: var(--hdk-radius);
   max-width: 400px;
-  box-shadow: var(--shadow-modal);
+  box-shadow: var(--hdk-shadow-modal);
   color: var(--color-text);
 }
 
 .modal-card h3 {
   margin-top: 0;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--hdk-space-lg);
   color: var(--color-text);
-  font-size: var(--font-size-lg);
+  font-size: var(--hdk-text-lg);
   font-weight: var(--font-weight-semibold);
 }
 
 .modal-card p {
-  margin: var(--spacing-lg) 0;
+  margin: var(--hdk-space-lg) 0;
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
 }
 
 .modal-hint {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   margin-top: 0;
 }
 
 .modal-error {
   color: var(--error-color, var(--color-danger, #d32f2f));
-  font-size: var(--font-size-sm);
-  margin-top: var(--spacing-md);
+  font-size: var(--hdk-text-sm);
+  margin-top: var(--hdk-space-md);
 }
 
 /* Modal Input */
 .modal-input {
   width: 100%;
-  padding: var(--spacing-md) var(--spacing-lg);
-  font-size: var(--font-size-base);
+  padding: var(--hdk-space-md) var(--hdk-space-lg);
+  font-size: var(--hdk-text-base);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--spacing-xl);
+  border-radius: var(--hdk-radius-sm);
+  margin-bottom: var(--hdk-space-xl);
   background-color: var(--color-bg-card);
   color: var(--color-text);
   font-family: var(--font-family);
@@ -69,7 +69,7 @@
 .modal-input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus-sm);
+  box-shadow: var(--hdk-shadow-focus-sm);
 }
 
 .modal-input::placeholder {
@@ -79,19 +79,19 @@
 /* Modal Button Container */
 .modal-actions {
   display: flex;
-  gap: var(--spacing-lg);
+  gap: var(--hdk-space-lg);
   justify-content: flex-end;
 }
 
 /* Modal Buttons */
 .modal-button {
-  padding: var(--spacing-md) var(--spacing-xl);
+  padding: var(--hdk-space-md) var(--hdk-space-xl);
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   background-color: var(--color-bg-card);
   color: var(--color-text);
-  font-size: var(--font-size-base);
+  font-size: var(--hdk-text-base);
   font-family: var(--font-family);
   font-weight: var(--font-weight-normal);
   transition: all var(--transition-fast);
@@ -130,25 +130,25 @@
 
 /* Modal Section - for grouping content */
 .modal-section {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--hdk-space-xl);
 }
 
 .modal-label {
   display: block;
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--hdk-space-md);
 }
 
 /* Modal Tags List - display existing tags */
 .modal-tags-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  gap: var(--hdk-space-sm);
+  padding: var(--hdk-space-lg);
   background-color: var(--color-bg);
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   border: 1px solid var(--color-border-light);
   max-height: 120px;
   overflow-y: auto;
@@ -157,11 +157,11 @@
 .modal-tag-chip {
   display: inline-flex;
   align-items: center;
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
   background-color: var(--color-primary-light);
   color: var(--color-primary);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-xs);
+  border-radius: var(--hdk-radius-sm);
+  font-size: var(--hdk-text-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
 }
@@ -170,28 +170,28 @@
 .edit-tag-modal {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
-  margin-bottom: var(--spacing-xl);
+  gap: var(--hdk-space-xl);
+  margin-bottom: var(--hdk-space-xl);
 }
 
 .edit-tag-field {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--hdk-space-sm);
 }
 
 .edit-tag-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
 .edit-tag-input {
   width: 100%;
-  padding: var(--spacing-md);
+  padding: var(--hdk-space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
+  border-radius: var(--hdk-radius-sm);
+  font-size: var(--hdk-text-base);
   background-color: var(--color-bg-input);
   color: var(--color-text);
   transition: border-color var(--transition-fast);
@@ -203,32 +203,32 @@
 }
 
 .edit-tag-hint {
-  font-size: var(--font-size-xs);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-secondary);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--hdk-space-xs);
 }
 
 .edit-tag-pills {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--hdk-space-sm);
 }
 
 .edit-tag-pills-container {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  gap: var(--hdk-space-sm);
 }
 
 .edit-tag-pill {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--hdk-space-sm) var(--hdk-space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   background-color: var(--color-bg-hover);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
 }

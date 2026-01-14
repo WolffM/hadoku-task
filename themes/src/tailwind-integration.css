@@ -1,0 +1,49 @@
+/**
+ * Tailwind v4 Integration for @wolffm/themes
+ *
+ * This file maps the namespaced theme variables (--hdk-*) to Tailwind v4's
+ * internal CSS variables, allowing Tailwind utilities to use your theme values.
+ *
+ * Usage:
+ * 1. Import this file AFTER importing tailwindcss in your main CSS:
+ *
+ *    @import "tailwindcss";
+ *    @import "@wolffm/themes/tailwind-integration.css";
+ *    @import "@wolffm/themes/style.css";
+ *
+ * 2. Now Tailwind utilities will use your theme values:
+ *    - `rounded-md` uses --hdk-radius
+ *    - `shadow-sm` uses --hdk-shadow-sm
+ *    - `text-sm` uses --hdk-text-sm
+ *
+ * This is OPTIONAL. Your theme variables work independently without this file.
+ * Only import this if you want Tailwind utilities to match your theme.
+ */
+
+@theme {
+  /* Border Radius - maps to rounded-* utilities */
+  --radius-sm: var(--hdk-radius-sm);
+  --radius: var(--hdk-radius);
+  --radius-lg: var(--hdk-radius-lg);
+
+  /* Shadows - maps to shadow-* utilities */
+  --shadow-sm: var(--hdk-shadow-sm);
+  --shadow: var(--hdk-shadow-md);
+  --shadow-md: var(--hdk-shadow-md);
+  --shadow-lg: var(--hdk-shadow-lg);
+
+  /* Font Sizes - maps to text-* utilities */
+  --text-xs: var(--hdk-text-xs);
+  --text-sm: var(--hdk-text-sm);
+  --text-base: var(--hdk-text-base);
+  --text-lg: var(--hdk-text-lg);
+
+  /*
+   * NOTE: We intentionally do NOT map --spacing-* variables.
+   * Tailwind's spacing scale powers both small values (padding, gap)
+   * and large values (max-w-md = 28rem). Overriding would break
+   * container width utilities.
+   *
+   * Use var(--hdk-space-*) directly in your CSS for theme spacing.
+   */
+}

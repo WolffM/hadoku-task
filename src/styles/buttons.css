@@ -23,10 +23,10 @@
 .task-app__info-btn {
   background: none;
   border: none;
-  padding: var(--spacing-sm);
+  padding: var(--hdk-space-sm);
   cursor: pointer;
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
+  border-radius: var(--hdk-radius-sm);
+  font-size: var(--hdk-text-base);
   color: var(--color-text);
   opacity: 0.7;
   transition:
@@ -43,7 +43,7 @@
 .task-app__action-btn {
   border: none;
   cursor: pointer;
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-bold);
   transition:
     opacity var(--transition-smooth),
@@ -69,8 +69,8 @@
 }
 
 .task-app__action-btn:last-child {
-  border-top-right-radius: var(--border-radius-lg);
-  border-bottom-right-radius: var(--border-radius-lg);
+  border-top-right-radius: var(--hdk-radius-lg);
+  border-bottom-right-radius: var(--hdk-radius-lg);
 }
 
 .task-app__action-btn:disabled {
@@ -121,9 +121,9 @@
 .task-app__sort-btn {
   background: none;
   border: none;
-  padding: var(--spacing-xs);
+  padding: var(--hdk-space-xs);
   cursor: pointer;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   font-size: 22px;
   color: var(--color-primary);
   transition: background-color var(--transition-smooth);
@@ -151,9 +151,9 @@
 .task-app__clear-tag-btn {
   background: none;
   border: none;
-  padding: var(--spacing-xs);
+  padding: var(--hdk-space-xs);
   cursor: pointer;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   font-size: 20px;
   color: var(--color-danger);
   opacity: 0.7;
@@ -184,9 +184,9 @@
   background: var(--color-danger-dark);
   color: var(--color-danger-text);
   border: none;
-  padding: 6px var(--spacing-lg);
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-xs);
+  padding: 6px var(--hdk-space-lg);
+  border-radius: var(--hdk-radius);
+  font-size: var(--hdk-text-xs);
   cursor: pointer;
   transition: background-color var(--transition-smooth);
 }

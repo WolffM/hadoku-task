@@ -5,16 +5,16 @@
 /* View Switcher */
 .view-switcher {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  gap: var(--hdk-space-sm);
+  margin-bottom: var(--hdk-space-lg);
 }
 
 .view-switcher__btn {
   background: transparent;
   border: none;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--hdk-space-sm) var(--hdk-space-md);
   border-radius: 999px;
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   color: var(--color-text-muted);
   cursor: pointer;
   transition:
@@ -30,7 +30,7 @@
 .view-switcher__btn--active {
   background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: var(--color-bg-card);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--hdk-shadow-sm);
 }
 
 .view-switcher__btn--active:hover {
@@ -42,27 +42,27 @@
 .calendar-day-view {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 /* Calendar Header */
 .calendar-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--hdk-space-lg);
 }
 
 .calendar-header__nav {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--hdk-space-xs);
 }
 
 .calendar-nav-btn {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-lg);
+  border-radius: var(--hdk-radius-sm);
+  padding: var(--hdk-space-sm) var(--hdk-space-md);
+  font-size: var(--hdk-text-lg);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -78,11 +78,11 @@
 .calendar-header__date {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 .calendar-date-label {
-  font-size: var(--font-size-lg);
+  font-size: var(--hdk-text-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
@@ -94,9 +94,9 @@
 .calendar-today-btn {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: var(--font-size-sm);
+  border-radius: var(--hdk-radius-sm);
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  font-size: var(--hdk-text-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -112,7 +112,7 @@
 .calendar-grid {
   position: relative;
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--hdk-radius);
   background: var(--color-bg-card);
   overflow: hidden;
 }
@@ -130,8 +130,8 @@
 .calendar-time-label {
   width: 70px;
   flex-shrink: 0;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-muted);
   text-align: right;
   border-right: 1px solid var(--color-border-light);
@@ -178,7 +178,7 @@
   right: 4px;
   background: var(--color-primary-bg);
   border-left: 3px solid var(--color-primary);
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   cursor: grab;
   pointer-events: auto;
   overflow: hidden;
@@ -188,7 +188,7 @@
 }
 
 .calendar-task-block:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--hdk-shadow-md);
 }
 
 .calendar-task-block:active {
@@ -201,13 +201,13 @@
 
 .calendar-task-block__content {
   flex: 1;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
   overflow: hidden;
   min-height: 0;
 }
 
 .calendar-task-block__title {
-  font-size: var(--font-size-sm);
+  font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   white-space: nowrap;
@@ -217,14 +217,14 @@
 
 .calendar-task-block__meta {
   display: flex;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  gap: var(--hdk-space-sm);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
 
 .calendar-task-block__tags {
-  font-size: var(--font-size-xs);
+  font-size: var(--hdk-text-xs);
   color: var(--color-primary);
   margin-top: 2px;
   white-space: nowrap;
@@ -249,10 +249,10 @@
 .calendar-task-block__btn {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--hdk-radius-sm);
   width: 20px;
   height: 20px;
-  font-size: var(--font-size-xs);
+  font-size: var(--hdk-text-xs);
   color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
@@ -340,20 +340,20 @@
 
 .calendar-create-form {
   background: var(--color-bg-card);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-modal);
+  border-radius: var(--hdk-radius);
+  padding: var(--hdk-space-lg);
+  box-shadow: var(--hdk-shadow-modal);
   min-width: 300px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--hdk-space-md);
 }
 
 .calendar-create-input {
-  padding: var(--spacing-md);
+  padding: var(--hdk-space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
+  border-radius: var(--hdk-radius-sm);
+  font-size: var(--hdk-text-base);
   background: var(--color-bg-card);
   color: var(--color-text);
 }
@@ -361,20 +361,20 @@
 .calendar-create-input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus);
+  box-shadow: var(--hdk-shadow-focus);
 }
 
 .calendar-create-actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--hdk-space-sm);
   justify-content: flex-end;
 }
 
 .calendar-create-btn {
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: var(--hdk-space-sm) var(--hdk-space-lg);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
+  border-radius: var(--hdk-radius-sm);
+  font-size: var(--hdk-text-sm);
   cursor: pointer;
   background: transparent;
   color: var(--color-text);

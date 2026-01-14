@@ -64,9 +64,9 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 
 ## CSS Variables
 
-Each theme defines ~50 variables:
+Each theme defines ~50 variables. Variables are **namespaced with `--hdk-*`** prefix for Tailwind v4 compatibility.
 
-### Colors
+### Colors (no prefix needed)
 
 - `--color-primary` (+ dark, light, bg, hover, text variants)
 - `--color-success` (+ dark, text, bg variants)
@@ -81,18 +81,18 @@ Each theme defines ~50 variables:
 ### Typography
 
 - `--font-family`
-- `--font-size-*` (xs, sm, md, base, lg)
+- `--hdk-text-*` (xs, sm, md, base, lg) - font sizes
 - `--font-weight-*` (normal, semibold, bold)
 - `--line-height-*` (normal, relaxed)
 
 ### Spacing
 
-- `--spacing-*` (xs, sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl)
+- `--hdk-space-*` (xs, sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl)
 
 ### Layout
 
-- `--border-radius` (+ sm, lg variants)
-- `--shadow-*` (sm, md, modal, focus, focus-sm, focus-alt)
+- `--hdk-radius` (+ sm, lg variants) - border radius
+- `--hdk-shadow-*` (sm, md, lg, focus, focus-sm, focus-alt)
 
 ### Transitions
 
@@ -105,17 +105,81 @@ Each theme defines ~50 variables:
 .my-button {
   background: var(--color-primary);
   color: var(--color-text);
-  padding: var(--spacing-md) var(--spacing-xl);
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-base);
-  box-shadow: var(--shadow-sm);
+  padding: var(--hdk-space-md) var(--hdk-space-xl);
+  border-radius: var(--hdk-radius);
+  font-size: var(--hdk-text-base);
+  box-shadow: var(--hdk-shadow-sm);
   transition: var(--transition-fast);
 }
 
 .my-button:hover {
   background: var(--color-primary-dark);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--hdk-shadow-md);
 }
+```
+
+## Tailwind v4 Compatibility
+
+This package uses namespaced CSS variables (`--hdk-*`) to avoid collisions with Tailwind v4's internal variables.
+
+### Why Namespacing?
+
+Tailwind v4 uses CSS custom properties internally:
+
+- `--spacing-*` powers `max-w-md`, `p-4`, `gap-*`, etc.
+- `--radius-*` powers `rounded-md`, `rounded-lg`, etc.
+- `--font-size-*` powers `text-sm`, `text-base`, etc.
+- `--shadow-*` powers `shadow-sm`, `shadow-md`, etc.
+
+Without namespacing, a theme variable like `--spacing-md: 8px` would break `max-w-md` (changing it from 28rem to 8px).
+
+### Variable Mapping
+
+| Old Name (v1.x)   | New Name (v2.x)   |
+| ----------------- | ----------------- |
+| `--spacing-md`    | `--hdk-space-md`  |
+| `--font-size-sm`  | `--hdk-text-sm`   |
+| `--border-radius` | `--hdk-radius`    |
+| `--shadow-sm`     | `--hdk-shadow-sm` |
+| `--shadow-modal`  | `--hdk-shadow-lg` |
+
+### Tailwind Integration (Optional)
+
+If you want Tailwind utilities like `rounded-md` and `shadow-sm` to use your theme values, create a CSS file:
+
+```css
+/* tailwind-theme.css */
+@import 'tailwindcss';
+
+@theme {
+  /* Map theme variables to Tailwind utilities */
+  --radius-sm: var(--hdk-radius-sm);
+  --radius: var(--hdk-radius);
+  --radius-lg: var(--hdk-radius-lg);
+
+  --shadow-sm: var(--hdk-shadow-sm);
+  --shadow: var(--hdk-shadow-md);
+  --shadow-lg: var(--hdk-shadow-lg);
+
+  --text-xs: var(--hdk-text-xs);
+  --text-sm: var(--hdk-text-sm);
+  --text-base: var(--hdk-text-base);
+  --text-lg: var(--hdk-text-lg);
+}
+```
+
+This is opt-in - your theme variables work independently of Tailwind.
+
+### Migration from v1.x
+
+Search and replace in your CSS:
+
+```
+var(--spacing-       →  var(--hdk-space-
+var(--font-size-     →  var(--hdk-text-
+var(--border-radius  →  var(--hdk-radius
+var(--shadow-        →  var(--hdk-shadow-
+var(--shadow-modal)  →  var(--hdk-shadow-lg)
 ```
 
 ## React Integration
