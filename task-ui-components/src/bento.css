@@ -199,6 +199,35 @@
   }
 }
 
+/* ===== CARD GRADIENT OFFSET ===== */
+/* Allows per-card hue variation while staying harmonious with theme */
+.card-gradient-offset {
+  --local-hue: calc(var(--accent-h) + var(--card-hue-offset, 0));
+  --base-l: calc(var(--accent-l) + var(--gradient-l-adjust, 0));
+  --gradient-start: oklch(
+    calc(var(--base-l) + 0.05) calc(var(--accent-c) * var(--gradient-c-scale, 0.9))
+      calc(var(--local-hue) - 15)
+  );
+  --gradient-end: oklch(
+    calc(var(--base-l) - 0.05) calc(var(--accent-c) * var(--gradient-c-scale, 0.9))
+      calc(var(--local-hue) + 15)
+  );
+  --highlight: oklch(calc(var(--base-l) + 0.15) calc(var(--accent-c) * 0.4) var(--local-hue));
+}
+
+/* Card text utility classes */
+.card-text-primary {
+  color: var(--card-text-primary);
+}
+
+.card-text-secondary {
+  color: var(--card-text-secondary);
+}
+
+.card-text-muted {
+  color: var(--card-text-muted);
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .bento-card,
