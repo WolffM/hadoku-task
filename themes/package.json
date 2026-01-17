@@ -27,7 +27,8 @@
   },
   "scripts": {
     "build": "tsc && node ../scripts/fix-imports.cjs dist",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "dev": "node dev/save-server.js"
   },
   "keywords": [
     "themes",

@@ -4,10 +4,9 @@
  */
 
 import React from 'react'
-import { ContextMenu } from '../ContextMenu'
+import { ContextMenu, logger } from '@wolffm/task-ui-components'
 import type { BoardsFile } from '../../domain/types'
 import { formatError } from '../../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
 
 export interface BoardContextMenuProps {
   isOpen: boolean
@@ -53,6 +52,7 @@ export function BoardContextMenu({
       isOpen={isOpen}
       x={x}
       y={y}
+      className="board-context-menu"
       items={[
         {
           label: '🗑️ Delete Board',

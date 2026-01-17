@@ -41,3 +41,6 @@ src/**/*.d.ts.map
 
 # Note: task/data is intentionally committed for personal backup/sync
 package-lock.json
+
+# Development-only tools
+themes/dev/save-server.js

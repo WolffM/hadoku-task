@@ -931,6 +931,215 @@
       background: var(--color-danger-light);
       color: var(--color-danger);
     }
+
+    /* ===== METALLIC SURFACE PREVIEW ===== */
+    .metallic-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .metallic-surface {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--hdk-radius-lg, 16px);
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      padding: 24px;
+      min-height: 120px;
+    }
+
+    .metallic-surface--noise::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .metallic-surface--highlight::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 50% 50% at 20% 20%, var(--highlight) 0%, transparent 70%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .metallic-surface .card-title {
+      color: var(--card-text-primary);
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metallic-surface .card-text {
+      color: var(--card-text-secondary);
+      font-size: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metallic-surface .card-muted {
+      color: var(--card-text-muted);
+      font-size: 12px;
+      margin-top: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metallic-info {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+      font-size: 12px;
+    }
+
+    .metallic-info code {
+      background: var(--color-bg-hover);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .metallic-note {
+      background: var(--color-warning-bg);
+      border: 1px solid var(--color-warning);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--color-text);
+    }
+
+    /* ===== COMPACT VARIABLES GRID ===== */
+    .compact-vars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .compact-var {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 10px;
+    }
+
+    .compact-var:hover {
+      border-color: var(--color-primary);
+      background: var(--color-bg-hover);
+    }
+
+    .compact-var.modified {
+      border-color: var(--color-warning);
+      background: var(--color-warning-bg);
+    }
+
+    .compact-var .color-box {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 1px solid var(--color-border-light);
+      flex-shrink: 0;
+    }
+
+    .compact-var .var-name {
+      font-family: monospace;
+      color: var(--color-text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .compact-vars-section {
+      margin-bottom: 16px;
+    }
+
+    .compact-vars-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-muted);
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compact-vars-section h4 .count {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      font-weight: normal;
+    }
+
+    /* Theme preview hero card */
+    .theme-preview-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .theme-preview-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-card-large {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--hdk-radius-lg, 16px);
+      padding: 24px;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-card-large .theme-name {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .preview-card-large .theme-desc {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: auto;
+    }
+
+    .preview-card-large .theme-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 16px;
+      width: fit-content;
+    }
+
+    .preview-buttons-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -948,6 +1157,49 @@
     <main class="showcase">
       <h1>Theme Color Editor</h1>
       <p class="showcase-subtitle">Click any color swatch or element to edit. Changes preview instantly.</p>
+
+      <!-- Theme Preview (Hero) -->
+      <section class="section" id="themePreviewSection">
+        <h3 class="section-title">Theme Preview <span class="count" id="themeNameBadge">light</span></h3>
+        <div class="theme-preview-hero">
+          <!-- Primary card with metallic effect (when available) -->
+          <div class="preview-card-large metallic-surface metallic-surface--noise metallic-surface--highlight" id="previewCardPrimary">
+            <div class="theme-name card-text-primary" id="previewThemeName">Light Theme</div>
+            <div class="theme-desc card-text-secondary">Your current theme with all customizations applied</div>
+            <div class="theme-badge" style="background: var(--color-success-bg); color: var(--color-success);">
+              <span>●</span> Active
+            </div>
+          </div>
+          <!-- Secondary preview card showing UI elements -->
+          <div class="preview-card-large" style="background: var(--color-bg-card); border: 1px solid var(--color-border);">
+            <div class="theme-name" style="color: var(--color-text);">Component Preview</div>
+            <div class="theme-desc" style="color: var(--color-text-secondary);">Buttons, badges, and interactive elements</div>
+            <div class="preview-buttons-row">
+              <button class="example-btn primary" style="font-size: 12px; padding: 6px 12px;">Primary</button>
+              <button class="example-btn success" style="font-size: 12px; padding: 6px 12px;">Success</button>
+              <button class="example-btn warning" style="font-size: 12px; padding: 6px 12px;">Warning</button>
+              <button class="example-btn danger" style="font-size: 12px; padding: 6px 12px;">Danger</button>
+              <button class="example-btn neutral" style="font-size: 12px; padding: 6px 12px;">Neutral</button>
+            </div>
+            <div class="preview-buttons-row" style="margin-top: 8px;">
+              <span class="badge success">Completed</span>
+              <span class="badge warning">Pending</span>
+              <span class="badge danger">Error</span>
+              <span class="badge muted">Archived</span>
+            </div>
+          </div>
+        </div>
+        <div class="metallic-note" id="metallicNote" style="display: none;">
+          ⚠️ Metallic effects are only enabled for <strong>light</strong> and <strong>dark</strong> themes.
+          This theme uses flat colors instead.
+        </div>
+      </section>
+
+      <!-- All Variables (Compact Grid) -->
+      <section class="section">
+        <h3 class="section-title">All Variables <span class="count" id="totalVarsCount">37 vars</span></h3>
+        <div id="compactVarsContainer"></div>
+      </section>
 
       <!-- Primary Colors -->
       <section class="section">
@@ -1178,10 +1430,12 @@
       </div>
 
       <div class="panel-actions" style="border-top: none; padding-top: 0;">
+        <button class="action-btn primary" id="saveToFileBtn" onclick="saveToFile()" style="display: none; background: #22c55e; color: white;">💾 Save to File</button>
         <button class="action-btn primary" onclick="exportCSS()">Export All Changes as CSS</button>
         <button class="action-btn primary" onclick="openSubmitModal()" style="background: var(--color-success); color: var(--color-success-text);">Submit Theme PR</button>
         <button class="action-btn danger" onclick="resetAll()">Reset All Changes</button>
       </div>
+      <div id="serverStatus" style="font-size: 11px; margin-top: 12px; text-align: center;"></div>
     </aside>
   </div>
 
@@ -1309,8 +1563,74 @@
     function init() {
       renderThemeList();
       renderSwatches();
+      renderCompactVars();
       setupClickHandlers();
       saveOriginalValues();
+      updateThemePreview();
+    }
+
+    // Render compact all-variables grid
+    function renderCompactVars() {
+      const container = document.getElementById('compactVarsContainer');
+      const categories = [
+        { name: 'Primary', vars: COLOR_VARS.primary },
+        { name: 'Success', vars: COLOR_VARS.success },
+        { name: 'Warning', vars: COLOR_VARS.warning },
+        { name: 'Danger', vars: COLOR_VARS.danger },
+        { name: 'Neutral', vars: COLOR_VARS.neutral },
+        { name: 'Text', vars: COLOR_VARS.text },
+        { name: 'Border', vars: COLOR_VARS.border },
+        { name: 'Background', vars: COLOR_VARS.bg }
+      ];
+
+      const totalVars = categories.reduce((sum, c) => sum + c.vars.length, 0);
+      document.getElementById('totalVarsCount').textContent = `${totalVars} vars`;
+
+      container.innerHTML = categories.map(cat => `
+        <div class="compact-vars-section">
+          <h4>${cat.name} <span class="count">(${cat.vars.length})</span></h4>
+          <div class="compact-vars-grid">
+            ${cat.vars.map(varName => {
+              const shortName = varName.replace('--color-', '').replace('--hdk-', '');
+              return `
+                <div class="compact-var" data-var="${varName}" onclick="openPanel('${varName}')">
+                  <div class="color-box" style="background: var(${varName});"></div>
+                  <span class="var-name">${shortName}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Update the theme preview section
+    function updateThemePreview() {
+      const isMetallicTheme = currentTheme === 'light' || currentTheme === 'dark';
+      const note = document.getElementById('metallicNote');
+      const badge = document.getElementById('themeNameBadge');
+      const themeName = document.getElementById('previewThemeName');
+      const primaryCard = document.getElementById('previewCardPrimary');
+
+      // Update badge and title
+      badge.textContent = currentTheme;
+
+      // Format theme name nicely
+      const formattedName = currentTheme
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ') + ' Theme';
+      themeName.textContent = formattedName;
+
+      // Show/hide metallic note
+      note.style.display = isMetallicTheme ? 'none' : 'block';
+
+      // Update primary card styling for non-metallic themes
+      if (!isMetallicTheme) {
+        primaryCard.style.background = 'var(--color-primary)';
+      } else {
+        primaryCard.style.background = '';
+      }
     }
 
     function renderThemeList() {
@@ -1389,7 +1709,9 @@
       // Update UI
       renderThemeList();
       renderSwatches();
+      renderCompactVars();
       updateModCount();
+      updateThemePreview();
 
       if (currentVar) {
         updatePanelForVar(currentVar);
@@ -1463,13 +1785,23 @@
       const el = document.getElementById(`val-${varName}`);
       if (el) el.textContent = value;
 
-      const swatch = document.querySelector(`[data-var="${varName}"]`);
+      const swatch = document.querySelector(`.swatch[data-var="${varName}"]`);
       if (swatch) {
         swatch.classList.toggle('modified', !!modifications[varName]);
         // Update the swatch color preview
         const colorDiv = swatch.querySelector('.swatch-color');
         if (colorDiv) {
           colorDiv.style.background = value;
+        }
+      }
+
+      // Also update compact vars grid
+      const compactVar = document.querySelector(`.compact-var[data-var="${varName}"]`);
+      if (compactVar) {
+        compactVar.classList.toggle('modified', !!modifications[varName]);
+        const colorBox = compactVar.querySelector('.color-box');
+        if (colorBox) {
+          colorBox.style.background = value;
         }
       }
     }
@@ -1490,6 +1822,7 @@
         `).join('');
       }
     }
+
 
     // ===== Panel Management =====
     function openPanel(varName) {
@@ -1791,6 +2124,79 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2000);
     }
+
+    // ===== Local Save Server =====
+    const LOCAL_SERVER_URL = 'http://localhost:3456';
+    let localServerAvailable = false;
+
+    async function checkLocalServer() {
+      try {
+        const response = await fetch(`${LOCAL_SERVER_URL}/health`, {
+          method: 'GET',
+          mode: 'cors'
+        });
+        localServerAvailable = response.ok;
+      } catch {
+        localServerAvailable = false;
+      }
+      updateSaveToFileButton();
+    }
+
+    function updateSaveToFileButton() {
+      const btn = document.getElementById('saveToFileBtn');
+      if (btn) {
+        btn.style.display = localServerAvailable ? 'block' : 'none';
+      }
+      // Also update the server status indicator
+      const indicator = document.getElementById('serverStatus');
+      if (indicator) {
+        indicator.style.display = 'block';
+        indicator.innerHTML = localServerAvailable
+          ? '<span style="color: #22c55e;">● Local server connected</span>'
+          : '<span style="color: #888;">○ Local server offline - <code>pnpm --filter @wolffm/themes dev</code></span>';
+      }
+    }
+
+    async function saveToFile() {
+      if (!localServerAvailable) {
+        showToast('Local server not running. Start with: pnpm --filter @wolffm/themes dev');
+        return;
+      }
+
+      const count = Object.keys(modifications).length;
+      if (count === 0) {
+        showToast('No modifications to save');
+        return;
+      }
+
+      try {
+        const css = generateThemeCSS(currentTheme);
+
+        const response = await fetch(`${LOCAL_SERVER_URL}/save-theme`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            themeName: currentTheme,
+            css: css,
+            mode: 'update'
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to save');
+        }
+
+        showToast(`Saved ${count} changes to themes/src/style.css`);
+      } catch (error) {
+        showToast(`Error: ${error.message}`);
+      }
+    }
+
+    // Check server availability on load and periodically
+    checkLocalServer();
+    setInterval(checkLocalServer, 5000);
 
     // ===== Submit Theme Functions =====
     // TODO: Update this URL to your deployed Cloudflare Worker

@@ -208,6 +208,22 @@ export function SettingsModal({
         <label className="settings-option">
           <input
             type="checkbox"
+            checked={preferences.simpleMode || false}
+            onChange={e => {
+              onSavePreferences({ simpleMode: e.target.checked })
+            }}
+          />
+          <span className="settings-label">
+            <strong>Simple Mode</strong>
+            <span className="settings-description">
+              Use flat colors instead of metallic gradients
+            </span>
+          </span>
+        </label>
+
+        <label className="settings-option">
+          <input
+            type="checkbox"
             checked={!showCompleteButton}
             onChange={e => {
               onSavePreferences({ showCompleteButton: !e.target.checked })

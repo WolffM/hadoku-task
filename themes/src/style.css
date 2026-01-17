@@ -29,6 +29,7 @@
 /* ===== METALLIC GRADIENT SYSTEM ===== */
 /* Derived variables that auto-calculate from per-theme OKLCH primitives */
 /* These create the sleek metallic gradient effects */
+/* NOTE: Metallic effect is currently only enabled for 'light' and 'dark' themes */
 :root {
   /* Metallic Gradient Colors - derived from --accent-l/c/h */
   --gradient-start: oklch(
@@ -56,6 +57,17 @@
   /* Per-theme lightness/chroma modifiers for metallic gradients */
   --gradient-l-adjust: 0;
   --gradient-c-scale: 0.9;
+}
+
+/* Disable metallic effect for themes other than light/dark */
+/* These themes will get different effects in future updates */
+[data-theme]:not([data-theme='light']):not([data-theme='dark']) {
+  --gradient-start: var(--color-primary);
+  --gradient-end: var(--color-primary);
+  --highlight: transparent;
+  --glow: transparent;
+  --glow-primary: transparent;
+  --glow-secondary: transparent;
 }
 
 /* ===== LIGHT THEME (Default) ===== */
@@ -244,11 +256,6 @@
 
 /* ===== STRAWBERRY LIGHT THEME ===== */
 [data-theme='strawberry-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.2;
-  --accent-h: 355;
-
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff477a;
   --color-primary-light: #ffe0e9;
@@ -314,11 +321,6 @@
 
 /* ===== STRAWBERRY DARK THEME ===== */
 [data-theme='strawberry-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.2;
-  --accent-h: 355;
-
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff8fb3;
   --color-primary-light: #7c1d3b;
@@ -384,11 +386,6 @@
 
 /* ===== OCEAN LIGHT THEME ===== */
 [data-theme='ocean-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.72;
-  --accent-c: 0.14;
-  --accent-h: 195;
-
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
   --color-primary-light: #cffafe;
@@ -454,11 +451,6 @@
 
 /* ===== OCEAN DARK THEME ===== */
 [data-theme='ocean-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.72;
-  --accent-c: 0.14;
-  --accent-h: 195;
-
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
   --color-primary-light: #164e63;
@@ -524,11 +516,6 @@
 
 /* ===== CYBERPUNK LIGHT THEME ===== */
 [data-theme='cyberpunk-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.6;
-  --accent-c: 0.25;
-  --accent-h: 340;
-
   --color-primary: #ff006e;
   --color-primary-dark: #d90062;
   --color-primary-light: #ffe0ed;
@@ -594,11 +581,6 @@
 
 /* ===== CYBERPUNK DARK THEME ===== */
 [data-theme='cyberpunk-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.8;
-  --accent-c: 0.16;
-  --accent-h: 195;
-
   --color-primary: #22d3ee;
   --color-primary-dark: #06b6d4;
   --color-primary-light: #083344;
@@ -664,11 +646,6 @@
 
 /* ===== COFFEE LIGHT THEME ===== */
 [data-theme='coffee-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.6;
-  --accent-c: 0.18;
-  --accent-h: 35;
-
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
   --color-primary-light: #fed7aa;
@@ -734,11 +711,6 @@
 
 /* ===== COFFEE DARK THEME ===== */
 [data-theme='coffee-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.6;
-  --accent-c: 0.18;
-  --accent-h: 35;
-
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
   --color-primary-light: #431407;
@@ -804,11 +776,6 @@
 
 /* ===== LAVENDER LIGHT THEME ===== */
 [data-theme='lavender-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.15;
-  --accent-h: 300;
-
   --color-primary: #c084fc;
   --color-primary-dark: #a855f7;
   --color-primary-light: #f3e8ff;
@@ -874,11 +841,6 @@
 
 /* ===== LAVENDER DARK THEME ===== */
 [data-theme='lavender-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.15;
-  --accent-h: 300;
-
   --color-primary: #c084fc;
   --color-primary-dark: #d8b4fe;
   --color-primary-light: #581c87;
@@ -944,11 +906,6 @@
 
 /* ===== PINK LIGHT THEME ===== */
 [data-theme='pink-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.18;
-  --accent-h: 340;
-
   --color-primary: #ff69b4;
   --color-primary-dark: #ff1493;
   --color-primary-light: #ffc0cb;
@@ -1014,11 +971,6 @@
 
 /* ===== PINK DARK THEME ===== */
 [data-theme='pink-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.65;
-  --accent-c: 0.3;
-  --accent-h: 320;
-
   --color-primary: #ff10f0;
   --color-primary-dark: #ff69b4;
   --color-primary-light: #4a0e47;
@@ -1084,11 +1036,6 @@
 
 /* ===== NATURE LIGHT THEME ===== */
 [data-theme='nature-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.65;
-  --accent-c: 0.17;
-  --accent-h: 135;
-
   --color-primary: #6bbe4e;
   --color-primary-dark: #5aa942;
   --color-primary-light: #e8f5e3;
@@ -1154,11 +1101,6 @@
 
 /* ===== NATURE DARK THEME ===== */
 [data-theme='nature-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.65;
-  --accent-c: 0.17;
-  --accent-h: 135;
-
   --color-primary: #5faf4b;
   --color-primary-dark: #6bbe4e;
   --color-primary-light: #2d4a24;
@@ -1331,11 +1273,6 @@
 /* Izakaya Theme - Winner of Kitsune Theme Contest */
 
 [data-theme='izakaya-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.13;
-  --accent-h: 175;
-
   --color-primary: #41baae;
   --color-primary-dark: #369c92;
   --color-primary-light: #7ad5cc;
@@ -1505,11 +1442,6 @@
 } */
 
 [data-theme='izakaya-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.13;
-  --accent-h: 175;
-
   --color-primary: #41baae;
   --color-primary-dark: #2c877d;
   --color-primary-light: #74d3c7;
@@ -1575,11 +1507,6 @@
 
 /* ===== LIGHT CUSTOM THEME (User Submitted) ===== */
 [data-theme='light-custom'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.75;
-  --accent-c: 0.12;
-  --accent-h: 250;
-
   --color-primary: #99b9ff;
   --color-primary-dark: #4d84ff;
   --color-primary-light: hsla(231, 21%, 95%, 0.5);

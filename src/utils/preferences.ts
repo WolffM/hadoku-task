@@ -28,6 +28,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   updatedAt: new Date().toISOString(),
   experimentalThemes: false,
   alwaysVerticalLayout: false,
+  simpleMode: false,
   theme: getDefaultTheme(),
   showCompleteButton: true,
   showDeleteButton: true,

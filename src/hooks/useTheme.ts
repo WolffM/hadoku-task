@@ -144,6 +144,21 @@ export function useTheme(
     }
   }, [theme, containerRef, preferencesLoaded, isInitialThemeLoad])
 
+  // Apply simple mode attribute (disables metallic gradients for flat colors)
+  useEffect(() => {
+    if (preferences.simpleMode) {
+      document.documentElement.setAttribute('data-simple-mode', 'true')
+      if (containerRef.current) {
+        containerRef.current.setAttribute('data-simple-mode', 'true')
+      }
+    } else {
+      document.documentElement.removeAttribute('data-simple-mode')
+      if (containerRef.current) {
+        containerRef.current.removeAttribute('data-simple-mode')
+      }
+    }
+  }, [preferences.simpleMode, containerRef])
+
   // Auto-switch theme variant when system preference changes
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')

@@ -243,3 +243,41 @@
     left: 0;
   }
 }
+
+/* ===== SIMPLE MODE ===== */
+/* Disables metallic gradients and effects, using solid colors instead */
+
+[data-simple-mode='true'] .metallic-surface {
+  /* Override gradient with solid primary background color */
+  background: var(--color-primary);
+}
+
+[data-simple-mode='true'] .metallic-surface--noise::before {
+  /* Hide noise texture */
+  display: none;
+}
+
+[data-simple-mode='true'] .metallic-surface--highlight::after {
+  /* Hide highlight effect */
+  display: none;
+}
+
+[data-simple-mode='true'] .card-gradient-offset {
+  /* Override card gradient with solid color */
+  --gradient-start: var(--color-primary);
+  --gradient-end: var(--color-primary);
+  --highlight: transparent;
+}
+
+/* Also disable any glow effects in simple mode */
+[data-simple-mode='true'] {
+  --glow: transparent;
+  --glow-primary: transparent;
+  --glow-secondary: transparent;
+}
+
+/* Disable shimmer animation in simple mode */
+[data-simple-mode='true'] .shimmer-overlay::after {
+  animation: none;
+  opacity: 0;
+}

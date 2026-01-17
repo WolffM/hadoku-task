@@ -520,6 +520,8 @@
 .board-context-menu,
 .tag-context-menu {
   position: fixed;
+  left: var(--context-menu-x, 0);
+  top: var(--context-menu-y, 0);
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--hdk-radius);

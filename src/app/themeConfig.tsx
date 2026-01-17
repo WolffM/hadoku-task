@@ -28,8 +28,6 @@ export interface ThemeFamily {
   darkLabel: string
 }
 
-export type { ThemeFamily as ThemeFamilyGeneric }
-
 // Base theme families (always available)
 export const BASE_THEME_FAMILIES: ThemeFamily[] = [
   {
