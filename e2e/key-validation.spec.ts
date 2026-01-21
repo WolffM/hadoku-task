@@ -72,9 +72,9 @@ test.describe('Key Validation Flow', () => {
     // Mock the API endpoints BEFORE navigation
     await page.route('**/task/api/validate-key', async route => {
       const request = route.request()
-      const postData = request.postDataJSON()
+      const headers = request.headers()
 
-      if (postData?.key === 'test-valid-key') {
+      if (headers['x-user-key'] === 'test-valid-key') {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

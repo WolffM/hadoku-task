@@ -517,9 +517,9 @@ export function createApi(
         const response = await fetch('/task/api/validate-key', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ key })
+            'Content-Type': 'application/json',
+            'X-User-Key': key
+          }
         })
         const isValid = response.ok
         logger.info('[api] validateKey: Completed', { isValid })

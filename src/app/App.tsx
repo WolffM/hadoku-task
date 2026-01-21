@@ -451,8 +451,10 @@ export default function App(props: TaskAppProps = {}) {
             try {
               const response = await fetch('/task/api/validate-key', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-User-Key': key
+                }
               })
               return response.ok
             } catch {
