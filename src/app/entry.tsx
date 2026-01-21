@@ -31,18 +31,22 @@ interface TaskElement extends HTMLElement {
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   // Priority for userType and sessionId:
-  // 1. Props passed to mount() (for embedding scenarios)
-  // 2. localStorage (for session-based auth after key validation)
+  // 1. localStorage (for session-based auth after key validation - survives page reload)
+  // 2. Props passed to mount() (for embedding scenarios with explicit non-public auth)
   // 3. URL query parameters (fallback)
   // 4. Default values
+  //
+  // IMPORTANT: localStorage takes precedence because after key validation, the authenticated
+  // userType ('friend'/'admin') is stored in localStorage and must override the default
+  // 'public' that registry.json passes to mount().
   const urlParams = new URLSearchParams(window.location.search)
   const storedSessionId = getStoredSessionId()
   const storedUserType = getStoredUserType()
 
   const userType =
-    props.userType || storedUserType || (urlParams.get('userType') as UserType) || 'public'
+    storedUserType || props.userType || (urlParams.get('userType') as UserType) || 'public'
 
-  const sessionId = props.sessionId || storedSessionId || 'public-session'
+  const sessionId = storedSessionId || props.sessionId || 'public-session'
 
   const finalProps = { ...props, userType, sessionId }
   const root = createRoot(el)
