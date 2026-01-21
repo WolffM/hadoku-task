@@ -38,7 +38,7 @@ export function BoardButton({
 
   return (
     <button
-      className={`board-btn ${isActive ? 'board-btn--active' : ''} ${isDragOver ? 'board-btn--drag-over' : ''}`}
+      className={`pill-btn board-btn ${isActive ? 'pill-btn--active board-btn--active' : ''} ${isDragOver ? 'board-btn--drag-over' : ''}`}
       onClick={() => onSwitch(board.id)}
       onContextMenu={e => {
         e.preventDefault()

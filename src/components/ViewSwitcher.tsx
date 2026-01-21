@@ -16,14 +16,14 @@ export function ViewSwitcher({ currentView, onViewChange }: ViewSwitcherProps) {
   return (
     <div className="view-switcher">
       <button
-        className={`view-switcher__btn ${currentView === 'board' ? 'view-switcher__btn--active' : ''}`}
+        className={`pill-btn view-switcher__btn ${currentView === 'board' ? 'pill-btn--active view-switcher__btn--active' : ''}`}
         onClick={() => onViewChange('board')}
         title="Board view"
       >
         Board
       </button>
       <button
-        className={`view-switcher__btn ${currentView === 'calendar' ? 'view-switcher__btn--active' : ''}`}
+        className={`pill-btn view-switcher__btn ${currentView === 'calendar' ? 'pill-btn--active view-switcher__btn--active' : ''}`}
         onClick={() => onViewChange('calendar')}
         title="Calendar view"
       >

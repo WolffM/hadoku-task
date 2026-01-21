@@ -2,40 +2,11 @@
  * Calendar day view styles
  */
 
-/* View Switcher */
+/* View Switcher - uses shared .pill-btn from buttons.css */
 .view-switcher {
   display: flex;
   gap: var(--hdk-space-sm);
   margin-bottom: var(--hdk-space-lg);
-}
-
-.view-switcher__btn {
-  background: transparent;
-  border: none;
-  padding: var(--hdk-space-sm) var(--hdk-space-md);
-  border-radius: 999px;
-  font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.view-switcher__btn:hover {
-  background-color: var(--color-primary-hover);
-  color: var(--color-text);
-}
-
-.view-switcher__btn--active {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
-  box-shadow: var(--hdk-shadow-sm);
-}
-
-.view-switcher__btn--active:hover {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
 }
 
 /* Calendar Day View */

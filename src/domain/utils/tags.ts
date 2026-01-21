@@ -29,41 +29,36 @@ export function formatError(error: unknown): string {
 }
 
 /**
+ * Extract normalized tags from a tags string (e.g., "#friend #soon")
+ * Returns tags as space-separated string or undefined if no tags
+ */
+function extractTags(tagsText: string): string | undefined {
+  const normalizeTag = (tag: string) => tag.trim().replace(/\s+/g, '-')
+  const tags =
+    tagsText
+      .match(/#[^\s#]+/g)
+      ?.map(tag => normalizeTag(tag.slice(1)))
+      .filter(Boolean) || []
+  return tags.length ? tags.join(' ') : undefined
+}
+
+/**
  * Parse task input and extract title and tags
  */
 export function parseTaskInput(input: string): { title: string; tag?: string } {
   // Trim input
   input = input.trim()
 
-  // Normalize tag by converting spaces to hyphens
-  const normalizeTag = (tag: string) => tag.trim().replace(/\s+/g, '-')
-
   // Handle quoted tasks with tags: "New task" #friend #soon
   const quotedMatch = input.match(/^["']([^"']+)["']\s*(.*)$/)
   if (quotedMatch) {
-    const title = quotedMatch[1].trim()
-    const tagsText = quotedMatch[2]
-    // Match tags: # followed by non-whitespace characters
-    const tags =
-      tagsText
-        .match(/#[^\s#]+/g)
-        ?.map(tag => normalizeTag(tag.slice(1)))
-        .filter(Boolean) || []
-    return { title, tag: tags.length ? tags.join(' ') : undefined }
+    return { title: quotedMatch[1].trim(), tag: extractTags(quotedMatch[2]) }
   }
 
   // Handle unquoted tasks with tags: New task #friend #soon
   const tagMatch = input.match(/^(.+?)\s+(#.+)$/)
   if (tagMatch) {
-    const title = tagMatch[1].trim()
-    const tagsText = tagMatch[2]
-    // Match tags: # followed by non-whitespace characters
-    const tags =
-      tagsText
-        .match(/#[^\s#]+/g)
-        ?.map(tag => normalizeTag(tag.slice(1)))
-        .filter(Boolean) || []
-    return { title, tag: tags.length ? tags.join(' ') : undefined }
+    return { title: tagMatch[1].trim(), tag: extractTags(tagMatch[2]) }
   }
 
   // Plain task without tags - trim title

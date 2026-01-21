@@ -16,9 +16,6 @@ interface UseTasksProps {
   sessionId?: string
 }
 
-// Re-export SESSION_ID for backwards compatibility
-export { SESSION_ID }
-
 export function useTasks({ userType, sessionId }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())

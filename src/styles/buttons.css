@@ -2,6 +2,36 @@
  * Button styles - All button variants
  */
 
+/* Shared pill button - used by board buttons, filter buttons, view switcher */
+.pill-btn {
+  background: transparent;
+  border: none;
+  padding: var(--hdk-space-sm) var(--hdk-space-md);
+  border-radius: 999px;
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.pill-btn:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-text);
+}
+
+.pill-btn--active {
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--color-bg-card);
+  box-shadow: var(--hdk-shadow-sm);
+}
+
+.pill-btn--active:hover {
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--color-bg-card);
+}
+
 /* Component-specific sizes */
 .task-app-container {
   --size-action-btn-width: 32px;

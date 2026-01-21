@@ -7,7 +7,7 @@ import type { Task } from '../types'
 /**
  * Get the start of a day (midnight) for a given date
  */
-export function startOfDay(date: Date): Date {
+function startOfDay(date: Date): Date {
   const result = new Date(date)
   result.setHours(0, 0, 0, 0)
   return result
@@ -16,7 +16,7 @@ export function startOfDay(date: Date): Date {
 /**
  * Get the end of a day (23:59:59.999) for a given date
  */
-export function endOfDay(date: Date): Date {
+function endOfDay(date: Date): Date {
   const result = new Date(date)
   result.setHours(23, 59, 59, 999)
   return result
@@ -57,7 +57,7 @@ export function createTimeOnDay(date: Date, hours: number, minutes: number): str
 /**
  * Snap minutes to 15-minute increments
  */
-export function snapToGrid(minutes: number): number {
+function snapToGrid(minutes: number): number {
   return Math.round(minutes / 15) * 15
 }
 

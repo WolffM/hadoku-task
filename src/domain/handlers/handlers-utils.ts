@@ -42,7 +42,7 @@ export function findBoardOrThrow(
  * Update a board at specific index immutably
  * Creates a new BoardsFile with the updated board at the specified index
  */
-export function updateBoardAtIndex(
+function updateBoardAtIndex(
   boards: BoardsFile,
   boardIndex: number,
   updatedBoard: Board,
@@ -68,7 +68,7 @@ export function updateBoardAtIndex(
  * @param timestamp - ISO timestamp string
  * @returns Updated StatsFile
  */
-export function recordStatsEvent(
+function recordStatsEvent(
   stats: StatsFile,
   task: Task,
   eventType: 'created' | 'completed' | 'edited' | 'deleted',

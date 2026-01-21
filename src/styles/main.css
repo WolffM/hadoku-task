@@ -343,38 +343,8 @@
   color: var(--color-bg-card);
 }
 
-/* Board list as pill buttons */
-.task-app__board-list .board-btn {
-  background: transparent;
-  border: none;
-  padding: var(--hdk-space-sm) var(--hdk-space-md);
-  border-radius: 999px;
-  font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.task-app__board-list .board-btn:hover {
-  background-color: var(--color-primary-hover);
-  color: var(--color-text);
-}
-
-/* Active board highlight using primary color */
-.task-app__board-list .board-btn--active {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
-  box-shadow: var(--hdk-shadow-sm);
-  border: none;
-}
-
-/* Active board should take precedence over hover state */
-.task-app__board-list .board-btn--active:hover {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
-}
+/* Board list - uses shared .pill-btn from buttons.css */
+/* Only component-specific overrides here */
 
 /* Dragging visuals for task rows */
 .task-app__item {
@@ -456,47 +426,13 @@
   flex-wrap: wrap;
 }
 
-.task-app__filters button {
-  transition:
-    background-color var(--transition-smooth),
-    border-color var(--transition-smooth),
-    box-shadow var(--transition-smooth);
-}
+/* Filter buttons - use shared .pill-btn from buttons.css */
+/* Only component-specific overrides here */
 
-/* lighter hover for filters so active state remains visually dominant */
-
-/* Make filter buttons visually match the board pill buttons */
-.task-app__filters button {
-  background: transparent;
-  border: none;
-  padding: var(--hdk-space-sm) var(--hdk-space-md);
-  border-radius: 999px;
-  font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-/* Hover state mirrors board button hover */
-.task-app__filters button:hover:not(.task-app__filter-drag-over) {
+/* Don't apply hover effect while dragging over */
+.task-app__filters button:hover:not(.task-app__filter-drag-over):not(.pill-btn--active) {
   background-color: var(--color-primary-hover);
   color: var(--color-text);
-}
-
-/* Active filter (on) matches the board active gradient and white text */
-.task-app__filters button.on {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
-  box-shadow: var(--hdk-shadow-sm);
-  border: none;
-}
-
-/* Active state should stay consistent on hover */
-.task-app__filters button.on:hover {
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
 }
 
 /* Drag-over state for filter buttons - higher specificity, no !important needed */

@@ -29,7 +29,7 @@ export interface ThemeFamily {
 }
 
 // Base theme families (always available)
-export const BASE_THEME_FAMILIES: ThemeFamily[] = [
+const BASE_THEME_FAMILIES: ThemeFamily[] = [
   {
     lightIcon: <SunIcon />,
     darkIcon: <MoonIcon />,
@@ -81,7 +81,7 @@ export const BASE_THEME_FAMILIES: ThemeFamily[] = [
 ]
 
 // Experimental theme families (gated by preference)
-export const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
+const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
   {
     lightIcon: <ZapIcon />,
     darkIcon: <ZapIcon />,

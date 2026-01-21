@@ -3,7 +3,7 @@
  * Randomly selected on app mount to provide inspiration and variety
  */
 
-export const TASK_PLACEHOLDERS = [
+const TASK_PLACEHOLDERS = [
   // Everyday tasks
   'Pick up kids after school...',
   'Buy groceries for the week...',

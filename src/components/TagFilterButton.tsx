@@ -38,7 +38,7 @@ export function TagFilterButton({
         onContextMenu(tag, e.clientX, e.clientY)
       }}
       {...longPressHandlers}
-      className={`${isActive ? 'on' : ''} ${isDragOver ? 'task-app__filter-drag-over' : ''}`}
+      className={`pill-btn ${isActive ? 'pill-btn--active on' : ''} ${isDragOver ? 'task-app__filter-drag-over' : ''}`}
       onDragOver={e => onDragOver(e, tag)}
       onDragLeave={onDragLeave}
       onDrop={e => onDrop(e, tag)}
