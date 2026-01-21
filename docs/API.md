@@ -550,7 +550,7 @@ Save user preferences (syncs for non-public users).
 
 ---
 
-## User Management Endpoints
+## Session & Authentication Endpoints
 
 ### POST `/validate-key`
 
@@ -558,12 +558,10 @@ Validate an authentication key.
 
 > **Note**: Implement your own key validation logic. This endpoint is called when users enter a key in the settings modal.
 
-**Body:**
+**Headers:**
 
-```json
-{
-  "key": "user-provided-key"
-}
+```http
+X-User-Key: user-provided-key
 ```
 
 **Response (valid):**
@@ -579,6 +577,70 @@ Validate an authentication key.
 ```json
 {
   "valid": false
+}
+```
+
+---
+
+### POST `/session/create`
+
+Create a new authenticated session after key validation.
+
+> **Note**: Called after successful key validation. Should create a server-side session and return session details.
+
+**Headers:**
+
+```http
+X-User-Key: validated-key
+```
+
+**Response:**
+
+```json
+{
+  "sessionId": "unique-session-identifier",
+  "userType": "friend",
+  "valid": true
+}
+```
+
+The frontend stores `sessionId` and `userType` in localStorage for subsequent requests.
+
+---
+
+### POST `/session/handshake`
+
+Establish or migrate a session on page load (for authenticated users).
+
+> **Note**: Called on page load for non-public users. Used to migrate preferences from old sessions and establish the current session.
+
+**Headers:**
+
+```http
+X-User-Type: friend | admin
+X-Session-Id: current-session-id
+```
+
+**Body:**
+
+```json
+{
+  "newSessionId": "current-session-id",
+  "oldSessionId": "previous-session-id-or-null"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "sessionId": "current-session-id",
+  "migrated": false,
+  "preferences": {
+    "experimentalThemes": false,
+    "alwaysVerticalLayout": false
+  }
 }
 ```
 

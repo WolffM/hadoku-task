@@ -38,22 +38,99 @@ const result = await TaskHandlers.createTask(storage, auth, input)
 
 ---
 
+## Key Design Decisions
+
+### 1. API Always Wins (Data Sync Strategy)
+
+**Server is the source of truth.** When syncing data, API data always overwrites localStorage.
+
+```typescript
+// On page load, syncFromApi() fetches server data and overwrites localStorage
+await syncFromApi() // API data → localStorage (no timestamp comparison)
+```
+
+**Why this is safer than timestamp comparison:**
+
+- ✅ Corrupted localStorage won't overwrite good server data
+- ✅ Empty localStorage won't wipe server data
+- ✅ Stale localStorage won't resurrect deleted data
+- ✅ Simple, predictable behavior
+
+**Trade-off:** If a user reloads during a pending background sync, the un-synced local change may be lost. This is rare and acceptable.
+
+### 2. Initialization Priority Order
+
+On page load, values are determined in this priority:
+
+```typescript
+// entry.tsx
+const userType = storedUserType || props.userType || urlParams.userType || 'public'
+const sessionId = storedSessionId || props.sessionId || 'public-session'
+```
+
+**Priority (highest to lowest):**
+
+1. **localStorage** - Survives auth, device-specific (e.g., `currentUserType: 'friend'`)
+2. **Props** - From parent app (e.g., registry.json defaults)
+3. **URL params** - Fallback for testing
+4. **Default** - `'public'` / `'public-session'`
+
+**Why localStorage first:** After key validation, the authenticated `userType` is stored in localStorage. On reload, this must override the default `'public'` from the parent's registry.json.
+
+### 3. Session-Based Authentication Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    KEY VALIDATION FLOW                               │
+└─────────────────────────────────────────────────────────────────────┘
+User enters key in Settings
+        │
+        ▼
+POST /task/api/validate-key
+Headers: { X-User-Key: "user-key" }
+        │
+        ▼ (if valid)
+POST /task/api/session/create
+Headers: { X-User-Key: "user-key" }
+Response: { sessionId: "abc123", userType: "friend" }
+        │
+        ▼
+Store in localStorage:
+- currentSessionId: "abc123"
+- currentUserType: "friend"
+        │
+        ▼
+Page reload (URL cleaned of ?key= param)
+        │
+        ▼
+entry.tsx reads localStorage → userType='friend', sessionId='abc123'
+        │
+        ▼
+createApi('friend', 'abc123') → API with syncFromApi()
+        │
+        ▼
+syncFromApi() → fetches boards from server → updates localStorage
+```
+
+---
+
 ## Security & Authentication
 
 ### Authentication Model
 
-**This micro-frontend delegates authentication to the parent application.**
+**This micro-frontend delegates most authentication to the parent application.**
 
 The task app does NOT:
 
-- ❌ Handle user credentials
+- ❌ Handle user credentials or passwords
 - ❌ Hash passwords
 - ❌ Generate session tokens
-- ❌ Validate authentication keys
+- ❌ Store authentication keys
 
 The task app DOES:
 
-- ✅ Receive `userType` and `sessionId` as props
+- ✅ Call parent's `/validate-key` and `/session/create` endpoints
+- ✅ Store `sessionId` and `userType` in localStorage after auth
 - ✅ Use these for storage namespacing (localStorage keys, API requests)
 - ✅ Validate operations based on `userType` (e.g., public can't sync to server)
 

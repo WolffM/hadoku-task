@@ -265,6 +265,7 @@ test.describe('Key Validation Flow', () => {
 
     // Wait for the page to reload (the auth flow triggers window.location.href change)
     await page.waitForURL('**/*', { timeout: 15000 })
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Verify new session is stored after reload
