@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.26",
+  "version": "3.4.27",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
@@ -42,7 +42,10 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "version:patch": "pnpm version patch --no-git-tag-version",
     "trim-changelog": "node scripts/trim-changelog.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@wolffm/task-ui-components": "workspace:*",
@@ -52,6 +55,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.57.0",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.47.0",

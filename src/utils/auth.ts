@@ -6,6 +6,37 @@
 import { logger } from '@wolffm/task-ui-components'
 import { formatError } from '../domain/utils/tags'
 import { isMobileApp } from './platform'
+import {
+  storeSessionId,
+  storeUserType,
+  getStoredSessionId,
+  clearAllSessionStorage
+} from '../api/session'
+import type { UserType } from '../domain/types'
+
+interface SessionCreateResponse {
+  sessionId: string
+  userType: UserType
+}
+
+/**
+ * Create a session with the server using the validated key
+ */
+async function createSession(key: string): Promise<SessionCreateResponse> {
+  const response = await fetch('/session/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-Key': key
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`Session creation failed: ${response.status}`)
+  }
+
+  return response.json()
+}
 
 /**
  * Validate a key and store it securely
@@ -27,12 +58,27 @@ export async function validateAndChangeKey(
     const isValid = await validateKeyFn(trimmedKey)
 
     if (isValid) {
-      // Reload with ?key= parameter so parent site can validate and set userType/sessionId
-      logger.info('[Auth] Key validated - reloading with key parameter')
+      logger.info('[Auth] Key validated - creating session')
 
-      // Get current URL and add/update the key parameter
-      const url = new URL(window.location.href)
-      url.searchParams.set('key', trimmedKey)
+      // Create session with the server
+      const sessionData = await createSession(trimmedKey)
+      logger.info('[Auth] Session created', {
+        sessionId: sessionData.sessionId,
+        userType: sessionData.userType
+      })
+
+      // Get old session info BEFORE storing new session
+      const oldSessionId = getStoredSessionId()
+
+      // Clear old session storage if switching sessions
+      if (oldSessionId && oldSessionId !== sessionData.sessionId) {
+        logger.info('[Auth] Clearing old session storage', { oldSessionId })
+        clearAllSessionStorage(oldSessionId)
+      }
+
+      // Store new session data in localStorage
+      storeSessionId(sessionData.sessionId)
+      storeUserType(sessionData.userType)
 
       // For mobile app: Notify about the auth change before reload
       if (isMobileApp()) {
@@ -42,7 +88,6 @@ export async function validateAndChangeKey(
         const event = new window.CustomEvent('authKeyChanged', {
           detail: {
             timestamp: Date.now()
-            // Don't include the actual key - mobile app doesn't need it
           }
         })
         window.dispatchEvent(event)
@@ -59,7 +104,9 @@ export async function validateAndChangeKey(
         }
       }
 
-      // Reload with the key in URL so parent site can process it
+      // Reload page (without ?key= in URL - session is now stored in localStorage)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('key')
       window.location.href = url.toString()
       return { success: true }
     } else {

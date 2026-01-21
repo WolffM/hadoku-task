@@ -446,8 +446,18 @@ export default function App(props: TaskAppProps = {}) {
           onCloseSettingsModal={() => modals.setShowSettingsModal(false)}
           onSavePreferences={handleSavePreferences}
           onValidateKey={async (key: string) => {
-            const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
-            return await api.validateKey(key)
+            // Always call server for key validation (regardless of current user type)
+            // since key validation is for authentication, not data operations
+            try {
+              const response = await fetch('/task/api/validate-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key })
+              })
+              return response.ok
+            } catch {
+              return false
+            }
           }}
           onShowToast={showToast}
           onCloseEditTagModal={() => {

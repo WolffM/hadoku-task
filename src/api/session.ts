@@ -1,5 +1,6 @@
 import { logger } from '@wolffm/task-ui-components'
 import { formatError } from '../domain/utils/tags'
+import type { UserType } from '../domain/types'
 
 /**
  * Generate a unique session ID for this browser tab/session
@@ -20,6 +21,21 @@ export function getStoredSessionId(): string | null {
 export function storeSessionId(sessionId: string): void {
   localStorage.setItem('currentSessionId', sessionId)
   logger.info('[Session] Stored sessionId', { sessionId })
+}
+
+/**
+ * Get the stored userType from localStorage
+ */
+export function getStoredUserType(): UserType | null {
+  return localStorage.getItem('currentUserType')
+}
+
+/**
+ * Store the current userType in localStorage
+ */
+export function storeUserType(userType: UserType): void {
+  localStorage.setItem('currentUserType', userType)
+  logger.info('[Session] Stored userType', { userType })
 }
 
 /**
@@ -89,7 +105,7 @@ export async function performSessionHandshake(
 }
 
 /**
- * Clear all localStorage keys associated with old sessionId
+ * Clear all localStorage keys associated with old sessionId for a specific userType
  */
 export function clearOldSessionStorage(oldSessionId: string, userType: string): void {
   if (!oldSessionId) return
@@ -105,6 +121,41 @@ export function clearOldSessionStorage(oldSessionId: string, userType: string): 
   }
 
   logger.info('[Session] Clearing old storage keys', { count: keysToRemove.length })
+
+  // Remove them
+  keysToRemove.forEach(key => {
+    logger.info('[Session] Removing key', { key })
+    localStorage.removeItem(key)
+  })
+}
+
+/**
+ * Clear all localStorage keys associated with a sessionId across ALL userTypes
+ * Used when switching accounts to ensure old data doesn't persist
+ */
+export function clearAllSessionStorage(oldSessionId: string): void {
+  if (!oldSessionId) return
+
+  const userTypes = ['public', 'friend', 'admin']
+  const keysToRemove: string[] = []
+
+  // Find all keys matching the old session pattern for any userType
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key) {
+      for (const ut of userTypes) {
+        if (key.startsWith(`${ut}-${oldSessionId}-`)) {
+          keysToRemove.push(key)
+          break
+        }
+      }
+    }
+  }
+
+  logger.info('[Session] Clearing all session storage keys', {
+    sessionId: oldSessionId,
+    count: keysToRemove.length
+  })
 
   // Remove them
   keysToRemove.forEach(key => {
