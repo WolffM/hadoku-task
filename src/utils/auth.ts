@@ -23,7 +23,7 @@ interface SessionCreateResponse {
  * Create a session with the server using the validated key
  */
 async function createSession(key: string): Promise<SessionCreateResponse> {
-  const response = await fetch('/session/create', {
+  const response = await fetch('/task/api/session/create', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

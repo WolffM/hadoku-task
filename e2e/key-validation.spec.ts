@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
  * Tests the complete authentication flow:
  * 1. User enters key in Settings
  * 2. Key is validated via /task/api/validate-key
- * 3. Session is created via /session/create
+ * 3. Session is created via /task/api/session/create
  * 4. Session data stored in localStorage
  * 5. Page reloads and uses stored session
  * 6. Subsequent reloads persist the session
@@ -89,7 +89,7 @@ test.describe('Key Validation Flow', () => {
       }
     })
 
-    await page.route('**/session/create', async route => {
+    await page.route('**/task/api/session/create', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -207,7 +207,7 @@ test.describe('Key Validation Flow', () => {
       })
     })
 
-    await page.route('**/session/create', async route => {
+    await page.route('**/task/api/session/create', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -342,7 +342,7 @@ test.describe('Key Validation Flow', () => {
       })
     })
 
-    await page.route('**/session/create', async route => {
+    await page.route('**/task/api/session/create', async route => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
