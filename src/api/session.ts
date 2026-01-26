@@ -3,6 +3,14 @@ import { formatError } from '../domain/utils/tags'
 import type { UserType } from '../domain/types'
 
 /**
+ * Result from session handshake
+ */
+export interface HandshakeResult {
+  preferences: null
+  serverUserType: UserType
+}
+
+/**
  * Generate a unique session ID for this browser tab/session
  * Used to identify which tab made changes when coordinating cross-tab sync via BroadcastChannel
  */
@@ -43,11 +51,14 @@ export function storeUserType(userType: UserType): void {
  * Sends old and new sessionIds, receives preferences for the new session
  *
  * For public users: skips handshake, maintains stable sessionId in localStorage
+ *
+ * Returns both the server preferences and the server's determined userType.
+ * The serverUserType may differ from the client's userType if the session expired.
  */
 export async function performSessionHandshake(
   newSessionId: string,
   userType: string
-): Promise<null> {
+): Promise<HandshakeResult> {
   const oldSessionId = getStoredSessionId()
 
   // Public users: don't perform handshake, use stable localStorage-based sessionId
@@ -55,14 +66,14 @@ export async function performSessionHandshake(
     // If we have a stored sessionId, keep using it (stable across reloads)
     if (oldSessionId) {
       logger.info('[Session] Public user - using existing sessionId', { oldSessionId })
-      return null // No preferences from server, will use localStorage
+      return { preferences: null, serverUserType: 'public' }
     }
 
     // First time public user - generate and store a stable sessionId
     const publicSessionId = `public-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     storeSessionId(publicSessionId)
     logger.info('[Session] Public user - created stable sessionId', { publicSessionId })
-    return null
+    return { preferences: null, serverUserType: 'public' }
   }
 
   // Authenticated users: perform handshake with server
@@ -92,15 +103,29 @@ export async function performSessionHandshake(
     // Store the new sessionId
     storeSessionId(newSessionId)
 
-    return data.preferences
+    // Check for userType mismatch - session may have expired
+    const serverUserType: UserType = data.userType || userType
+    if (data.userType && data.userType !== userType) {
+      logger.warn('[Session] Server userType differs from client', {
+        clientUserType: userType,
+        serverUserType: data.userType
+      })
+      // Update stored userType to match server
+      storeUserType(data.userType)
+    }
+
+    return {
+      preferences: data.preferences,
+      serverUserType
+    }
   } catch (error) {
     logger.error('[Session] Handshake failed', {
       error: formatError(error)
     })
     // Store the new sessionId anyway
     storeSessionId(newSessionId)
-    // Return null to indicate no preferences available
-    return null
+    // Return null preferences but keep client's userType assumption
+    return { preferences: null, serverUserType: userType as UserType }
   }
 }
 

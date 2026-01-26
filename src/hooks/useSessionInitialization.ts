@@ -4,7 +4,12 @@
 
 import { useEffect } from 'react'
 import type { UserPreferences } from '../domain/types'
-import { performSessionHandshake, clearOldSessionStorage, getStoredSessionId } from '../api/session'
+import {
+  performSessionHandshake,
+  clearOldSessionStorage,
+  getStoredSessionId,
+  storeUserType
+} from '../api/session'
 import { createApi } from '../api/client'
 import { logger } from '@wolffm/task-ui-components'
 import { logPackageVersions } from '../utils/version'
@@ -46,7 +51,32 @@ export function useSessionInitialization({
       const oldSessionId = getStoredSessionId()
 
       // Perform handshake (for public users, this ensures stable sessionId in localStorage)
-      const serverPreferences = await performSessionHandshake(propsSessionId, userType)
+      const handshakeResult = await performSessionHandshake(propsSessionId, userType)
+
+      // Check for session expiration - server userType differs from client
+      if (handshakeResult.serverUserType !== userType) {
+        logger.warn('[App] User type changed - session may have expired', {
+          expected: userType,
+          actual: handshakeResult.serverUserType
+        })
+
+        // If user was authenticated but session expired (now treated as public)
+        if (userType !== 'public' && handshakeResult.serverUserType === 'public') {
+          // Update stored userType to match server
+          storeUserType(handshakeResult.serverUserType)
+
+          // Notify user and reload to reinitialize with correct state
+          showToast('Your session has expired. Please enter your key again.', 'info')
+
+          // Small delay to let the toast show before reload
+          setTimeout(() => {
+            window.location.reload()
+          }, 1500)
+          return
+        }
+      }
+
+      const serverPreferences = handshakeResult.preferences
 
       // Determine the effective sessionId to use
       let finalSessionId = propsSessionId
