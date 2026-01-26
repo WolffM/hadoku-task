@@ -636,6 +636,7 @@ X-Session-Id: current-session-id
 {
   "success": true,
   "sessionId": "current-session-id",
+  "userType": "friend",
   "migrated": false,
   "preferences": {
     "experimentalThemes": false,
@@ -643,6 +644,8 @@ X-Session-Id: current-session-id
   }
 }
 ```
+
+> **Important - Session Expiration**: The `userType` field in the response reflects the server's determined user type based on the current session state. If the server session has expired (e.g., KV TTL exceeded), the server will return `userType: "public"` even if the client sent `X-User-Type: friend`. The client must check for this mismatch and handle session expiration appropriately (show re-authentication prompt, reload page).
 
 ---
 

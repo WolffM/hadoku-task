@@ -383,4 +383,62 @@ test.describe('Key Validation Flow', () => {
       expect(sessionId).toMatch(/^public-/)
     }
   })
+
+  test('should handle session expiration gracefully', async ({ page }) => {
+    // Mock the handshake endpoint BEFORE navigation
+    await page.route('**/task/api/session/handshake', async route => {
+      // Server returns 'public' (simulating expired session)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          sessionId: 'expired-session-789',
+          userType: 'public', // Session expired - server disagrees with client
+          migrated: false,
+          preferences: null
+        })
+      })
+    })
+
+    // Mock the boards API
+    await page.route('**/task/api/boards*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          boards: []
+        })
+      })
+    })
+
+    // Use addInitScript that only sets localStorage if not already set to 'public'
+    // This allows the test to set up 'friend' initially, but after our code
+    // updates to 'public' and reloads, that value persists
+    await page.addInitScript(() => {
+      const currentUserType = localStorage.getItem('currentUserType')
+      // Only set up 'friend' session if not already set to 'public' (post-expiration)
+      if (currentUserType !== 'public') {
+        localStorage.setItem('currentSessionId', 'expired-session-789')
+        localStorage.setItem('currentUserType', 'friend')
+      }
+    })
+
+    // Navigate - app will mount with userType='friend' from localStorage
+    await page.goto('/')
+
+    // Wait for the session expiration handling to complete and page to reload
+    // The flow is: detect mismatch -> show toast -> wait 1.5s -> reload
+    // After reload, the app should initialize as 'public' user
+    await page.waitForTimeout(3000)
+
+    // Verify localStorage was updated to 'public' after session expiration handling
+    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    expect(userType).toBe('public')
+
+    // Verify the app eventually loads (after the reload with correct userType)
+    await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
+  })
 })

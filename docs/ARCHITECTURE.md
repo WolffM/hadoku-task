@@ -112,6 +112,49 @@ createApi('friend', 'abc123') → API with syncFromApi()
 syncFromApi() → fetches boards from server → updates localStorage
 ```
 
+### 4. Session Expiration Handling
+
+Server sessions may expire (e.g., KV TTL exceeded after 24+ hours). When this happens, the server treats the user as `public` even if the client thinks they're authenticated.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                   SESSION EXPIRATION FLOW                            │
+└─────────────────────────────────────────────────────────────────────┘
+User reloads after 24+ hours
+        │
+        ▼
+localStorage: userType='friend', sessionId='abc123'
+        │
+        ▼
+POST /task/api/session/handshake
+Headers: { X-User-Type: 'friend', X-Session-Id: 'abc123' }
+        │
+        ▼
+Edge-router: KV lookup for session → expired/not found
+        │
+        ▼
+Response: { userType: 'public', ... }  ← Server disagrees with client
+        │
+        ▼
+Client detects mismatch: expected 'friend', got 'public'
+        │
+        ▼
+Show toast: "Your session has expired. Please enter your key again."
+        │
+        ▼
+Update localStorage: userType='public'
+        │
+        ▼
+Page reload → App reinitializes as public user
+```
+
+**Key implementation details:**
+
+- `performSessionHandshake()` returns `{ preferences, serverUserType }`
+- `useSessionInitialization` compares `serverUserType` with client's `userType`
+- On mismatch where authenticated user becomes public: show toast, update localStorage, reload
+- This prevents "lost context" where user sees empty/public data instead of their authenticated data
+
 ---
 
 ## Security & Authentication

@@ -16,7 +16,7 @@ import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useTaskHandlers } from '../hooks/useTaskHandlers'
 import { useSessionInitialization } from '../hooks/useSessionInitialization'
-import { useToast, logger } from '@wolffm/task-ui-components'
+import { useToast, logger, Toaster } from '@wolffm/task-ui-components'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader } from '../components/AppHeader'
 import { BoardsSection } from '../components/BoardsSection'
@@ -245,7 +245,13 @@ export default function App(props: TaskAppProps = {}) {
   // Show loading skeleton only on initial load (not on theme changes)
   // Use system preference for theme during initial load, then switch to user preference
   if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded) {
-    return <LoadingSkeleton isDarkTheme={systemPrefersDark} />
+    return (
+      <>
+        <LoadingSkeleton isDarkTheme={systemPrefersDark} />
+        {/* Toaster must be rendered during loading to show session expiration messages */}
+        <Toaster toasts={toasts} onDismiss={dismissToast} position="bottom-center" />
+      </>
+    )
   }
 
   return (
