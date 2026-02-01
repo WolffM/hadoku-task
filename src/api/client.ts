@@ -32,16 +32,14 @@ async function syncBoardsToLocalStorage(
   for (const board of apiData.boards || []) {
     const boardId = board.id
 
-    // Update tasks for this board
-    if (board.tasks && board.tasks.length > 0) {
-      const tasksKey = `${userType}-${sessionId}-${boardId}-tasks`
-      const tasksFile: TasksFile = {
-        version: 1,
-        updatedAt: apiData.updatedAt || new Date().toISOString(),
-        tasks: board.tasks
-      }
-      window.localStorage.setItem(tasksKey, JSON.stringify(tasksFile))
+    // Update tasks for this board (always write, even if empty - to clear completed tasks)
+    const tasksKey = `${userType}-${sessionId}-${boardId}-tasks`
+    const tasksFile: TasksFile = {
+      version: 1,
+      updatedAt: apiData.updatedAt || new Date().toISOString(),
+      tasks: board.tasks || []
     }
+    window.localStorage.setItem(tasksKey, JSON.stringify(tasksFile))
 
     // Update stats for this board if present
     if (board.stats) {

@@ -5,7 +5,22 @@
 
 import { logger } from '@wolffm/task-ui-components'
 import type { Task, BoardsFile, Board } from '../../domain/types'
+import { DomainError } from '../../domain/types'
 import { formatError } from '../../domain/utils/tags'
+
+/**
+ * Check if an error is a 404 (not found) error
+ * Supports both DomainError with httpStatus and legacy string matching
+ */
+function is404Error(error: unknown): boolean {
+  // Check for DomainError with httpStatus
+  if (error instanceof DomainError && error.httpStatus === 404) {
+    return true
+  }
+  // Fallback: check error message for '404' (for server responses)
+  const errorMessage = formatError(error)
+  return errorMessage.includes('404') || errorMessage.includes('not found')
+}
 
 /**
  * Generic operation wrapper that handles:
@@ -38,18 +53,21 @@ export async function withPendingOperation<T>(
     const result = await operation()
     return result
   } catch (error) {
-    // Suppress 404 errors (task/resource already processed)
-    const errorMessage = formatError(error)
-    const is404 = suppress404 && errorMessage.includes('404')
-    if (!is404) {
+    // Suppress 404 errors (task/resource already processed on another device)
+    const shouldSuppress = suppress404 && is404Error(error)
+    if (!shouldSuppress) {
       if (onError) {
         onError(error as Error)
       } else {
         logger.error('[withPendingOperation] Error in operation', {
           operationKey,
-          error: errorMessage
+          error: formatError(error)
         })
       }
+    } else {
+      logger.info('[withPendingOperation] Suppressed 404 error (resource already processed)', {
+        operationKey
+      })
     }
     return undefined
   } finally {

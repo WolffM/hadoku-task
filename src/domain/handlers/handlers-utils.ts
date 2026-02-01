@@ -7,24 +7,25 @@
  */
 
 import type { Task, TasksFile, StatsFile, Board, BoardsFile, ULID, AuthContext } from '../types.js'
+import { TaskNotFoundError, BoardNotFoundError } from '../types.js'
 import type { Storage } from '../../server/storage.js'
 
 /**
  * Find task by ID or throw error
- * @throws Error if task not found
+ * @throws TaskNotFoundError if task not found (HTTP 404)
  * @returns Task and its index in the tasks array
  */
 export function findTaskOrThrow(tasks: TasksFile, taskId: ULID): { task: Task; index: number } {
   const index = tasks.tasks.findIndex(t => t.id === taskId)
   if (index < 0) {
-    throw new Error('Task not found')
+    throw new TaskNotFoundError(taskId)
   }
   return { task: tasks.tasks[index], index }
 }
 
 /**
  * Find board by ID or throw error
- * @throws Error if board not found
+ * @throws BoardNotFoundError if board not found (HTTP 404)
  * @returns Board and its index in the boards array
  */
 export function findBoardOrThrow(
@@ -33,7 +34,7 @@ export function findBoardOrThrow(
 ): { board: Board; index: number } {
   const index = boards.boards.findIndex(b => b.id === boardId)
   if (index < 0) {
-    throw new Error(`Board ${boardId} not found`)
+    throw new BoardNotFoundError(boardId)
   }
   return { board: boards.boards[index], index }
 }

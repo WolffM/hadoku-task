@@ -12,6 +12,7 @@ import type {
   AuthContext,
   CreateTaskInput
 } from '../domain/types'
+import { TaskNotFoundError } from '../domain/types'
 import { SESSION_ID } from './session'
 import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
@@ -174,7 +175,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const taskToComplete = tasksFile.tasks.find(t => t.id === id)
 
       if (!taskToComplete) {
-        throw new Error('Task not found')
+        throw new TaskNotFoundError(id)
       }
 
       // Use handler to complete the task (removes from active, updates stats)
@@ -208,7 +209,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const taskToDelete = tasksFileBefore.tasks.find(t => t.id === id)
 
       if (!taskToDelete) {
-        throw new Error('Task not found')
+        throw new TaskNotFoundError(id)
       }
 
       // Use handler to delete the task

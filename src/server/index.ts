@@ -45,3 +45,6 @@ export type {
   UpdateTaskInput,
   UserPreferences
 } from '../domain/types.js'
+
+// Error Types (for HTTP status code handling)
+export { DomainError, TaskNotFoundError, BoardNotFoundError } from '../domain/types.js'

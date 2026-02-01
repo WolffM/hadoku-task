@@ -101,3 +101,42 @@ export interface UserPreferences {
   showDeleteButton?: boolean
   showTagButton?: boolean
 }
+
+// --- Error Types ---
+
+/**
+ * Base error class for domain errors with HTTP status codes.
+ * Consuming HTTP frameworks should catch these and return the appropriate status.
+ */
+export class DomainError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly httpStatus: number
+  ) {
+    super(message)
+    this.name = 'DomainError'
+  }
+}
+
+/**
+ * Error thrown when a task is not found.
+ * HTTP status: 404 Not Found
+ */
+export class TaskNotFoundError extends DomainError {
+  constructor(taskId?: string) {
+    super(taskId ? `Task ${taskId} not found` : 'Task not found', 'TASK_NOT_FOUND', 404)
+    this.name = 'TaskNotFoundError'
+  }
+}
+
+/**
+ * Error thrown when a board is not found.
+ * HTTP status: 404 Not Found
+ */
+export class BoardNotFoundError extends DomainError {
+  constructor(boardId: string) {
+    super(`Board ${boardId} not found`, 'BOARD_NOT_FOUND', 404)
+    this.name = 'BoardNotFoundError'
+  }
+}
