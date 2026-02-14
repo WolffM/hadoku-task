@@ -8,6 +8,7 @@ import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
 import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
 import { logger } from '@wolffm/task-ui-components'
+import { setTheme as applyThemeToDOM } from '@wolffm/themes'
 
 export interface UseThemeReturn {
   theme: ThemeName
@@ -44,6 +45,7 @@ export function useTheme(
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [isThemeReady, setIsThemeReady] = useState(false)
   const [isInitialThemeLoad, setIsInitialThemeLoad] = useState(true)
+  const [pendingTheme, setPendingTheme] = useState<ThemeName | null>(null)
 
   // Use system preference as default theme (like the loading skeleton)
   const systemPrefersDark =
@@ -62,6 +64,13 @@ export function useTheme(
     }
   }, [initialTheme, preferences.experimentalThemes, savePreferences])
 
+  // Clear pending theme once preferences sync catches up
+  useEffect(() => {
+    if (pendingTheme !== null && preferences.theme === pendingTheme) {
+      setPendingTheme(null)
+    }
+  }, [preferences.theme, pendingTheme])
+
   // Compute theme families based on experimental preferences
   const THEME_FAMILIES = useMemo(
     () => getThemeFamilies(preferences.experimentalThemes || false),
@@ -76,7 +85,12 @@ export function useTheme(
       return initialTheme as ThemeName
     }
 
-    // Priority 2: User preferences
+    // Priority 2: Pending theme (optimistic update before preferences sync)
+    if (pendingTheme && isThemeAvailable(pendingTheme, preferences.experimentalThemes || false)) {
+      return pendingTheme
+    }
+
+    // Priority 3: User preferences
     const requestedTheme = preferences.theme
 
     // Check if the requested theme is available
@@ -107,6 +121,7 @@ export function useTheme(
     return defaultTheme as ThemeName
   }, [
     initialTheme,
+    pendingTheme,
     preferences.theme,
     preferences.experimentalThemes,
     defaultTheme,
@@ -114,7 +129,11 @@ export function useTheme(
   ])
 
   const setTheme = useCallback(
-    (newTheme: ThemeName) => savePreferences({ theme: newTheme }),
+    (newTheme: ThemeName) => {
+      setPendingTheme(newTheme)
+      applyThemeToDOM(newTheme)
+      savePreferences({ theme: newTheme })
+    },
     [savePreferences]
   )
 

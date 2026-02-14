@@ -44,7 +44,7 @@ test.describe('Data Sync Flow', () => {
       await submitButton.click()
 
       // Wait for page reload after auth
-      await page.waitForURL('**/*', { timeout: 15000 })
+      await page.waitForEvent('load', { timeout: 15000 })
       await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
 
       // Give time for sync to complete
@@ -76,12 +76,6 @@ test.describe('Data Sync Flow', () => {
     })
 
     test('should show API data after page reload', async ({ page }) => {
-      // Pre-populate localStorage with auth data (simulating previous auth)
-      await page.addInitScript(() => {
-        // These will be overwritten by the actual auth flow if it works
-        localStorage.setItem('currentUserType', 'friend')
-      })
-
       // First, authenticate
       await page.goto('https://hadoku.me/task/')
 
@@ -101,7 +95,7 @@ test.describe('Data Sync Flow', () => {
         const submitButton = keyInputGroup.locator('button.settings-field-button')
         await submitButton.click()
 
-        await page.waitForURL('**/*', { timeout: 15000 })
+        await page.waitForEvent('load', { timeout: 15000 })
       }
 
       await page.waitForSelector('h1.task-app__header', { timeout: 15000 })

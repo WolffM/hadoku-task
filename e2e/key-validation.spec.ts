@@ -114,7 +114,7 @@ test.describe('Key Validation Flow', () => {
 
     // Wait for the page to reload (the auth flow triggers window.location.href change)
     // After reload, the session data should be in localStorage
-    await page.waitForURL('**/*', { timeout: 15000 })
+    await page.waitForEvent('load', { timeout: 15000 })
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Verify localStorage was updated after the reload
@@ -264,8 +264,7 @@ test.describe('Key Validation Flow', () => {
     await fillKeyAndSubmit(page, 'new-account-key')
 
     // Wait for the page to reload (the auth flow triggers window.location.href change)
-    await page.waitForURL('**/*', { timeout: 15000 })
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForEvent('load', { timeout: 15000 })
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Verify new session is stored after reload
