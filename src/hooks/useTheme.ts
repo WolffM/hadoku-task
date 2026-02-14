@@ -77,20 +77,16 @@ export function useTheme(
     [preferences.experimentalThemes]
   )
 
-  // Validate and sanitize theme - prioritize initialTheme from mount params, then preferences
+  // Validate and sanitize theme - prioritize user selection, then mount params, then preferences
   const theme = useMemo(() => {
-    // Priority 1: Mount parameter theme (highest priority)
-    if (initialTheme && isThemeAvailable(initialTheme, preferences.experimentalThemes || false)) {
-      logger.info(`[useTheme] Using theme from mount parameter: ${initialTheme}`)
-      return initialTheme as ThemeName
-    }
-
-    // Priority 2: Pending theme (optimistic update before preferences sync)
+    // Priority 1: Pending theme (user just clicked a theme in the picker - always wins)
     if (pendingTheme && isThemeAvailable(pendingTheme, preferences.experimentalThemes || false)) {
       return pendingTheme
     }
 
-    // Priority 3: User preferences
+    // Priority 2: User preferences (saved theme from previous session)
+    // Check this before initialTheme so that a user's saved choice isn't overridden
+    // by the parent site's theme prop on every mount
     const requestedTheme = preferences.theme
 
     // Check if the requested theme is available
@@ -117,7 +113,14 @@ export function useTheme(
       return fallbackTheme as ThemeName
     }
 
-    // Priority 3: System preference (lowest priority)
+    // Priority 3: Mount parameter theme (initial theme from parent site)
+    // Used as default when user has no saved preference yet
+    if (initialTheme && isThemeAvailable(initialTheme, preferences.experimentalThemes || false)) {
+      logger.info(`[useTheme] Using theme from mount parameter: ${initialTheme}`)
+      return initialTheme as ThemeName
+    }
+
+    // Priority 4: System preference (lowest priority)
     return defaultTheme as ThemeName
   }, [
     initialTheme,
