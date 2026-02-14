@@ -60,7 +60,7 @@ export function TagFiltersSection({
         />
       ))}
       <button
-        className={`task-app__filter-add ${dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
+        className={`pill-btn task-app__filter-add ${dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
         onClick={onCreateTagClick}
         onDragOver={e => {
           e.preventDefault()
