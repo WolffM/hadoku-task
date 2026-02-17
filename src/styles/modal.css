@@ -103,12 +103,12 @@
 
 .modal-button--primary {
   background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: var(--color-bg-card);
+  color: var(--color-on-primary);
   border: none;
 }
 
 .modal-button--primary:hover {
-  filter: brightness(1.05);
+  background: color-mix(in oklch, var(--color-primary) 86%, black);
 }
 
 .modal-button--primary:disabled {
@@ -120,12 +120,12 @@
 
 .modal-button--danger {
   background: linear-gradient(180deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
-  color: var(--color-danger-text);
+  color: var(--color-on-danger);
   border: none;
 }
 
 .modal-button--danger:hover {
-  filter: brightness(1.05);
+  background: color-mix(in oklch, var(--color-danger) 86%, black);
 }
 
 /* Modal Section - for grouping content */

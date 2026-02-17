@@ -18,6 +18,18 @@ All spacing, typography, radius, and shadow variables use the `--hdk-*` namespac
 
 Each theme requires **34 color variables** + **6 shadow variables** = **40 total variables**. The system uses a hierarchical color assignment strategy where "main colors" are selected from the palette, and "alt colors" are derived through color manipulation.
 
+> **CRITICAL: `--color-on-*` variables (text on colored surfaces)**
+>
+> The `--color-on-primary`, `--color-on-success`, `--color-on-warning`, `--color-on-danger`,
+> and `--color-on-neutral` variables define the text color for use **ON TOP OF** that color's
+> background (e.g., text on a primary-colored button). These must be computed from the
+> **luminance of the color itself**, NOT from the theme mode.
+>
+> **WRONG:** "This is a light theme, so all `--color-on-*` = black"
+> **RIGHT:** "--color-primary is #2563eb (dark blue, low luminance) so --color-on-primary = white"
+>
+> Use the WCAG relative luminance formula: if luminance > 0.179, use `black`; otherwise `white`.
+
 ### Color Variables Count:
 
 - Primary colors: 6 (includes text)
@@ -68,7 +80,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 - `--color-primary-light` - **ALT:** Light tint for light themes / dark shade for dark themes
 - `--color-primary-bg` - **ALT:** Very subtle background (5-10% opacity)
 - `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
-- `--color-primary-text` - **ALT:** Text on primary backgrounds (white or black for contrast)
+- `--color-on-primary` - **ALT:** Text ON primary-colored surfaces. Compute from primary's luminance, NOT from theme mode. (white for dark colors, black for light colors)
 
 #### 2. Success Colors (4 variables)
 
@@ -76,7 +88,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 
 - `--color-success` - **MAIN:** Success/completion indicator
 - `--color-success-dark` - **ALT:** Darker shade (~10-15% darker, or pick complementary from palette)
-- `--color-success-text` - **ALT:** Text on success backgrounds (white or black for contrast)
+- `--color-on-success` - **ALT:** Text ON success-colored surfaces. Compute from success color's luminance. (white for dark colors, black for light colors)
 - `--color-success-bg` - **ALT:** Background for success badges (10-15% opacity of success color)
 
 #### 3. Warning Colors (3 variables)
@@ -85,7 +97,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 
 - `--color-warning` - **MAIN:** Warning/caution indicator (typically amber/yellow)
 - `--color-warning-bg` - **ALT:** Background for warning badges (10-15% opacity of warning color)
-- `--color-warning-text` - **ALT:** Text on warning backgrounds (usually black for yellow/amber)
+- `--color-on-warning` - **ALT:** Text ON warning-colored surfaces. Compute from warning color's luminance. (usually black since warning colors tend to be bright amber/yellow)
 
 #### 4. Danger Colors (5 variables)
 
@@ -95,7 +107,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 - `--color-danger-dark` - **ALT:** Darker shade (darken 10-15%)
 - `--color-danger-darker` - **ALT:** Even darker (darken 20-30%)
 - `--color-danger-light` - **ALT:** Light tint/background shade
-- `--color-danger-text` - **ALT:** Text color on danger backgrounds (auto-calculated)
+- `--color-on-danger` - **ALT:** Text ON danger-colored surfaces. Compute from danger color's luminance. (white for dark colors, black for light colors)
 
 #### 5. Neutral Colors (5 variables)
 
@@ -104,7 +116,7 @@ All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main
 - `--color-neutral` - **MAIN:** Neutral gray or muted color
 - `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
 - `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
-- `--color-neutral-text` - **ALT:** Text on neutral backgrounds (white or black for contrast)
+- `--color-on-neutral` - **ALT:** Text ON neutral-colored surfaces. Compute from neutral color's luminance. (white for dark neutrals, black for light neutrals)
 - `--color-muted-bg` - **ALT:** Background for neutral/unknown badges
 
 #### 6. Text Colors (4 variables)
@@ -251,14 +263,14 @@ Use color manipulation functions:
 
 // === From SUCCESS ===
 --color-success-dark: darken(success, 15%)
---color-success-text: getContrastText(success) // auto: white or black
+--color-on-success: getContrastText(success) // auto: white or black based on SUCCESS color luminance
 
 // === From DANGER ===
 --color-danger-dark: darken(danger, 15%)
 --color-danger-darker: darken(danger, 30%)
 --color-danger-light: lighten(danger, 40%)     // light theme
 --color-danger-light: darken(danger, 30%)      // dark theme
---color-danger-text: getContrastText(danger)   // auto: white or black
+--color-on-danger: getContrastText(danger)   // auto: white or black based on DANGER color luminance
 
 // === From NEUTRAL ===
 --color-neutral-light: lighten(neutral, 20%)   // light theme
@@ -338,13 +350,13 @@ Ensure WCAG AA compliance:
 
   /* From Success */
   --color-success-dark: #e0b425; /* darken 10% */
-  --color-success-text: #1a1a1a; /* auto-contrast */
+  --color-on-success: #1a1a1a; /* auto-contrast: success is bright, so dark text */
 
   /* From Danger */
   --color-danger-dark: #003d6e; /* darken 15% */
   --color-danger-darker: #002c4f; /* darken 30% */
   --color-danger-light: #e6f2ff; /* lighten 40% */
-  --color-danger-text: white; /* auto-contrast */
+  --color-on-danger: white; /* auto-contrast: danger is dark blue, so white text */
 
   /* From Neutral */
   --color-neutral-light: #f4f4f4; /* lighten 20% */

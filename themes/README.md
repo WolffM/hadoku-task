@@ -4,18 +4,17 @@ Beautiful color themes using CSS custom properties. Framework-agnostic and ready
 
 ## Themes
 
-12 theme families, each with light and dark variants:
+9 theme families (18 themes), each with light and dark variants:
 
-- **Light** (default) - Clean blue and white
-- **Dark** - Sophisticated midnight with purple accents
-- **Strawberry Light/Dark** - Sweet pink tones
-- **Ocean Light/Dark** - Deep sea blues and tropical coral
-- **Cyberpunk Light/Dark** - Neon dystopia with electric colors
-- **Coffee Light/Dark** - Rich espresso and cream tones
-- **Lavender Light/Dark** - Soft purple elegance
-- **Nature Light/Dark** - Lush leaf greens inspired by forests and earth
-- **Pink Light/Dark** - Bubblegum pink and neon glows
-- **Kitsune Springs A-D Light/Dark** - Japanese spa-inspired themes with serene colors (8 variants)
+- **Light** (default) / **Dark** - Clean blue and white / Sophisticated midnight with purple accents
+- **Strawberry** Light/Dark - Sweet pink tones
+- **Ocean** Light/Dark - Deep sea blues and tropical coral
+- **Cyberpunk** Light/Dark - Neon dystopia with electric colors
+- **Coffee** Light/Dark - Rich espresso and cream tones
+- **Lavender** Light/Dark - Soft purple elegance
+- **Nature** Light/Dark - Lush leaf greens inspired by forests and earth
+- **Pink** Light/Dark - Bubblegum pink and neon glows
+- **Izakaya** Light/Dark - Japanese izakaya-inspired warm tones (Kitsune contest winner)
 
 ## Installation
 
@@ -64,15 +63,15 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 
 ## CSS Variables
 
-Each theme defines ~50 variables. Variables are **namespaced with `--hdk-*`** prefix for Tailwind v4 compatibility.
+Each theme defines ~40 variables (34 color + 6 shadow). Variables are **namespaced with `--hdk-*`** prefix for Tailwind v4 compatibility.
 
 ### Colors (no prefix needed)
 
-- `--color-primary` (+ dark, light, bg, hover, text variants)
-- `--color-success` (+ dark, text, bg variants)
-- `--color-warning` (+ bg, text variants)
-- `--color-danger` (+ dark, darker, light, text variants)
-- `--color-neutral` (+ light, lighter, text variants)
+- `--color-primary` (+ dark, light, bg, hover variants) / `--color-on-primary`
+- `--color-success` (+ dark, bg, hover variants) / `--color-on-success`
+- `--color-warning` (+ bg, hover variants) / `--color-on-warning`
+- `--color-danger` (+ dark, darker, light, hover variants) / `--color-on-danger`
+- `--color-neutral` (+ light, lighter, hover variants) / `--color-on-neutral`
 - `--color-muted-bg` - background for neutral/unknown badges
 - `--color-text` (+ secondary, tertiary, muted variants)
 - `--color-border` (+ light variant)
@@ -104,7 +103,7 @@ Each theme defines ~50 variables. Variables are **namespaced with `--hdk-*`** pr
 ```css
 .my-button {
   background: var(--color-primary);
-  color: var(--color-text);
+  color: var(--color-on-primary);
   padding: var(--hdk-space-md) var(--hdk-space-xl);
   border-radius: var(--hdk-radius);
   font-size: var(--hdk-text-base);
@@ -401,8 +400,12 @@ type Theme =
   | 'coffee-dark'
   | 'lavender-light'
   | 'lavender-dark'
+  | 'nature-light'
+  | 'nature-dark'
   | 'pink-light'
   | 'pink-dark'
+  | 'izakaya-light'
+  | 'izakaya-dark'
 
 const THEMES: readonly Theme[]
 ```

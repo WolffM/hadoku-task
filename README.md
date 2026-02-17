@@ -27,7 +27,7 @@ Native Android app available! Built with Capacitor WebView wrapper.
 - 🏷️ **Tag Support** - Organize with `#tags`
 - 🔍 **Smart Filtering** - Filter by tag or view all
 - 🎯 **Drag & Drop** - Reorder tasks and move between boards
-- 🎨 **12 Theme Families** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya, and more
+- 🎨 **9 Theme Families** - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya
 - 📋 **Multi-Board** - Organize tasks across multiple boards
 - ⚡ **Optimistic Updates** - Instant UI response with background sync
 - 👥 **Multi-User** - Public (localStorage), Friend/Admin (server sync)
@@ -128,7 +128,7 @@ Fix bug #high-priority [Enter]           # Tagged task
 
 ### Themes
 
-Choose from 12 carefully crafted theme families via the theme picker (top-right), each with light and dark variants:
+Choose from 9 theme families via the theme picker (top-right), each with light and dark variants:
 
 - **☼ Light / ☽ Dark** - Clean and sophisticated defaults
 - **❖ Strawberry** - Sweet pink tones
@@ -184,7 +184,7 @@ await TaskHandlers.createTask(storage, auth, input)
 - React-based UI with optimistic updates
 - All user types use localStorage for instant feedback
 - Non-public users sync to server in background
-- 7 complete themes with CSS custom properties
+- 9 theme families (18 themes) with CSS custom properties
 
 **See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design documentation.**
 

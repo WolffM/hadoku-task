@@ -34,13 +34,13 @@ pnpm run dev
 ### Styling
 
 - Use CSS custom properties for colors/spacing
-- Add styles to appropriate CSS file (`variables.css`, `main.css`, `buttons.css`, etc.)
+- Add styles to appropriate CSS file (`base.css`, `main.css`, `buttons.css`, etc.)
 
 ## Adding Features
 
 ### New Theme
 
-1. Add definition in `themes/src/style.css` (~45 CSS variables)
+1. Add definition in `themes/src/style.css` (~40 CSS variables: 34 color + 6 shadow)
 2. Update `THEMES` array in `themes/src/index.ts`
 3. Add theme family entry in `src/app/themeConfig.tsx`
 

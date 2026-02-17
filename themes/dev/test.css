@@ -7,23 +7,23 @@
   --color-primary-hover: hsla(221, 100%, 60%, 0.08); /* modified */
   --color-success: #99ffc2; /* modified */
   --color-success-dark: #5cff9d; /* modified */
-  --color-success-text: #000000;
+  --color-on-success: #000000;
   --color-success-bg: hsla(144, 100%, 80%, 0.1); /* modified */
   --color-success-hover: hsla(144, 100%, 80%, 0.06); /* modified */
   --color-warning: #ffb433; /* modified */
   --color-warning-bg: hsla(38, 100%, 60%, 0.1); /* modified */
-  --color-warning-text: #000000;
+  --color-on-warning: #000000;
   --color-warning-hover: hsla(38, 100%, 60%, 0.06); /* modified */
   --color-danger: #ff6633; /* modified */
   --color-danger-dark: #ff4000; /* modified */
   --color-danger-darker: #cc3300; /* modified */
   --color-danger-light: #fadbd1; /* modified */
-  --color-danger-text: #000000;
+  --color-on-danger: #000000;
   --color-danger-hover: rgba(255, 102, 51, 0.06); /* modified */
   --color-neutral: #a6b0bf; /* modified */
   --color-neutral-light: #e4e5e7; /* modified */
   --color-neutral-lighter: #ffffff; /* modified */
-  --color-neutral-text: #000000;
+  --color-on-neutral: #000000;
   --color-neutral-hover: rgba(166, 176, 191, 0.06); /* modified */
   --color-muted-bg: #d6d8db; /* modified */
   --color-text: #05112e; /* modified */

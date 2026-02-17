@@ -201,8 +201,8 @@
 
 /* ===== CARD GRADIENT OFFSET ===== */
 /* Allows per-card hue variation while staying harmonious with theme */
-/* Only active in advanced surface mode; simple mode uses flat --gradient-start/--gradient-end */
-[data-surface='advanced'] .card-gradient-offset {
+/* Disabled in simple mode (data-simple-mode='true') which uses flat colors */
+.card-gradient-offset {
   --local-hue: calc(var(--accent-h) + var(--card-hue-offset, 0));
   --base-l: calc(var(--accent-l) + var(--gradient-l-adjust, 0));
   --gradient-start: oklch(

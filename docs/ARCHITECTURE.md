@@ -400,8 +400,7 @@ src/
 │   └── storage.ts           # Storage interface
 │
 ├── styles/                   # CSS modules
-│   ├── variables.css        # Design tokens + themes
-│   ├── base.css            # Reset and base
+│   ├── base.css              # Design tokens + base styles
 │   ├── main.css            # Layout and structure
 │   ├── buttons.css         # Button styles
 │   ├── modal.css           # Modal dialogs
@@ -508,8 +507,7 @@ const storage = {
 
 ```text
 src/styles/
-├── variables.css       # Design tokens + 7 theme definitions
-├── base.css           # CSS reset and base styles
+├── base.css            # Base styles, design tokens, and CSS reset
 ├── main.css           # Layout, header, app structure
 ├── buttons.css        # All button variants
 ├── modal.css          # Modal dialogs
@@ -520,7 +518,7 @@ src/styles/
 
 ### Theme System
 
-**12 theme families (24 variants with light/dark) with ~45 CSS variables each:**
+**9 theme families (18 themes with light/dark) with ~40 CSS variables each:**
 
 ```css
 :root {
@@ -529,21 +527,27 @@ src/styles/
 [data-theme='dark'] {
   /* Dark theme */
 }
-[data-theme='strawberry'] {
-  /* Strawberry theme */
+[data-theme='strawberry-light'] {
+  /* Strawberry light — each family has light + dark */
 }
-/* ... 4 more themes */
+/* ... 7 more families × 2 variants */
 ```
 
 **Theme variables structure:**
 
-- Primary colors (5 variants)
-- Success/Danger colors (theme-specific, opposing colors)
-- Neutral colors (grays)
-- Text colors (primary, secondary, muted)
-- Border colors
-- Background colors (app, cards, hover states)
-- Shadow values
+- Primary colors (6 variants incl. `--color-on-primary`)
+- Success colors (5 variants incl. `--color-on-success`)
+- Warning colors (4 variants incl. `--color-on-warning`)
+- Danger colors (6 variants incl. `--color-on-danger`)
+- Neutral colors (6 variants incl. `--color-on-neutral`)
+- Text colors (4: primary, secondary, tertiary, muted)
+- Border colors (2: default, light)
+- Background colors (5: default, card, alt, hover, overlay)
+- Shadows (6: sm, md, lg, focus, focus-sm, focus-alt)
+
+> **Note:** `--color-on-*` variables define the text color to use ON TOP OF
+> that color's surface. These are computed from the color's luminance,
+> not the theme mode. See THEME_CREATION_GUIDE.md for details.
 
 **Theme switching:**
 
@@ -700,9 +704,9 @@ Instant UI feedback with background server sync
 
 **New Theme:**
 
-1. Add theme definition in `src/styles/variables.css` (~45 variables)
-2. Add to type union in `src/app/App.tsx`
-3. Add theme picker option with icon
+1. Add theme definition in `themes/src/style.css` (~40 variables: 34 color + 6 shadow)
+2. Add to `THEMES` array in `themes/src/index.ts`
+3. Add theme family in `themes/src/metadata.tsx` with icon
 
 **New Component:**
 
