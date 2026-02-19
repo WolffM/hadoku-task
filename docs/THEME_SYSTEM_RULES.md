@@ -9,14 +9,15 @@ Based on analysis of Material Design 3, Radix Colors, Tailwind CSS, WCAG 2.2, an
 
 These are legal accessibility requirements, not suggestions.
 
-| Scenario | Minimum Ratio | Standard |
-|----------|--------------|----------|
-| Normal text on background | **4.5:1** | WCAG 2.2 SC 1.4.3 Level AA |
-| Large text (≥18pt or ≥14pt bold) on background | **3:1** | WCAG 2.2 SC 1.4.3 Level AA |
-| UI component boundaries (borders, icons, focus rings) | **3:1** | WCAG 2.2 SC 1.4.11 Level AA |
-| Enhanced contrast (AAA) normal text | **7:1** | WCAG 2.2 SC 1.4.6 Level AAA |
+| Scenario                                              | Minimum Ratio | Standard                    |
+| ----------------------------------------------------- | ------------- | --------------------------- |
+| Normal text on background                             | **4.5:1**     | WCAG 2.2 SC 1.4.3 Level AA  |
+| Large text (≥18pt or ≥14pt bold) on background        | **3:1**       | WCAG 2.2 SC 1.4.3 Level AA  |
+| UI component boundaries (borders, icons, focus rings) | **3:1**       | WCAG 2.2 SC 1.4.11 Level AA |
+| Enhanced contrast (AAA) normal text                   | **7:1**       | WCAG 2.2 SC 1.4.6 Level AAA |
 
 ### Hard Rules:
+
 - **Every `--color-on-X` must achieve ≥4.5:1 against its paired `--color-X`.**
   Text on filled buttons is normal-sized, so 4.5:1 is the minimum, not 3:1.
 - **Badge text must achieve ≥4.5:1 against its badge background.**
@@ -24,15 +25,16 @@ These are legal accessibility requirements, not suggestions.
 - **Never auto-calculate `on-X` without verifying the result.** Our cascade system derives `on-primary` via a simple `getContrastColor()` but this must be validated per theme.
 
 ### Our Current Status:
+
 All button pairs pass WCAG AA:
 
-| Button | BG | Text | Ratio | AA |
-|--------|-----|------|-------|----|
-| Primary | `#2563eb` | white | 5.17:1 | ✅ |
-| Success | `#0ea5e9` | black | 7.58:1 | ✅ |
-| Warning | `#f59e0b` | black | 9.78:1 | ✅ |
-| Danger | `#f97316` | black | 7.49:1 | ✅ |
-| Neutral | `#64748b` | white | 4.76:1 | ✅ |
+| Button  | BG        | Text  | Ratio  | AA  |
+| ------- | --------- | ----- | ------ | --- |
+| Primary | `#2563eb` | white | 5.17:1 | ✅  |
+| Success | `#0ea5e9` | black | 7.58:1 | ✅  |
+| Warning | `#f59e0b` | black | 9.78:1 | ✅  |
+| Danger  | `#f97316` | black | 7.49:1 | ✅  |
+| Neutral | `#64748b` | white | 4.76:1 | ✅  |
 
 **But "pass" ≠ "good".** Neutral at 4.76:1 barely clears 4.5:1. Material Design targets higher floors.
 
@@ -45,6 +47,7 @@ Material Design 3's single most important rule:
 > **Colors must only be used in their designated pairs. Combining colors improperly breaks contrast under user-adjustable contrast levels.**
 
 ### The Pairing Pattern:
+
 ```
 X          → background fill
 on-X       → text/icons on X
@@ -53,12 +56,14 @@ on-X-container → text/icons on X-container
 ```
 
 ### Hard Rules:
+
 - **`on-primary` is ONLY for text/icons that sit on a `primary` background.** Never use `on-primary` on `surface` or `bg`.
 - **`primary` is ONLY for fills and backgrounds, never for body text.** Use `text` or `text-secondary` for body copy.
 - **Container colors get their own `on-container` text color.** Don't reuse `on-primary` on `primary-bg` — the contrast math is different.
 - **Each new surface level needs its own "on" color verified.**
 
 ### Violation in Our System:
+
 We have `--color-primary-bg` but no `--color-on-primary-bg`. Badges using `color: var(--color-success)` on `background: var(--color-success-bg)` are creating an **unvalidated pair**. This works sometimes but is not guaranteed across all themes.
 
 ---
@@ -72,22 +77,25 @@ However, our theme system intentionally allows creative freedom — themes expre
 personality through color choice (e.g., the light theme uses a "beach" palette
 with sky-blue success and orange danger).
 
-| Role | Conventional Hue | Our Approach |
-|------|------------------|--------------|
-| **Success** | Green | Theme-specific — can be any positive-feeling color |
-| **Warning** | Yellow / Amber | Theme-specific — caution indicator |
-| **Danger / Error** | Red | Theme-specific — any bold contrasting color |
-| **Primary** | Brand color | Can be any hue |
-| **Neutral** | Gray / desaturated | Should remain desaturated |
+| Role               | Conventional Hue   | Our Approach                                       |
+| ------------------ | ------------------ | -------------------------------------------------- |
+| **Success**        | Green              | Theme-specific — can be any positive-feeling color |
+| **Warning**        | Yellow / Amber     | Theme-specific — caution indicator                 |
+| **Danger / Error** | Red                | Theme-specific — any bold contrasting color        |
+| **Primary**        | Brand color        | Can be any hue                                     |
+| **Neutral**        | Gray / desaturated | Should remain desaturated                          |
 
 ### Hard Rules:
+
 - **All semantic colors MUST be visually distinct from each other** within each theme.
 - **Success and danger MUST NOT be the same hue family** — users must be able to tell them apart.
 - **Neutral MUST be desaturated.** Saturation ≤ 15% in HSL.
 - **Each `--color-on-X` MUST achieve ≥4.5:1 contrast against its `--color-X`.**
 
 ### Acknowledged Exceptions:
+
 The light theme uses a beach-inspired palette where `--color-success` is sky blue (#0ea5e9) and `--color-danger` is orange (#f97316). This is intentional and documented in `THEME_CREATION_GUIDE.md`, which states: "Success and Danger are theme-specific, not fixed to green/red."
+
 - Radix Colors explicitly notes which scale steps have which foreground expectations. There is no ambiguity.
 
 ---
@@ -96,20 +104,22 @@ The light theme uses a beach-inspired palette where `--color-success` is sky blu
 
 Radix Colors defines the most rigorous scale structure in the industry. Key rules:
 
-| Steps | Purpose | Rule |
-|-------|---------|------|
-| 1–2 | App/card backgrounds | Must be near-white (light) or near-black (dark) |
-| 3–5 | Component backgrounds (normal → hover → pressed) | Must be progressively darker/lighter |
-| 6–8 | Borders (subtle → interactive → strong) | 6 for dividers, 7 for button borders, 8 for focus rings |
-| 9–10 | Solid fills (normal → hover) | **Highest chroma step.** Used for buttons, badges, headers |
-| 11–12 | Text (low contrast → high contrast) | Must achieve Lc 60 / Lc 90 APCA on step 2 |
+| Steps | Purpose                                          | Rule                                                       |
+| ----- | ------------------------------------------------ | ---------------------------------------------------------- |
+| 1–2   | App/card backgrounds                             | Must be near-white (light) or near-black (dark)            |
+| 3–5   | Component backgrounds (normal → hover → pressed) | Must be progressively darker/lighter                       |
+| 6–8   | Borders (subtle → interactive → strong)          | 6 for dividers, 7 for button borders, 8 for focus rings    |
+| 9–10  | Solid fills (normal → hover)                     | **Highest chroma step.** Used for buttons, badges, headers |
+| 11–12 | Text (low contrast → high contrast)              | Must achieve Lc 60 / Lc 90 APCA on step 2                  |
 
 ### Hard Rules:
+
 - **Step 9 (solid fill) determines foreground color.** Most steps-9 use white text. Five exceptions use dark text: Sky, Mint, Lime, Yellow, Amber.
 - **Never use a solid-fill color for text.** Step 9 is for backgrounds, steps 11–12 are for text.
 - **Background steps (1–2) must have enough contrast with text steps (11–12) for readability.** This is guaranteed by Radix's math but must be manually verified in custom systems.
 
 ### Mapping to Our System:
+
 ```
 Radix 1–2  → --color-bg, --color-bg-card
 Radix 3–5  → --color-bg-hover, --color-primary-hover (with alpha)
@@ -127,6 +137,7 @@ Radix 12   → --color-text
 Every design system agrees on these:
 
 ### Hard Rules:
+
 - **Dark themes are NOT inverted light themes.** You cannot just swap white↔black.
 - **Dark backgrounds use elevated surfaces, not lowered ones.** Higher = lighter in dark mode (Material Design).
 - **Accent colors often need desaturation in dark mode.** Full-saturation colors on dark backgrounds cause eye strain and "vibration" effects.
@@ -135,6 +146,7 @@ Every design system agrees on these:
 - **Background in dark mode should not be pure black (`#000000`).** Use `#0f172a` or similar dark-slate. Pure black creates harsh edges on OLED screens and makes elevated cards invisible.
 
 ### Exceptions:
+
 - OLED/AMOLED-optimized themes may use `#000000` intentionally.
 
 ---
@@ -142,6 +154,7 @@ Every design system agrees on these:
 ## 6. State Management Rules
 
 ### Hard Rules:
+
 - **Every interactive color needs at minimum: default, hover, active, focus, disabled states.**
 - **Hover states should darken light fills and lighten dark fills** — a 5–10% lightness shift is standard.
 - **Disabled states must be visually distinct but are exempt from contrast requirements** (WCAG 2.2 explicitly excludes inactive UI components).
@@ -155,11 +168,13 @@ Every design system agrees on these:
 Our cascade system auto-computes `on-X` (white or black) based on luminance. This has a known flaw:
 
 ### The Problem:
+
 - Mid-range colors (L ≈ 0.18–0.25 in relative luminance) can go either way.
 - A color at luminance 0.18 yields: white=4.31:1 (FAIL), black=4.64:1 (passes barely).
 - The threshold in most `getContrastColor()` implementations uses luminance 0.179 as the cutoff. Colors near this boundary can flip between themes.
 
 ### Hard Rules:
+
 - **Never blindly trust auto-calculated contrast text.** Always verify the computed `on-X` against its `X` background.
 - **Prefer explicit `on-X` definitions per theme** over auto-calculation.
 - **If auto-calculating, use WCAG ratio, not luminance threshold.** Compute both white and black contrast ratios, pick the higher one, and verify it's ≥ 4.5:1.
@@ -170,6 +185,7 @@ Our cascade system auto-computes `on-X` (white or black) based on luminance. Thi
 ## 8. Color Space Rules
 
 ### Hard Rules:
+
 - **HSL is insufficient for perceptually uniform color manipulation.** `hsl(120, 100%, 50%)` and `hsl(240, 100%, 50%)` have vastly different perceived brightness.
 - **Use OKLCH or CIELAB for deriving variants.** Tailwind v4 moved entirely to OKLCH. Material Design uses HCT (Hue/Chroma/Tone).
 - **If deriving dark/light variants by shifting L in HSL, verify contrast after every shift.** A -15 lightness shift might be fine for blue but catastrophic for yellow.
@@ -182,6 +198,7 @@ Our cascade system auto-computes `on-X` (white or black) based on luminance. Thi
 When designing a system that supports user-created themes:
 
 ### Hard Rules:
+
 - **Define a minimum set of required variables** and validate completeness at load time.
 - **Every theme must be tested against a contrast matrix** before shipping.
 - **Provide a reference theme** (and its full set of passing contrast ratios) that custom themes can be diff'd against.
@@ -192,17 +209,17 @@ When designing a system that supports user-created themes:
 
 ## 10. Summary: What We Must Fix
 
-| Priority | Issue | Status |
-|----------|-------|--------|
-| **Done** | `--color-*-text` renamed to `--color-on-*` | ✅ Completed — all 107 values fixed |
-| **Done** | Light theme button text inconsistent (mix of black/white) | ✅ All `--color-on-*` set to white in light theme |
-| **Done** | Button hover effects inconsistent | ✅ Unified to `color-mix(in oklch, ..., black)` |
-| **Accepted** | Success is not green in some themes | By design — themes express personality (see THEME_CREATION_GUIDE.md) |
-| **P1** | No `--color-on-X-container` variables | Badge text color is unvalidated against badge bg |
-| **P1** | Auto-calculated `on-X` is not verified | Add contrast validation to theme editor export |
-| **P2** | Some dark themes use pure white text | Consider `#e2e8f0` or similar off-white |
-| **P2** | Advanced surface mode incomplete | Simple/Advanced toggle exists but needs comprehensive design plan |
-| **P3** | Theme editor doesn't show contrast ratios | Add live contrast ratio display in the editor panel |
+| Priority     | Issue                                                     | Status                                                               |
+| ------------ | --------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Done**     | `--color-*-text` renamed to `--color-on-*`                | ✅ Completed — all 107 values fixed                                  |
+| **Done**     | Light theme button text inconsistent (mix of black/white) | ✅ All `--color-on-*` set to white in light theme                    |
+| **Done**     | Button hover effects inconsistent                         | ✅ Unified to `color-mix(in oklch, ..., black)`                      |
+| **Accepted** | Success is not green in some themes                       | By design — themes express personality (see THEME_CREATION_GUIDE.md) |
+| **P1**       | No `--color-on-X-container` variables                     | Badge text color is unvalidated against badge bg                     |
+| **P1**       | Auto-calculated `on-X` is not verified                    | Add contrast validation to theme editor export                       |
+| **P2**       | Some dark themes use pure white text                      | Consider `#e2e8f0` or similar off-white                              |
+| **P2**       | Advanced surface mode incomplete                          | Simple/Advanced toggle exists but needs comprehensive design plan    |
+| **P3**       | Theme editor doesn't show contrast ratios                 | Add live contrast ratio display in the editor panel                  |
 
 ---
 

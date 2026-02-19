@@ -18,6 +18,7 @@ The `--color-primary-text`, `--color-success-text`, `--color-warning-text`, `--c
 **Why:** The old names were ambiguous — "primary-text" reads as "primary-colored text" rather than "text ON a primary-colored surface." This caused AI agents (and humans) to systematically assign values based on the theme mode (light=black, dark=white) instead of computing from each color's actual luminance. 47% of values were wrong, resulting in invisible button text across many themes.
 
 **Migration:** Search and replace in custom CSS:
+
 ```
 var(--color-primary-text) → var(--color-on-primary)
 var(--color-success-text) → var(--color-on-success)
@@ -27,6 +28,7 @@ var(--color-neutral-text) → var(--color-on-neutral)
 ```
 
 #### Fixed
+
 - Fixed 57 incorrect `--color-on-*` values across all 18 production themes + dev-only `light-custom` using WCAG luminance calculation
 - Fixed `.pill-btn--active` and `.modal-button--primary` using `var(--color-bg-card)` instead of the contrast text variable
 - Fixed `.task-app__edit-tag-btn` hardcoding `color: white` instead of using the contrast variable
@@ -35,6 +37,7 @@ var(--color-neutral-text) → var(--color-on-neutral)
 - Fixed global `.var-name` CSS selector in editor bleeding into compact variable grid (scoped to `.editor-panel .var-name`)
 
 #### Changed
+
 - Light theme: set all `--color-on-*` to white for consistent filled button text across all semantic colors
 - Button hover: replaced inconsistent `filter: brightness()` / `background: var(--color-*-dark)` with unified `color-mix(in oklch, ..., black)` across all filled buttons (editor, modal, app)
 - Editor refactored from 1 monolithic HTML file (2354 lines) into 5 modular files: `editor.html` (294 lines), `editor.css`, `editor.js`, `config.js`, `color-utils.js`
@@ -49,6 +52,7 @@ var(--color-neutral-text) → var(--color-on-neutral)
 - Created `claude.md` — agent instructions for verification and testing practices
 
 #### Removed
+
 - Removed ~250 lines of commented-out Kitsune Springs A/B/C themes (preserved in THEME_GRAVEYARD.md)
 - Removed dead `[data-surface='simple']` CSS block from style.css (replaced by `data-simple-mode` system)
 - Removed dark sidebar from theme editor (62 hardcoded color values eliminated)

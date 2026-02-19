@@ -1,7 +1,8 @@
 // Editor configuration — themes, color variables, cascade maps, and SVG icons
 // Icons match the React components from @wolffm/task-ui-components exactly
 
-const iconAttrs = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const iconAttrs =
+  'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
 
 // SVG icons (same paths as ThemeIcons.tsx in task-ui-components)
 export const THEME_ICONS = {
@@ -14,51 +15,170 @@ export const THEME_ICONS = {
   flower: `<svg ${iconAttrs}><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
   leaf: `<svg ${iconAttrs}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" fill="currentColor"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9 14.5 11 14 11 20" stroke="currentColor" stroke-width="2" fill="none"/><path d="M11 8c3 2 5 4 7 7" stroke="white" stroke-width="1.5" opacity="0.4"/></svg>`,
   heart: `<svg ${iconAttrs}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/></svg>`,
-  spa: `<svg ${iconAttrs}><path d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="8" cy="14" rx="4" ry="1.5" fill="currentColor" opacity="0.3"/><circle cx="17" cy="18" r="2" fill="currentColor" opacity="0.4"/><circle cx="20" cy="16" r="1.5" fill="currentColor" opacity="0.4"/></svg>`,
-};
+  spa: `<svg ${iconAttrs}><path d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><path d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="8" cy="14" rx="4" ry="1.5" fill="currentColor" opacity="0.3"/><circle cx="17" cy="18" r="2" fill="currentColor" opacity="0.4"/><circle cx="20" cy="16" r="1.5" fill="currentColor" opacity="0.4"/></svg>`
+}
 
 // Theme families — mirrors THEME_FAMILIES from @wolffm/themes metadata.tsx
 // Colors extracted from style.css so the picker shows real theme accents
 export const THEME_FAMILIES = [
-  { lightTheme: 'light',           darkTheme: 'dark',            label: 'Default',    icon: 'sun',        darkIcon: 'moon',       lightPrimary: '#2563eb', darkPrimary: '#d8b4fe', lightBg: '#f8fafc', darkBg: '#0f172a' },
-  { lightTheme: 'strawberry-light', darkTheme: 'strawberry-dark', label: 'Strawberry', icon: 'strawberry', darkIcon: 'strawberry', lightPrimary: '#ff6b9d', darkPrimary: '#ff6b9d', lightBg: '#fffbfc', darkBg: '#1a0d14' },
-  { lightTheme: 'ocean-light',     darkTheme: 'ocean-dark',      label: 'Ocean',      icon: 'wave',       darkIcon: 'wave',       lightPrimary: '#06b6d4', darkPrimary: '#06b6d4', lightBg: '#f0f9ff', darkBg: '#082f49' },
-  { lightTheme: 'cyberpunk-light', darkTheme: 'cyberpunk-dark',  label: 'Cyberpunk',  icon: 'zap',        darkIcon: 'zap',        lightPrimary: '#ff006e', darkPrimary: '#22d3ee', lightBg: '#fafafe', darkBg: '#020617' },
-  { lightTheme: 'coffee-light',    darkTheme: 'coffee-dark',     label: 'Coffee',     icon: 'coffee',     darkIcon: 'coffee',     lightPrimary: '#ea580c', darkPrimary: '#ea580c', lightBg: '#fffbeb', darkBg: '#1c1917' },
-  { lightTheme: 'lavender-light',  darkTheme: 'lavender-dark',   label: 'Lavender',   icon: 'flower',     darkIcon: 'flower',     lightPrimary: '#c084fc', darkPrimary: '#c084fc', lightBg: '#fafafa', darkBg: '#1a0f1e' },
-  { lightTheme: 'nature-light',    darkTheme: 'nature-dark',     label: 'Nature',     icon: 'leaf',       darkIcon: 'leaf',       lightPrimary: '#6bbe4e', darkPrimary: '#5faf4b', lightBg: '#f9f7ee', darkBg: '#1e1c17' },
-  { lightTheme: 'pink-light',      darkTheme: 'pink-dark',       label: 'Pink',       icon: 'heart',      darkIcon: 'heart',      lightPrimary: '#ff69b4', darkPrimary: '#ff10f0', lightBg: '#fffafc', darkBg: '#0d0012' },
-  { lightTheme: 'izakaya-light',   darkTheme: 'izakaya-dark',    label: 'Izakaya',    icon: 'spa',        darkIcon: 'spa',        lightPrimary: '#41baae', darkPrimary: '#41baae', lightBg: '#f2e6cd', darkBg: '#101d26' },
-];
+  {
+    lightTheme: 'light',
+    darkTheme: 'dark',
+    label: 'Default',
+    icon: 'sun',
+    darkIcon: 'moon',
+    lightPrimary: '#2563eb',
+    darkPrimary: '#d8b4fe',
+    lightBg: '#f8fafc',
+    darkBg: '#0f172a'
+  },
+  {
+    lightTheme: 'strawberry-light',
+    darkTheme: 'strawberry-dark',
+    label: 'Strawberry',
+    icon: 'strawberry',
+    darkIcon: 'strawberry',
+    lightPrimary: '#ff6b9d',
+    darkPrimary: '#ff6b9d',
+    lightBg: '#fffbfc',
+    darkBg: '#1a0d14'
+  },
+  {
+    lightTheme: 'ocean-light',
+    darkTheme: 'ocean-dark',
+    label: 'Ocean',
+    icon: 'wave',
+    darkIcon: 'wave',
+    lightPrimary: '#06b6d4',
+    darkPrimary: '#06b6d4',
+    lightBg: '#f0f9ff',
+    darkBg: '#082f49'
+  },
+  {
+    lightTheme: 'cyberpunk-light',
+    darkTheme: 'cyberpunk-dark',
+    label: 'Cyberpunk',
+    icon: 'zap',
+    darkIcon: 'zap',
+    lightPrimary: '#ff006e',
+    darkPrimary: '#22d3ee',
+    lightBg: '#fafafe',
+    darkBg: '#020617'
+  },
+  {
+    lightTheme: 'coffee-light',
+    darkTheme: 'coffee-dark',
+    label: 'Coffee',
+    icon: 'coffee',
+    darkIcon: 'coffee',
+    lightPrimary: '#ea580c',
+    darkPrimary: '#ea580c',
+    lightBg: '#fffbeb',
+    darkBg: '#1c1917'
+  },
+  {
+    lightTheme: 'lavender-light',
+    darkTheme: 'lavender-dark',
+    label: 'Lavender',
+    icon: 'flower',
+    darkIcon: 'flower',
+    lightPrimary: '#c084fc',
+    darkPrimary: '#c084fc',
+    lightBg: '#fafafa',
+    darkBg: '#1a0f1e'
+  },
+  {
+    lightTheme: 'nature-light',
+    darkTheme: 'nature-dark',
+    label: 'Nature',
+    icon: 'leaf',
+    darkIcon: 'leaf',
+    lightPrimary: '#6bbe4e',
+    darkPrimary: '#5faf4b',
+    lightBg: '#f9f7ee',
+    darkBg: '#1e1c17'
+  },
+  {
+    lightTheme: 'pink-light',
+    darkTheme: 'pink-dark',
+    label: 'Pink',
+    icon: 'heart',
+    darkIcon: 'heart',
+    lightPrimary: '#ff69b4',
+    darkPrimary: '#ff10f0',
+    lightBg: '#fffafc',
+    darkBg: '#0d0012'
+  },
+  {
+    lightTheme: 'izakaya-light',
+    darkTheme: 'izakaya-dark',
+    label: 'Izakaya',
+    icon: 'spa',
+    darkIcon: 'spa',
+    lightPrimary: '#41baae',
+    darkPrimary: '#41baae',
+    lightBg: '#f2e6cd',
+    darkBg: '#101d26'
+  }
+]
 
 // Maps theme name → icon key for the toggle button
-export const THEME_ICON_MAP = {};
+export const THEME_ICON_MAP = {}
 THEME_FAMILIES.forEach(f => {
-  THEME_ICON_MAP[f.lightTheme] = f.icon;
-  THEME_ICON_MAP[f.darkTheme] = f.darkIcon;
-});
+  THEME_ICON_MAP[f.lightTheme] = f.icon
+  THEME_ICON_MAP[f.darkTheme] = f.darkIcon
+})
 
 export const COLOR_VARS = {
-  primary: ['--color-primary', '--color-primary-dark', '--color-primary-light', '--color-primary-bg', '--color-primary-hover', '--color-on-primary'],
-  success: ['--color-success', '--color-success-dark', '--color-on-success', '--color-success-bg', '--color-success-hover'],
+  primary: [
+    '--color-primary',
+    '--color-primary-dark',
+    '--color-primary-light',
+    '--color-primary-bg',
+    '--color-primary-hover',
+    '--color-on-primary'
+  ],
+  success: [
+    '--color-success',
+    '--color-success-dark',
+    '--color-on-success',
+    '--color-success-bg',
+    '--color-success-hover'
+  ],
   warning: ['--color-warning', '--color-warning-bg', '--color-on-warning', '--color-warning-hover'],
-  danger: ['--color-danger', '--color-danger-dark', '--color-danger-darker', '--color-danger-light', '--color-on-danger', '--color-danger-hover'],
-  neutral: ['--color-neutral', '--color-neutral-light', '--color-neutral-lighter', '--color-on-neutral', '--color-neutral-hover', '--color-muted-bg'],
+  danger: [
+    '--color-danger',
+    '--color-danger-dark',
+    '--color-danger-darker',
+    '--color-danger-light',
+    '--color-on-danger',
+    '--color-danger-hover'
+  ],
+  neutral: [
+    '--color-neutral',
+    '--color-neutral-light',
+    '--color-neutral-lighter',
+    '--color-on-neutral',
+    '--color-neutral-hover',
+    '--color-muted-bg'
+  ],
   text: ['--color-text', '--color-text-secondary', '--color-text-tertiary', '--color-text-muted'],
   border: ['--color-border', '--color-border-light'],
   bg: ['--color-bg', '--color-bg-card', '--color-bg-alt', '--color-bg-hover', '--color-bg-overlay']
-};
+}
 
 // Root colors that auto-cascade to derived variants when changed
 export const CASCADE_MAP = {
   '--color-primary': {
     '--color-primary-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 15) }),
-    '--color-primary-light': (h, s, l, isDark) => isDark
-      ? ({ h, s: Math.max(0, s - 30), l: Math.max(0, l - 30) })
-      : ({ h, s: Math.min(100, s - 20), l: Math.min(100, l + 25) }),
-    '--color-primary-bg': (h, s, l, isDark) => isDark
-      ? ({ h, s: Math.max(0, s - 40), l: 15, a: 100 })
-      : ({ h, s: Math.min(100, s - 10), l: 97, a: 100 }),
+    '--color-primary-light': (h, s, l, isDark) =>
+      isDark
+        ? { h, s: Math.max(0, s - 30), l: Math.max(0, l - 30) }
+        : { h, s: Math.min(100, s - 20), l: Math.min(100, l + 25) },
+    '--color-primary-bg': (h, s, l, isDark) =>
+      isDark
+        ? { h, s: Math.max(0, s - 40), l: 15, a: 100 }
+        : { h, s: Math.min(100, s - 10), l: 97, a: 100 },
     '--color-primary-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 8 })
   },
   '--color-success': {
@@ -73,35 +193,36 @@ export const CASCADE_MAP = {
   '--color-danger': {
     '--color-danger-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 10) }),
     '--color-danger-darker': (h, s, l) => ({ h, s, l: Math.max(0, l - 20) }),
-    '--color-danger-light': (h, s, l, isDark) => isDark
-      ? ({ h, s: Math.max(0, s - 30), l: Math.max(0, l - 35) })
-      : ({ h, s: Math.min(100, s - 20), l: Math.min(100, l + 30) }),
+    '--color-danger-light': (h, s, l, isDark) =>
+      isDark
+        ? { h, s: Math.max(0, s - 30), l: Math.max(0, l - 35) }
+        : { h, s: Math.min(100, s - 20), l: Math.min(100, l + 30) },
     '--color-danger-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
   },
   '--color-neutral': {
-    '--color-neutral-light': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.max(0, l - 15) })
-      : ({ h, s: Math.max(0, s - 10), l: Math.min(100, l + 20) }),
-    '--color-neutral-lighter': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.max(0, l - 25) })
-      : ({ h, s: Math.max(0, s - 15), l: Math.min(100, l + 30) }),
+    '--color-neutral-light': (h, s, l, isDark) =>
+      isDark
+        ? { h, s, l: Math.max(0, l - 15) }
+        : { h, s: Math.max(0, s - 10), l: Math.min(100, l + 20) },
+    '--color-neutral-lighter': (h, s, l, isDark) =>
+      isDark
+        ? { h, s, l: Math.max(0, l - 25) }
+        : { h, s: Math.max(0, s - 15), l: Math.min(100, l + 30) },
     '--color-neutral-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 }),
-    '--color-muted-bg': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.max(0, l - 15) })
-      : ({ h, s: Math.max(0, s - 10), l: Math.min(100, l + 15) })
+    '--color-muted-bg': (h, s, l, isDark) =>
+      isDark
+        ? { h, s, l: Math.max(0, l - 15) }
+        : { h, s: Math.max(0, s - 10), l: Math.min(100, l + 15) }
   },
   '--color-bg': {
-    '--color-bg-card': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.min(100, l + 3) })
-      : ({ h, s, l: Math.min(100, l + 2) }),
-    '--color-bg-alt': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.max(0, l - 2) })
-      : ({ h, s, l: Math.max(0, l - 3) }),
-    '--color-bg-hover': (h, s, l, isDark) => isDark
-      ? ({ h, s, l: Math.min(100, l + 5) })
-      : ({ h, s, l: Math.max(0, l - 4) })
+    '--color-bg-card': (h, s, l, isDark) =>
+      isDark ? { h, s, l: Math.min(100, l + 3) } : { h, s, l: Math.min(100, l + 2) },
+    '--color-bg-alt': (h, s, l, isDark) =>
+      isDark ? { h, s, l: Math.max(0, l - 2) } : { h, s, l: Math.max(0, l - 3) },
+    '--color-bg-hover': (h, s, l, isDark) =>
+      isDark ? { h, s, l: Math.min(100, l + 5) } : { h, s, l: Math.max(0, l - 4) }
   }
-};
+}
 
 // Maps root colors to their auto-calculated contrast text colors
 export const TEXT_CONTRAST_MAP = {
@@ -110,7 +231,7 @@ export const TEXT_CONTRAST_MAP = {
   '--color-warning': '--color-on-warning',
   '--color-danger': '--color-on-danger',
   '--color-neutral': '--color-on-neutral'
-};
+}
 
-export const LOCAL_SERVER_URL = 'http://localhost:3456';
-export const WORKER_URL = 'https://api.hadoku.me';
+export const LOCAL_SERVER_URL = 'http://localhost:3456'
+export const WORKER_URL = 'https://api.hadoku.me'

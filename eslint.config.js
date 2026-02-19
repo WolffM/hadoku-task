@@ -62,6 +62,7 @@ export default [
         alert: 'readonly',
         confirm: 'readonly',
         prompt: 'readonly',
+        getComputedStyle: 'readonly',
         crypto: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
