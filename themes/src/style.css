@@ -88,6 +88,43 @@
   --gradient-c-scale: 0.9;
 }
 
+/* ===== SHARED LIGHT THEME TOKENS ===== */
+/* Values identical across all light themes — avoids repeating in each block */
+:root,
+[data-theme='light'],
+[data-theme='strawberry-light'],
+[data-theme='ocean-light'],
+[data-theme='cyberpunk-light'],
+[data-theme='coffee-light'],
+[data-theme='lavender-light'],
+[data-theme='pink-light'],
+[data-theme='nature-light'],
+[data-theme='izakaya-light'],
+[data-theme='light-custom'] {
+  --card-text-primary: rgba(0, 0, 0, 0.9);
+  --card-text-secondary: rgba(0, 0, 0, 0.7);
+  --card-text-muted: rgba(0, 0, 0, 0.5);
+  --gradient-l-adjust: 0.12;
+  --gradient-c-scale: 0.7;
+}
+
+/* ===== SHARED DARK THEME TOKENS ===== */
+[data-theme='dark'],
+[data-theme='strawberry-dark'],
+[data-theme='ocean-dark'],
+[data-theme='cyberpunk-dark'],
+[data-theme='coffee-dark'],
+[data-theme='lavender-dark'],
+[data-theme='pink-dark'],
+[data-theme='nature-dark'],
+[data-theme='izakaya-dark'] {
+  --card-text-primary: rgba(255, 255, 255, 0.95);
+  --card-text-secondary: rgba(255, 255, 255, 0.8);
+  --card-text-muted: rgba(255, 255, 255, 0.6);
+  --gradient-l-adjust: -0.08;
+  --gradient-c-scale: 0.85;
+}
+
 /* ===== LIGHT THEME (Default) ===== */
 :root,
 [data-theme='light'] {
@@ -191,15 +228,6 @@
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-smooth: 0.2s ease;
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== DARK THEME ===== */
@@ -261,15 +289,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(251, 113, 133, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(251, 113, 133, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(251, 113, 133, 0.2);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== STRAWBERRY LIGHT THEME ===== */
@@ -331,15 +350,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== STRAWBERRY DARK THEME ===== */
@@ -401,15 +411,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.2);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== OCEAN LIGHT THEME ===== */
@@ -471,15 +472,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== OCEAN DARK THEME ===== */
@@ -541,15 +533,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== CYBERPUNK LIGHT THEME ===== */
@@ -611,15 +594,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(255, 0, 110, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 0, 110, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 0, 110, 0.2);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== CYBERPUNK DARK THEME ===== */
@@ -681,15 +655,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== COFFEE LIGHT THEME ===== */
@@ -751,15 +716,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== COFFEE DARK THEME ===== */
@@ -821,15 +777,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== LAVENDER LIGHT THEME ===== */
@@ -891,15 +838,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== LAVENDER DARK THEME ===== */
@@ -961,15 +899,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.3);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.3);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.2);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== PINK LIGHT THEME ===== */
@@ -1031,15 +960,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== PINK DARK THEME ===== */
@@ -1101,15 +1021,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(255, 16, 240, 0.4);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 16, 240, 0.4);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 16, 240, 0.3);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== NATURE LIGHT THEME ===== */
@@ -1171,15 +1082,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(107, 190, 78, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(107, 190, 78, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(107, 190, 78, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* ===== NATURE DARK THEME ===== */
@@ -1241,15 +1143,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(95, 175, 75, 0.35);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(95, 175, 75, 0.35);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(95, 175, 75, 0.25);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* Izakaya Theme - Winner of Kitsune Theme Contest */
@@ -1313,15 +1206,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }
 
 /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C dark themes */
@@ -1384,15 +1268,6 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.32);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.32);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.18);
-
-  /* Card text - light text on dark gradients */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* Gradient adjustments - more subdued for dark mode */
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
 }
 
 /* ===== LIGHT CUSTOM THEME (Dev Editor Output) ===== */
@@ -1457,13 +1332,4 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(153, 185, 255, 0.25);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(153, 185, 255, 0.25);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(153, 185, 255, 0.15);
-
-  /* Card text - dark text on light gradients */
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-
-  /* Gradient adjustments - brighter for light mode */
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
 }

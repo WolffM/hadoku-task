@@ -16,6 +16,18 @@ export default defineConfig({
         mkdirSync(dirname(dest), { recursive: true })
         copyFileSync(resolve(__dirname, 'src/app/entry.d.ts'), dest)
       }
+    },
+    // Re-minify JS to strip whitespace (Vite preserves whitespace in ES lib mode)
+    {
+      name: 'minify-es-lib',
+      async renderChunk(code) {
+        const esbuild = await import('esbuild')
+        const result = await esbuild.transform(code, {
+          minify: true,
+          target: 'es2022'
+        })
+        return { code: result.code, map: null }
+      }
     }
   ],
   server: {
@@ -38,7 +50,9 @@ export default defineConfig({
       // React is provided by hadoku-site via import maps, so externalize it
       external: ['react', 'react-dom/client', 'react/jsx-runtime'],
       output: {
-        assetFileNames: 'style.css'
+        assetFileNames: 'style.css',
+        entryFileNames: 'index.js',
+        chunkFileNames: '[name]-[hash].js'
       }
     },
     target: 'es2022'

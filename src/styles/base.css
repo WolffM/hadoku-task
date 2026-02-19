@@ -137,15 +137,6 @@ body {
   animation: fadeIn 0.2s ease-in;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 /* Dark theme for loading skeleton */
 .task-app-loading[data-dark-theme='true'] {
   --color-bg: #1a1a1a;

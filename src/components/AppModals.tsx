@@ -2,18 +2,21 @@
  * All modal components for the main app
  */
 
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import type { Task, BoardsFile, UserPreferences } from '../domain/types'
 import { Toaster, type ToastState } from '@wolffm/task-ui-components'
 import {
   ClearTagModal,
   CreateBoardModal,
   CreateTagModal,
-  SettingsModal,
   EditTagModal,
   BoardContextMenu,
   TagContextMenu
 } from './modals'
+
+const SettingsModal = lazy(() =>
+  import('./modals/SettingsModal').then(m => ({ default: m.SettingsModal }))
+)
 import type { PendingTaskOperation } from '../hooks/useModalState'
 
 interface AppModalsProps {
@@ -152,18 +155,22 @@ export function AppModals({
         onInputChange={onTagInputChange}
       />
 
-      <SettingsModal
-        isOpen={showSettingsModal}
-        preferences={preferences}
-        showCompleteButton={showCompleteButton}
-        showDeleteButton={showDeleteButton}
-        showTagButton={showTagButton}
-        userType={userType}
-        onClose={onCloseSettingsModal}
-        onSavePreferences={onSavePreferences}
-        onValidateKey={onValidateKey}
-        onShowToast={onShowToast}
-      />
+      {showSettingsModal && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            isOpen={showSettingsModal}
+            preferences={preferences}
+            showCompleteButton={showCompleteButton}
+            showDeleteButton={showDeleteButton}
+            showTagButton={showTagButton}
+            userType={userType}
+            onClose={onCloseSettingsModal}
+            onSavePreferences={onSavePreferences}
+            onValidateKey={onValidateKey}
+            onShowToast={onShowToast}
+          />
+        </Suspense>
+      )}
 
       <EditTagModal
         isOpen={!!editTagModal}
