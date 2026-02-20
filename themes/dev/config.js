@@ -233,5 +233,52 @@ export const TEXT_CONTRAST_MAP = {
   '--color-neutral': '--color-on-neutral'
 }
 
+// Gradient stop configuration for advanced themes
+// Each stop has a position and 3 OKLCH channel vars (lightness, chroma, hue)
+export const GRADIENT_VARS = {
+  'beach-day': {
+    angle: 135,
+    stops: [
+      {
+        position: '0%',
+        vars: { l: '--advanced-stop-1-l', c: '--advanced-stop-1-c', h: '--advanced-stop-1-h' }
+      },
+      {
+        position: '15%',
+        vars: { l: '--advanced-stop-2-l', c: '--advanced-stop-2-c', h: '--advanced-stop-2-h' }
+      },
+      {
+        position: '30%',
+        vars: { l: '--advanced-stop-3-l', c: '--advanced-stop-3-c', h: '--advanced-stop-3-h' }
+      },
+      {
+        position: '45%',
+        vars: { l: '--advanced-stop-4-l', c: '--advanced-stop-4-c', h: '--advanced-stop-4-h' }
+      },
+      {
+        position: '55%',
+        vars: { l: '--advanced-stop-5-l', c: '--advanced-stop-5-c', h: '--advanced-stop-5-h' }
+      },
+      {
+        position: '70%',
+        vars: { l: '--advanced-stop-6-l', c: '--advanced-stop-6-c', h: '--advanced-stop-6-h' }
+      },
+      {
+        position: '85%',
+        vars: { l: '--advanced-stop-7-l', c: '--advanced-stop-7-c', h: '--advanced-stop-7-h' }
+      },
+      {
+        position: '100%',
+        vars: { l: '--advanced-stop-8-l', c: '--advanced-stop-8-c', h: '--advanced-stop-8-h' }
+      }
+    ]
+  }
+}
+
+// Maps base themes to their advanced theme package
+export const ADVANCED_THEME_MAP = {
+  light: 'beach-day'
+}
+
 export const LOCAL_SERVER_URL = 'http://localhost:3456'
 export const WORKER_URL = 'https://api.hadoku.me'

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Theme Editor | @wolffm/themes</title>
   <link rel="stylesheet" href="../src/style.css">
-  <link rel="stylesheet" href="../../task-ui-components/src/bento.css">
+  <link rel="stylesheet" href="../../src/styles/advanced-themes.css">
   <link rel="stylesheet" href="editor.css">
 </head>
 <body>
@@ -16,9 +16,10 @@
       <span id="modBadge" style="display: none;">
         Modified<span class="modification-count" id="modCount">0</span>
       </span>
-      <button class="surface-toggle" id="surfaceToggle" onclick="editor.toggleSurfaceMode()" title="Toggle simple/advanced surface mode">
-        <span id="surfaceToggleLabel">Simple</span>
-      </button>
+      <div class="mode-toggle" id="modeToggle" style="display: none;">
+        <button class="mode-btn active" id="modeBtnAdvanced" onclick="editor.setMode('advanced')">Advanced</button>
+        <button class="mode-btn" id="modeBtnBasic" onclick="editor.setMode('basic')">Basic</button>
+      </div>
       <div class="theme-picker" id="themePicker"></div>
     </div>
   </header>
@@ -43,23 +44,50 @@
             <div class="theme-name" style="color: var(--color-text);">Component Preview</div>
             <div class="theme-desc" style="color: var(--color-text-secondary);">Buttons, badges, and interactive elements</div>
             <div class="preview-buttons-row">
-              <button class="example-btn primary" style="font-size: 12px; padding: 6px 12px;">Primary</button>
-              <button class="example-btn success" style="font-size: 12px; padding: 6px 12px;">Success</button>
-              <button class="example-btn warning" style="font-size: 12px; padding: 6px 12px;">Warning</button>
-              <button class="example-btn danger" style="font-size: 12px; padding: 6px 12px;">Danger</button>
-              <button class="example-btn neutral" style="font-size: 12px; padding: 6px 12px;">Neutral</button>
+              <button class="example-btn primary" style="font-size: 12px; padding: 6px 12px;" data-vars="--color-primary,--color-on-primary">Primary</button>
+              <button class="example-btn success" style="font-size: 12px; padding: 6px 12px;" data-vars="--color-success,--color-on-success">Success</button>
+              <button class="example-btn warning" style="font-size: 12px; padding: 6px 12px;" data-vars="--color-warning,--color-on-warning">Warning</button>
+              <button class="example-btn danger" style="font-size: 12px; padding: 6px 12px;" data-vars="--color-danger,--color-on-danger">Danger</button>
+              <button class="example-btn neutral" style="font-size: 12px; padding: 6px 12px;" data-vars="--color-neutral,--color-on-neutral">Neutral</button>
             </div>
             <div class="preview-buttons-row" style="margin-top: 8px;">
-              <span class="badge success">Completed</span>
-              <span class="badge warning">Pending</span>
-              <span class="badge danger">Error</span>
-              <span class="badge muted">Archived</span>
+              <span class="badge success" data-vars="--color-success,--color-success-bg">Completed</span>
+              <span class="badge warning" data-vars="--color-warning,--color-warning-bg">Pending</span>
+              <span class="badge danger" data-vars="--color-danger,--color-danger-light">Error</span>
+              <span class="badge muted" data-vars="--color-muted-bg,--color-text-secondary">Archived</span>
             </div>
           </div>
         </div>
-        <div class="metallic-note" id="metallicNote" style="display: none;">
-          Switch to <strong>Advanced</strong> mode to preview metallic gradient effects.
+      </section>
+
+      <!-- Advanced Effects Demo (visible only for advanced themes) -->
+      <section class="section" id="hoverDemoSection" style="display: none;">
+        <h3 class="section-title">Advanced Effects</h3>
+        <p class="hover-demo-hint">Hover to preview — each box shows a different shimmer effect</p>
+        <div class="demo-shimmer-grid" id="shimmerGrid">
+          <div>
+            <div class="shimmer-box shimmer-cascade-rich"></div>
+            <p class="hover-demo-label">Cascade Rich</p>
+            <p class="hover-demo-sublabel">Multi-wave, varied speeds</p>
+          </div>
+          <div>
+            <div class="shimmer-box shimmer-sat-rich"></div>
+            <p class="hover-demo-label">Sat + Rich</p>
+            <p class="hover-demo-sublabel">Saturation + cascade</p>
+          </div>
+          <div>
+            <div class="shimmer-box shimmer-shift"></div>
+            <p class="hover-demo-label">Shift</p>
+            <p class="hover-demo-sublabel">Gradient displacement</p>
+          </div>
         </div>
+      </section>
+
+      <!-- Gradient Stops (visible only for themes with advanced gradients) -->
+      <section class="section" id="gradientSection" style="display: none;">
+        <h3 class="section-title">Gradient Stops <span class="count" id="gradientStopCount">8 stops</span></h3>
+        <div class="gradient-bar" id="gradientBar"></div>
+        <div id="gradientStopsContainer"></div>
       </section>
 
       <!-- All Variables (Compact Grid) -->
@@ -243,13 +271,14 @@
 
       <div class="panel-actions">
         <button class="action-btn primary" onclick="editor.copyCurrentVar()">Copy Variable</button>
-        <button class="action-btn secondary" onclick="editor.resetCurrentVar()">Reset to Original</button>
+      </div>
+      <div class="panel-actions-row">
+        <button class="action-btn secondary" onclick="editor.resetCurrentVar()">Reset Variable</button>
+        <button class="action-btn danger" onclick="editor.resetAll()">Reset All</button>
       </div>
       <div class="panel-actions" style="border-top: none; padding-top: 0;">
-        <button class="action-btn primary" id="saveToFileBtn" onclick="editor.saveToFile()" style="display: none;">💾 Save to File</button>
-        <button class="action-btn primary" onclick="editor.exportCSS()">Export All Changes as CSS</button>
-        <button class="action-btn primary" onclick="editor.openSubmitModal()" style="background: var(--color-success); color: var(--color-on-success);">Submit Theme PR</button>
-        <button class="action-btn danger" onclick="editor.resetAll()">Reset All Changes</button>
+        <button class="action-btn primary" id="applyBtn" onclick="editor.applyChanges()" style="background: var(--color-success); color: var(--color-on-success);">Apply Changes</button>
+        <button class="action-btn secondary" onclick="editor.exportCSS()">Export as CSS</button>
       </div>
       <div id="serverStatus" style="font-size: 11px; margin-top: var(--hdk-space-lg); text-align: center; color: var(--color-text-muted);"></div>
 
@@ -265,32 +294,6 @@
 
   <div class="toast" id="toast">Copied to clipboard!</div>
 
-  <!-- Submit Theme Modal -->
-  <div class="modal-overlay" id="submitModal">
-    <div class="modal">
-      <h3>Submit Theme as Pull Request</h3>
-      <p>Your theme will be submitted for review and inclusion in the theme library.</p>
-      <div class="modal-field">
-        <label>Theme Name *</label>
-        <input type="text" id="themeName" placeholder="e.g., sunset-glow" />
-        <div class="hint">Lowercase letters, numbers, and hyphens only</div>
-      </div>
-      <div class="modal-field">
-        <label>Your Name (optional)</label>
-        <input type="text" id="authorName" placeholder="e.g., Jane Doe" />
-      </div>
-      <div class="modal-field">
-        <label>Description (optional)</label>
-        <textarea id="themeDescription" placeholder="Describe your theme..."></textarea>
-      </div>
-      <div id="submitStatus" class="submit-status" style="display: none;"></div>
-      <div class="modal-actions">
-        <button class="action-btn secondary" onclick="editor.closeSubmitModal()">Cancel</button>
-        <button class="action-btn primary" id="submitBtn" onclick="editor.submitTheme()">Submit Theme</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="editor.js"></script>
+  <script src="editor.bundle.js"></script>
 </body>
 </html>

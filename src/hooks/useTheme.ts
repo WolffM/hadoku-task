@@ -6,7 +6,12 @@
 import { useState, useEffect, useMemo, useCallback, type RefObject } from 'react'
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
-import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
+import {
+  getThemeFamilies,
+  isExperimentalTheme,
+  ADVANCED_THEME_MAP,
+  type ThemeFamily
+} from '../app/themeConfig'
 import { logger } from '@wolffm/task-ui-components'
 import { setTheme as applyThemeToDOM } from '@wolffm/themes'
 
@@ -150,7 +155,21 @@ export function useTheme(
       containerRef.current.setAttribute('data-theme', theme)
     }
 
-    logger.info(`[useTheme] Applied theme: ${theme}`, { preferencesLoaded })
+    // Apply advanced theme attribute (CSS handles simple-mode override)
+    const advancedTheme = ADVANCED_THEME_MAP[theme]
+    if (advancedTheme) {
+      document.documentElement.setAttribute('data-advanced-theme', advancedTheme)
+      if (containerRef.current) {
+        containerRef.current.setAttribute('data-advanced-theme', advancedTheme)
+      }
+    } else {
+      document.documentElement.removeAttribute('data-advanced-theme')
+      if (containerRef.current) {
+        containerRef.current.removeAttribute('data-advanced-theme')
+      }
+    }
+
+    logger.info(`[useTheme] Applied theme: ${theme}`, { preferencesLoaded, advancedTheme })
 
     // Only delay theme ready on initial load, not on theme changes
     if (isInitialThemeLoad) {

@@ -55,83 +55,34 @@
  * For Tailwind integration, see tailwind-integration.css or docs.
  */
 
-/* ===== METALLIC GRADIENT SYSTEM ===== */
-/* Derived variables that auto-calculate from per-theme OKLCH primitives */
-/* These create the sleek metallic gradient effects */
-/* Toggle metallic effects off via data-simple-mode attribute (set by useTheme.ts) */
-:root {
-  /* Metallic Gradient Colors - derived from --accent-l/c/h */
-  --gradient-start: oklch(
-    calc(var(--accent-l) + 0.05) calc(var(--accent-c) * 0.9) calc(var(--accent-h) - 15)
-  );
-  --gradient-end: oklch(
-    calc(var(--accent-l) - 0.05) calc(var(--accent-c) * 1.1) calc(var(--accent-h) + 15)
-  );
-  --highlight: oklch(calc(var(--accent-l) + 0.2) calc(var(--accent-c) * 0.5) var(--accent-h));
-  --glow: oklch(var(--accent-l) calc(var(--accent-c) * 1.3) var(--accent-h) / 0.4);
-  --glow-primary: oklch(
-    calc(var(--accent-l) - 0.1) calc(var(--accent-c) * 0.8) var(--accent-h) / 0.25
-  );
-  --glow-secondary: oklch(
-    calc(var(--accent-l) - 0.15) calc(var(--accent-c) * 0.6) calc(var(--accent-h) + 30) / 0.18
-  );
-
-  /* ===== CARD TEXT COLORS ===== */
-  /* Text colors for content displayed on metallic gradient surfaces */
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-
-  /* ===== GRADIENT ADJUSTMENTS ===== */
-  /* Per-theme lightness/chroma modifiers for metallic gradients */
-  --gradient-l-adjust: 0;
-  --gradient-c-scale: 0.9;
-}
-
-/* ===== SHARED LIGHT THEME TOKENS ===== */
-/* Values identical across all light themes — avoids repeating in each block */
-:root,
-[data-theme='light'],
-[data-theme='strawberry-light'],
-[data-theme='ocean-light'],
-[data-theme='cyberpunk-light'],
-[data-theme='coffee-light'],
-[data-theme='lavender-light'],
-[data-theme='pink-light'],
-[data-theme='nature-light'],
-[data-theme='izakaya-light'],
-[data-theme='light-custom'] {
-  --card-text-primary: rgba(0, 0, 0, 0.9);
-  --card-text-secondary: rgba(0, 0, 0, 0.7);
-  --card-text-muted: rgba(0, 0, 0, 0.5);
-  --gradient-l-adjust: 0.12;
-  --gradient-c-scale: 0.7;
-}
-
-/* ===== SHARED DARK THEME TOKENS ===== */
-[data-theme='dark'],
-[data-theme='strawberry-dark'],
-[data-theme='ocean-dark'],
-[data-theme='cyberpunk-dark'],
-[data-theme='coffee-dark'],
-[data-theme='lavender-dark'],
-[data-theme='pink-dark'],
-[data-theme='nature-dark'],
-[data-theme='izakaya-dark'] {
-  --card-text-primary: rgba(255, 255, 255, 0.95);
-  --card-text-secondary: rgba(255, 255, 255, 0.8);
-  --card-text-muted: rgba(255, 255, 255, 0.6);
-  --gradient-l-adjust: -0.08;
-  --gradient-c-scale: 0.85;
-}
-
 /* ===== LIGHT THEME (Default) ===== */
 :root,
 [data-theme='light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.58;
-  --accent-c: 0.17;
-  --accent-h: 250;
+  /* Advanced theme: Beach Day gradient stops (OKLCH) */
+  --advanced-stop-1-l: 0.82;
+  --advanced-stop-1-c: 0.18;
+  --advanced-stop-1-h: 55;
+  --advanced-stop-2-l: 0.78;
+  --advanced-stop-2-c: 0.2;
+  --advanced-stop-2-h: 40;
+  --advanced-stop-3-l: 0.72;
+  --advanced-stop-3-c: 0.22;
+  --advanced-stop-3-h: 25;
+  --advanced-stop-4-l: 0.7;
+  --advanced-stop-4-c: 0.18;
+  --advanced-stop-4-h: 10;
+  --advanced-stop-5-l: 0.72;
+  --advanced-stop-5-c: 0.16;
+  --advanced-stop-5-h: 355;
+  --advanced-stop-6-l: 0.68;
+  --advanced-stop-6-c: 0.14;
+  --advanced-stop-6-h: 190;
+  --advanced-stop-7-l: 0.6;
+  --advanced-stop-7-c: 0.16;
+  --advanced-stop-7-h: 200;
+  --advanced-stop-8-l: 0.5;
+  --advanced-stop-8-c: 0.18;
+  --advanced-stop-8-h: 210;
 
   /* Primary Colors */
   --color-primary: #2563eb;
@@ -232,11 +183,6 @@
 
 /* ===== DARK THEME ===== */
 [data-theme='dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.78;
-  --accent-c: 0.12;
-  --accent-h: 300;
-
   --color-primary: #d8b4fe;
   --color-primary-dark: #c084fc;
   --color-primary-light: #4c1d95;
@@ -293,11 +239,6 @@
 
 /* ===== STRAWBERRY LIGHT THEME ===== */
 [data-theme='strawberry-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.18;
-  --accent-h: 10;
-
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff477a;
   --color-primary-light: #ffe0e9;
@@ -354,11 +295,6 @@
 
 /* ===== STRAWBERRY DARK THEME ===== */
 [data-theme='strawberry-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.18;
-  --accent-h: 10;
-
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff8fb3;
   --color-primary-light: #7c1d3b;
@@ -415,11 +351,6 @@
 
 /* ===== OCEAN LIGHT THEME ===== */
 [data-theme='ocean-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.13;
-  --accent-h: 200;
-
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
   --color-primary-light: #cffafe;
@@ -476,11 +407,6 @@
 
 /* ===== OCEAN DARK THEME ===== */
 [data-theme='ocean-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.13;
-  --accent-h: 200;
-
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
   --color-primary-light: #164e63;
@@ -537,11 +463,6 @@
 
 /* ===== CYBERPUNK LIGHT THEME ===== */
 [data-theme='cyberpunk-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.58;
-  --accent-c: 0.22;
-  --accent-h: 345;
-
   --color-primary: #ff006e;
   --color-primary-dark: #d90062;
   --color-primary-light: #ffe0ed;
@@ -598,11 +519,6 @@
 
 /* ===== CYBERPUNK DARK THEME ===== */
 [data-theme='cyberpunk-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.78;
-  --accent-c: 0.14;
-  --accent-h: 195;
-
   --color-primary: #22d3ee;
   --color-primary-dark: #06b6d4;
   --color-primary-light: #083344;
@@ -659,11 +575,6 @@
 
 /* ===== COFFEE LIGHT THEME ===== */
 [data-theme='coffee-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.58;
-  --accent-c: 0.18;
-  --accent-h: 35;
-
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
   --color-primary-light: #fed7aa;
@@ -720,11 +631,6 @@
 
 /* ===== COFFEE DARK THEME ===== */
 [data-theme='coffee-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.58;
-  --accent-c: 0.18;
-  --accent-h: 35;
-
   --color-primary: #ea580c;
   --color-primary-dark: #c2410c;
   --color-primary-light: #431407;
@@ -781,11 +687,6 @@
 
 /* ===== LAVENDER LIGHT THEME ===== */
 [data-theme='lavender-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.16;
-  --accent-h: 290;
-
   --color-primary: #c084fc;
   --color-primary-dark: #a855f7;
   --color-primary-light: #f3e8ff;
@@ -842,11 +743,6 @@
 
 /* ===== LAVENDER DARK THEME ===== */
 [data-theme='lavender-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.16;
-  --accent-h: 290;
-
   --color-primary: #c084fc;
   --color-primary-dark: #d8b4fe;
   --color-primary-light: #581c87;
@@ -903,11 +799,6 @@
 
 /* ===== PINK LIGHT THEME ===== */
 [data-theme='pink-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.18;
-  --accent-h: 340;
-
   --color-primary: #ff69b4;
   --color-primary-dark: #ff1493;
   --color-primary-light: #ffc0cb;
@@ -964,11 +855,6 @@
 
 /* ===== PINK DARK THEME ===== */
 [data-theme='pink-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.6;
-  --accent-c: 0.25;
-  --accent-h: 320;
-
   --color-primary: #ff10f0;
   --color-primary-dark: #ff69b4;
   --color-primary-light: #4a0e47;
@@ -1025,11 +911,6 @@
 
 /* ===== NATURE LIGHT THEME ===== */
 [data-theme='nature-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.68;
-  --accent-c: 0.16;
-  --accent-h: 135;
-
   --color-primary: #6bbe4e;
   --color-primary-dark: #5aa942;
   --color-primary-light: #e8f5e3;
@@ -1086,11 +967,6 @@
 
 /* ===== NATURE DARK THEME ===== */
 [data-theme='nature-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.65;
-  --accent-c: 0.15;
-  --accent-h: 135;
-
   --color-primary: #5faf4b;
   --color-primary-dark: #6bbe4e;
   --color-primary-light: #2d4a24;
@@ -1149,11 +1025,6 @@
 /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C themes */
 
 [data-theme='izakaya-light'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.1;
-  --accent-h: 175;
-
   --color-primary: #41baae;
   --color-primary-dark: #369c92;
   --color-primary-light: #7ad5cc;
@@ -1211,11 +1082,6 @@
 /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C dark themes */
 
 [data-theme='izakaya-dark'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.7;
-  --accent-c: 0.1;
-  --accent-h: 175;
-
   --color-primary: #41baae;
   --color-primary-dark: #2c877d;
   --color-primary-light: #74d3c7;
@@ -1275,11 +1141,6 @@
    export their customizations. It is NOT included in the production THEMES array
    or THEME_FAMILIES metadata — it only exists for dev/editor workflow. */
 [data-theme='light-custom'] {
-  /* OKLCH Accent Primitives (for metallic gradients) */
-  --accent-l: 0.75;
-  --accent-c: 0.12;
-  --accent-h: 230;
-
   --color-primary: #99b9ff;
   --color-primary-dark: #4d84ff;
   --color-primary-light: hsla(231, 21%, 95%, 0.5);

@@ -16,13 +16,17 @@ export function colorToHex(color) {
       return `#${r}${g}${b}${a === 'ff' ? '' : a}`
     }
   }
-  // Fallback: create temp element to let the browser parse
-  const temp = document.createElement('div')
-  temp.style.color = color
-  document.body.appendChild(temp)
-  const computed = getComputedStyle(temp).color
-  document.body.removeChild(temp)
-  return colorToHex(computed)
+  // Fallback: use canvas to convert any CSS color to RGB
+  const canvas = document.createElement('canvas')
+  canvas.width = 1
+  canvas.height = 1
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, 1, 1)
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+  const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  if (a < 255) return hex + Math.round(a).toString(16).padStart(2, '0')
+  return hex
 }
 
 export function hexToHsl(hex) {
@@ -97,6 +101,18 @@ export function hslToHex(h, s, l, a = 100) {
     )
   }
   return hex
+}
+
+export function oklchToDisplayColor(l, c, h) {
+  // Use canvas to reliably convert oklch to RGB (getComputedStyle may return oklch as-is)
+  const canvas = document.createElement('canvas')
+  canvas.width = 1
+  canvas.height = 1
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = `oklch(${l} ${c} ${h})`
+  ctx.fillRect(0, 0, 1, 1)
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
 export function getContrastColor(color) {

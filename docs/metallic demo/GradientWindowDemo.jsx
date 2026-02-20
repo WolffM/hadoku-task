@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react'
 
 /*
  * GRADIENT WINDOW EFFECT
  * ======================
- * 
+ *
  * Features:
  * - Cards as windows into shared gradient
  * - Color-aware glow on hover
@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 // ============================================
 const gradientPresets = [
   {
-    name: "Beach Day",
+    name: 'Beach Day',
     gradient: `linear-gradient(
       135deg,
       oklch(0.82 0.18 55) 0%,
@@ -26,10 +26,10 @@ const gradientPresets = [
       oklch(0.68 0.14 190) 70%,
       oklch(0.6 0.16 200) 85%,
       oklch(0.5 0.18 210) 100%
-    )`,
+    )`
   },
   {
-    name: "Cotton Candy",
+    name: 'Cotton Candy',
     gradient: `linear-gradient(
       135deg,
       oklch(0.88 0.14 330) 0%,
@@ -37,10 +37,10 @@ const gradientPresets = [
       oklch(0.8 0.12 30) 50%,
       oklch(0.85 0.1 60) 75%,
       oklch(0.9 0.08 90) 100%
-    )`,
+    )`
   },
   {
-    name: "Aurora",
+    name: 'Aurora',
     gradient: `linear-gradient(
       135deg,
       oklch(0.75 0.2 160) 0%,
@@ -48,16 +48,16 @@ const gradientPresets = [
       oklch(0.6 0.2 220) 50%,
       oklch(0.55 0.18 280) 75%,
       oklch(0.6 0.16 320) 100%
-    )`,
-  },
-];
+    )`
+  }
+]
 
 // ============================================
 // WINDOW CARD WITH GLOW (no shimmer)
 // ============================================
-function WindowCard({ children, className = "" }) {
-  const [isHovered, setIsHovered] = useState(false);
-  
+function WindowCard({ children, className = '' }) {
+  const [isHovered, setIsHovered] = useState(false)
+
   return (
     <div
       className={`window-card-wrapper ${isHovered ? 'is-hovered' : ''} ${className}`}
@@ -65,51 +65,49 @@ function WindowCard({ children, className = "" }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="window-card">
-        <div className="relative z-10 h-full">
-          {children}
-        </div>
+        <div className="relative z-10 h-full">{children}</div>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
 // SAMPLE CARDS
 // ============================================
 const sampleCards = [
-  { title: "Profile", span: "col-span-1 row-span-1", content: "👤" },
-  { title: "Projects", span: "col-span-2 row-span-1", content: "📁" },
-  { title: "Links", span: "col-span-1 row-span-2", content: "🔗" },
-  { title: "Tech Stack", span: "col-span-1 row-span-1", content: "⚡" },
-  { title: "Blog", span: "col-span-1 row-span-1", content: "✍️" },
-  { title: "Contact", span: "col-span-2 row-span-1", content: "💬" },
-  { title: "Gallery", span: "col-span-1 row-span-1", content: "🖼️" },
-  { title: "Stats", span: "col-span-1 row-span-1", content: "📊" },
-];
+  { title: 'Profile', span: 'col-span-1 row-span-1', content: '👤' },
+  { title: 'Projects', span: 'col-span-2 row-span-1', content: '📁' },
+  { title: 'Links', span: 'col-span-1 row-span-2', content: '🔗' },
+  { title: 'Tech Stack', span: 'col-span-1 row-span-1', content: '⚡' },
+  { title: 'Blog', span: 'col-span-1 row-span-1', content: '✍️' },
+  { title: 'Contact', span: 'col-span-2 row-span-1', content: '💬' },
+  { title: 'Gallery', span: 'col-span-1 row-span-1', content: '🖼️' },
+  { title: 'Stats', span: 'col-span-1 row-span-1', content: '📊' }
+]
 
 // ============================================
 // SHIMMER EFFECTS - Final 3
 // ============================================
 const shimmerExperiments = [
   {
-    name: "Cascade Rich",
-    description: "Multi-wave, varied speeds",
-    className: "shimmer-cascade-rich",
-    usesMouse: false,
+    name: 'Cascade Rich',
+    description: 'Multi-wave, varied speeds',
+    className: 'shimmer-cascade-rich',
+    usesMouse: false
   },
   {
-    name: "Sat + Rich",
-    description: "Saturation + cascade",
-    className: "shimmer-sat-rich",
-    usesMouse: false,
+    name: 'Sat + Rich',
+    description: 'Saturation + cascade',
+    className: 'shimmer-sat-rich',
+    usesMouse: false
   },
   {
-    name: "Shift",
-    description: "Gradient displacement",
-    className: "shimmer-shift",
-    usesMouse: false,
-  },
-];
+    name: 'Shift',
+    description: 'Gradient displacement',
+    className: 'shimmer-shift',
+    usesMouse: false
+  }
+]
 
 // (MouseShimmerBox removed - no mouse-based effects in final 3)
 
@@ -117,19 +115,19 @@ const shimmerExperiments = [
 // MAIN COMPONENT
 // ============================================
 export default function GradientWindowDemo() {
-  const [selectedGradient, setSelectedGradient] = useState(gradientPresets[0]);
-  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
+  const [selectedGradient, setSelectedGradient] = useState(gradientPresets[0])
+  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 30;
-      const y = (e.clientY / window.innerHeight - 0.5) * 30;
-      setMouseOffset({ x, y });
-    };
+    const handleMouseMove = e => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 30
+      const y = (e.clientY / window.innerHeight - 0.5) * 30
+      setMouseOffset({ x, y })
+    }
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
 
   return (
     <>
@@ -330,35 +328,32 @@ export default function GradientWindowDemo() {
           background-position: 70% 70%;
         }
       `}</style>
-      
+
       <div className="min-h-screen bg-white">
         {/* Header */}
         <div className="p-8 pb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">
-            Gradient Windows
-          </h1>
-          <p className="text-gray-500 mb-6">
-            Cards as windows into a shared gradient
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Gradient Windows</h1>
+          <p className="text-gray-500 mb-6">Cards as windows into a shared gradient</p>
 
           {/* Gradient Picker */}
           <div className="flex flex-wrap gap-3">
-            {gradientPresets.map((preset) => (
+            {gradientPresets.map(preset => (
               <button
                 key={preset.name}
                 onClick={() => setSelectedGradient(preset)}
                 className={`
                   px-4 py-2 rounded-xl text-sm font-medium
                   transition-all duration-200 hover:brightness-110
-                  ${selectedGradient.name === preset.name
-                    ? "ring-2 ring-gray-800 ring-offset-2"
-                    : "hover:shadow-md"
+                  ${
+                    selectedGradient.name === preset.name
+                      ? 'ring-2 ring-gray-800 ring-offset-2'
+                      : 'hover:shadow-md'
                   }
                 `}
                 style={{
                   background: preset.gradient,
-                  color: "white",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                 }}
               >
                 {preset.name}
@@ -370,11 +365,8 @@ export default function GradientWindowDemo() {
         {/* Grid */}
         <div className="px-4 md:px-8 pb-4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[120px]">
-            {sampleCards.map((card) => (
-              <WindowCard
-                key={card.title}
-                className={card.span}
-              >
+            {sampleCards.map(card => (
+              <WindowCard key={card.title} className={card.span}>
                 <div className="p-4 h-full flex flex-col justify-between">
                   <span className="text-2xl">{card.content}</span>
                   <span className="text-white font-medium text-sm drop-shadow-sm">
@@ -392,11 +384,11 @@ export default function GradientWindowDemo() {
             Buttons with color-aware glow
           </h2>
           <div className="flex flex-wrap gap-3">
-            {["Primary", "Success", "Warning", "Danger", "Info"].map((label) => (
+            {['Primary', 'Success', 'Warning', 'Danger', 'Info'].map(label => (
               <span key={label} className="window-button-wrapper">
                 <button
                   className="window-button px-5 py-2.5 rounded-xl text-white font-medium text-sm"
-                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
                 >
                   {label}
                 </button>
@@ -407,27 +399,20 @@ export default function GradientWindowDemo() {
 
         {/* Shimmer Effects - Final 3 */}
         <div className="px-4 md:px-8 py-8 border-t border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-2">
-            Shimmer Effects
-          </h2>
-          <p className="text-gray-500 mb-6">
-            Final 3 — hover to preview
-          </p>
-          
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Shimmer Effects</h2>
+          <p className="text-gray-500 mb-6">Final 3 — hover to preview</p>
+
           <div className="grid grid-cols-3 gap-6">
-            {shimmerExperiments.map((exp) => (
+            {shimmerExperiments.map(exp => (
               <div key={exp.name} className="text-center">
-                <div 
-                  className={`shimmer-box ${exp.className} h-28 mb-3 cursor-pointer`}
-                />
+                <div className={`shimmer-box ${exp.className} h-28 mb-3 cursor-pointer`} />
                 <p className="text-sm font-medium text-gray-800">{exp.name}</p>
                 <p className="text-xs text-gray-500">{exp.description}</p>
               </div>
             ))}
           </div>
         </div>
-
       </div>
     </>
-  );
+  )
 }

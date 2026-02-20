@@ -1,4 +1,10 @@
-import { colorToHex, hexToHsl, hslToHex, getContrastColor } from './color-utils.js'
+import {
+  colorToHex,
+  hexToHsl,
+  hslToHex,
+  getContrastColor,
+  oklchToDisplayColor
+} from './color-utils.js'
 import {
   COLOR_VARS,
   CASCADE_MAP,
@@ -6,8 +12,9 @@ import {
   THEME_FAMILIES,
   THEME_ICONS,
   THEME_ICON_MAP,
-  LOCAL_SERVER_URL,
-  WORKER_URL
+  GRADIENT_VARS,
+  ADVANCED_THEME_MAP,
+  LOCAL_SERVER_URL
 } from './config.js'
 
 // ===== State =====
@@ -16,7 +23,7 @@ let currentVar = null
 let modifications = {}
 const originalValues = {}
 let pickerOpen = false
-let simpleMode = true
+let simpleMode = false
 
 // ===== DOM Helpers =====
 const $ = id => document.getElementById(id)
@@ -35,6 +42,8 @@ function init() {
   setupClickHandlers()
   saveOriginalValues()
   updateThemePreview()
+  renderGradientSection()
+  updateModeToggle()
 }
 
 // ===== Theme Picker — compact swatch grid =====
@@ -155,6 +164,7 @@ function renderSwatches() {
 
 function updateThemePreview() {
   const primaryCard = $('previewCardPrimary')
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
 
   $('themeNameBadge').textContent = currentTheme
   $('previewThemeName').textContent =
@@ -163,31 +173,142 @@ function updateThemePreview() {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ') + ' Theme'
 
-  // Update surface mode
-  const toggleLabel = $('surfaceToggleLabel')
-  toggleLabel.textContent = simpleMode ? 'Simple' : 'Advanced'
-
-  if (simpleMode) {
-    // Simple: solid primary background, white text
+  if (advancedTheme && !simpleMode) {
+    // Advanced theme: use gradient as preview card background
+    primaryCard.className = 'preview-card-large gradient-preview'
+    primaryCard.style.background = 'var(--advanced-gradient)'
+    primaryCard.style.color = 'white'
+    primaryCard.style.textShadow = '0 1px 3px rgba(0,0,0,0.3)'
+    document.documentElement.setAttribute('data-advanced-theme', advancedTheme)
+  } else {
+    // Basic theme or simple mode: solid primary background
     primaryCard.className = 'preview-card-large'
     primaryCard.style.background = 'var(--color-primary)'
     primaryCard.style.color = 'var(--color-on-primary)'
-    document.documentElement.setAttribute('data-simple-mode', 'true')
-    $('metallicNote').style.display = 'block'
-  } else {
-    // Advanced: metallic gradient with card-text colors
-    primaryCard.className =
-      'preview-card-large metallic-surface metallic-surface--noise metallic-surface--highlight card-gradient-offset'
-    primaryCard.style.background = ''
-    primaryCard.style.color = ''
-    document.documentElement.removeAttribute('data-simple-mode')
-    $('metallicNote').style.display = 'none'
+    primaryCard.style.textShadow = ''
+    if (!advancedTheme) {
+      document.documentElement.removeAttribute('data-advanced-theme')
+    }
+  }
+
+  // Update hover demo cards visibility
+  const hoverDemo = $('hoverDemoSection')
+  if (hoverDemo) {
+    hoverDemo.style.display = advancedTheme && !simpleMode ? '' : 'none'
   }
 }
 
-function toggleSurfaceMode() {
-  simpleMode = !simpleMode
+// ===== Gradient Section =====
+function renderGradientSection() {
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  const section = $('gradientSection')
+
+  if (!advancedTheme || !GRADIENT_VARS[advancedTheme] || simpleMode) {
+    section.style.display = 'none'
+    return
+  }
+
+  section.style.display = ''
+  const config = GRADIENT_VARS[advancedTheme]
+  $('gradientStopCount').textContent = `${config.stops.length} stops`
+
+  renderGradientBar()
+  renderGradientStops(config)
+}
+
+function renderGradientBar() {
+  const bar = $('gradientBar')
+  bar.style.background = 'var(--advanced-gradient)'
+}
+
+// ===== Mode Toggle (Basic / Advanced) =====
+function updateModeToggle() {
+  const toggle = $('modeToggle')
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+
+  // Only show toggle for themes that have an advanced variant
+  if (!advancedTheme) {
+    toggle.style.display = 'none'
+    return
+  }
+
+  toggle.style.display = ''
+  $('modeBtnAdvanced').classList.toggle('active', !simpleMode)
+  $('modeBtnBasic').classList.toggle('active', simpleMode)
+}
+
+function setMode(mode) {
+  simpleMode = mode === 'basic'
+  document.documentElement.setAttribute('data-simple-mode', simpleMode ? 'true' : 'false')
+  updateModeToggle()
   updateThemePreview()
+  renderGradientSection()
+}
+
+function renderGradientStops(config) {
+  const container = $('gradientStopsContainer')
+
+  container.innerHTML = config.stops
+    .map((stop, i) => {
+      const l = parseFloat(getVarValue(stop.vars.l)) || 0
+      const c = parseFloat(getVarValue(stop.vars.c)) || 0
+      const h = parseFloat(getVarValue(stop.vars.h)) || 0
+      const hex = oklchToDisplayColor(l, c, h)
+
+      return `
+      <div class="gradient-stop-row" data-stop-index="${i}">
+        <div class="gradient-stop-swatch" style="background: ${hex};" id="stopSwatch${i}"></div>
+        <div class="gradient-stop-position">${stop.position}</div>
+        <div class="gradient-stop-sliders">
+          <div class="oklch-slider-group">
+            <div class="oklch-slider-label"><span>L</span><span class="oklch-slider-value" id="stopL${i}">${l}</span></div>
+            <input type="range" class="oklch-slider oklch-slider--l" min="0" max="1" step="0.01" value="${l}"
+              oninput="editor.handleGradientSlider(${i}, 'l', this.value)">
+          </div>
+          <div class="oklch-slider-group">
+            <div class="oklch-slider-label"><span>C</span><span class="oklch-slider-value" id="stopC${i}">${c}</span></div>
+            <input type="range" class="oklch-slider oklch-slider--c" min="0" max="0.4" step="0.01" value="${c}"
+              oninput="editor.handleGradientSlider(${i}, 'c', this.value)">
+          </div>
+          <div class="oklch-slider-group">
+            <div class="oklch-slider-label"><span>H</span><span class="oklch-slider-value" id="stopH${i}">${h}</span></div>
+            <input type="range" class="oklch-slider oklch-slider--h" min="0" max="360" step="1" value="${h}"
+              oninput="editor.handleGradientSlider(${i}, 'h', this.value)">
+          </div>
+        </div>
+      </div>
+    `
+    })
+    .join('')
+}
+
+function handleGradientSlider(stopIndex, channel, value) {
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  if (!advancedTheme || !GRADIENT_VARS[advancedTheme]) return
+
+  const stop = GRADIENT_VARS[advancedTheme].stops[stopIndex]
+  const varName = stop.vars[channel]
+
+  // Set the CSS variable
+  document.documentElement.style.setProperty(varName, value)
+  modifications[varName] = value
+
+  // Update slider value label
+  const labelId = `stop${channel.toUpperCase()}${stopIndex}`
+  const label = $(labelId)
+  if (label) label.textContent = value
+
+  // Update swatch color
+  const l = parseFloat(getVarValue(stop.vars.l)) || 0
+  const c = parseFloat(getVarValue(stop.vars.c)) || 0
+  const h = parseFloat(getVarValue(stop.vars.h)) || 0
+  const hex = oklchToDisplayColor(l, c, h)
+  const swatch = $(`stopSwatch${stopIndex}`)
+  if (swatch) swatch.style.background = hex
+
+  // Update gradient bar
+  renderGradientBar()
+  updateModCount()
 }
 
 function updateModCount() {
@@ -212,7 +333,7 @@ function updateModCount() {
         ([varName, value]) => `
       <div class="var-item modified" onclick="editor.openPanel('${varName}')">
         <div class="color-dot" style="background: ${value};"></div>
-        <span class="var-label">${varName.replace('--color-', '')}</span>
+        <span class="var-label">${varName.replace('--color-', '').replace('--advanced-', 'grad-')}</span>
       </div>
     `
       )
@@ -244,6 +365,8 @@ function setTheme(theme) {
   currentTheme = theme
   document.documentElement.setAttribute('data-theme', theme)
   pickerOpen = false
+  simpleMode = false
+  document.documentElement.setAttribute('data-simple-mode', 'false')
 
   Object.keys(modifications).forEach(varName => {
     document.documentElement.style.removeProperty(varName)
@@ -256,6 +379,8 @@ function setTheme(theme) {
   renderCompactVars()
   updateModCount()
   updateThemePreview()
+  renderGradientSection()
+  updateModeToggle()
 
   if (currentVar) updatePanelForVar(currentVar)
 }
@@ -437,6 +562,7 @@ function resetAll() {
   modifications = {}
   updateModCount()
   renderSwatches()
+  renderGradientSection()
   if (currentVar) updatePanelForVar(currentVar)
   showToast('All changes reset')
 }
@@ -450,6 +576,8 @@ function exportCSS() {
 
   let css = `/* Theme modifications based on ${currentTheme} */\n`
   css += `[data-theme='${currentTheme}-custom'] {\n`
+
+  // Export color vars
   Object.values(COLOR_VARS)
     .flat()
     .forEach(varName => {
@@ -457,6 +585,20 @@ function exportCSS() {
       const isModified = modifications[varName]
       css += `  ${varName}: ${value};${isModified ? ' /* modified */' : ''}\n`
     })
+
+  // Export gradient stop vars if this theme has an advanced gradient
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
+    css += `\n  /* Advanced gradient stops */\n`
+    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+      Object.values(stop.vars).forEach(varName => {
+        const value = getVarValue(varName)
+        const isModified = modifications[varName]
+        css += `  ${varName}: ${value};${isModified ? ' /* modified */' : ''}\n`
+      })
+    })
+  }
+
   css += `}\n`
 
   navigator.clipboard.writeText(css)
@@ -468,11 +610,25 @@ function generateThemeCSS(themeName) {
   css += `/* Based on: ${currentTheme} */\n`
   css += `/* Created: ${new Date().toISOString().split('T')[0]} */\n\n`
   css += `[data-theme='${themeName}'] {\n`
+
+  // Color vars
   Object.values(COLOR_VARS)
     .flat()
     .forEach(varName => {
       css += `  ${varName}: ${getVarValue(varName)};\n`
     })
+
+  // Gradient stop vars
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
+    css += `\n  /* Advanced gradient stops */\n`
+    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+      Object.values(stop.vars).forEach(varName => {
+        css += `  ${varName}: ${getVarValue(varName)};\n`
+      })
+    })
+  }
+
   css += `}\n`
   return css
 }
@@ -501,6 +657,16 @@ function saveOriginalValues() {
     .forEach(varName => {
       originalValues[varName] = getVarValue(varName)
     })
+
+  // Save gradient stop vars too
+  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
+    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+      Object.values(stop.vars).forEach(varName => {
+        originalValues[varName] = getVarValue(varName)
+      })
+    })
+  }
 }
 
 // ===== Local Save Server =====
@@ -513,13 +679,10 @@ async function checkLocalServer() {
   } catch {
     localServerAvailable = false
   }
-  updateSaveToFileButton()
+  updateServerStatus()
 }
 
-function updateSaveToFileButton() {
-  const btn = $('saveToFileBtn')
-  if (btn) btn.style.display = localServerAvailable ? 'block' : 'none'
-
+function updateServerStatus() {
   const indicator = $('serverStatus')
   if (indicator) {
     indicator.style.display = 'block'
@@ -527,16 +690,23 @@ function updateSaveToFileButton() {
       ? '<span style="color: var(--color-success);">● Local server connected</span>'
       : '<span style="color: var(--color-text-muted);">○ Local server offline — <code>pnpm --filter @wolffm/themes dev</code></span>'
   }
+  const applyBtn = $('applyBtn')
+  if (applyBtn) {
+    applyBtn.disabled = !localServerAvailable
+    applyBtn.title = localServerAvailable
+      ? ''
+      : 'Start local server: pnpm --filter @wolffm/themes dev'
+  }
 }
 
-async function saveToFile() {
-  if (!localServerAvailable) {
-    showToast('Local server not running')
-    return
-  }
+async function applyChanges() {
   const count = Object.keys(modifications).length
   if (count === 0) {
-    showToast('No modifications to save')
+    showToast('No modifications to apply')
+    return
+  }
+  if (!localServerAvailable) {
+    showToast('Local server not running — run: pnpm --filter @wolffm/themes dev')
     return
   }
 
@@ -552,101 +722,16 @@ async function saveToFile() {
     })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || 'Failed to save')
-    showToast(`Saved ${count} changes to themes/src/style.css`)
+    showToast(`Applied ${count} changes to themes/src/style.css`)
   } catch (error) {
     showToast(`Error: ${error.message}`)
   }
 }
 
-// ===== Submit Theme =====
-function openSubmitModal() {
-  const count = Object.keys(modifications).length
-  if (count === 0) {
-    showToast('No modifications to submit')
-    return
-  }
-
-  $('themeName').value = currentTheme + '-custom'
-  $('authorName').value = ''
-  $('themeDescription').value = ''
-  $('submitStatus').style.display = 'none'
-  $('submitBtn').disabled = false
-  $('submitBtn').textContent = 'Submit Theme'
-  $('submitModal').classList.add('show')
-}
-
-function closeSubmitModal() {
-  $('submitModal').classList.remove('show')
-}
-
-async function submitTheme() {
-  const themeName = $('themeName').value.trim()
-  const authorName = $('authorName').value.trim()
-  const description = $('themeDescription').value.trim()
-
-  if (!themeName) {
-    showSubmitStatus('error', 'Theme name is required')
-    return
-  }
-  if (!/^[a-z0-9-]+$/.test(themeName)) {
-    showSubmitStatus('error', 'Theme name must be lowercase letters, numbers, and hyphens only')
-    return
-  }
-
-  const submitBtn = $('submitBtn')
-  submitBtn.disabled = true
-  submitBtn.textContent = 'Submitting...'
-  showSubmitStatus('loading', 'Creating pull request...')
-
-  try {
-    const response = await fetch(`${WORKER_URL}/submit-theme`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        themeName,
-        baseTheme: currentTheme,
-        authorName: authorName || 'Anonymous',
-        description: description || `Custom theme based on ${currentTheme}`,
-        css: generateThemeCSS(themeName),
-        modifications: Object.keys(modifications).length
-      })
-    })
-    const result = await response.json()
-    if (!response.ok) throw new Error(result.error || 'Failed to create PR')
-
-    showSubmitStatus(
-      'success',
-      `
-      Pull request created!<br>
-      <a href="${result.prUrl}" target="_blank" style="color: var(--color-success); text-decoration: underline;">
-        View PR #${result.prNumber}
-      </a>
-    `
-    )
-    submitBtn.textContent = 'Submitted!'
-  } catch (error) {
-    showSubmitStatus('error', `Error: ${error.message}`)
-    submitBtn.disabled = false
-    submitBtn.textContent = 'Submit Theme'
-  }
-}
-
-function showSubmitStatus(type, message) {
-  const status = $('submitStatus')
-  status.style.display = 'block'
-  status.className = `submit-status ${type}`
-  status.innerHTML = message
-}
-
 // ===== Event Listeners =====
-$('submitModal').addEventListener('click', e => {
-  if (e.target.id === 'submitModal') closeSubmitModal()
-})
-
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if ($('submitModal').classList.contains('show')) closeSubmitModal()
-    else if (pickerOpen) {
+    if (pickerOpen) {
       pickerOpen = false
       renderThemePicker()
     }
@@ -663,17 +748,15 @@ window.editor = {
   openPanel,
   closePanel,
   setTheme,
+  setMode,
   togglePicker,
-  toggleSurfaceMode,
   handleColorPick,
   handleHexInput,
   handleSliderChange,
+  handleGradientSlider,
   copyCurrentVar,
   resetCurrentVar,
   resetAll,
   exportCSS,
-  saveToFile,
-  openSubmitModal,
-  closeSubmitModal,
-  submitTheme
+  applyChanges
 }

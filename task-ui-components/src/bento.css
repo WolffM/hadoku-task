@@ -1,6 +1,6 @@
 /**
  * Bento Component Styles
- * Styles for BentoGrid, BentoCard, MetallicSurface, and ShimmerOverlay
+ * Styles for BentoGrid and BentoCard
  */
 
 /* ===== BENTO GRID ===== */
@@ -134,101 +134,6 @@
   opacity: 0.85;
 }
 
-/* ===== METALLIC SURFACE ===== */
-.metallic-surface {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--metallic-radius, var(--hdk-radius-lg, 16px));
-
-  /* Base metallic gradient */
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-}
-
-/* Noise texture overlay for brushed metal effect */
-.metallic-surface--noise::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Highlight reflection effect */
-.metallic-surface--highlight::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 50% 50% at 20% 20%, var(--highlight) 0%, transparent 70%);
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* ===== SHIMMER OVERLAY ===== */
-.shimmer-overlay {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.shimmer-overlay::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    transparent 100%
-  );
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-/* ===== CARD GRADIENT OFFSET ===== */
-/* Allows per-card hue variation while staying harmonious with theme */
-/* Disabled in simple mode (data-simple-mode='true') which uses flat colors */
-.card-gradient-offset {
-  --local-hue: calc(var(--accent-h) + var(--card-hue-offset, 0));
-  --base-l: calc(var(--accent-l) + var(--gradient-l-adjust, 0));
-  --gradient-start: oklch(
-    calc(var(--base-l) + 0.05) calc(var(--accent-c) * var(--gradient-c-scale, 0.9))
-      calc(var(--local-hue) - 15)
-  );
-  --gradient-end: oklch(
-    calc(var(--base-l) - 0.05) calc(var(--accent-c) * var(--gradient-c-scale, 0.9))
-      calc(var(--local-hue) + 15)
-  );
-  --highlight: oklch(calc(var(--base-l) + 0.15) calc(var(--accent-c) * 0.4) var(--local-hue));
-}
-
-/* Card text utility classes */
-.card-text-primary {
-  color: var(--card-text-primary);
-}
-
-.card-text-secondary {
-  color: var(--card-text-secondary);
-}
-
-.card-text-muted {
-  color: var(--card-text-muted);
-}
-
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .bento-card,
@@ -237,48 +142,4 @@
     transform: none;
     transition: none;
   }
-
-  .shimmer-overlay::after {
-    animation: none;
-    opacity: 0.1;
-    left: 0;
-  }
-}
-
-/* ===== SIMPLE MODE ===== */
-/* Disables metallic gradients and effects, using solid colors instead */
-
-[data-simple-mode='true'] .metallic-surface {
-  /* Override gradient with solid primary background color */
-  background: var(--color-primary);
-}
-
-[data-simple-mode='true'] .metallic-surface--noise::before {
-  /* Hide noise texture */
-  display: none;
-}
-
-[data-simple-mode='true'] .metallic-surface--highlight::after {
-  /* Hide highlight effect */
-  display: none;
-}
-
-[data-simple-mode='true'] .card-gradient-offset {
-  /* Override card gradient with solid color */
-  --gradient-start: var(--color-primary);
-  --gradient-end: var(--color-primary);
-  --highlight: transparent;
-}
-
-/* Also disable any glow effects in simple mode */
-[data-simple-mode='true'] {
-  --glow: transparent;
-  --glow-primary: transparent;
-  --glow-secondary: transparent;
-}
-
-/* Disable shimmer animation in simple mode */
-[data-simple-mode='true'] .shimmer-overlay::after {
-  animation: none;
-  opacity: 0;
 }

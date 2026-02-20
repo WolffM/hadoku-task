@@ -31,16 +31,19 @@ Round 4: Final selection (3 winners)
 ### CSS `background-attachment: fixed`
 
 **How it works:**
+
 - Positions background relative to viewport, not element
 - All elements with same gradient sample from same viewport position
 - Creates "window into shared canvas" illusion
 
 **Critical gotchas:**
+
 - `transform` on element breaks fixed attachment (creates new stacking context)
 - `transform: scale()` on hover causes gradient to "jump" to element-local
 - Cannot animate a "shift" with fixed attachment — both states sample same viewport position
 
 **Safe hover effects with fixed backgrounds:**
+
 - `filter: brightness()`, `filter: saturate()` — don't break fixed
 - `box-shadow` changes — work fine
 - Pseudo-element overlays — work fine (the key technique)
@@ -64,7 +67,9 @@ The winning pattern for shimmer effects:
   background: linear-gradient(135deg, ...shimmer...);
   transform: translateX(-50%) translateY(-50%);
   opacity: 0;
-  transition: transform 2s, opacity 0.5s;
+  transition:
+    transform 2s,
+    opacity 0.5s;
 }
 
 .element:hover::after {
@@ -78,16 +83,19 @@ The winning pattern for shimmer effects:
 ### Animation Timing
 
 **What felt good:**
+
 - Shimmer sweep: 2-4 seconds (slower = more premium)
 - Opacity fade-in: 0.3-0.5 seconds
 - Saturation transitions: 0.6-0.8 seconds
 
 **What felt bad:**
+
 - Fast sweeps (< 1s) — looked cheap
 - Instant opacity changes — jarring
 - Looping animations — distracting for hover states
 
 **Reverse animations:**
+
 - Use `transition` not `animation` for hover effects
 - Ensures smooth reverse when hover ends
 - Match or slightly extend reverse duration
@@ -119,18 +127,19 @@ Mismatched angles break the metallic illusion — light should "catch" along the
 background: linear-gradient(
   135deg,
   transparent 20%,
-  rgba(255,255,255,0.05) 26%,  /* Wave 1: subtle */
-  transparent 32%,
+  rgba(255, 255, 255, 0.05) 26%,
+  /* Wave 1: subtle */ transparent 32%,
   transparent 44%,
-  rgba(255,255,255,0.15) 50%,  /* Wave 2: strong */
-  transparent 56%,
+  rgba(255, 255, 255, 0.15) 50%,
+  /* Wave 2: strong */ transparent 56%,
   transparent 68%,
-  rgba(255,255,255,0.08) 74%,  /* Wave 3: medium */
-  transparent 80%
+  rgba(255, 255, 255, 0.08) 74%,
+  /* Wave 3: medium */ transparent 80%
 );
 ```
 
 **Variation dimensions:**
+
 - Opacity (0.03 → 0.18 range worked well)
 - Width (narrow vs wide bands)
 - Spacing (gaps between waves)
@@ -153,7 +162,9 @@ For gradient displacement on hover while keeping scroll-reactivity:
   background-size: 130% 130%;
   background-position: 30% 30%;
   opacity: 0;
-  transition: opacity 0.4s, background-position 0.8s;
+  transition:
+    opacity 0.4s,
+    background-position 0.8s;
 }
 
 .element:hover::after {
@@ -171,12 +182,14 @@ For gradient displacement on hover while keeping scroll-reactivity:
 ### 1. Subtlety > Drama
 
 Effects that tested poorly:
+
 - High opacity (> 0.2) shimmer bands
 - Fast animations (< 1.5s)
 - Large displacement shifts
 - Pulsing/breathing loops
 
 Effects that tested well:
+
 - Low opacity (0.03 - 0.15) shimmer bands
 - Slow, deliberate movement (2-4s)
 - Gentle shifts (15-20% background-position change)
@@ -185,6 +198,7 @@ Effects that tested well:
 ### 2. Physical Plausibility
 
 Metallic effects need to respect how light behaves:
+
 - Light catches along consistent angles
 - Brighter highlights have soft falloff edges
 - Movement suggests tilting a surface, not magic
@@ -192,6 +206,7 @@ Metallic effects need to respect how light behaves:
 ### 3. Layered Complexity
 
 Single effects feel flat. Winning effects combined:
+
 - Base saturation/brightness shift (immediate feedback)
 - Multi-band shimmer sweep (visual interest)
 - Box-shadow enhancement (depth cue)
@@ -199,6 +214,7 @@ Single effects feel flat. Winning effects combined:
 ### 4. Reverse Transitions Matter
 
 Hover-off is as important as hover-on:
+
 - Abrupt snap-back feels broken
 - Reverse should be equal or slightly slower
 - Opacity should fade smoothly, not cut
@@ -208,26 +224,31 @@ Hover-off is as important as hover-on:
 ## Effect Categories for Future Themes
 
 ### Shimmer/Sweep Effects
+
 - Single band diagonal sweep
 - Multi-band cascade (varied opacity/speed)
 - Horizontal/vertical wipes
 
 ### Color Modulation
+
 - Saturation boost
 - Brightness shift
 - Hue rotation (use sparingly)
 
 ### Spatial Effects
+
 - Gradient position shift
 - Scale (careful with fixed attachment)
 - Parallax (mouse-driven)
 
 ### Light Simulation
+
 - Mouse-position glow (mask-based reveal)
 - Directional highlights (fixed angle, mouse-positioned)
 - Edge illumination (inset box-shadow)
 
 ### Texture Reveal
+
 - Brushed metal (repeating-linear-gradient)
 - Noise overlay (SVG filter or gradient)
 - Mask-based spotlight
@@ -236,15 +257,15 @@ Hover-off is as important as hover-on:
 
 ## Failed Approaches (Avoid These)
 
-| Attempt | Why It Failed |
-|---------|---------------|
-| `transform: scale()` on hover | Breaks `background-attachment: fixed` |
-| `transform: translateY()` for lift | Gradient stays fixed, element moves = jarring pop |
-| Fixed attachment + position animation | Both states sample same viewport position = no visible shift |
-| Fast shimmer (< 1s) | Looks cheap, overwhelming |
-| Looping shimmer animation | Distracting, doesn't feel like response to hover |
-| Circular mouse glow (no texture) | Looks like flashlight, not metallic |
-| Horizontal-only wave on diagonal gradient | Angle mismatch breaks illusion |
+| Attempt                                   | Why It Failed                                                |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| `transform: scale()` on hover             | Breaks `background-attachment: fixed`                        |
+| `transform: translateY()` for lift        | Gradient stays fixed, element moves = jarring pop            |
+| Fixed attachment + position animation     | Both states sample same viewport position = no visible shift |
+| Fast shimmer (< 1s)                       | Looks cheap, overwhelming                                    |
+| Looping shimmer animation                 | Distracting, doesn't feel like response to hover             |
+| Circular mouse glow (no texture)          | Looks like flashlight, not metallic                          |
+| Horizontal-only wave on diagonal gradient | Angle mismatch breaks illusion                               |
 
 ---
 
@@ -253,6 +274,7 @@ Hover-off is as important as hover-on:
 ### OKLCH Color Space
 
 Used `oklch(lightness chroma hue)` for perceptually uniform gradients:
+
 - Lightness: 0.5-0.9 range for UI elements
 - Chroma: 0.08-0.22 (higher = more saturated)
 - Hue: 0-360 degrees
@@ -276,11 +298,13 @@ Used `oklch(lightness chroma hue)` for perceptually uniform gradients:
 ## Checklist for Future Animation Design
 
 ### Before Starting
+
 - [ ] Define the physical metaphor (metallic, glass, fabric, etc.)
 - [ ] Choose base gradient angle
 - [ ] Decide on hover-only vs continuous animation
 
 ### During Development
+
 - [ ] Match shimmer angle to gradient angle
 - [ ] Test with `inset: -100%` or larger for diagonal sweeps
 - [ ] Use `transition` not `animation` for hover states
@@ -288,6 +312,7 @@ Used `oklch(lightness chroma hue)` for perceptually uniform gradients:
 - [ ] Test reverse transition (hover-off)
 
 ### Polish Pass
+
 - [ ] Slow down animations (2-4s for sweeps)
 - [ ] Reduce opacity (0.03-0.15 for shimmer bands)
 - [ ] Soften edges (wider gradient transition zones)
@@ -295,6 +320,7 @@ Used `oklch(lightness chroma hue)` for perceptually uniform gradients:
 - [ ] Verify no jarring snap-back on hover-off
 
 ### Testing
+
 - [ ] Test all gradient presets
 - [ ] Test at different viewport positions (scroll)
 - [ ] Test rapid hover on/off

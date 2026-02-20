@@ -17,8 +17,6 @@ export { SettingsModal } from './components/SettingsModal'
 // Bento components
 export { BentoGrid } from './components/BentoGrid'
 export { BentoCard } from './components/BentoCard'
-export { MetallicSurface } from './components/MetallicSurface'
-export { ShimmerOverlay } from './components/ShimmerOverlay'
 
 // Hooks
 export { useToast } from './hooks/useToast'
@@ -72,8 +70,6 @@ export type {
 } from './components/SettingsModal'
 export type { BentoGridProps, BentoColumns } from './components/BentoGrid'
 export type { BentoCardProps, CardSize } from './components/BentoCard'
-export type { MetallicSurfaceProps } from './components/MetallicSurface'
-export type { ShimmerOverlayProps } from './components/ShimmerOverlay'
 
 // Utilities
 export { logger } from './utils/logger'
