@@ -4,7 +4,7 @@
  * Designed to work with any theme system via configuration
  */
 
-import React from 'react'
+import React, { useRef, useLayoutEffect, useState } from 'react'
 import type { ThemePickerProps } from '../types'
 import { SettingsIcon, MoonIcon, getFallbackIcon } from './ThemeIcons'
 import '../theme-picker.css'
@@ -35,13 +35,44 @@ export function ThemePicker({
   onToggle,
   onSettingsClick,
   getThemeIcon,
-  className = ''
+  className = '',
+  dropdownPlacement = 'auto'
 }: ThemePickerProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [resolvedPlacement, setResolvedPlacement] = useState<'left' | 'right'>('right')
+
+  // Edge detection: when 'auto', measure the dropdown after render and flip if it overflows
+  useLayoutEffect(() => {
+    if (!isOpen) return
+
+    if (dropdownPlacement !== 'auto') {
+      setResolvedPlacement(dropdownPlacement)
+      return
+    }
+
+    // Start with right (default), then check if it overflows
+    setResolvedPlacement('right')
+
+    // Use rAF to measure after the browser has laid out the dropdown
+    const frameId = requestAnimationFrame(() => {
+      const el = dropdownRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      if (rect.right > window.innerWidth) {
+        setResolvedPlacement('left')
+      }
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [isOpen, dropdownPlacement])
+
   // Get icon for current theme (use provided function or fallback to MoonIcon)
   const currentIcon = getThemeIcon ? getThemeIcon(currentTheme) : <MoonIcon />
 
+  const openLeftClass = resolvedPlacement === 'left' ? 'theme-picker--open-left' : ''
+
   return (
-    <div className={`theme-picker ${className}`}>
+    <div className={`theme-picker ${openLeftClass} ${className}`.trim()}>
       <button
         className="theme-toggle-btn"
         onClick={onToggle}
@@ -51,7 +82,11 @@ export function ThemePicker({
         {currentIcon}
       </button>
       {isOpen && (
-        <div className="theme-picker__dropdown" onClick={e => e.stopPropagation()}>
+        <div
+          ref={dropdownRef}
+          className="theme-picker__dropdown"
+          onClick={e => e.stopPropagation()}
+        >
           <div className="theme-picker__pills">
             {themeFamilies.map((family, idx) => {
               // Use provided icons or fallback to generic shapes

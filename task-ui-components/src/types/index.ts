@@ -26,6 +26,14 @@ export interface ThemeFamily {
 }
 
 /**
+ * Dropdown placement direction
+ * - 'right': Opens to the right of the toggle button (default)
+ * - 'left': Opens to the left of the toggle button
+ * - 'auto': Automatically detects edge collisions and flips direction
+ */
+export type DropdownPlacement = 'left' | 'right' | 'auto'
+
+/**
  * Theme picker component props
  */
 export interface ThemePickerProps {
@@ -45,4 +53,6 @@ export interface ThemePickerProps {
   getThemeIcon?: (theme: ThemeName) => ReactNode
   /** Optional: CSS class name for the container */
   className?: string
+  /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
+  dropdownPlacement?: DropdownPlacement
 }

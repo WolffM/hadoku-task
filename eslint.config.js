@@ -67,6 +67,8 @@ export default [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         BroadcastChannel: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
         // DOM types
         HTMLElement: 'readonly',
         HTMLInputElement: 'readonly',

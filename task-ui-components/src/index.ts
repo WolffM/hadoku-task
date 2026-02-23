@@ -50,7 +50,8 @@ export {
 } from './components/ThemeIcons'
 
 // Types
-export type { ThemeName, ThemeFamily, ThemePickerProps } from './types'
+export type { ThemeName, ThemeFamily, ThemePickerProps, DropdownPlacement } from './types'
+export type { ConnectedThemePickerProps } from './components/ConnectedThemePicker'
 export type { ToastProps } from './components/Toast'
 export type { ToasterProps, ToastState } from './components/Toaster'
 export type { UseToastReturn } from './hooks/useToast'

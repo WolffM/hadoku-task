@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { ThemePicker } from './ThemePicker'
-import type { ThemeFamily } from '../types'
+import type { ThemeFamily, DropdownPlacement } from '../types'
 
 export interface ConnectedThemePickerProps {
   /** Available theme families */
@@ -20,6 +20,8 @@ export interface ConnectedThemePickerProps {
   className?: string
   /** Optional callback when settings icon is clicked */
   onSettingsClick?: () => void
+  /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
+  dropdownPlacement?: DropdownPlacement
 }
 
 /**
@@ -56,7 +58,8 @@ export function ConnectedThemePicker({
   onThemeChange,
   getThemeIcon,
   className,
-  onSettingsClick
+  onSettingsClick,
+  dropdownPlacement
 }: ConnectedThemePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -70,6 +73,7 @@ export function ConnectedThemePicker({
       getThemeIcon={getThemeIcon}
       className={className}
       onSettingsClick={onSettingsClick}
+      dropdownPlacement={dropdownPlacement}
     />
   )
 }

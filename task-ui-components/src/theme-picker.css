@@ -80,6 +80,12 @@
   gap: var(--hdk-space-md, 12px); /* Spacing between pill tower and settings button */
 }
 
+/* Open-left modifier: dropdown opens to the left of the toggle */
+.theme-picker--open-left .theme-picker__dropdown {
+  left: auto;
+  right: calc(100% + var(--hdk-space-md, 12px));
+}
+
 /* Theme pill tower - has the shadow */
 .theme-picker__pills {
   display: flex;
