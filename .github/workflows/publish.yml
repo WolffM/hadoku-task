@@ -102,6 +102,8 @@ jobs:
 
       - name: Build Task package
         run: pnpm run build:all
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debug - Show changed files
         run: |
@@ -166,8 +168,8 @@ jobs:
           fi
 
           # Check task package if SOURCE files changed (matches pre-commit hook pattern)
-          # Pattern: (src/|package.json|vite.config.|tsconfig.) at root level
-          if git diff --name-only HEAD~1 HEAD | grep -qE "^(src/|package\.json|vite\.config\.|tsconfig\.)"; then
+          # Pattern: (src/|worker/|package.json|vite.config.|tsconfig.|tsup.) at root level
+          if git diff --name-only HEAD~1 HEAD | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then
             echo "📦 task source files changed, checking version..."
             if ! check_version_published "@wolffm/task" "."; then
               echo "::warning::task version was not bumped! Will auto-bump."
@@ -332,7 +334,7 @@ jobs:
         id: task_changed
         run: |
           # Check if any files changed outside of themes/ and task-ui-components/ directories
-          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -q .; then
+          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ Task package has changes"
           else

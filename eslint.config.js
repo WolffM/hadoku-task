@@ -124,6 +124,28 @@ export default [
     }
   },
 
+  // Cloudflare Worker files
+  {
+    files: ['worker/**/*.ts'],
+    languageOptions: {
+      globals: {
+        KVNamespace: 'readonly',
+        D1Database: 'readonly',
+        DurableObjectNamespace: 'readonly',
+        R2Bucket: 'readonly',
+        AnalyticsEngineDataset: 'readonly',
+        ExecutionContext: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        fetch: 'readonly'
+      }
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off'
+    }
+  },
+
   // Prettier config (must be last)
   prettierConfig
 ]

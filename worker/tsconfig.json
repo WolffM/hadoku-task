@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "baseUrl": "..",
+    "paths": {
+      "@wolffm/task/api": ["src/server/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "../src/server/**/*.ts", "../src/domain/**/*.ts"]
+}
