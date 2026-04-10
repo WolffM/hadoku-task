@@ -16,7 +16,8 @@ export default [
       '**/coverage/**',
       '**/*.config.js',
       '**/*.config.ts',
-      '**/scripts/**'
+      '**/scripts/**',
+      'themes/dev/editor.bundle.js'
     ]
   },
 
@@ -99,7 +100,8 @@ export default [
         'warn',
         {
           argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_'
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
         }
       ],
       '@typescript-eslint/no-explicit-any': 'warn',

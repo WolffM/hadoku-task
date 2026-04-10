@@ -81,12 +81,14 @@ test.describe('Theme Picker', () => {
     const box = await dropdown.boundingBox()
     expect(box).not.toBeNull()
 
-    const viewport = page.viewportSize()!
+    const viewport = page.viewportSize()
+    expect(viewport).not.toBeNull()
+    if (!box || !viewport) return
 
     // The dropdown's right edge must not exceed the viewport width
-    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1) // +1 for rounding
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1) // +1 for rounding
     // The dropdown's left edge must not be negative
-    expect(box!.x).toBeGreaterThanOrEqual(-1) // -1 for rounding
+    expect(box.x).toBeGreaterThanOrEqual(-1) // -1 for rounding
   })
 
   test('should change theme when a pill button is clicked', async ({ page }) => {
@@ -150,7 +152,8 @@ test.describe('Theme Picker', () => {
     // The dropdown must not overflow the right side of a 400px viewport
     const box = await dropdown.boundingBox()
     expect(box).not.toBeNull()
-    expect(box!.x + box!.width).toBeLessThanOrEqual(401) // 400 + 1 rounding tolerance
+    if (!box) return
+    expect(box.x + box.width).toBeLessThanOrEqual(401) // 400 + 1 rounding tolerance
 
     await context.close()
   })

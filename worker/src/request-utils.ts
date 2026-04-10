@@ -114,13 +114,12 @@ export function createTaskOperationHandler<T>(
   return async (c: Context) => {
     const id = getTaskIdFromParam(c)
     const validationError = validateTaskId(id)
-    if (validationError) {
-      logError(method, path, validationError)
-      return badRequest(c, validationError)
+    if (validationError || !id) {
+      logError(method, path, validationError ?? 'Missing task ID')
+      return badRequest(c, validationError ?? 'Missing task ID')
     }
 
-    // After validation, we know id is a valid string
-    const taskId = id!
+    const taskId = id
 
     const body = await parseBodySafely(c)
     const boardId = getBoardIdFromContext(c, body, DEFAULT_BOARD_ID)

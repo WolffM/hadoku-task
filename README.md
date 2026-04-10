@@ -40,15 +40,15 @@ Native Android app available! Built with Capacitor WebView wrapper.
 ### Install and Run
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 # Open http://localhost:5173?userType=public
 ```
 
 ### Build for Production
 
 ```bash
-npm run build:all
+pnpm run build:all
 ```
 
 **Output:**
