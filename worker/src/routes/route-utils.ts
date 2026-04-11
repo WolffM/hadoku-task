@@ -21,19 +21,7 @@ import {
   logTaskEvent
 } from '../events'
 import { maskKey } from '@wolffm/worker-utils'
-
-interface Env {
-  TASKS_KV: KVNamespace
-  DB: D1Database
-}
-
-interface AppContext {
-  Bindings: Env
-  Variables: {
-    authContext: TaskAuthContext
-    context: { auth: TaskAuthContext }
-  }
-}
+import type { AppContext, Env } from '../types'
 
 /**
  * Create KV-backed storage adapter for @wolffm/task package

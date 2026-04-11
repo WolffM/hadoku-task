@@ -4,18 +4,12 @@
  * Handles utility endpoints: health check, key validation
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import type { Context } from 'hono'
 import { healthCheck, logRequest } from '@wolffm/worker-utils'
+import type { AppContext } from '../types'
 import { HealthResponseSchema, ValidateKeyResponseSchema } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-  ADMIN_KEYS?: string
-  FRIEND_KEYS?: string
-}
-
 export function createMiscRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Health Check
   const healthRoute = createRoute({
@@ -36,7 +30,7 @@ export function createMiscRoutes() {
     }
   })
 
-  app.openapi(healthRoute, c => healthCheck(c, 'task-api-adapter', { kv: true }))
+  app.openapi(healthRoute, ((c: any) => healthCheck(c, 'task-api-adapter', { kv: true })) as never)
 
   // Validate Key
   const validateKeyRoute = createRoute({
@@ -57,7 +51,7 @@ export function createMiscRoutes() {
     }
   })
 
-  app.openapi(validateKeyRoute, (c: Context) => {
+  app.openapi(validateKeyRoute, c => {
     const authContext = c.get('authContext')
     const userType = authContext.userType
     const valid = userType !== 'public'

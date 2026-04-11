@@ -4,10 +4,10 @@
  * Handles tag management and batch operations on tasks
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import type { Context } from 'hono'
 import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, logRequest, logError, requireFields } from '@wolffm/worker-utils'
 import { getContext, handleOperation, handleBatchOperation, withBoardLock } from './route-utils'
+import type { AppContext } from '../types'
 import {
   CreateTagInputSchema,
   CreateTagResponseSchema,
@@ -22,12 +22,8 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createTagsBatchRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // ============================================================================
   // Tag Management
@@ -69,7 +65,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(createTagRoute, async c => {
+  app.openapi(createTagRoute, (async (c: any) => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['boardId', 'tag'])
@@ -85,7 +81,7 @@ export function createTagsBatchRoutes() {
     })
 
     return handleOperation(c, (storage, auth) => TaskHandlers.createTag(storage, auth, body))
-  })
+  }) as never)
 
   // Delete Tag
   const deleteTagRoute = createRoute({
@@ -123,7 +119,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(deleteTagRoute, async c => {
+  app.openapi(deleteTagRoute, (async (c: any) => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['boardId', 'tag'])
@@ -139,7 +135,7 @@ export function createTagsBatchRoutes() {
     })
 
     return handleOperation(c, (storage, auth) => TaskHandlers.deleteTag(storage, auth, body))
-  })
+  }) as never)
 
   // ============================================================================
   // Batch Operations
@@ -184,7 +180,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchUpdateTagsWithParamRoute, async c => {
+  app.openapi(batchUpdateTagsWithParamRoute, (async (c: any) => {
     const { boardId: boardIdFromParam } = c.req.valid('param')
     const body = c.req.valid('json')
     const boardId = boardIdFromParam || body.boardId || 'main'
@@ -207,7 +203,7 @@ export function createTagsBatchRoutes() {
     })
 
     return c.json(result, 200)
-  })
+  }) as never)
 
   // Batch Update Tags (legacy alias)
   const batchUpdateTagsLegacyRoute = createRoute({
@@ -245,7 +241,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchUpdateTagsLegacyRoute, async c => {
+  app.openapi(batchUpdateTagsLegacyRoute, (async (c: any) => {
     const body = c.req.valid('json')
     const boardId = body.boardId || 'main'
 
@@ -267,7 +263,7 @@ export function createTagsBatchRoutes() {
     })
 
     return c.json(result, 200)
-  })
+  }) as never)
 
   // Batch Move Tasks
   const batchMoveTasksRoute = createRoute({
@@ -305,7 +301,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchMoveTasksRoute, async (c: Context) => {
+  app.openapi(batchMoveTasksRoute, (async (c: any) => {
     logRequest('POST', '/task/api/batch/move-tasks', {
       userType: c.get('authContext').userType
     })
@@ -313,13 +309,18 @@ export function createTagsBatchRoutes() {
     return handleBatchOperation(
       c,
       ['sourceBoardId', 'targetBoardId', 'taskIds'],
-      (storage, auth, body) => TaskHandlers.batchMoveTasks(storage, auth, body),
+      (storage, auth, body) =>
+        TaskHandlers.batchMoveTasks(
+          storage,
+          auth,
+          body as { sourceBoardId: string; targetBoardId: string; taskIds: string[] }
+        ),
       (body, userType, sessionId) => [
         `${userType}:${sessionId}:${body.sourceBoardId}`,
         `${userType}:${sessionId}:${body.targetBoardId}`
       ]
     )
-  })
+  }) as never)
 
   // Batch Move Tasks (legacy alias)
   const batchMoveLegacyRoute = createRoute({
@@ -357,7 +358,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchMoveLegacyRoute, async (c: Context) => {
+  app.openapi(batchMoveLegacyRoute, (async (c: any) => {
     logRequest('POST', '/task/api/batch-move', {
       userType: c.get('authContext').userType
     })
@@ -365,13 +366,18 @@ export function createTagsBatchRoutes() {
     return handleBatchOperation(
       c,
       ['sourceBoardId', 'targetBoardId', 'taskIds'],
-      (storage, auth, body) => TaskHandlers.batchMoveTasks(storage, auth, body),
+      (storage, auth, body) =>
+        TaskHandlers.batchMoveTasks(
+          storage,
+          auth,
+          body as { sourceBoardId: string; targetBoardId: string; taskIds: string[] }
+        ),
       (body, userType, sessionId) => [
         `${userType}:${sessionId}:${body.sourceBoardId}`,
         `${userType}:${sessionId}:${body.targetBoardId}`
       ]
     )
-  })
+  }) as never)
 
   // Batch Clear Tag
   const batchClearTagRoute = createRoute({
@@ -409,7 +415,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchClearTagRoute, async (c: Context) => {
+  app.openapi(batchClearTagRoute, (async (c: any) => {
     logRequest('POST', '/task/api/batch-clear-tag', {
       userType: c.get('authContext').userType
     })
@@ -417,10 +423,15 @@ export function createTagsBatchRoutes() {
     return handleBatchOperation(
       c,
       ['boardId', 'tag', 'taskIds'],
-      (storage, auth, body) => TaskHandlers.batchClearTag(storage, auth, body),
+      (storage, auth, body) =>
+        TaskHandlers.batchClearTag(
+          storage,
+          auth,
+          body as { boardId: string; tag: string; taskIds: string[] }
+        ),
       (body, userType, sessionId) => [`${userType}:${sessionId}:${body.boardId}`]
     )
-  })
+  }) as never)
 
   return app
 }

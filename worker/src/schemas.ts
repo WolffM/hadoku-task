@@ -109,10 +109,7 @@ export const CreateTaskInputSchema = z
     endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
   })
   .passthrough()
-  .openapi({
-    ref: 'CreateTaskInput',
-    description: 'Create task input. Additional fields are allowed and will be stored.'
-  })
+  .openapi('CreateTaskInput')
 
 export const CreateTaskResponseSchema = z
   .object({
@@ -131,10 +128,7 @@ export const UpdateTaskInputSchema = z
     endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
   })
   .passthrough()
-  .openapi({
-    ref: 'UpdateTaskInput',
-    description: 'Update task fields. Additional fields are allowed and will be merged.'
-  })
+  .openapi('UpdateTaskInput')
 
 export const UpdateTaskResponseSchema = z
   .object({

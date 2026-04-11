@@ -8,6 +8,7 @@ import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, logRequest, logError, requireFields, extractField } from '@wolffm/worker-utils'
 import { handleOperation, handleBoardOperation } from './route-utils'
 import { DEFAULT_BOARD_ID } from '../constants'
+import type { AppContext } from '../types'
 import {
   GetTasksResponseSchema,
   CreateTaskInputSchema,
@@ -20,12 +21,8 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createTaskRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Get Tasks for a Board
   const getTasksRoute = createRoute({
@@ -51,7 +48,7 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(getTasksRoute, async c => {
+  app.openapi(getTasksRoute, (async (c: any) => {
     const { boardId = 'main' } = c.req.valid('query')
 
     logRequest('GET', '/task/api/tasks', {
@@ -60,7 +57,7 @@ export function createTaskRoutes() {
     })
 
     return handleOperation(c, (storage, auth) => TaskHandlers.getBoardTasks(storage, auth, boardId))
-  })
+  }) as never)
 
   // Create Task
   const createTaskRoute = createRoute({
@@ -98,7 +95,7 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(createTaskRoute, async c => {
+  app.openapi(createTaskRoute, (async (c: any) => {
     const body = c.req.valid('json')
     const { boardId = DEFAULT_BOARD_ID, ...input } = body
 
@@ -118,7 +115,7 @@ export function createTaskRoutes() {
     return handleBoardOperation(c, boardId, (storage, auth) =>
       TaskHandlers.createTask(storage, auth, input, boardId)
     )
-  })
+  }) as never)
 
   // Update Task
   const updateTaskRoute = createRoute({
@@ -159,10 +156,11 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(updateTaskRoute, async c => {
+  app.openapi(updateTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
     const body = c.req.valid('json')
-    const boardId = body.boardId || extractField(c, ['query:boardId'], DEFAULT_BOARD_ID)
+    const boardId: string =
+      body.boardId || extractField(c, ['query:boardId'], DEFAULT_BOARD_ID) || DEFAULT_BOARD_ID
 
     logRequest('PATCH', '/task/api/:id', {
       userType: c.get('authContext').userType,
@@ -172,9 +170,9 @@ export function createTaskRoutes() {
 
     const { boardId: _, ...input } = body
     return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.updateTask(storage, auth, id, input, boardId)
+      TaskHandlers.updateTask(storage, auth, id, input as Record<string, unknown>, boardId)
     )
-  })
+  }) as never)
 
   // Complete Task
   const completeTaskRoute = createRoute({
@@ -211,7 +209,7 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(completeTaskRoute, async c => {
+  app.openapi(completeTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
     const { boardId = DEFAULT_BOARD_ID } = c.req.valid('query')
 
@@ -224,7 +222,7 @@ export function createTaskRoutes() {
     return handleBoardOperation(c, boardId, (storage, auth) =>
       TaskHandlers.completeTask(storage, auth, id, boardId)
     )
-  })
+  }) as never)
 
   // Delete Task
   const deleteTaskRoute = createRoute({
@@ -261,7 +259,7 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(deleteTaskRoute, async c => {
+  app.openapi(deleteTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
     const { boardId = DEFAULT_BOARD_ID } = c.req.valid('query')
 
@@ -274,7 +272,7 @@ export function createTaskRoutes() {
     return handleBoardOperation(c, boardId, (storage, auth) =>
       TaskHandlers.deleteTask(storage, auth, id, boardId)
     )
-  })
+  }) as never)
 
   // Get Board Stats
   const getStatsRoute = createRoute({
@@ -300,7 +298,7 @@ export function createTaskRoutes() {
     }
   })
 
-  app.openapi(getStatsRoute, async c => {
+  app.openapi(getStatsRoute, (async (c: any) => {
     const { boardId = 'main' } = c.req.valid('query')
 
     logRequest('GET', '/task/api/stats', {
@@ -309,7 +307,7 @@ export function createTaskRoutes() {
     })
 
     return handleOperation(c, (storage, auth) => TaskHandlers.getBoardStats(storage, auth, boardId))
-  })
+  }) as never)
 
   return app
 }

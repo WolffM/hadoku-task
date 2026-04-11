@@ -12,6 +12,7 @@ import {
 } from '../session'
 import { getSessionIdFromRequest } from '../request-utils'
 import { DEFAULT_SESSION_ID, DEFAULT_THEME } from '../constants'
+import type { AppContext } from '../types'
 import {
   GetPreferencesResponseSchema,
   UpdatePreferencesInputSchema,
@@ -19,12 +20,8 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createPreferencesRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Get User Preferences
   const getPreferencesRoute = createRoute({
@@ -47,7 +44,7 @@ Falls back to legacy authKey-based prefs if session-based prefs not found.`,
     }
   })
 
-  app.openapi(getPreferencesRoute, async c => {
+  app.openapi(getPreferencesRoute, (async (c: any) => {
     const auth = c.get('authContext')
     const sessionId = getSessionIdFromRequest(c, auth)
 
@@ -107,7 +104,7 @@ Falls back to legacy authKey-based prefs if session-based prefs not found.`,
         200
       )
     }
-  })
+  }) as never)
 
   // Save User Preferences
   const updatePreferencesRoute = createRoute({
@@ -147,7 +144,7 @@ Merges with existing preferences.`,
     }
   })
 
-  app.openapi(updatePreferencesRoute, async c => {
+  app.openapi(updatePreferencesRoute, (async (c: any) => {
     const auth = c.get('authContext')
     const sessionId = getSessionIdFromRequest(c, auth)
 
@@ -160,7 +157,8 @@ Merges with existing preferences.`,
         fields: Object.keys(body)
       })
 
-      const existing = (await getPreferencesBySessionId(c.env.TASKS_KV, sessionId)) || {}
+      const existing: Partial<UserPreferences> =
+        (await getPreferencesBySessionId(c.env.TASKS_KV, sessionId)) || {}
 
       const updated: UserPreferences = {
         ...existing,
@@ -180,7 +178,7 @@ Merges with existing preferences.`,
       )
       return badRequest(c, `Failed to save preferences: ${errorMessage}`)
     }
-  })
+  }) as never)
 
   return app
 }

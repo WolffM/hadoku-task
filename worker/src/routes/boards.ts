@@ -9,6 +9,7 @@ import { badRequest, logRequest, logError, requireFields } from '@wolffm/worker-
 import { getContext, withBoardLock } from './route-utils'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
+import type { AppContext } from '../types'
 import {
   GetBoardsResponseSchema,
   CreateBoardInputSchema,
@@ -17,12 +18,8 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createBoardRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Get All Boards
   const getBoardsRoute = createRoute({
@@ -43,7 +40,7 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(getBoardsRoute, async c => {
+  app.openapi(getBoardsRoute, (async (c: any) => {
     const authContext = c.get('authContext')
     logRequest('GET', '/task/api/boards', { userType: authContext.userType })
 
@@ -57,7 +54,7 @@ export function createBoardRoutes() {
       },
       200
     )
-  })
+  }) as never)
 
   // Create a New Board
   const createBoardRoute = createRoute({
@@ -95,7 +92,7 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(createBoardRoute, async c => {
+  app.openapi(createBoardRoute, (async (c: any) => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['id', 'name'])
@@ -117,7 +114,7 @@ export function createBoardRoutes() {
     })
 
     return c.json(result, 200)
-  })
+  }) as never)
 
   // Delete a Board
   const deleteBoardRoute = createRoute({
@@ -151,7 +148,7 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(deleteBoardRoute, async c => {
+  app.openapi(deleteBoardRoute, (async (c: any) => {
     const { boardId } = c.req.valid('param')
 
     const validationError = validateBoardId(boardId)
@@ -173,7 +170,7 @@ export function createBoardRoutes() {
     })
 
     return c.json(result, 200)
-  })
+  }) as never)
 
   return app
 }

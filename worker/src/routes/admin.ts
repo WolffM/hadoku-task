@@ -15,6 +15,7 @@ import {
 } from '../throttle'
 import { getSessionMapping } from '../session'
 import { USER_TYPES } from '../constants'
+import type { AppContext } from '../types'
 import {
   GetThrottleStatusResponseSchema,
   GetSessionsResponseSchema,
@@ -22,12 +23,8 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createAdminRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Get Throttle Status
   const getThrottleStatusRoute = createRoute({
@@ -70,7 +67,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(getThrottleStatusRoute, async c => {
+  app.openapi(getThrottleStatusRoute, (async (c: any) => {
     const auth = c.get('authContext')
     if (auth.userType !== USER_TYPES.ADMIN) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -92,7 +89,7 @@ export function createAdminRoutes() {
       },
       200
     )
-  })
+  }) as never)
 
   // Get Sessions for Auth Key
   const getSessionsRoute = createRoute({
@@ -135,7 +132,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(getSessionsRoute, async c => {
+  app.openapi(getSessionsRoute, (async (c: any) => {
     const auth = c.get('authContext')
     if (auth.userType !== USER_TYPES.ADMIN) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -166,7 +163,7 @@ export function createAdminRoutes() {
       },
       200
     )
-  })
+  }) as never)
 
   // Unblacklist Session
   const unblacklistRoute = createRoute({
@@ -209,7 +206,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(unblacklistRoute, async c => {
+  app.openapi(unblacklistRoute, (async (c: any) => {
     const auth = c.get('authContext')
     if (auth.userType !== USER_TYPES.ADMIN) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -229,7 +226,7 @@ export function createAdminRoutes() {
       { success: true as const, message: `Session ${maskSessionId(sessionId)} unblacklisted` },
       200
     )
-  })
+  }) as never)
 
   return app
 }

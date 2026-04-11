@@ -126,6 +126,16 @@ export default [
     }
   },
 
+  // Worker route files use `(c: any) =>` in app.openapi() handlers because
+  // @hono/zod-openapi strict TypedResponse types don't flow through c.json().
+  // The `as never` cast on each handler makes `c` implicitly any.
+  {
+    files: ['worker/src/routes/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
+  },
+
   // Cloudflare Worker files
   {
     files: ['worker/**/*.ts'],

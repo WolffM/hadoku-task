@@ -6,18 +6,15 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { badRequest, logRequest, logError, maskKey, maskSessionId } from '@wolffm/worker-utils'
 import { handleSessionHandshake } from '../session'
+import type { AppContext } from '../types'
 import {
   SessionHandshakeInputSchema,
   SessionHandshakeResponseSchema,
   ErrorResponseSchema
 } from '../schemas'
 
-interface Env {
-  TASKS_KV: KVNamespace
-}
-
 export function createSessionRoutes() {
-  const app = new OpenAPIHono<{ Bindings: Env }>()
+  const app = new OpenAPIHono<AppContext>()
 
   // Session Handshake
   const handshakeRoute = createRoute({
@@ -59,7 +56,7 @@ export function createSessionRoutes() {
     }
   })
 
-  app.openapi(handshakeRoute, async c => {
+  app.openapi(handshakeRoute, (async (c: any) => {
     try {
       const auth = c.get('authContext')
       const body = c.req.valid('json')
@@ -94,7 +91,7 @@ export function createSessionRoutes() {
       )
       return badRequest(c, `Handshake failed: ${errorMessage}`)
     }
-  })
+  }) as never)
 
   return app
 }

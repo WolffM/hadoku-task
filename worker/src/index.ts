@@ -20,8 +20,7 @@ import {
   logError,
   simpleValidationHook,
   createErrorHandlers,
-  createOpenAPIDocConfig,
-  type HadokuAuthContext
+  createOpenAPIDocConfig
 } from '@wolffm/worker-utils'
 import {
   checkThrottle,
@@ -31,6 +30,7 @@ import {
   type IncidentRecord
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
+import type { AppContext, Env, TaskAuthExtension } from './types'
 
 // Import route modules
 import { createSessionRoutes } from './routes/session'
@@ -41,41 +41,18 @@ import { createTagsBatchRoutes } from './routes/tags-batch'
 import { createAdminRoutes } from './routes/admin'
 import { createMiscRoutes } from './routes/misc'
 
-interface Env {
-  ADMIN_KEYS?: string
-  FRIEND_KEYS?: string
-  TASKS_KV: KVNamespace
-  DB: D1Database
-}
-
-/**
- * Extended auth context for task-api
- *
- * Extends HadokuAuthContext with:
- * - sessionId: Used as KV storage key prefix (actually the credential, not browser session)
- * - key: Alias for credential (backward compat for throttle middleware)
- */
-interface TaskAuthExtension {
-  sessionId: string
-  key: string | undefined
-  [key: string]: unknown
-}
-
-// Define a custom context type for Hono
-interface AppContext {
-  Bindings: Env
-  Variables: {
-    authContext: HadokuAuthContext & TaskAuthExtension
-  }
-}
-
 /**
  * Create the Task API Hono app.
  * Returns a Hono instance suitable for use as a Cloudflare Worker default export.
  */
 export function createTaskHandler(): OpenAPIHono<AppContext> {
+  // Cast needed: simpleValidationHook's ValidationHookResult uses Zod 3 issue types
+  // but @hono/zod-openapi 1.2.2 passes Zod 4 $ZodIssue (PropertyKey[] vs (string|number)[])
+  // Runtime behavior is identical — only the path array type definition differs
   const app = new OpenAPIHono<AppContext>({
-    defaultHook: simpleValidationHook
+    defaultHook: simpleValidationHook as unknown as NonNullable<
+      ConstructorParameters<typeof OpenAPIHono<AppContext>>[0]
+    >['defaultHook']
   })
 
   // ============================================================================
