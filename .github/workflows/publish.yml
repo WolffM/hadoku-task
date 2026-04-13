@@ -209,28 +209,43 @@ jobs:
         run: |
           echo "🤖 Auto-bumping versions that were missed by pre-commit hook..."
           
-          # Function to bump version for a package (matches pre-commit hook logic)
+          # Function to compute the next version (handles .20 rollover to next minor)
+          next_version() {
+            local v=$1
+            local maj=$(echo "$v" | cut -d. -f1)
+            local min=$(echo "$v" | cut -d. -f2)
+            local pat=$(echo "$v" | cut -d. -f3)
+            if [[ $pat -eq 20 ]]; then
+              echo "$maj.$((min + 1)).0"
+            else
+              echo "$maj.$min.$((pat + 1))"
+            fi
+          }
+
+          # Function to bump version for a package.
+          # Loops until it finds an unpublished version: a single-step bump is
+          # insufficient because if the pre-commit hook was skipped AND a prior
+          # CI run already burned current+1, we'd write a duplicate version and
+          # pnpm publish silently no-ops ("no new packages") in pnpm 9+.
           bump_package_version() {
             local pkg_path=$1
             local pkg_name=$2
-          
-            # Read current version from package.json
-            current_version=$(node -p "require('${pkg_path}/package.json').version")
-            major=$(echo "$current_version" | cut -d. -f1)
-            minor=$(echo "$current_version" | cut -d. -f2)
-            patch=$(echo "$current_version" | cut -d. -f3)
-          
-            # Rollover at .20 to keep patch numbers manageable
-            if [[ $patch -eq 20 ]]; then
-              new_minor=$((minor + 1))
-              new_version="$major.$new_minor.0"
-              echo "🚀 $pkg_name: Rolling over to minor version"
-            else
-              new_patch=$((patch + 1))
-              new_version="$major.$minor.$new_patch"
-              echo "📈 $pkg_name: Incrementing patch version"
-            fi
-          
+
+            local current_version=$(node -p "require('${pkg_path}/package.json').version")
+            local new_version=$(next_version "$current_version")
+
+            local max_attempts=50
+            local attempts=0
+            while npm view "$pkg_name@$new_version" version 2>/dev/null | grep -q "$new_version"; do
+              echo "⚠️  $pkg_name: $new_version already published, trying next..."
+              attempts=$((attempts + 1))
+              if [ $attempts -ge $max_attempts ]; then
+                echo "❌ $pkg_name: reached max bump attempts ($max_attempts)"
+                exit 1
+              fi
+              new_version=$(next_version "$new_version")
+            done
+
             # Update package.json with new version
             node -e "
           const fs = require('fs');
@@ -238,7 +253,7 @@ jobs:
           pkg.version = '$new_version';
           fs.writeFileSync('${pkg_path}/package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
-          
+
             echo "✅ $pkg_name: Version bumped: $current_version → $new_version"
           }
 
@@ -361,7 +376,35 @@ jobs:
         run: pnpm --filter @wolffm/task publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      # Defense in depth: pnpm publish does not fail loudly on duplicate-version
+      # no-ops in pnpm 9+. Verify each package actually landed on the registry
+      # so any future bump-logic regression fails the workflow loudly.
+      - name: Verify publishes appeared on registry
+        if: steps.themes_changed.outputs.changed == 'true' || steps.ui_components_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
+        run: |
+          verify_published() {
+            local pkg_name=$1
+            local pkg_path=$2
+            local version=$(node -p "require('${pkg_path}/package.json').version")
+            if ! npm view "${pkg_name}@${version}" version 2>/dev/null | grep -q "$version"; then
+              echo "❌ ERROR: ${pkg_name}@${version} did not appear on the registry after publish"
+              exit 1
+            fi
+            echo "✓ Verified ${pkg_name}@${version} on registry"
+          }
+          if [ "${{ steps.ui_components_changed.outputs.changed }}" = "true" ]; then
+            verify_published "@wolffm/task-ui-components" "./task-ui-components"
+          fi
+          if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
+            verify_published "@wolffm/themes" "./themes"
+          fi
+          if [ "${{ steps.task_changed.outputs.changed }}" = "true" ]; then
+            verify_published "@wolffm/task" "."
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Notify parent about package updates
         if: steps.themes_changed.outputs.changed == 'true' || steps.ui_components_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
         env:
