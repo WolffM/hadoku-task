@@ -1,8 +1,8 @@
 ## Steps to reproduce
 1. Open a shell in `/home/runner/work/hadoku-task/hadoku-task`.
 2. Run:
-   `pnpm dlx tsx -e "import assert from 'node:assert/strict'; import { parseTaskInput } from './src/domain/utils/tags.ts'; const parsed = parseTaskInput(\"'Don't panic' #home\"); assert.equal(parsed.title, \"Don't panic\");"`
-3. The command intentionally asserts expected behavior for quoted task titles containing an apostrophe.
+   `pnpm dlx tsx -e "import assert from 'node:assert/strict'; import { parseTaskInput } from './src/domain/utils/tags.ts'; const parsed = parseTaskInput(\"'Don't panic' #home\"); assert.strictEqual(parsed.title, \"Don't panic\", 'task title should preserve apostrophes inside quoted titles');"`
+3. Observe the command fail when it checks expected behavior for quoted task titles containing an apostrophe.
 4. Capture stderr/stdout output for evidence (saved as `crimson-kitty-trace.txt`).
 
 ## Observed
