@@ -1,14 +1,20 @@
 ## Steps to reproduce
 1. Open the repository at `/home/runner/work/hadoku-task/hadoku-task`.
 2. Run this exact reproduction command:
-   `node --experimental-strip-types <<'EOF'`
-   `import assert from 'node:assert/strict'`
-   `import { parseTaskInput } from './src/domain/utils/tags.ts'`
-   `const input = '"Crimson kitty\'s scrubbed task" #alpha'`
-   `const parsed = parseTaskInput(input)`
-   `console.log(parsed)`
-   `assert.equal(parsed.title, "Crimson kitty's scrubbed task")`
-   `EOF`
+
+```bash
+node --experimental-strip-types <<'EOF'
+import assert from 'node:assert/strict'
+import { parseTaskInput } from './src/domain/utils/tags.ts'
+
+const input = `"Crimson kitty's scrubbed task" #alpha`
+const parsed = parseTaskInput(input)
+console.log('Input:', input)
+console.log('Parsed:', parsed)
+assert.equal(parsed.title, "Crimson kitty's scrubbed task")
+EOF
+```
+
 3. Observe the assertion failure and compare actual vs expected parsed title.
 4. Save terminal output as trace evidence.
 
