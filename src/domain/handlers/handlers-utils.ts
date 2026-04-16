@@ -107,15 +107,13 @@ export function extractTasksFromBoard(
 
 /**
  * Prepare tasks for insertion into target board
- * Preserves IDs, title, tags, and createdAt timestamp
+ * Preserves all task fields (including scheduling metadata) while resetting move-specific fields
  */
 export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
   return tasks.map(task => ({
-    id: task.id,
-    title: task.title,
-    tag: task.tag,
+    ...task,
     state: 'Active' as const,
-    createdAt: task.createdAt,
+    closedAt: null,
     updatedAt: timestamp
   }))
 }
