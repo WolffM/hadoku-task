@@ -1,0 +1,27 @@
+Input: "Crimson kitty's scrubbed task" #alpha
+Parsed: { title: 'Crimson kitty', tag: 'alpha' }
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'Crimson kitty'
+- "Crimson kitty's scrubbed task"
+
+    at file:///home/runner/work/hadoku-task/hadoku-task/[eval1]:8:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:268:26)
+    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:265:20)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'Crimson kitty',
+  expected: "Crimson kitty's scrubbed task",
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.1
