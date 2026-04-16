@@ -110,10 +110,9 @@ export function extractTasksFromBoard(
  * Preserves all task fields (including scheduling metadata) while resetting move-specific fields
  */
 export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
-  return tasks.map(task => ({
+  return tasks.map(({ closedAt: _closedAt, ...task }) => ({
     ...task,
     state: 'Active' as const,
-    closedAt: null,
     updatedAt: timestamp
   }))
 }
