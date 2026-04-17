@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react'
 
-export interface ToastState {
+interface ToastState {
   id: number
   message: string
   type: 'success' | 'error' | 'info' | 'warning'
