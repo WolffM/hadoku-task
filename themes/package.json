@@ -27,6 +27,7 @@
   },
   "scripts": {
     "build": "tsc && node ../scripts/fix-imports.cjs dist",
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm run build",
     "dev": "node dev/save-server.js"
   },

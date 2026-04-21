@@ -38,6 +38,7 @@
     "build:packages": "pnpm --filter @wolffm/task-ui-components run build && pnpm --filter @wolffm/themes run build",
     "build:all": "pnpm run build:packages && pnpm run build && pnpm run build:server && pnpm run build:worker",
     "preview": "vite preview",
+    "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes run typecheck && tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
