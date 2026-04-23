@@ -281,4 +281,4 @@ export const ADVANCED_THEME_MAP = {
 }
 
 export const LOCAL_SERVER_URL = 'http://localhost:3456'
-export const WORKER_URL = 'https://api.hadoku.me'
+export const WORKER_URL = 'https://watchparty.hadoku.me'
