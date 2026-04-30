@@ -31,7 +31,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "dev": "pnpm run build:packages && vite",
+    "dev": "pnpm run build:packages && node ../hadoku_site/scripts/secrets/dev-vault.mjs -- vite",
     "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "build:worker": "tsup --config tsup.worker.config.ts",
