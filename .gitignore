@@ -50,3 +50,8 @@ themes/dev/save-server.js
 # Playwright test outputs
 playwright-report/
 test-results/
+
+# Tooling caches (under node_modules/.cache/* but list explicitly for clarity)
+.eslintcache
+.prettiercache
+*.tsbuildinfo

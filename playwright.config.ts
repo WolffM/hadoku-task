@@ -22,9 +22,13 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: `pnpm run build:packages && pnpm exec vite --port ${PORT}`,
+    // Skip the package build when dist artifacts already exist — saves ~30s on
+    // iterative dev runs. CI starts cold so `node -e ...` evaluates false and
+    // build:packages runs (incremental tsc keeps it fast on warm caches too).
+    command: `node -e "process.exit(require('fs').existsSync('./themes/dist/index.js') && require('fs').existsSync('./task-ui-components/dist/index.js') ? 0 : 1)" || pnpm run build:packages; pnpm exec vite --port ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: false, // Always start fresh server
+    // Reuse server on local dev (huge speedup); CI always starts fresh.
+    reuseExistingServer: !process.env.CI,
     timeout: 180000,
     stdout: 'pipe',
     stderr: 'pipe'

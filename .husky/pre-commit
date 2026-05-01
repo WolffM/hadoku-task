@@ -4,24 +4,24 @@
 # or they silently noop on Debian-likes where /bin/sh is dash.
 echo "🔍 Running pre-commit checks..."
 
-# TS gate — prevents commits that break tsc (resilience plan track 1)
+# TS gate — prevents commits that break tsc (resilience plan track 1).
+# tsBuildInfoFile makes this an incremental check on warm caches (~1-3s
+# instead of ~25s) so leave it as a hard gate.
 echo "🔎 Running typecheck..."
 if ! pnpm run typecheck; then
-  echo "❌ TypeScript errors — fix before committing (or `--no-verify` to bypass)."
+  echo "❌ TypeScript errors — fix before committing (or --no-verify to bypass)."
   exit 1
 fi
 
-# Auto-fix linting and formatting issues
-echo "📋 Running ESLint auto-fix..."
-if ! pnpm run lint:fix; then
-  echo "❌ ESLint found errors that could not be auto-fixed."
-  echo "💡 Please fix the errors manually before committing."
+# Lint + format ONLY the staged files via lint-staged. This replaces the
+# previous "lint everything + format everything" approach which was
+# (a) slow on every commit regardless of scope and (b) auto-staged
+# unrelated worktree changes via `git add -u`, breaking parallel work.
+echo "📋 Running lint-staged on staged files..."
+if ! pnpm exec lint-staged; then
+  echo "❌ Lint or format failed on staged files."
   exit 1
 fi
-
-echo "✨ Auto-formatting code..."
-pnpm run format
-
 echo "✅ Linting and formatting complete!"
 
 # Function to bump version for a package
@@ -134,8 +134,5 @@ if [ "$bumped_any" = true ]; then
 else
   echo "ℹ️  No code changes detected, skipping version bump"
 fi
-
-# Stage linting and formatting changes
-git add -u
 
 echo "✅ All pre-commit checks passed!"
