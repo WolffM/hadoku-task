@@ -137,6 +137,16 @@ body {
   animation: fadeIn 0.2s ease-in;
 }
 
+/* Mobile WebView (Capacitor): apply the same safe-area treatment the
+   real app gets so the skeleton doesn't sit under the status bar /
+   gesture nav during cold start. Mirrors .task-app-container rules. */
+.task-app-loading[data-mobile-app='true'] {
+  padding-top: calc(1rem + max(env(safe-area-inset-top, 0px), 28px));
+  padding-bottom: calc(1rem + max(env(safe-area-inset-bottom, 0px), 16px));
+  padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1rem + env(safe-area-inset-right, 0px));
+}
+
 /* Dark theme for loading skeleton */
 .task-app-loading[data-dark-theme='true'] {
   --color-bg: #1a1a1a;

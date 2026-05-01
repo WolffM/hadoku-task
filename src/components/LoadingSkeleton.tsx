@@ -4,14 +4,20 @@
  */
 
 import React from 'react'
+import { isMobileApp } from '../utils/platform'
 
 export interface LoadingSkeletonProps {
   isDarkTheme: boolean
 }
 
 export function LoadingSkeleton({ isDarkTheme }: LoadingSkeletonProps) {
+  const inMobileApp = isMobileApp()
   return (
-    <div className="task-app-loading" data-dark-theme={isDarkTheme ? 'true' : 'false'}>
+    <div
+      className="task-app-loading"
+      data-dark-theme={isDarkTheme ? 'true' : 'false'}
+      data-mobile-app={inMobileApp ? 'true' : undefined}
+    >
       <div className="task-app-loading__skeleton">
         {/* Header */}
         <div className="skeleton-header-row">
