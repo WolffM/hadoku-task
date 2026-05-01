@@ -2,7 +2,7 @@
  * All modal components for the main app
  */
 
-import React, { lazy, Suspense } from 'react'
+import React from 'react'
 import type { Task, BoardsFile, UserPreferences } from '../domain/types'
 import { Toaster, type ToastState } from '@wolffm/task-ui-components'
 import {
@@ -13,10 +13,9 @@ import {
   BoardContextMenu,
   TagContextMenu
 } from './modals'
-
-const SettingsModal = lazy(() =>
-  import('./modals/SettingsModal').then(m => ({ default: m.SettingsModal }))
-)
+// Eager import: same staleness footgun as Calendar — lazy chunks vanish
+// when their hash changes on a new deploy, breaking users with cached entries.
+import { SettingsModal } from './modals/SettingsModal'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 
 interface AppModalsProps {
@@ -156,20 +155,18 @@ export function AppModals({
       />
 
       {showSettingsModal && (
-        <Suspense fallback={null}>
-          <SettingsModal
-            isOpen={showSettingsModal}
-            preferences={preferences}
-            showCompleteButton={showCompleteButton}
-            showDeleteButton={showDeleteButton}
-            showTagButton={showTagButton}
-            userType={userType}
-            onClose={onCloseSettingsModal}
-            onSavePreferences={onSavePreferences}
-            onValidateKey={onValidateKey}
-            onShowToast={onShowToast}
-          />
-        </Suspense>
+        <SettingsModal
+          isOpen={showSettingsModal}
+          preferences={preferences}
+          showCompleteButton={showCompleteButton}
+          showDeleteButton={showDeleteButton}
+          showTagButton={showTagButton}
+          userType={userType}
+          onClose={onCloseSettingsModal}
+          onSavePreferences={onSavePreferences}
+          onValidateKey={onValidateKey}
+          onShowToast={onShowToast}
+        />
       )}
 
       <EditTagModal

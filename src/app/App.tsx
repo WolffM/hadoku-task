@@ -4,7 +4,7 @@
  *
  */
 
-import React, { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { TaskAppProps } from './entry'
 import { useTasks } from '../hooks/useTasks'
 import { useDragAndDrop } from '../hooks/useDragAndDrop'
@@ -27,9 +27,10 @@ import { BoardsSection } from '../components/BoardsSection'
 import { ViewSwitcher, type ViewType } from '../components/ViewSwitcher'
 import { TagFiltersSection } from '../components/TagFiltersSection'
 import { TaskLayout } from '../components/TaskLayout'
-const CalendarDayView = lazy(() =>
-  import('../components/calendar/CalendarDayView').then(m => ({ default: m.CalendarDayView }))
-)
+// Eager import: lazy() pointed at a dynamic chunk that broke when index.js
+// got cached in WebViews across deploys (chunk hashes change every build).
+// The component is ~8 kB; not worth the deployment fragility.
+import { CalendarDayView } from '../components/calendar/CalendarDayView'
 import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
@@ -449,18 +450,16 @@ export default function App(props: TaskAppProps = {}) {
             />
           </>
         ) : (
-          <Suspense fallback={<LoadingSkeleton isDarkTheme={isDarkTheme} />}>
-            <CalendarDayView
-              tasks={tasks}
-              selectedDate={calendarDate}
-              onDateChange={setCalendarDate}
-              onCreateTask={handlers.handleAddTask}
-              onUpdateTask={updateTaskTags}
-              onDeleteTask={deleteTask}
-              onEditTag={handlers.handleEditTag}
-              pendingOperations={pendingOperations}
-            />
-          </Suspense>
+          <CalendarDayView
+            tasks={tasks}
+            selectedDate={calendarDate}
+            onDateChange={setCalendarDate}
+            onCreateTask={handlers.handleAddTask}
+            onUpdateTask={updateTaskTags}
+            onDeleteTask={deleteTask}
+            onEditTag={handlers.handleEditTag}
+            pendingOperations={pendingOperations}
+          />
         )}
 
         <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />

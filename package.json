@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.51",
+  "version": "3.4.52",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
@@ -38,11 +38,11 @@
     "build:packages": "pnpm --filter @wolffm/task-ui-components run build && pnpm --filter @wolffm/themes run build",
     "build:all": "pnpm run build:packages && pnpm run build && pnpm run build:server && pnpm run build:worker",
     "preview": "vite preview",
-    "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes run typecheck && tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes --parallel run typecheck && tsc --noEmit",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --cache --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "version:patch": "pnpm version patch --no-git-tag-version",
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky",
@@ -74,6 +74,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.6.2",
     "tsup": "^8.4.0",
     "typescript": "^5.6.3",
@@ -83,5 +84,14 @@
     "overrides": {
       "js-yaml": "4.1.1"
     }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --cache --fix",
+      "prettier --write --cache"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write --cache"
+    ]
   }
 }

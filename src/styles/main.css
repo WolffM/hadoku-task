@@ -10,9 +10,16 @@
 
 /* Mobile WebView (Capacitor) draws edge-to-edge; pad by safe-area insets so
    the header doesn't sit under the status bar and the bottom doesn't get
-   eaten by the gesture nav. iOS notch/home-indicator gets the same treatment. */
+   eaten by the gesture nav. iOS notch/home-indicator gets the same treatment.
+
+   max(env(...), 28px) guarantees a baseline even when the host page didn't
+   ship viewport-fit=cover at parse time — Android WebView won't expose a
+   non-zero env() value retroactively when JS patches the meta later, so
+   without the floor we'd get 0px on first deploy and the header would still
+   sit under the status bar. 28px is a typical Android status-bar height;
+   on devices that DO expose env(), the real value (often 24-32px) wins. */
 .task-app-container[data-mobile-app='true'] {
-  padding-top: calc(var(--hdk-space-xl) + env(safe-area-inset-top, 0px));
+  padding-top: calc(var(--hdk-space-xl) + max(env(safe-area-inset-top, 0px), 28px));
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
@@ -24,13 +31,13 @@
 }
 
 .task-app-container[data-mobile-app='true'] .task-app {
-  padding-bottom: calc(var(--hdk-space-5xl) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--hdk-space-5xl) + max(env(safe-area-inset-bottom, 0px), 16px));
 }
 
 /* Pull-to-refresh indicator — fixed at top center, slides in via inline transform */
 .task-app__pull-refresh {
   position: fixed;
-  top: env(safe-area-inset-top, 0px);
+  top: max(env(safe-area-inset-top, 0px), 28px);
   left: 50%;
   width: 40px;
   height: 40px;

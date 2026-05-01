@@ -55,6 +55,17 @@
  * For Tailwind integration, see tailwind-integration.css or docs.
  */
 
+/* --advanced-gradient is registered as non-inheriting so a parent matching
+   [data-theme='light'] (e.g. <html> set by the page-load init script) can't
+   bleed its gradient into a descendant on a different theme. Without this,
+   a container nested inside <html data-theme='light'> with its own
+   data-theme='coffee-light' inherits the light gradient via CSS variable
+   inheritance — which is what bit us in production. */
+@property --advanced-gradient {
+  syntax: '*';
+  inherits: false;
+}
+
 /* ===== LIGHT THEME (Default) ===== */
 :root,
 [data-theme='light'] {
