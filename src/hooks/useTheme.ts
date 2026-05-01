@@ -163,7 +163,7 @@ export function useTheme(
   // Apply theme-mode attribute. The themes package owns documentElement;
   // we mirror to containerRef for microfrontend host isolation.
   useEffect(() => {
-    const mode = preferences.themeMode ?? 'advanced'
+    const mode = preferences.themeMode ?? 'simple'
     applyThemeModeToDOM(mode)
     if (containerRef.current) {
       containerRef.current.setAttribute('data-theme-mode', mode)

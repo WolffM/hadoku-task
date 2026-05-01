@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { createApi } from '../../api/client'
+import { createApi, type SyncErrorReporter } from '../../api/client'
 import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
@@ -14,15 +14,17 @@ interface UseTasksProps {
   userType: string
   // sessionId from parent
   sessionId?: string
+  onSyncError?: SyncErrorReporter
 }
 
-export function useTasks({ userType, sessionId }: UseTasksProps) {
+export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
   // ✅ FIX: Recreate API when userType or sessionId changes
   const api = useMemo(
-    () => createApi(userType as 'public' | 'friend' | 'admin', sessionId || 'public'),
-    [userType, sessionId]
+    () =>
+      createApi(userType as 'public' | 'friend' | 'admin', sessionId || 'public', { onSyncError }),
+    [userType, sessionId, onSyncError]
   )
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')

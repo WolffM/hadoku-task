@@ -8,10 +8,54 @@
   flex: 1;
 }
 
+/* Mobile WebView (Capacitor) draws edge-to-edge; pad by safe-area insets so
+   the header doesn't sit under the status bar and the bottom doesn't get
+   eaten by the gesture nav. iOS notch/home-indicator gets the same treatment. */
+.task-app-container[data-mobile-app='true'] {
+  padding-top: calc(var(--hdk-space-xl) + env(safe-area-inset-top, 0px));
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 .task-app {
   max-width: 720px;
   margin: 0 auto;
   padding: 0 var(--hdk-space-xl) var(--hdk-space-5xl);
+}
+
+.task-app-container[data-mobile-app='true'] .task-app {
+  padding-bottom: calc(var(--hdk-space-5xl) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Pull-to-refresh indicator — fixed at top center, slides in via inline transform */
+.task-app__pull-refresh {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-bg-card);
+  box-shadow: var(--hdk-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.task-app__pull-refresh--spinning svg {
+  animation: task-app-spin 0.9s linear infinite;
+}
+
+@keyframes task-app-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Header container with theme toggle */

@@ -75,7 +75,7 @@ test.describe('Theme Mode', () => {
     await setupRoutes(page)
   })
 
-  test('default themeMode is advanced on first load (light theme)', async ({ page }) => {
+  test('default themeMode is simple on first load (light theme)', async ({ page }) => {
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -86,7 +86,7 @@ test.describe('Theme Mode', () => {
     await waitForApp(page)
 
     const mode = await page.evaluate(() => document.documentElement.getAttribute('data-theme-mode'))
-    expect(mode).toBe('advanced')
+    expect(mode).toBe('simple')
   })
 
   test('hdk-advanced-page class is applied to the task container', async ({ page }) => {
@@ -119,7 +119,8 @@ test.describe('Theme Mode', () => {
     await expect(buttons).toHaveCount(2)
     await expect(buttons.nth(0)).toHaveText('Simple')
     await expect(buttons.nth(1)).toHaveText('Advanced')
-    await expect(buttons.nth(1)).toHaveClass(/active/)
+    // Simple is the default when no themeMode pref is saved
+    await expect(buttons.nth(0)).toHaveClass(/active/)
   })
 
   test('mode toggle is hidden on a theme without an advanced contract', async ({ page }) => {
@@ -137,6 +138,38 @@ test.describe('Theme Mode', () => {
     await expect(page.locator('.theme-picker__mode-toggle')).toHaveCount(0)
   })
 
+  test('--advanced-gradient does not leak from light into other themes', async ({ page }) => {
+    // Regression: previously the light gradient was declared in
+    // `:root, [data-theme='light']` which cascaded to every element,
+    // so a user on (e.g.) coffee-light with themeMode='advanced'
+    // would see the light theme's beach-day gradient. The advanced
+    // contract is now scoped to [data-theme='light'] only.
+    await seedPublicSession(page, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      theme: 'coffee-light',
+      themeMode: 'advanced'
+    })
+
+    await page.goto('/')
+    await waitForApp(page)
+
+    // Custom property should be unset on a non-advanced theme
+    const gradient = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--advanced-gradient').trim()
+    )
+    expect(gradient).toBe('')
+
+    // And on the actual surface element the kit applies to — confirm
+    // the rendered background falls back to the flat color, no
+    // linear-gradient leaks through.
+    const surfaceBg = await page.evaluate(() => {
+      const el = document.querySelector('.task-app-container.hdk-advanced-page')
+      return el ? getComputedStyle(el).backgroundImage : null
+    })
+    expect(surfaceBg).not.toMatch(/linear-gradient/)
+  })
+
   test('mode toggle is visible on cyberpunk-dark', async ({ page }) => {
     // cyberpunk is experimental — must be enabled or the theme falls back
     await seedPublicSession(page, {
@@ -151,10 +184,11 @@ test.describe('Theme Mode', () => {
 
     await page.locator('.theme-toggle-btn').click()
     await expect(page.locator('.theme-picker__mode-toggle')).toBeVisible()
-    await expect(page.locator('.theme-picker__mode-btn').nth(1)).toHaveClass(/active/)
+    // Simple is the default when no themeMode pref is saved
+    await expect(page.locator('.theme-picker__mode-btn').nth(0)).toHaveClass(/active/)
   })
 
-  test('clicking Simple flips data-theme-mode and persists to localStorage', async ({ page }) => {
+  test('clicking Advanced flips data-theme-mode and persists to localStorage', async ({ page }) => {
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -166,16 +200,16 @@ test.describe('Theme Mode', () => {
 
     expect(
       await page.evaluate(() => document.documentElement.getAttribute('data-theme-mode'))
-    ).toBe('advanced')
+    ).toBe('simple')
 
     await page.locator('.theme-toggle-btn').click()
-    await page.locator('.theme-picker__mode-btn').filter({ hasText: 'Simple' }).click()
+    await page.locator('.theme-picker__mode-btn').filter({ hasText: 'Advanced' }).click()
 
     await expect
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
-      .toBe('simple')
+      .toBe('advanced')
 
-    // Persistence: the public-user prefs key in localStorage should now have themeMode='simple'
+    // Persistence: the public-user prefs key in localStorage should now have themeMode='advanced'
     await expect
       .poll(() =>
         page.evaluate(key => {
@@ -183,7 +217,7 @@ test.describe('Theme Mode', () => {
           return raw ? (JSON.parse(raw).themeMode as string) : null
         }, PREFS_KEY)
       )
-      .toBe('simple')
+      .toBe('advanced')
   })
 
   test('legacy simpleMode=true is migrated to themeMode=simple on load', async ({ page }) => {

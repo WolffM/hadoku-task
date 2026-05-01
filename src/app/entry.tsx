@@ -6,7 +6,28 @@ import '@wolffm/themes/style.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/task-ui-components'
 import { getStoredSessionId, getStoredUserType } from '../api/session'
+import { isMobileApp } from '../utils/platform'
 import type { UserType } from '../domain/types'
+
+// Capacitor 7 draws the WebView edge-to-edge; without viewport-fit=cover the page
+// has no way to read env(safe-area-inset-*). Patch the viewport meta in-place so
+// hadoku-site doesn't need to know about the mobile wrapper.
+function ensureSafeAreaViewport() {
+  if (typeof document === 'undefined') return
+  if (!isMobileApp()) return
+  let meta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.name = 'viewport'
+    document.head.appendChild(meta)
+  }
+  const current = meta.content || ''
+  if (/viewport-fit\s*=\s*cover/.test(current)) return
+  const next = current.length
+    ? `${current.replace(/,\s*viewport-fit\s*=\s*[^,]+/g, '')}, viewport-fit=cover`
+    : 'width=device-width, initial-scale=1.0, viewport-fit=cover'
+  meta.content = next
+}
 
 // Task App Entry Point
 // Service Worker disabled - parent app handles GitHub integration
@@ -30,6 +51,8 @@ interface TaskElement extends HTMLElement {
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
+  ensureSafeAreaViewport()
+
   // Priority for userType and sessionId:
   // 1. localStorage (for session-based auth after key validation - survives page reload)
   // 2. Props passed to mount() (for embedding scenarios with explicit non-public auth)

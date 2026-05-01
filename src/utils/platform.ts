@@ -3,18 +3,22 @@
  * Functions for detecting the runtime environment
  */
 
-/**
- * Check if running inside a mobile app wrapper (Capacitor/Cordova/iframe)
- * This is different from screen size detection - it detects if we're inside a native app
- * @returns true if inside a mobile app wrapper
- */
 export function isMobileApp(): boolean {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const win = window as any
 
   return (
-    window.parent !== window || // Inside iframe/webview
-    !!win.Capacitor || // Capacitor framework
-    !!win.cordova // Cordova framework
+    window.parent !== window ||
+    !!win.Capacitor ||
+    !!win.cordova ||
+    /HadokuTaskApp\//.test(window.navigator.userAgent || '')
+  )
+}
+
+export function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    'ontouchstart' in window ||
+    (typeof window.navigator !== 'undefined' && window.navigator.maxTouchPoints > 0)
   )
 }

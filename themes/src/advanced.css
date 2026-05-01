@@ -7,8 +7,8 @@
  * shared rendering kit.
  *
  * Mode is controlled by data-theme-mode='simple' | 'advanced':
- *   - 'advanced' (default): render the gradient + effects
- *   - 'simple':              flatten to the theme's solid colors
+ *   - 'simple' (default): flatten to the theme's solid colors
+ *   - 'advanced':         render the gradient + effects (opt-in)
  *
  * Class hooks (consumer applies these in JSX):
  *   .hdk-advanced-page      — viewport-fixed gradient page background

@@ -45,7 +45,7 @@ import { hasAdvanced as themeHasAdvanced } from './effects'
  */
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>('light')
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('advanced')
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('simple')
 
   useEffect(() => {
     setThemeState(getTheme())

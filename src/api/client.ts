@@ -76,6 +76,8 @@ function adminHeaders(userType: string, sessionId?: string) {
   return headers
 }
 
+export type SyncErrorReporter = (operation: string, reason: 'http-error' | 'network') => void
+
 /**
  * Fire-and-forget server sync with consistent logging
  * Used for optimistic updates where localStorage is source of truth
@@ -84,7 +86,8 @@ function backgroundSync(
   url: string,
   options: globalThis.RequestInit,
   operation: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  onError?: SyncErrorReporter
 ): void {
   fetch(url, options)
     .then(r => {
@@ -93,16 +96,19 @@ function backgroundSync(
           status: r.status,
           ...context
         })
+        onError?.(operation, 'http-error')
+      } else {
+        logger.info(`[api] ${operation}: Server sync completed`, context)
       }
       return r
     })
-    .then(() => logger.info(`[api] ${operation}: Server sync completed`, context))
-    .catch(err =>
+    .catch(err => {
       logger.error(`[api] ${operation}: Server sync failed`, {
         ...context,
         error: formatError(err)
       })
-    )
+      onError?.(operation, 'network')
+    })
 }
 
 /**
@@ -111,11 +117,17 @@ function backgroundSync(
  * - "public" is localStorage-only, no server sync
  * - All other user types (friend, admin, custom names) sync to server in background
  */
+export interface CreateApiOptions {
+  onSyncError?: SyncErrorReporter
+}
+
 export function createApi(
   userType: 'public' | 'friend' | 'admin' = 'public',
-  sessionId: string = 'public'
+  sessionId: string = 'public',
+  apiOptions: CreateApiOptions = {}
 ) {
   const localStorage = createLocalStorageApi(userType, sessionId)
+  const onSyncError = apiOptions.onSyncError
 
   // Public mode: localStorage only, no server sync
   if (userType === 'public') {
@@ -137,7 +149,8 @@ export function createApi(
         const response = await fetch(
           `/task/api/boards?userType=${userType}&sessionId=${encodeURIComponent(sessionId)}`,
           {
-            headers: adminHeaders(userType, sessionId)
+            headers: adminHeaders(userType, sessionId),
+            cache: 'no-store'
           }
         )
 
@@ -202,16 +215,16 @@ export function createApi(
           boardId
         })
       })
-        .then(r => {
+        .then(async r => {
           if (!r.ok) {
             logger.warn('[api] createTask: Server sync returned error', {
               status: r.status,
               taskId: localTask.id
             })
+            onSyncError?.('createTask', 'http-error')
+            return
           }
-          return r.json()
-        })
-        .then((serverResponse: { ok: boolean; id: string }) => {
+          const serverResponse = (await r.json()) as { ok: boolean; id: string }
           if (serverResponse.ok) {
             if (serverResponse.id === localTask.id) {
               logger.info('[api] createTask: Server sync completed', { taskId: localTask.id })
@@ -228,6 +241,7 @@ export function createApi(
             taskId: localTask.id,
             error: formatError(err)
           })
+          onSyncError?.('createTask', 'network')
         })
 
       return localTask
@@ -245,7 +259,8 @@ export function createApi(
           body: JSON.stringify({ boardId, tag })
         },
         'createTag',
-        { tag, boardId }
+        { tag, boardId },
+        onSyncError
       )
       return result
     },
@@ -262,7 +277,8 @@ export function createApi(
           body: JSON.stringify({ boardId, tag })
         },
         'deleteTag',
-        { tag, boardId }
+        { tag, boardId },
+        onSyncError
       )
       return result
     },
@@ -291,7 +307,8 @@ export function createApi(
           body: JSON.stringify({ ...patch, boardId })
         },
         'patchTask',
-        { taskId: id, boardId }
+        { taskId: id, boardId },
+        onSyncError
       )
       return result
     },
@@ -310,7 +327,8 @@ export function createApi(
           headers: adminHeaders(userType, sessionId)
         },
         'completeTask',
-        { taskId: id, boardId }
+        { taskId: id, boardId },
+        onSyncError
       )
       return result
     },
@@ -329,7 +347,8 @@ export function createApi(
           headers: adminHeaders(userType, sessionId)
         },
         'deleteTask',
-        { taskId: id, boardId }
+        { taskId: id, boardId },
+        onSyncError
       )
     },
 
@@ -347,7 +366,8 @@ export function createApi(
           body: JSON.stringify({ id: boardId, name: boardId })
         },
         'createBoard',
-        { boardId }
+        { boardId },
+        onSyncError
       )
       return result
     },
@@ -364,7 +384,8 @@ export function createApi(
           headers: adminHeaders(userType, sessionId)
         },
         'deleteBoard',
-        { boardId }
+        { boardId },
+        onSyncError
       )
       return result
     },
@@ -426,7 +447,8 @@ export function createApi(
           body: JSON.stringify(prefs)
         },
         'savePreferences',
-        {}
+        {},
+        onSyncError
       )
     },
 
@@ -450,7 +472,8 @@ export function createApi(
           body: JSON.stringify({ boardId, updates })
         },
         'batchUpdateTags',
-        { boardId, count: updates.length }
+        { boardId, count: updates.length },
+        onSyncError
       )
     },
 
@@ -478,7 +501,8 @@ export function createApi(
           body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
         },
         'batchMoveTasks',
-        { sourceBoardId, targetBoardId, count: taskIds.length }
+        { sourceBoardId, targetBoardId, count: taskIds.length },
+        onSyncError
       )
 
       return result
@@ -504,7 +528,8 @@ export function createApi(
           body: JSON.stringify({ boardId, tag, taskIds })
         },
         'batchClearTag',
-        { boardId, tag, count: taskIds.length }
+        { boardId, tag, count: taskIds.length },
+        onSyncError
       )
     },
 

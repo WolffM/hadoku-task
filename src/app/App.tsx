@@ -15,6 +15,9 @@ import { hasAdvanced } from '@wolffm/themes'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator'
+import { isMobileApp } from '../utils/platform'
 import { useTaskHandlers } from '../hooks/useTaskHandlers'
 import { useSessionInitialization } from '../hooks/useSessionInitialization'
 import { useToast, logger, Toaster } from '@wolffm/task-ui-components'
@@ -57,6 +60,8 @@ export default function App(props: TaskAppProps = {}) {
 
   // Basic state
   const isMobileDevice = useIsMobile()
+  // Detect once at mount — UA doesn't change during a session
+  const [isInMobileApp] = useState(() => isMobileApp())
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
@@ -100,6 +105,23 @@ export default function App(props: TaskAppProps = {}) {
   const showDeleteButton = preferences.showDeleteButton ?? true
   const showTagButton = preferences.showTagButton ?? false
 
+  // Toast notifications hook (declared early so background sync can surface errors)
+  const { toasts, showToast, dismissToast } = useToast()
+
+  // Surface backgroundSync failures from the API client as user-visible toasts.
+  // Why: optimistic writes hide network failures otherwise. Mobile users especially
+  // see no signal when a complete/delete never reached the server.
+  const reportSyncError = React.useCallback(
+    (operation: string, reason: 'http-error' | 'network') => {
+      const friendly =
+        reason === 'network'
+          ? `Server sync failed (${operation}) — check connection`
+          : `Server rejected ${operation} — changes may not persist`
+      showToast(friendly, 'error', 4000)
+    },
+    [showToast]
+  )
+
   // Task operations hook
   const {
     tasks,
@@ -119,7 +141,7 @@ export default function App(props: TaskAppProps = {}) {
     moveTasksToBoard,
     createTagOnBoard,
     deleteTagOnBoard
-  } = useTasks({ userType, sessionId: effectiveSessionId })
+  } = useTasks({ userType, sessionId: effectiveSessionId, onSyncError: reportSyncError })
 
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({
@@ -134,8 +156,21 @@ export default function App(props: TaskAppProps = {}) {
   // Modal state hook
   const modals = useModalState()
 
-  // Toast notifications hook
-  const { toasts, showToast, dismissToast } = useToast()
+  // Pull-to-refresh — only inside the mobile WebView; desktop pull is meaningless.
+  // Reuses the same handler the in-app refresh button does (initialLoad → syncFromApi).
+  const handlePullRefresh = React.useCallback(async () => {
+    try {
+      await initialLoad()
+    } catch (err) {
+      logger.error('[App] pull-to-refresh failed', { error: formatError(err) })
+      showToast('Refresh failed', 'error')
+    }
+  }, [initialLoad, showToast])
+
+  const pullState = usePullToRefresh({
+    enabled: isInMobileApp && userType !== 'public',
+    onRefresh: handlePullRefresh
+  })
 
   // Note: Theme picker now uses overlay approach like modals instead of useClickOutside
   useClickOutside(
@@ -211,7 +246,9 @@ export default function App(props: TaskAppProps = {}) {
     try {
       // Fetch latest preferences from server (or localStorage for public users)
       // This ensures we always show current state even if changed in another tab/device
-      const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
+      const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId, {
+        onSyncError: reportSyncError
+      })
       const freshPrefs = await api.getPreferences()
       if (freshPrefs) {
         logger.info('[App] Loaded fresh preferences', {
@@ -239,7 +276,9 @@ export default function App(props: TaskAppProps = {}) {
     // This happens in api.savePreferences() - it:
     // 1. Saves to localStorage immediately (instant update)
     // 2. Background syncs to server (for friend/admin users)
-    const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId)
+    const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId, {
+      onSyncError: reportSyncError
+    })
     await api.savePreferences(prefs)
 
     logger.info('[App] Preferences saved successfully')
@@ -262,6 +301,7 @@ export default function App(props: TaskAppProps = {}) {
       ref={containerRef}
       className="task-app-container task-app-fade-in hdk-advanced-page"
       data-dark-theme={isDarkTheme ? 'true' : 'false'}
+      data-mobile-app={isInMobileApp ? 'true' : undefined}
       onMouseDown={dragAndDrop.selectionStartHandler}
       onMouseMove={dragAndDrop.selectionMoveHandler}
       onMouseUp={dragAndDrop.selectionEndHandler}
@@ -289,6 +329,13 @@ export default function App(props: TaskAppProps = {}) {
         }
       }}
     >
+      {isInMobileApp && (
+        <PullToRefreshIndicator
+          pullDistance={pullState.pullDistance}
+          isRefreshing={pullState.isRefreshing}
+          threshold={pullState.threshold}
+        />
+      )}
       <div className="task-app">
         <AppHeader
           theme={theme}
@@ -298,7 +345,7 @@ export default function App(props: TaskAppProps = {}) {
           onThemeChange={setTheme}
           onSettingsClick={handleSettingsOpen}
           THEME_FAMILIES={THEME_FAMILIES}
-          themeMode={preferences.themeMode ?? 'advanced'}
+          themeMode={preferences.themeMode ?? 'simple'}
           onThemeModeChange={mode => {
             void savePreferences({ themeMode: mode })
           }}

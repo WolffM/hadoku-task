@@ -112,11 +112,13 @@ export function setThemeMode(mode: ThemeMode): void {
 
 /**
  * Get the currently active theme mode from the DOM.
- * Defaults to 'advanced' when the attribute is unset.
+ * Defaults to 'simple' when the attribute is unset — advanced visuals
+ * are opt-in (users see flat colors until they explicitly turn the
+ * gradient/effects on via the picker toggle).
  */
 export function getThemeMode(): ThemeMode {
   const attr = document.documentElement.getAttribute('data-theme-mode')
-  return attr === 'simple' ? 'simple' : 'advanced'
+  return attr === 'advanced' ? 'advanced' : 'simple'
 }
 
 /**
@@ -133,7 +135,7 @@ export function saveThemeMode(mode: ThemeMode): void {
 
 /**
  * Load saved theme mode from localStorage.
- * Falls back to 'advanced' when no preference exists.
+ * Falls back to 'simple' when no preference exists — see getThemeMode.
  */
 export function loadThemeMode(): ThemeMode {
   try {
@@ -145,8 +147,8 @@ export function loadThemeMode(): ThemeMode {
   } catch {
     /* localStorage may be unavailable */
   }
-  setThemeMode('advanced')
-  return 'advanced'
+  setThemeMode('simple')
+  return 'simple'
 }
 
 // Theme metadata and React integration (optional peer dependencies)
