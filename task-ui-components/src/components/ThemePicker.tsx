@@ -41,8 +41,6 @@ export function ThemePicker({
   onThemeModeChange,
   hasAdvanced
 }: ThemePickerProps) {
-  const showModeToggle =
-    hasAdvanced === true && themeMode !== undefined && onThemeModeChange !== undefined
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [resolvedPlacement, setResolvedPlacement] = useState<'left' | 'right'>('right')
 
@@ -92,12 +90,12 @@ export function ThemePicker({
           className="theme-picker__dropdown"
           onClick={e => e.stopPropagation()}
         >
-          {showModeToggle && (
+          {hasAdvanced && themeMode && onThemeModeChange && (
             <div className="theme-picker__mode-toggle" role="group" aria-label="Theme mode">
               <button
                 type="button"
                 className={`theme-picker__mode-btn ${themeMode === 'simple' ? 'active' : ''}`}
-                onClick={() => onThemeModeChange!('simple')}
+                onClick={() => onThemeModeChange('simple')}
                 aria-pressed={themeMode === 'simple'}
               >
                 Simple
@@ -105,7 +103,7 @@ export function ThemePicker({
               <button
                 type="button"
                 className={`theme-picker__mode-btn ${themeMode === 'advanced' ? 'active' : ''}`}
-                onClick={() => onThemeModeChange!('advanced')}
+                onClick={() => onThemeModeChange('advanced')}
                 aria-pressed={themeMode === 'advanced'}
               >
                 Advanced
