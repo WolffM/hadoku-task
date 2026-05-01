@@ -1,0 +1,218 @@
+/**
+ * Hadoku Themes — Advanced Visual Kit
+ *
+ * Class hooks for themes that ship an advanced visual contract
+ * (gradient + animated effects). Per-theme tokens live inside that
+ * theme's [data-theme='X'] block in style.css; this file is the
+ * shared rendering kit.
+ *
+ * Mode is controlled by data-theme-mode='simple' | 'advanced':
+ *   - 'advanced' (default): render the gradient + effects
+ *   - 'simple':              flatten to the theme's solid colors
+ *
+ * Class hooks (consumer applies these in JSX):
+ *   .hdk-advanced-page      — viewport-fixed gradient page background
+ *   .hdk-advanced-surface   — "window into the gradient" element
+ *   .hdk-advanced-surface--shift         — gradient displacement on hover
+ *   .hdk-advanced-surface--cascade-rich  — multi-wave shimmer
+ *   .hdk-advanced-surface--sat-rich      — saturation + cascade
+ *
+ * When --advanced-gradient is undefined (theme has no advanced
+ * contract), the surfaces fall back to their flat backgrounds so the
+ * classes are safe to apply unconditionally.
+ */
+
+/* ---------- Page surface ---------- */
+
+.hdk-advanced-page {
+  background: var(--advanced-gradient, var(--color-bg));
+  background-attachment: fixed;
+}
+
+/* ---------- Card surface ---------- */
+/* Each surface is its own stacking context so effect ::after layers
+   sit above the bg but below content without forcing children to set
+   z-index. */
+
+.hdk-advanced-surface {
+  position: relative;
+  overflow: hidden;
+  background: var(--advanced-gradient, var(--color-bg-card));
+  background-attachment: fixed;
+  isolation: isolate;
+}
+
+/* ---------- Effect: SHIFT — gradient displacement on hover ---------- */
+
+.hdk-advanced-surface--shift::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--advanced-gradient);
+  background-attachment: scroll;
+  background-size: 130% 130%;
+  background-position: 30% 30%;
+  opacity: 0;
+  transition:
+    opacity 0.4s ease,
+    background-position 0.8s ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hdk-advanced-surface--shift:hover::after {
+  opacity: 1;
+  background-position: 70% 70%;
+}
+
+/* ---------- Effect: CASCADE-RICH — multi-wave, varied speeds ---------- */
+
+.hdk-advanced-surface--cascade-rich::before {
+  content: '';
+  position: absolute;
+  inset: -80%;
+  background: linear-gradient(
+    135deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.03) 44%,
+    rgba(255, 255, 255, 0.03) 48%,
+    transparent 54%
+  );
+  transform: translateX(-50%) translateY(-50%);
+  opacity: 0;
+  transition:
+    transform 1.2s ease-out,
+    opacity 0.2s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hdk-advanced-surface--cascade-rich::after {
+  content: '';
+  position: absolute;
+  inset: -150%;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 22%,
+    rgba(255, 255, 255, 0.05) 26%,
+    transparent 30%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 45%,
+    rgba(255, 255, 255, 0.18) 48%,
+    rgba(255, 255, 255, 0.12) 51%,
+    transparent 56%,
+    transparent 66%,
+    rgba(255, 255, 255, 0.06) 70%,
+    transparent 74%,
+    transparent 100%
+  );
+  transform: translateX(-45%) translateY(-45%);
+  opacity: 0;
+  transition:
+    transform 4s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s,
+    opacity 0.5s ease 0.1s;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hdk-advanced-surface--cascade-rich:hover::before {
+  transform: translateX(50%) translateY(50%);
+  opacity: 1;
+}
+
+.hdk-advanced-surface--cascade-rich:hover::after {
+  transform: translateX(45%) translateY(45%);
+  opacity: 1;
+}
+
+/* ---------- Effect: SAT-RICH — saturation boost + 4-band cascade ---------- */
+
+.hdk-advanced-surface--sat-rich {
+  filter: saturate(1) brightness(1);
+  transition:
+    filter 0.6s ease-out,
+    box-shadow 0.6s ease-out;
+}
+
+.hdk-advanced-surface--sat-rich::after {
+  content: '';
+  position: absolute;
+  inset: -100%;
+  background: linear-gradient(
+    135deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.03) 30%,
+    transparent 38%,
+    transparent 44%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.16) 52%,
+    rgba(255, 255, 255, 0.1) 54%,
+    transparent 60%,
+    transparent 70%,
+    rgba(255, 255, 255, 0.04) 78%,
+    transparent 86%
+  );
+  transform: translateX(-50%) translateY(-50%);
+  opacity: 0;
+  transition:
+    transform 3s ease-out,
+    opacity 0.6s ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hdk-advanced-surface--sat-rich:hover {
+  filter: saturate(1.15) brightness(1.05);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.hdk-advanced-surface--sat-rich:hover::after {
+  transform: translateX(50%) translateY(50%);
+  opacity: 1;
+}
+
+/* ---------- Simple mode override ---------- */
+/* Forces flat colors regardless of theme. The selectors target
+   common scope roots so the override applies whether the attribute
+   is set on documentElement, body, or a microfrontend container. */
+
+[data-theme-mode='simple'] .hdk-advanced-page,
+[data-theme-mode='simple'].hdk-advanced-page {
+  background: var(--color-bg);
+  background-attachment: scroll;
+}
+
+[data-theme-mode='simple'] .hdk-advanced-surface,
+[data-theme-mode='simple'].hdk-advanced-surface {
+  background: var(--color-bg-card);
+  background-attachment: scroll;
+}
+
+[data-theme-mode='simple'] .hdk-advanced-surface::before,
+[data-theme-mode='simple'] .hdk-advanced-surface::after,
+[data-theme-mode='simple'].hdk-advanced-surface::before,
+[data-theme-mode='simple'].hdk-advanced-surface::after {
+  display: none;
+}
+
+[data-theme-mode='simple'] .hdk-advanced-surface--sat-rich:hover,
+[data-theme-mode='simple'].hdk-advanced-surface--sat-rich:hover {
+  filter: none;
+  box-shadow: none;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hdk-advanced-surface--shift::after,
+  .hdk-advanced-surface--cascade-rich::before,
+  .hdk-advanced-surface--cascade-rich::after,
+  .hdk-advanced-surface--sat-rich,
+  .hdk-advanced-surface--sat-rich::after {
+    transition: none;
+  }
+}

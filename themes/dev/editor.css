@@ -912,7 +912,10 @@ input[type='range']::-webkit-slider-thumb {
   text-align: center;
 }
 
-/* --- Shimmer effects (matches GradientWindowDemo.jsx spec) --- */
+/* --- Shimmer effects demo ---
+   Effect classes ship from @wolffm/themes/advanced.css:
+     .hdk-advanced-surface[--shift|--cascade-rich|--sat-rich]
+   .shimmer-box only carries demo-specific framing (height, shadow). */
 
 .demo-shimmer-grid {
   display: grid;
@@ -928,134 +931,12 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 .shimmer-box {
-  background: var(--advanced-gradient);
-  background-attachment: fixed;
   border-radius: 0.75rem;
-  position: relative;
-  overflow: hidden;
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.1),
     inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   height: 112px;
   cursor: pointer;
-}
-
-/* 1. CASCADE RICH — multi-wave, varied speeds */
-.shimmer-cascade-rich::before {
-  content: '';
-  position: absolute;
-  inset: -80%;
-  background: linear-gradient(
-    135deg,
-    transparent 38%,
-    rgba(255, 255, 255, 0.03) 44%,
-    rgba(255, 255, 255, 0.03) 48%,
-    transparent 54%
-  );
-  transform: translateX(-50%) translateY(-50%);
-  opacity: 0;
-  transition:
-    transform 1.2s ease-out,
-    opacity 0.2s ease;
-  pointer-events: none;
-}
-.shimmer-cascade-rich::after {
-  content: '';
-  position: absolute;
-  inset: -150%;
-  background: linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 22%,
-    rgba(255, 255, 255, 0.05) 26%,
-    transparent 30%,
-    transparent 40%,
-    rgba(255, 255, 255, 0.12) 45%,
-    rgba(255, 255, 255, 0.18) 48%,
-    rgba(255, 255, 255, 0.12) 51%,
-    transparent 56%,
-    transparent 66%,
-    rgba(255, 255, 255, 0.06) 70%,
-    transparent 74%,
-    transparent 100%
-  );
-  transform: translateX(-45%) translateY(-45%);
-  opacity: 0;
-  transition:
-    transform 4s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s,
-    opacity 0.5s ease 0.1s;
-  pointer-events: none;
-}
-.shimmer-cascade-rich:hover::before {
-  transform: translateX(50%) translateY(50%);
-  opacity: 1;
-}
-.shimmer-cascade-rich:hover::after {
-  transform: translateX(45%) translateY(45%);
-  opacity: 1;
-}
-
-/* 2. SAT + RICH — saturation boost + 4-band cascade */
-.shimmer-sat-rich {
-  filter: saturate(1) brightness(1);
-  transition:
-    filter 0.6s ease-out,
-    box-shadow 0.6s ease-out;
-}
-.shimmer-sat-rich::after {
-  content: '';
-  position: absolute;
-  inset: -100%;
-  background: linear-gradient(
-    135deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.03) 30%,
-    transparent 38%,
-    transparent 44%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.16) 52%,
-    rgba(255, 255, 255, 0.1) 54%,
-    transparent 60%,
-    transparent 70%,
-    rgba(255, 255, 255, 0.04) 78%,
-    transparent 86%
-  );
-  transform: translateX(-50%) translateY(-50%);
-  opacity: 0;
-  transition:
-    transform 3s ease-out,
-    opacity 0.6s ease-out;
-  pointer-events: none;
-}
-.shimmer-sat-rich:hover {
-  filter: saturate(1.15) brightness(1.05);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-}
-.shimmer-sat-rich:hover::after {
-  transform: translateX(50%) translateY(50%);
-  opacity: 1;
-}
-
-/* 3. SHIFT — gradient displacement on hover */
-.shimmer-shift::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--advanced-gradient);
-  background-size: 130% 130%;
-  background-position: 30% 30%;
-  opacity: 0;
-  transition:
-    opacity 0.4s ease,
-    background-position 0.8s ease-out;
-  pointer-events: none;
-}
-.shimmer-shift:hover::after {
-  opacity: 1;
-  background-position: 70% 70%;
 }
 
 /* ===== Gradient Editor ===== */

@@ -208,9 +208,9 @@ export function SettingsModal({
         <label className="settings-option">
           <input
             type="checkbox"
-            checked={preferences.simpleMode || false}
+            checked={(preferences.themeMode ?? 'advanced') === 'simple'}
             onChange={e => {
-              onSavePreferences({ simpleMode: e.target.checked })
+              onSavePreferences({ themeMode: e.target.checked ? 'simple' : 'advanced' })
             }}
           />
           <span className="settings-label">

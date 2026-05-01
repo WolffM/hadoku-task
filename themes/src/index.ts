@@ -28,6 +28,10 @@ export const THEMES = [
 
 export type Theme = (typeof THEMES)[number]
 
+export type ThemeMode = 'simple' | 'advanced'
+
+const THEME_MODE_STORAGE_KEY = 'hadoku-theme-mode'
+
 /**
  * Set the active theme
  * @param theme - Theme name
@@ -98,6 +102,55 @@ export function clearTheme(): void {
   setTheme('light')
 }
 
+/**
+ * Set the active theme mode (writes data-theme-mode on documentElement).
+ * 'advanced' renders the gradient + effects; 'simple' uses flat colors.
+ */
+export function setThemeMode(mode: ThemeMode): void {
+  document.documentElement.setAttribute('data-theme-mode', mode)
+}
+
+/**
+ * Get the currently active theme mode from the DOM.
+ * Defaults to 'advanced' when the attribute is unset.
+ */
+export function getThemeMode(): ThemeMode {
+  const attr = document.documentElement.getAttribute('data-theme-mode')
+  return attr === 'simple' ? 'simple' : 'advanced'
+}
+
+/**
+ * Persist theme mode to localStorage and apply it.
+ */
+export function saveThemeMode(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(THEME_MODE_STORAGE_KEY, mode)
+  } catch {
+    /* localStorage may be unavailable in some environments */
+  }
+  setThemeMode(mode)
+}
+
+/**
+ * Load saved theme mode from localStorage.
+ * Falls back to 'advanced' when no preference exists.
+ */
+export function loadThemeMode(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY)
+    if (saved === 'simple' || saved === 'advanced') {
+      setThemeMode(saved)
+      return saved
+    }
+  } catch {
+    /* localStorage may be unavailable */
+  }
+  setThemeMode('advanced')
+  return 'advanced'
+}
+
 // Theme metadata and React integration (optional peer dependencies)
 export { THEME_FAMILIES, THEME_ICON_MAP } from './metadata'
 export { useTheme } from './useTheme'
+export { THEME_EFFECTS, hasAdvanced, getThemeEffects } from './effects'
+export type { AdvancedEffect, ThemeEffectMap } from './effects'

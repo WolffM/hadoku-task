@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Theme Editor | @wolffm/themes</title>
   <link rel="stylesheet" href="../src/style.css">
-  <link rel="stylesheet" href="../../src/styles/advanced-themes.css">
+  <link rel="stylesheet" href="../src/advanced.css">
   <link rel="stylesheet" href="editor.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
       </span>
       <div class="mode-toggle" id="modeToggle" style="display: none;">
         <button class="mode-btn active" id="modeBtnAdvanced" onclick="editor.setMode('advanced')">Advanced</button>
-        <button class="mode-btn" id="modeBtnBasic" onclick="editor.setMode('basic')">Basic</button>
+        <button class="mode-btn" id="modeBtnSimple" onclick="editor.setMode('simple')">Simple</button>
       </div>
       <div class="theme-picker" id="themePicker"></div>
     </div>
@@ -66,17 +66,17 @@
         <p class="hover-demo-hint">Hover to preview — each box shows a different shimmer effect</p>
         <div class="demo-shimmer-grid" id="shimmerGrid">
           <div>
-            <div class="shimmer-box shimmer-cascade-rich"></div>
+            <div class="shimmer-box hdk-advanced-surface hdk-advanced-surface--cascade-rich"></div>
             <p class="hover-demo-label">Cascade Rich</p>
             <p class="hover-demo-sublabel">Multi-wave, varied speeds</p>
           </div>
           <div>
-            <div class="shimmer-box shimmer-sat-rich"></div>
+            <div class="shimmer-box hdk-advanced-surface hdk-advanced-surface--sat-rich"></div>
             <p class="hover-demo-label">Sat + Rich</p>
             <p class="hover-demo-sublabel">Saturation + cascade</p>
           </div>
           <div>
-            <div class="shimmer-box shimmer-shift"></div>
+            <div class="shimmer-box hdk-advanced-surface hdk-advanced-surface--shift"></div>
             <p class="hover-demo-label">Shift</p>
             <p class="hover-demo-sublabel">Gradient displacement</p>
           </div>

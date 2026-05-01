@@ -94,7 +94,7 @@ export interface UserPreferences {
   experimentalThemes?: boolean
   alwaysVerticalLayout?: boolean
   displayName?: string // Display name for user
-  simpleMode?: boolean // Disable metallic gradients, use flat colors
+  themeMode?: 'simple' | 'advanced' // Toggle the theme's advanced visuals
   // Device-specific settings (localStorage only)
   theme?: string
   showCompleteButton?: boolean

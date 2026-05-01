@@ -259,7 +259,7 @@ export default function App(props: TaskAppProps = {}) {
   return (
     <div
       ref={containerRef}
-      className="task-app-container task-app-fade-in"
+      className="task-app-container task-app-fade-in hdk-advanced-page"
       data-dark-theme={isDarkTheme ? 'true' : 'false'}
       onMouseDown={dragAndDrop.selectionStartHandler}
       onMouseMove={dragAndDrop.selectionMoveHandler}

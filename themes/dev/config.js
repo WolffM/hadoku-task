@@ -233,10 +233,11 @@ export const TEXT_CONTRAST_MAP = {
   '--color-neutral': '--color-on-neutral'
 }
 
-// Gradient stop configuration for advanced themes
-// Each stop has a position and 3 OKLCH channel vars (lightness, chroma, hue)
+// Per-theme gradient stop configuration. A theme has an advanced
+// visual contract iff it appears as a key here. Each stop has a
+// position and 3 OKLCH channel vars (lightness, chroma, hue).
 export const GRADIENT_VARS = {
-  'beach-day': {
+  light: {
     angle: 135,
     stops: [
       {
@@ -273,11 +274,6 @@ export const GRADIENT_VARS = {
       }
     ]
   }
-}
-
-// Maps base themes to their advanced theme package
-export const ADVANCED_THEME_MAP = {
-  light: 'beach-day'
 }
 
 export const LOCAL_SERVER_URL = 'http://localhost:3456'

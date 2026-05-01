@@ -13,7 +13,6 @@ import {
   THEME_ICONS,
   THEME_ICON_MAP,
   GRADIENT_VARS,
-  ADVANCED_THEME_MAP,
   LOCAL_SERVER_URL
 } from './config.js'
 
@@ -23,7 +22,7 @@ let currentVar = null
 let modifications = {}
 const originalValues = {}
 let pickerOpen = false
-let simpleMode = false
+let themeMode = 'advanced'
 
 // ===== DOM Helpers =====
 const $ = id => document.getElementById(id)
@@ -36,6 +35,7 @@ function getVarValue(varName) {
 
 // ===== Initialization =====
 function init() {
+  document.documentElement.setAttribute('data-theme-mode', themeMode)
   renderThemePicker()
   renderSwatches()
   renderCompactVars()
@@ -164,7 +164,8 @@ function renderSwatches() {
 
 function updateThemePreview() {
   const primaryCard = $('previewCardPrimary')
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  const hasAdvanced = !!GRADIENT_VARS[currentTheme]
+  const showAdvanced = hasAdvanced && themeMode === 'advanced'
 
   $('themeNameBadge').textContent = currentTheme
   $('previewThemeName').textContent =
@@ -173,43 +174,38 @@ function updateThemePreview() {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ') + ' Theme'
 
-  if (advancedTheme && !simpleMode) {
+  if (showAdvanced) {
     // Advanced theme: use gradient as preview card background
     primaryCard.className = 'preview-card-large gradient-preview'
     primaryCard.style.background = 'var(--advanced-gradient)'
     primaryCard.style.color = 'white'
     primaryCard.style.textShadow = '0 1px 3px rgba(0,0,0,0.3)'
-    document.documentElement.setAttribute('data-advanced-theme', advancedTheme)
   } else {
-    // Basic theme or simple mode: solid primary background
+    // Simple mode or theme without advanced contract: solid primary background
     primaryCard.className = 'preview-card-large'
     primaryCard.style.background = 'var(--color-primary)'
     primaryCard.style.color = 'var(--color-on-primary)'
     primaryCard.style.textShadow = ''
-    if (!advancedTheme) {
-      document.documentElement.removeAttribute('data-advanced-theme')
-    }
   }
 
   // Update hover demo cards visibility
   const hoverDemo = $('hoverDemoSection')
   if (hoverDemo) {
-    hoverDemo.style.display = advancedTheme && !simpleMode ? '' : 'none'
+    hoverDemo.style.display = showAdvanced ? '' : 'none'
   }
 }
 
 // ===== Gradient Section =====
 function renderGradientSection() {
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
+  const config = GRADIENT_VARS[currentTheme]
   const section = $('gradientSection')
 
-  if (!advancedTheme || !GRADIENT_VARS[advancedTheme] || simpleMode) {
+  if (!config || themeMode === 'simple') {
     section.style.display = 'none'
     return
   }
 
   section.style.display = ''
-  const config = GRADIENT_VARS[advancedTheme]
   $('gradientStopCount').textContent = `${config.stops.length} stops`
 
   renderGradientBar()
@@ -221,25 +217,24 @@ function renderGradientBar() {
   bar.style.background = 'var(--advanced-gradient)'
 }
 
-// ===== Mode Toggle (Basic / Advanced) =====
+// ===== Mode Toggle (Simple / Advanced) =====
 function updateModeToggle() {
   const toggle = $('modeToggle')
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
 
-  // Only show toggle for themes that have an advanced variant
-  if (!advancedTheme) {
+  // Only show toggle for themes that ship an advanced visual contract
+  if (!GRADIENT_VARS[currentTheme]) {
     toggle.style.display = 'none'
     return
   }
 
   toggle.style.display = ''
-  $('modeBtnAdvanced').classList.toggle('active', !simpleMode)
-  $('modeBtnBasic').classList.toggle('active', simpleMode)
+  $('modeBtnAdvanced').classList.toggle('active', themeMode === 'advanced')
+  $('modeBtnSimple').classList.toggle('active', themeMode === 'simple')
 }
 
 function setMode(mode) {
-  simpleMode = mode === 'basic'
-  document.documentElement.setAttribute('data-simple-mode', simpleMode ? 'true' : 'false')
+  themeMode = mode === 'simple' ? 'simple' : 'advanced'
+  document.documentElement.setAttribute('data-theme-mode', themeMode)
   updateModeToggle()
   updateThemePreview()
   renderGradientSection()
@@ -283,10 +278,10 @@ function renderGradientStops(config) {
 }
 
 function handleGradientSlider(stopIndex, channel, value) {
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
-  if (!advancedTheme || !GRADIENT_VARS[advancedTheme]) return
+  const config = GRADIENT_VARS[currentTheme]
+  if (!config) return
 
-  const stop = GRADIENT_VARS[advancedTheme].stops[stopIndex]
+  const stop = config.stops[stopIndex]
   const varName = stop.vars[channel]
 
   // Set the CSS variable
@@ -365,8 +360,8 @@ function setTheme(theme) {
   currentTheme = theme
   document.documentElement.setAttribute('data-theme', theme)
   pickerOpen = false
-  simpleMode = false
-  document.documentElement.setAttribute('data-simple-mode', 'false')
+  themeMode = 'advanced'
+  document.documentElement.setAttribute('data-theme-mode', 'advanced')
 
   Object.keys(modifications).forEach(varName => {
     document.documentElement.style.removeProperty(varName)
@@ -587,10 +582,10 @@ function exportCSS() {
     })
 
   // Export gradient stop vars if this theme has an advanced gradient
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
-  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
+  const exportConfig = GRADIENT_VARS[currentTheme]
+  if (exportConfig) {
     css += `\n  /* Advanced gradient stops */\n`
-    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+    exportConfig.stops.forEach(stop => {
       Object.values(stop.vars).forEach(varName => {
         const value = getVarValue(varName)
         const isModified = modifications[varName]
@@ -619,10 +614,10 @@ function generateThemeCSS(themeName) {
     })
 
   // Gradient stop vars
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
-  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
+  const themeConfig = GRADIENT_VARS[currentTheme]
+  if (themeConfig) {
     css += `\n  /* Advanced gradient stops */\n`
-    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+    themeConfig.stops.forEach(stop => {
       Object.values(stop.vars).forEach(varName => {
         css += `  ${varName}: ${getVarValue(varName)};\n`
       })
@@ -659,9 +654,9 @@ function saveOriginalValues() {
     })
 
   // Save gradient stop vars too
-  const advancedTheme = ADVANCED_THEME_MAP[currentTheme]
-  if (advancedTheme && GRADIENT_VARS[advancedTheme]) {
-    GRADIENT_VARS[advancedTheme].stops.forEach(stop => {
+  const stopConfig = GRADIENT_VARS[currentTheme]
+  if (stopConfig) {
+    stopConfig.stops.forEach(stop => {
       Object.values(stop.vars).forEach(varName => {
         originalValues[varName] = getVarValue(varName)
       })

@@ -14,11 +14,13 @@
   "files": [
     "dist",
     "src/style.css",
+    "src/advanced.css",
     "src/tailwind-integration.css",
     "README.md"
   ],
   "exports": {
     "./style.css": "./src/style.css",
+    "./advanced.css": "./src/advanced.css",
     "./tailwind-integration.css": "./src/tailwind-integration.css",
     ".": {
       "types": "./dist/index.d.ts",

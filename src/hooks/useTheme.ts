@@ -6,14 +6,9 @@
 import { useState, useEffect, useMemo, useCallback, type RefObject } from 'react'
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
-import {
-  getThemeFamilies,
-  isExperimentalTheme,
-  ADVANCED_THEME_MAP,
-  type ThemeFamily
-} from '../app/themeConfig'
+import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
 import { logger } from '@wolffm/task-ui-components'
-import { setTheme as applyThemeToDOM } from '@wolffm/themes'
+import { setTheme as applyThemeToDOM, setThemeMode as applyThemeModeToDOM } from '@wolffm/themes'
 
 export interface UseThemeReturn {
   theme: ThemeName
@@ -147,58 +142,33 @@ export function useTheme(
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {
-    // Apply to document root (for standalone usage)
     document.documentElement.setAttribute('data-theme', theme)
-
-    // Also apply to container (for microfrontend usage where parent may isolate styles)
     if (containerRef.current) {
       containerRef.current.setAttribute('data-theme', theme)
     }
 
-    // Apply advanced theme attribute (CSS handles simple-mode override)
-    const advancedTheme = ADVANCED_THEME_MAP[theme]
-    if (advancedTheme) {
-      document.documentElement.setAttribute('data-advanced-theme', advancedTheme)
-      if (containerRef.current) {
-        containerRef.current.setAttribute('data-advanced-theme', advancedTheme)
-      }
-    } else {
-      document.documentElement.removeAttribute('data-advanced-theme')
-      if (containerRef.current) {
-        containerRef.current.removeAttribute('data-advanced-theme')
-      }
-    }
+    logger.info(`[useTheme] Applied theme: ${theme}`, { preferencesLoaded })
 
-    logger.info(`[useTheme] Applied theme: ${theme}`, { preferencesLoaded, advancedTheme })
-
-    // Only delay theme ready on initial load, not on theme changes
     if (isInitialThemeLoad) {
-      // Mark theme as ready after a brief delay to ensure CSS has been applied
       const timer = setTimeout(() => {
         setIsThemeReady(true)
         setIsInitialThemeLoad(false)
       }, 50)
       return () => clearTimeout(timer)
     } else {
-      // Theme changes are instant - no skeleton needed
       setIsThemeReady(true)
     }
   }, [theme, containerRef, preferencesLoaded, isInitialThemeLoad])
 
-  // Apply simple mode attribute (disables metallic gradients for flat colors)
+  // Apply theme-mode attribute. The themes package owns documentElement;
+  // we mirror to containerRef for microfrontend host isolation.
   useEffect(() => {
-    if (preferences.simpleMode) {
-      document.documentElement.setAttribute('data-simple-mode', 'true')
-      if (containerRef.current) {
-        containerRef.current.setAttribute('data-simple-mode', 'true')
-      }
-    } else {
-      document.documentElement.removeAttribute('data-simple-mode')
-      if (containerRef.current) {
-        containerRef.current.removeAttribute('data-simple-mode')
-      }
+    const mode = preferences.themeMode ?? 'advanced'
+    applyThemeModeToDOM(mode)
+    if (containerRef.current) {
+      containerRef.current.setAttribute('data-theme-mode', mode)
     }
-  }, [preferences.simpleMode, containerRef])
+  }, [preferences.themeMode, containerRef])
 
   // Auto-switch theme variant when system preference changes
   useEffect(() => {

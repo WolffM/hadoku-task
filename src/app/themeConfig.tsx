@@ -108,11 +108,6 @@ const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
   }
 ]
 
-/** Maps base themes to their advanced theme package (gradient + effects) */
-export const ADVANCED_THEME_MAP: Record<string, string> = {
-  light: 'beach-day'
-}
-
 /**
  * Get all theme families based on experimental preference
  */

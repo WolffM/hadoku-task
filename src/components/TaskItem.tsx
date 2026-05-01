@@ -42,7 +42,7 @@ export function TaskItem({
 
   return (
     <li
-      className={`task-app__item ${selected ? 'selected' : ''}`}
+      className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''}`}
       data-task-id={task.id}
       draggable={isDraggable}
       onDragStart={onDragStart ? e => onDragStart(e, task.id) : undefined}

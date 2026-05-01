@@ -28,11 +28,36 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   updatedAt: new Date().toISOString(),
   experimentalThemes: false,
   alwaysVerticalLayout: false,
-  simpleMode: false,
+  themeMode: 'advanced',
   theme: getDefaultTheme(),
   showCompleteButton: true,
   showDeleteButton: true,
   showTagButton: false
+}
+
+/**
+ * Migrate legacy preference keys to their current shape.
+ *
+ * - `simpleMode: boolean` → `themeMode: 'simple' | 'advanced'`
+ *
+ * Returns a cleaned preferences object when a migration occurred,
+ * or null when the input is already current.
+ */
+export function migrateLegacyKeys(prefs: UserPreferences): UserPreferences | null {
+  // Cast through unknown so we can read keys that have been removed from the type.
+  const legacy = prefs as unknown as { simpleMode?: boolean }
+  if (legacy.simpleMode === undefined) return null
+
+  const result: UserPreferences & { simpleMode?: boolean } = { ...prefs }
+  if (result.themeMode === undefined) {
+    result.themeMode = legacy.simpleMode ? 'simple' : 'advanced'
+  }
+  delete result.simpleMode
+
+  logger.info('[Preferences] Migrated legacy simpleMode → themeMode', {
+    themeMode: result.themeMode
+  })
+  return result
 }
 
 /**
