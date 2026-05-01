@@ -23,7 +23,8 @@ export interface ThemeEffectMap {
 }
 
 export const THEME_EFFECTS: Partial<Record<Theme, ThemeEffectMap>> = {
-  light: { card: 'shift', modal: 'none', button: 'none' }
+  light: { card: 'shift', modal: 'none', button: 'none' },
+  'cyberpunk-dark': { card: 'cascade-rich', modal: 'none', button: 'none' }
 }
 
 /** True when the theme ships an advanced visual contract. */

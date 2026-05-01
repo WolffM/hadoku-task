@@ -103,7 +103,8 @@ export function useSessionInitialization({
         const hasLocalData = localPrefs && localPrefs.updatedAt !== undefined
 
         if (hasLocalData) {
-          // Use localStorage preferences (device-specific)
+          // Use localStorage preferences (device-specific) — already
+          // migrated by localStorageApi.getPreferences at read time.
           logger.info('[App] Using device-specific localStorage preferences')
           setPreferences(localPrefs)
         } else if (serverPreferences) {

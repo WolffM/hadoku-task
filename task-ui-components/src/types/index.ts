@@ -34,6 +34,12 @@ export interface ThemeFamily {
 export type DropdownPlacement = 'left' | 'right' | 'auto'
 
 /**
+ * Theme mode — Simple flattens advanced visuals (gradients, effects)
+ * to their solid color fallback. Used together with @wolffm/themes.
+ */
+export type ThemeMode = 'simple' | 'advanced'
+
+/**
  * Theme picker component props
  */
 export interface ThemePickerProps {
@@ -55,4 +61,11 @@ export interface ThemePickerProps {
   className?: string
   /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
   dropdownPlacement?: DropdownPlacement
+  /** Optional: Active theme mode. Required to render the Simple/Advanced toggle. */
+  themeMode?: ThemeMode
+  /** Optional: Callback when theme mode is changed. Required to render the toggle. */
+  onThemeModeChange?: (mode: ThemeMode) => void
+  /** Optional: True when the active theme has an advanced visual contract.
+   *  Toggle is hidden when false. */
+  hasAdvanced?: boolean
 }

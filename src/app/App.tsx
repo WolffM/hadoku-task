@@ -11,6 +11,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop'
 import { useTaskSort } from '../hooks/useTaskSort'
 import { usePreferences } from '../hooks/usePreferences'
 import { useTheme } from '../hooks/useTheme'
+import { hasAdvanced } from '@wolffm/themes'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -297,6 +298,11 @@ export default function App(props: TaskAppProps = {}) {
           onThemeChange={setTheme}
           onSettingsClick={handleSettingsOpen}
           THEME_FAMILIES={THEME_FAMILIES}
+          themeMode={preferences.themeMode ?? 'advanced'}
+          onThemeModeChange={mode => {
+            void savePreferences({ themeMode: mode })
+          }}
+          hasAdvanced={hasAdvanced(theme)}
         />
 
         <BoardsSection

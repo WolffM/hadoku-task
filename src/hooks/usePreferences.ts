@@ -9,8 +9,7 @@ import type { UserPreferences } from '../domain/types'
 import {
   DEFAULT_PREFERENCES,
   cleanupOrphanedKeys,
-  migrateFromSessionStorage,
-  migrateLegacyKeys
+  migrateFromSessionStorage
 } from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
@@ -56,12 +55,11 @@ export function usePreferences(
 
       if (prefs) {
         // Check for sessionStorage migration
+        // (legacy simpleMode→themeMode is handled at the localStorage
+        // read boundary in localStorageApi.getPreferences)
         const migrations = migrateFromSessionStorage(prefs)
-        const legacyMigrated = migrateLegacyKeys(prefs)
-
-        if (migrations || legacyMigrated) {
-          const base = legacyMigrated ?? prefs
-          const newPrefs = { ...base, ...migrations, updatedAt: new Date().toISOString() }
+        if (migrations) {
+          const newPrefs = { ...prefs, ...migrations, updatedAt: new Date().toISOString() }
           setPreferences(newPrefs)
           await api.savePreferences(newPrefs)
           logger.info('[usePreferences] Applied and saved migrations')

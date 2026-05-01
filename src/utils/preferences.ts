@@ -40,8 +40,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
  *
  * - `simpleMode: boolean` → `themeMode: 'simple' | 'advanced'`
  *
- * Returns a cleaned preferences object when a migration occurred,
- * or null when the input is already current.
+ * Returns a cleaned preferences object (with the legacy key removed)
+ * when a migration occurred, or null when the input is already current.
+ *
+ * Callers that persist the result MUST overwrite the stored value
+ * directly (e.g. `localStorage.setItem(key, JSON.stringify(migrated))`)
+ * — a shallow-merge save would leave the stale legacy key in storage.
  */
 export function migrateLegacyKeys(prefs: UserPreferences): UserPreferences | null {
   // Cast through unknown so we can read keys that have been removed from the type.

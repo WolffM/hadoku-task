@@ -236,44 +236,44 @@ export const TEXT_CONTRAST_MAP = {
 // Per-theme gradient stop configuration. A theme has an advanced
 // visual contract iff it appears as a key here. Each stop has a
 // position and 3 OKLCH channel vars (lightness, chroma, hue).
-export const GRADIENT_VARS = {
-  light: {
-    angle: 135,
-    stops: [
-      {
-        position: '0%',
-        vars: { l: '--advanced-stop-1-l', c: '--advanced-stop-1-c', h: '--advanced-stop-1-h' }
-      },
-      {
-        position: '15%',
-        vars: { l: '--advanced-stop-2-l', c: '--advanced-stop-2-c', h: '--advanced-stop-2-h' }
-      },
-      {
-        position: '30%',
-        vars: { l: '--advanced-stop-3-l', c: '--advanced-stop-3-c', h: '--advanced-stop-3-h' }
-      },
-      {
-        position: '45%',
-        vars: { l: '--advanced-stop-4-l', c: '--advanced-stop-4-c', h: '--advanced-stop-4-h' }
-      },
-      {
-        position: '55%',
-        vars: { l: '--advanced-stop-5-l', c: '--advanced-stop-5-c', h: '--advanced-stop-5-h' }
-      },
-      {
-        position: '70%',
-        vars: { l: '--advanced-stop-6-l', c: '--advanced-stop-6-c', h: '--advanced-stop-6-h' }
-      },
-      {
-        position: '85%',
-        vars: { l: '--advanced-stop-7-l', c: '--advanced-stop-7-c', h: '--advanced-stop-7-h' }
-      },
-      {
-        position: '100%',
-        vars: { l: '--advanced-stop-8-l', c: '--advanced-stop-8-c', h: '--advanced-stop-8-h' }
-      }
-    ]
+const STOP_VARS_8 = [
+  {
+    position: '0%',
+    vars: { l: '--advanced-stop-1-l', c: '--advanced-stop-1-c', h: '--advanced-stop-1-h' }
+  },
+  {
+    position: '15%',
+    vars: { l: '--advanced-stop-2-l', c: '--advanced-stop-2-c', h: '--advanced-stop-2-h' }
+  },
+  {
+    position: '30%',
+    vars: { l: '--advanced-stop-3-l', c: '--advanced-stop-3-c', h: '--advanced-stop-3-h' }
+  },
+  {
+    position: '45%',
+    vars: { l: '--advanced-stop-4-l', c: '--advanced-stop-4-c', h: '--advanced-stop-4-h' }
+  },
+  {
+    position: '55%',
+    vars: { l: '--advanced-stop-5-l', c: '--advanced-stop-5-c', h: '--advanced-stop-5-h' }
+  },
+  {
+    position: '70%',
+    vars: { l: '--advanced-stop-6-l', c: '--advanced-stop-6-c', h: '--advanced-stop-6-h' }
+  },
+  {
+    position: '85%',
+    vars: { l: '--advanced-stop-7-l', c: '--advanced-stop-7-c', h: '--advanced-stop-7-h' }
+  },
+  {
+    position: '100%',
+    vars: { l: '--advanced-stop-8-l', c: '--advanced-stop-8-c', h: '--advanced-stop-8-h' }
   }
+]
+
+export const GRADIENT_VARS = {
+  light: { angle: 135, stops: STOP_VARS_8 },
+  'cyberpunk-dark': { angle: 135, stops: STOP_VARS_8 }
 }
 
 export const LOCAL_SERVER_URL = 'http://localhost:3456'

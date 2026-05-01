@@ -18,6 +18,7 @@ import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
 import { deferredBroadcast } from '../utils/broadcast'
 import { createDefaultTasks, createDefaultStats } from '../domain/utils/defaults'
+import { migrateLegacyKeys } from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
 /**
@@ -254,7 +255,14 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const stored = localStorage.getItem(key)
       if (stored) {
         const parsed = JSON.parse(stored)
-        return parsed // Return all preferences including theme and button settings
+        // One-time legacy key migration — overwrite storage with the
+        // cleaned shape so legacy keys disappear after the first read.
+        const migrated = migrateLegacyKeys(parsed)
+        if (migrated) {
+          localStorage.setItem(key, JSON.stringify(migrated))
+          return migrated
+        }
+        return parsed
       }
       // Default preferences - respect browser's color scheme preference
       const prefersDark =

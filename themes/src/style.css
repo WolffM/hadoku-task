@@ -583,6 +583,44 @@
   --hdk-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
+
+  /* Advanced contract: neon-grid 8-stop gradient (cyan → magenta → violet).
+     Renders only when data-theme-mode='advanced' (via @wolffm/themes/advanced.css). */
+  --advanced-stop-1-l: 0.32;
+  --advanced-stop-1-c: 0.12;
+  --advanced-stop-1-h: 220;
+  --advanced-stop-2-l: 0.42;
+  --advanced-stop-2-c: 0.18;
+  --advanced-stop-2-h: 200;
+  --advanced-stop-3-l: 0.5;
+  --advanced-stop-3-c: 0.2;
+  --advanced-stop-3-h: 195;
+  --advanced-stop-4-l: 0.45;
+  --advanced-stop-4-c: 0.22;
+  --advanced-stop-4-h: 280;
+  --advanced-stop-5-l: 0.4;
+  --advanced-stop-5-c: 0.26;
+  --advanced-stop-5-h: 320;
+  --advanced-stop-6-l: 0.46;
+  --advanced-stop-6-c: 0.28;
+  --advanced-stop-6-h: 340;
+  --advanced-stop-7-l: 0.38;
+  --advanced-stop-7-c: 0.22;
+  --advanced-stop-7-h: 290;
+  --advanced-stop-8-l: 0.28;
+  --advanced-stop-8-c: 0.16;
+  --advanced-stop-8-h: 250;
+  --advanced-gradient: linear-gradient(
+    135deg,
+    oklch(var(--advanced-stop-1-l) var(--advanced-stop-1-c) var(--advanced-stop-1-h)) 0%,
+    oklch(var(--advanced-stop-2-l) var(--advanced-stop-2-c) var(--advanced-stop-2-h)) 15%,
+    oklch(var(--advanced-stop-3-l) var(--advanced-stop-3-c) var(--advanced-stop-3-h)) 30%,
+    oklch(var(--advanced-stop-4-l) var(--advanced-stop-4-c) var(--advanced-stop-4-h)) 45%,
+    oklch(var(--advanced-stop-5-l) var(--advanced-stop-5-c) var(--advanced-stop-5-h)) 60%,
+    oklch(var(--advanced-stop-6-l) var(--advanced-stop-6-c) var(--advanced-stop-6-h)) 75%,
+    oklch(var(--advanced-stop-7-l) var(--advanced-stop-7-c) var(--advanced-stop-7-h)) 88%,
+    oklch(var(--advanced-stop-8-l) var(--advanced-stop-8-c) var(--advanced-stop-8-h)) 100%
+  );
 }
 
 /* ===== COFFEE LIGHT THEME ===== */
