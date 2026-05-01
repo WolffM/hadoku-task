@@ -6,11 +6,7 @@
 import { useState, useEffect } from 'react'
 import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
-import {
-  DEFAULT_PREFERENCES,
-  cleanupOrphanedKeys,
-  migrateFromSessionStorage
-} from '../utils/preferences'
+import { DEFAULT_PREFERENCES, cleanupOrphanedKeys } from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface UsePreferencesReturn {
@@ -54,19 +50,10 @@ export function usePreferences(
       logger.info('[usePreferences] Loaded preferences', { prefs })
 
       if (prefs) {
-        // Check for sessionStorage migration
-        // (legacy simpleMode→themeMode is handled at the localStorage
-        // read boundary in localStorageApi.getPreferences)
-        const migrations = migrateFromSessionStorage(prefs)
-        if (migrations) {
-          const newPrefs = { ...prefs, ...migrations, updatedAt: new Date().toISOString() }
-          setPreferences(newPrefs)
-          await api.savePreferences(newPrefs)
-          logger.info('[usePreferences] Applied and saved migrations')
-        } else {
-          setPreferences(prefs)
-          logger.info('[usePreferences] Applied preferences to state')
-        }
+        // Legacy key migration (simpleMode→themeMode) is handled at the
+        // localStorage read boundary in localStorageApi.getPreferences.
+        setPreferences(prefs)
+        logger.info('[usePreferences] Applied preferences to state')
       }
 
       setPreferencesLoaded(true)

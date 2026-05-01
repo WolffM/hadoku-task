@@ -1,112 +1,38 @@
 /**
  * Theme configuration
- * Defines all available theme families and their icons
+ * Splits the package's THEME_FAMILIES into base + experimental sets,
+ * gated by the user's experimentalThemes preference, and provides a
+ * helper to look up the icon for a specific theme.
  */
 
 import React from 'react'
-import {
-  SunIcon,
-  MoonIcon,
-  StrawberryIcon,
-  WaveIcon,
-  ZapIcon,
-  CoffeeIcon,
-  FlowerIcon,
-  LeafIcon,
-  HeartIcon,
-  SpaIcon
-} from '@wolffm/task-ui-components'
+import { THEME_FAMILIES as ALL_THEME_FAMILIES } from '@wolffm/themes'
+import { MoonIcon } from '@wolffm/task-ui-components'
+import type { ThemeFamily as PackageThemeFamily } from '@wolffm/task-ui-components'
 import type { ThemeName } from './types'
 
-// Define a properly typed ThemeFamily for this app
-export interface ThemeFamily {
-  lightIcon: React.ReactNode
-  darkIcon: React.ReactNode
-  lightTheme: ThemeName
-  darkTheme: ThemeName
-  lightLabel: string
-  darkLabel: string
-}
+export type ThemeFamily = PackageThemeFamily
 
-// Base theme families (always available)
-const BASE_THEME_FAMILIES: ThemeFamily[] = [
-  {
-    lightIcon: <SunIcon />,
-    darkIcon: <MoonIcon />,
-    lightTheme: 'light',
-    darkTheme: 'dark',
-    lightLabel: 'Light',
-    darkLabel: 'Dark'
-  },
-  {
-    lightIcon: <CoffeeIcon />,
-    darkIcon: <CoffeeIcon />,
-    lightTheme: 'coffee-light',
-    darkTheme: 'coffee-dark',
-    lightLabel: 'Coffee Light',
-    darkLabel: 'Coffee Dark'
-  },
-  {
-    lightIcon: <LeafIcon />,
-    darkIcon: <LeafIcon />,
-    lightTheme: 'nature-light',
-    darkTheme: 'nature-dark',
-    lightLabel: 'Nature Light',
-    darkLabel: 'Nature Dark'
-  },
-  {
-    lightIcon: <FlowerIcon />,
-    darkIcon: <FlowerIcon />,
-    lightTheme: 'lavender-light',
-    darkTheme: 'lavender-dark',
-    lightLabel: 'Lavender Light',
-    darkLabel: 'Lavender Dark'
-  },
-  {
-    lightIcon: <StrawberryIcon />,
-    darkIcon: <StrawberryIcon />,
-    lightTheme: 'strawberry-light',
-    darkTheme: 'strawberry-dark',
-    lightLabel: 'Strawberry Light',
-    darkLabel: 'Strawberry Dark'
-  },
-  {
-    lightIcon: <WaveIcon />,
-    darkIcon: <WaveIcon />,
-    lightTheme: 'ocean-light',
-    darkTheme: 'ocean-dark',
-    lightLabel: 'Ocean Light',
-    darkLabel: 'Ocean Dark'
-  }
-]
+/**
+ * Theme families that are gated behind the experimentalThemes pref.
+ * Everything else from the package is shown by default.
+ */
+const EXPERIMENTAL_THEMES = new Set<string>([
+  'cyberpunk-light',
+  'cyberpunk-dark',
+  'pink-light',
+  'pink-dark',
+  'izakaya-light',
+  'izakaya-dark'
+])
 
-// Experimental theme families (gated by preference)
-const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = [
-  {
-    lightIcon: <ZapIcon />,
-    darkIcon: <ZapIcon />,
-    lightTheme: 'cyberpunk-light',
-    darkTheme: 'cyberpunk-dark',
-    lightLabel: 'Cyberpunk Light',
-    darkLabel: 'Cyberpunk Dark'
-  },
-  {
-    lightIcon: <HeartIcon />,
-    darkIcon: <HeartIcon />,
-    lightTheme: 'pink-light',
-    darkTheme: 'pink-dark',
-    lightLabel: 'Pink Light',
-    darkLabel: 'Pink Dark'
-  },
-  {
-    lightIcon: <SpaIcon />,
-    darkIcon: <SpaIcon />,
-    lightTheme: 'izakaya-light',
-    darkTheme: 'izakaya-dark',
-    lightLabel: 'Izakaya Light',
-    darkLabel: 'Izakaya Dark'
-  }
-]
+const BASE_THEME_FAMILIES: ThemeFamily[] = ALL_THEME_FAMILIES.filter(
+  f => !EXPERIMENTAL_THEMES.has(f.lightTheme) && !EXPERIMENTAL_THEMES.has(f.darkTheme)
+)
+
+const EXPERIMENTAL_THEME_FAMILIES: ThemeFamily[] = ALL_THEME_FAMILIES.filter(
+  f => EXPERIMENTAL_THEMES.has(f.lightTheme) || EXPERIMENTAL_THEMES.has(f.darkTheme)
+)
 
 /**
  * Get all theme families based on experimental preference
@@ -121,21 +47,15 @@ export function getThemeFamilies(experimentalEnabled: boolean): ThemeFamily[] {
  * Check if a theme is experimental
  */
 export function isExperimentalTheme(themeName: string): boolean {
-  return EXPERIMENTAL_THEME_FAMILIES.some(
-    f => f.lightTheme === themeName || f.darkTheme === themeName
-  )
+  return EXPERIMENTAL_THEMES.has(themeName)
 }
 
 /**
  * Get icon for a specific theme
  */
 export function getThemeIcon(themeName: ThemeName, experimentalEnabled: boolean): React.ReactNode {
-  const allFamilies = getThemeFamilies(experimentalEnabled)
-
-  const family = allFamilies.find(f => f.lightTheme === themeName || f.darkTheme === themeName)
-
+  const families = getThemeFamilies(experimentalEnabled)
+  const family = families.find(f => f.lightTheme === themeName || f.darkTheme === themeName)
   if (!family) return <MoonIcon />
-
-  // Return appropriate icon based on light/dark variant
   return themeName.endsWith('-dark') || themeName === 'dark' ? family.darkIcon : family.lightIcon
 }
