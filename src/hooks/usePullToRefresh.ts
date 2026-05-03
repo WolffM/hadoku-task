@@ -40,9 +40,19 @@ export function usePullToRefresh({
 
     const handleStart = (e: TouchEvent) => {
       if (refreshingRef.current) return
-      const scrollEl = document.scrollingElement || document.documentElement
-      if (scrollEl.scrollTop > 0) return
       if (e.touches.length !== 1) return
+      // Bail if the document OR any ancestor of the touch target has scrolled.
+      // Without the ancestor walk, scrolled inner containers (modals, columns,
+      // the body when html is height-locked) would still engage pull-to-refresh.
+      if ((window.scrollY || 0) > 0) return
+      const target = e.target as Element | null
+      let node: Element | null = target
+      while (node && node !== document.body && node !== document.documentElement) {
+        if (node.scrollTop > 0) return
+        node = node.parentElement
+      }
+      if ((document.body?.scrollTop || 0) > 0) return
+      if ((document.documentElement?.scrollTop || 0) > 0) return
       startYRef.current = e.touches[0].clientY
     }
 
