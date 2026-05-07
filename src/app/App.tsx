@@ -73,7 +73,8 @@ export default function App(props: TaskAppProps = {}) {
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
     // For public users, use stored sessionId immediately if available
     if (userType === 'public') {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('currentSessionId') : null
+      const stored =
+        typeof window !== 'undefined' ? localStorage.getItem('hadoku_session_id') : null
       return stored || propsSessionId
     }
     return propsSessionId

@@ -51,8 +51,8 @@ test.describe('Data Sync Flow', () => {
       await page.waitForTimeout(3000)
 
       // Verify localStorage was updated
-      const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-      const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+      const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
+      const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
       expect(sessionId).toBeTruthy()
       expect(sessionId).not.toMatch(/^public-/)
@@ -80,7 +80,7 @@ test.describe('Data Sync Flow', () => {
       await page.goto('https://hadoku.me/task/')
 
       // Check if already authenticated
-      const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+      const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
       if (userType !== 'friend') {
         // Need to authenticate first
@@ -105,7 +105,7 @@ test.describe('Data Sync Flow', () => {
 
       // Get current localStorage state
       const beforeReload = await page.evaluate(() => {
-        const sessionId = localStorage.getItem('currentSessionId')
+        const sessionId = localStorage.getItem('hadoku_session_id')
         const boardsKey = Object.keys(localStorage).find(k => k.includes('-boards'))
         const boardsData = boardsKey ? localStorage.getItem(boardsKey) : null
         return { sessionId, boardsKey, boardsData }
@@ -122,8 +122,8 @@ test.describe('Data Sync Flow', () => {
 
       // Verify data persists
       const afterReload = await page.evaluate(() => {
-        const sessionId = localStorage.getItem('currentSessionId')
-        const userType = localStorage.getItem('currentUserType')
+        const sessionId = localStorage.getItem('hadoku_session_id')
+        const userType = localStorage.getItem('hadoku_user_type')
         const boardsKey = Object.keys(localStorage).find(k => k.includes('-boards'))
         const boardsData = boardsKey ? localStorage.getItem(boardsKey) : null
         return { sessionId, userType, boardsKey, boardsData }
@@ -145,8 +145,8 @@ test.describe('Data Sync Flow', () => {
       // Pre-populate localStorage with OLD data
       await page.addInitScript(
         ({ oldTs }) => {
-          localStorage.setItem('currentSessionId', 'test-sync-session')
-          localStorage.setItem('currentUserType', 'friend')
+          localStorage.setItem('hadoku_session_id', 'test-sync-session')
+          localStorage.setItem('hadoku_user_type', 'friend')
           localStorage.setItem(
             'friend-test-sync-session-boards',
             JSON.stringify({
@@ -240,8 +240,8 @@ test.describe('Data Sync Flow', () => {
       // Pre-populate localStorage with NEWER data
       await page.addInitScript(
         ({ newerTs }) => {
-          localStorage.setItem('currentSessionId', 'test-overwrite-session')
-          localStorage.setItem('currentUserType', 'friend')
+          localStorage.setItem('hadoku_session_id', 'test-overwrite-session')
+          localStorage.setItem('hadoku_user_type', 'friend')
           localStorage.setItem(
             'friend-test-overwrite-session-main-tasks',
             JSON.stringify({

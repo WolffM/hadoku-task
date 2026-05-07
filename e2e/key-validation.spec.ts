@@ -58,8 +58,8 @@ test.describe('Key Validation Flow', () => {
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Check localStorage - either no session or a public session was generated
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
+    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
     // Either no session, or a public session was generated
     if (sessionId) {
@@ -118,8 +118,8 @@ test.describe('Key Validation Flow', () => {
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Verify localStorage was updated after the reload
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
+    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
     expect(sessionId).toBe('test-session-123')
     expect(userType).toBe('friend')
@@ -128,8 +128,8 @@ test.describe('Key Validation Flow', () => {
   test('should persist session across page reloads', async ({ page }) => {
     // Pre-populate localStorage with session data
     await page.addInitScript(() => {
-      localStorage.setItem('currentSessionId', 'persisted-session-456')
-      localStorage.setItem('currentUserType', 'admin')
+      localStorage.setItem('hadoku_session_id', 'persisted-session-456')
+      localStorage.setItem('hadoku_user_type', 'admin')
     })
 
     // Mock the session handshake endpoint
@@ -180,8 +180,8 @@ test.describe('Key Validation Flow', () => {
     await page.waitForTimeout(2000)
 
     // Verify session data persists
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
+    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
     expect(sessionId).toBe('persisted-session-456')
     expect(userType).toBe('admin')
@@ -190,8 +190,10 @@ test.describe('Key Validation Flow', () => {
     await page.reload()
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
-    const sessionIdAfterReload = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-    const userTypeAfterReload = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const sessionIdAfterReload = await page.evaluate(() =>
+      localStorage.getItem('hadoku_session_id')
+    )
+    const userTypeAfterReload = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
     expect(sessionIdAfterReload).toBe('persisted-session-456')
     expect(userTypeAfterReload).toBe('admin')
@@ -243,8 +245,8 @@ test.describe('Key Validation Flow', () => {
 
     // Pre-populate localStorage with old session data (manually, not with addInitScript)
     await page.evaluate(() => {
-      localStorage.setItem('currentSessionId', 'old-session-111')
-      localStorage.setItem('currentUserType', 'friend')
+      localStorage.setItem('hadoku_session_id', 'old-session-111')
+      localStorage.setItem('hadoku_user_type', 'friend')
       localStorage.setItem(
         'friend-old-session-111-main-tasks',
         JSON.stringify({ version: 1, tasks: [] })
@@ -268,8 +270,8 @@ test.describe('Key Validation Flow', () => {
     await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
 
     // Verify new session is stored after reload
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
-    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
+    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
     expect(sessionId).toBe('new-session-222')
     expect(userType).toBe('admin')
@@ -320,7 +322,7 @@ test.describe('Key Validation Flow', () => {
     await page.waitForSelector('.settings-error', { state: 'visible', timeout: 5000 })
 
     // Session should NOT be created
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
 
     // Should still be null or a public session, not a new authenticated session
     if (sessionId) {
@@ -375,7 +377,7 @@ test.describe('Key Validation Flow', () => {
     await page.waitForSelector('.settings-error', { state: 'visible', timeout: 5000 })
 
     // Session should NOT be updated
-    const sessionId = await page.evaluate(() => localStorage.getItem('currentSessionId'))
+    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
 
     // Should still be null or a public session
     if (sessionId) {
@@ -417,11 +419,11 @@ test.describe('Key Validation Flow', () => {
     // This allows the test to set up 'friend' initially, but after our code
     // updates to 'public' and reloads, that value persists
     await page.addInitScript(() => {
-      const currentUserType = localStorage.getItem('currentUserType')
+      const hadoku_user_type = localStorage.getItem('hadoku_user_type')
       // Only set up 'friend' session if not already set to 'public' (post-expiration)
-      if (currentUserType !== 'public') {
-        localStorage.setItem('currentSessionId', 'expired-session-789')
-        localStorage.setItem('currentUserType', 'friend')
+      if (hadoku_user_type !== 'public') {
+        localStorage.setItem('hadoku_session_id', 'expired-session-789')
+        localStorage.setItem('hadoku_user_type', 'friend')
       }
     })
 
@@ -434,7 +436,7 @@ test.describe('Key Validation Flow', () => {
     await page.waitForTimeout(3000)
 
     // Verify localStorage was updated to 'public' after session expiration handling
-    const userType = await page.evaluate(() => localStorage.getItem('currentUserType'))
+    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
     expect(userType).toBe('public')
 
     // Verify the app eventually loads (after the reload with correct userType)

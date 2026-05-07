@@ -17,17 +17,40 @@ export interface HandshakeResult {
 export const SESSION_ID = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 /**
+ * One-shot migration (2026-05-07): rename legacy 'currentSessionId' /
+ * 'currentUserType' to platform-canonical 'hadoku_session_id' /
+ * 'hadoku_user_type'. The mf-loader (hadoku_site/src/components/mf-loader.js)
+ * and auth-client (hadoku_site/src/lib/api/auth-client.ts) both read the
+ * canonical names. Without this rename, cross-origin clients (Capacitor APK)
+ * loop on "session expired" because their cookies are blocked by SameSite=Strict
+ * and the X-Session-Id header fallback couldn't find the sessionId at the
+ * key the loader was looking at. Safe to remove after one release cycle.
+ */
+if (typeof window !== 'undefined') {
+  const legacySessionId = localStorage.getItem('currentSessionId')
+  if (legacySessionId && !localStorage.getItem('hadoku_session_id')) {
+    localStorage.setItem('hadoku_session_id', legacySessionId)
+    localStorage.removeItem('currentSessionId')
+  }
+  const legacyUserType = localStorage.getItem('currentUserType')
+  if (legacyUserType && !localStorage.getItem('hadoku_user_type')) {
+    localStorage.setItem('hadoku_user_type', legacyUserType)
+    localStorage.removeItem('currentUserType')
+  }
+}
+
+/**
  * Get the last sessionId we used (stored in localStorage)
  */
 export function getStoredSessionId(): string | null {
-  return localStorage.getItem('currentSessionId')
+  return localStorage.getItem('hadoku_session_id')
 }
 
 /**
  * Store the current sessionId in localStorage
  */
 export function storeSessionId(sessionId: string): void {
-  localStorage.setItem('currentSessionId', sessionId)
+  localStorage.setItem('hadoku_session_id', sessionId)
   logger.info('[Session] Stored sessionId', { sessionId })
 }
 
@@ -35,14 +58,14 @@ export function storeSessionId(sessionId: string): void {
  * Get the stored userType from localStorage
  */
 export function getStoredUserType(): UserType | null {
-  return localStorage.getItem('currentUserType')
+  return localStorage.getItem('hadoku_user_type') as UserType | null
 }
 
 /**
  * Store the current userType in localStorage
  */
 export function storeUserType(userType: UserType): void {
-  localStorage.setItem('currentUserType', userType)
+  localStorage.setItem('hadoku_user_type', userType)
   logger.info('[Session] Stored userType', { userType })
 }
 
