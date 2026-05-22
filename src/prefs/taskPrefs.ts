@@ -5,11 +5,11 @@
  * D1-persisted) instead of the legacy localStorage + KV `prefs:{sessionId}` path.
  * See ../../hadoku_site/docs/planning/unified-prefs-2026-05-20.md.
  *
- * STAGING (PR1): this adapter is the active prefs path, but the legacy code
- * (api/client.ts prefs methods, utils/preferences.ts, worker prefs routes) is
- * deliberately LEFT IN PLACE so PR1 is revertible and the migration can read
- * the old prefs to seed the new store. PR2 deletes the legacy paths once
- * multi-device parity is verified in prod.
+ * This is the ONLY client prefs path — the legacy client code (api/client.ts
+ * prefs methods, utils/preferences.ts) was deleted in Tranche A. The only
+ * legacy remnant is the worker route /task/api/preferences (KV
+ * `prefs:{sessionId}`), retained for the 30-day migration window so stale
+ * users still migrate; readLegacyPrefs() reads it. Deleted in Tranche B.
  *
  * Per-field scope split (locked decision):
  *   device-scoped (differs per device): theme, themeMode, alwaysVerticalLayout,
@@ -189,9 +189,10 @@ async function saveSplit(patch: Partial<UserPreferences>): Promise<void> {
 /**
  * One-shot migration: seed prefs-api from the legacy path the first time we
  * load for a given (userType, sessionId). Reads the authoritative legacy prefs
- * via the OLD createApi (localStorage for public; server-or-localStorage for
- * auth), then splits + saves into the new store. Idempotent and flagged in
- * localStorage so it runs at most once per legacy storage key.
+ * via readLegacyPrefs (localStorage for public; localStorage-or-worker-route
+ * for auth), splits + saves into the new store, then removes the stale legacy
+ * localStorage key. Idempotent and flagged so it runs at most once per
+ * legacy storage key.
  */
 async function migrateOnce(userType: string, sessionId: string): Promise<void> {
   if (typeof window === 'undefined') return
