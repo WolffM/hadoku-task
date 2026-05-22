@@ -21,7 +21,6 @@
  */
 import { z } from 'zod'
 import { createPrefsClient, type PrefsClient } from '@wolffm/prefs-client'
-import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
 import { logger } from '@wolffm/task-ui-components'
 
@@ -99,6 +98,22 @@ function getClient(): PrefsClient<TaskPrefs> {
   return cachedClient
 }
 
+/**
+ * Default preferences for the hook's initial React state (before the SDK
+ * resolves). Single source of truth now that utils/preferences.ts is gone.
+ */
+export const DEFAULT_TASK_PREFERENCES: UserPreferences = {
+  version: 1,
+  updatedAt: new Date().toISOString(),
+  experimentalThemes: false,
+  alwaysVerticalLayout: false,
+  themeMode: 'simple',
+  theme: getDefaultTheme(),
+  showCompleteButton: true,
+  showDeleteButton: true,
+  showTagButton: false
+}
+
 /** SDK merged blob → UserPreferences (synthesize version + updatedAt for UI compat). */
 function toUserPreferences(blob: TaskPrefs): UserPreferences {
   return {
@@ -106,6 +121,48 @@ function toUserPreferences(blob: TaskPrefs): UserPreferences {
     updatedAt: new Date().toISOString(),
     ...blob
   } as UserPreferences
+}
+
+/**
+ * Read the legacy preferences for one-shot migration, self-contained (no
+ * dependency on the deleted createApi/localStorageApi prefs methods):
+ *   1. localStorage `{userType}-{sessionId}-preferences` — authoritative for
+ *      any user who used the app before cutover (the old client mirrored
+ *      server→localStorage on every load).
+ *   2. Auth users on a fresh browser (no localStorage): fetch the legacy
+ *      worker route `/task/api/preferences` (KV `prefs:{sessionId}`), which
+ *      is retained for the 30-day migration window (deleted in Tranche B).
+ * Returns null when there's nothing to migrate.
+ */
+async function readLegacyPrefs(
+  userType: string,
+  sessionId: string
+): Promise<UserPreferences | null> {
+  if (typeof window !== 'undefined') {
+    const raw = window.localStorage.getItem(`${userType}-${sessionId}-preferences`)
+    if (raw) {
+      try {
+        return JSON.parse(raw) as UserPreferences
+      } catch {
+        // Corrupt legacy blob — fall through to server (auth) or null.
+      }
+    }
+  }
+  if (userType !== 'public') {
+    try {
+      const resp = await fetch('/task/api/preferences', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Type': userType,
+          'X-Session-Id': sessionId
+        }
+      })
+      if (resp.ok) return (await resp.json()) as UserPreferences
+    } catch {
+      // Network/route failure — non-fatal; migration retries next load.
+    }
+  }
+  return null
 }
 
 /** Split a prefs patch by scope and save each scope through the SDK. */
@@ -138,12 +195,12 @@ async function saveSplit(patch: Partial<UserPreferences>): Promise<void> {
  */
 async function migrateOnce(userType: string, sessionId: string): Promise<void> {
   if (typeof window === 'undefined') return
-  const flagKey = `task-prefs-migrated:${userType}-${sessionId}-preferences`
+  const legacyKey = `${userType}-${sessionId}-preferences`
+  const flagKey = `task-prefs-migrated:${legacyKey}`
   if (window.localStorage.getItem(flagKey)) return
 
   try {
-    const legacyApi = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
-    const legacy = await legacyApi.getPreferences()
+    const legacy = await readLegacyPrefs(userType, sessionId)
     if (legacy) {
       await saveSplit(legacy)
       logger.info('[taskPrefs] Migrated legacy prefs into unified store', {
@@ -152,16 +209,18 @@ async function migrateOnce(userType: string, sessionId: string): Promise<void> {
       })
     }
   } catch (err) {
-    // Migration failure is non-fatal: the SDK falls back to defaults/cache and
-    // the legacy path is still present. Log and let the flag stay UNSET so a
-    // later load retries.
+    // Migration failure is non-fatal: the SDK falls back to defaults/cache.
+    // Leave the flag UNSET so a later load retries.
     logger.warn('[taskPrefs] Legacy migration failed; will retry next load', {
       error: err instanceof Error ? err.message : String(err)
     })
     return
   }
 
+  // Mark migrated, then drop the stale legacy localStorage blob (Tranche A
+  // runtime cleanup) — the SDK cache is now authoritative on this device.
   window.localStorage.setItem(flagKey, new Date().toISOString())
+  window.localStorage.removeItem(legacyKey)
 }
 
 /**

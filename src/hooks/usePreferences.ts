@@ -5,8 +5,11 @@
 
 import { useState, useEffect } from 'react'
 import type { UserPreferences } from '../domain/types'
-import { DEFAULT_PREFERENCES, cleanupOrphanedKeys } from '../utils/preferences'
-import { loadTaskPreferences, saveTaskPreferences } from '../prefs/taskPrefs'
+import {
+  loadTaskPreferences,
+  saveTaskPreferences,
+  DEFAULT_TASK_PREFERENCES
+} from '../prefs/taskPrefs'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface UsePreferencesReturn {
@@ -30,7 +33,7 @@ export function usePreferences(
   sessionId: string,
   skipInitialLoad: boolean = false
 ): UsePreferencesReturn {
-  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_TASK_PREFERENCES)
   const [preferencesLoaded, setPreferencesLoaded] = useState(false)
 
   // Load preferences on mount (only if not skipped)
@@ -41,9 +44,6 @@ export function usePreferences(
     }
 
     const loadPreferences = async () => {
-      // Clean up any orphaned keys from schema changes
-      cleanupOrphanedKeys(userType, sessionId)
-
       logger.info('[usePreferences] Loading preferences...', { userType, sessionId })
       // Unified prefs store (SDK). Legacy simpleMode→themeMode migration now
       // lives in the SDK's migrations chain; the one-shot legacy-store

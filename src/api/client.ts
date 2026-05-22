@@ -390,67 +390,9 @@ export function createApi(
       return result
     },
 
-    // User preferences
-    async getPreferences() {
-      logger.info('[api] getPreferences: Starting', { userType })
-
-      // For non-public users, always fetch from server to ensure sync across devices/tabs
-      // Note: userType is guaranteed to be non-public here due to early return above
-      try {
-        const response = await fetch('/task/api/preferences', {
-          headers: adminHeaders(userType, sessionId)
-        })
-        if (response.ok) {
-          const serverPrefs = await response.json()
-          logger.info('[api] getPreferences: Fetched from server', {
-            hasPrefs: !!serverPrefs,
-            keys: serverPrefs ? Object.keys(serverPrefs) : []
-          })
-          // Also save to localStorage for offline access and instant local updates
-          await localStorage.savePreferences(serverPrefs)
-          return serverPrefs
-        } else {
-          logger.warn('[api] getPreferences: Server returned error', { status: response.status })
-        }
-      } catch (err) {
-        logger.warn('[api] getPreferences: Server fetch failed, using localStorage', {
-          error: formatError(err)
-        })
-      }
-
-      // Fallback to localStorage if server fails
-      const localPrefs = await localStorage.getPreferences()
-      logger.info('[api] getPreferences: Using localStorage fallback', {
-        hasPrefs: !!localPrefs
-      })
-      return localPrefs
-    },
-
-    async savePreferences(prefs: Partial<import('../domain/types').UserPreferences>) {
-      logger.info('[api] savePreferences: Starting', {
-        userType,
-        keys: Object.keys(prefs)
-      })
-
-      // ALWAYS save to localStorage first for instant UI update
-      // This ensures responsive UI even if server sync is slow/fails
-      await localStorage.savePreferences(prefs)
-      logger.info('[api] savePreferences: Saved to localStorage')
-
-      // Sync to server in background (userType is guaranteed non-public here)
-      // This enables cross-device/tab sync via getPreferences()
-      backgroundSync(
-        '/task/api/preferences',
-        {
-          method: 'PUT',
-          headers: adminHeaders(userType, sessionId),
-          body: JSON.stringify(prefs)
-        },
-        'savePreferences',
-        {},
-        onSyncError
-      )
-    },
+    // User preferences moved to @wolffm/prefs-client (src/prefs/taskPrefs.ts).
+    // The legacy GET/PUT /task/api/preferences path is gone from the client;
+    // the worker route is retained for the 30d migration window (Tranche B).
 
     // Batch operations
     async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>) {

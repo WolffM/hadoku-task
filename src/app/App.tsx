@@ -35,7 +35,7 @@ import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { getRandomPlaceholder } from '../utils/placeholders'
-import { createApi } from '../api/client'
+import { loadTaskPreferences, saveTaskPreferences } from '../prefs/taskPrefs'
 import type { UserPreferences } from '../domain/types'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
@@ -246,12 +246,9 @@ export default function App(props: TaskAppProps = {}) {
     modals.setShowSettingsModal(true)
 
     try {
-      // Fetch latest preferences from server (or localStorage for public users)
-      // This ensures we always show current state even if changed in another tab/device
-      const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId, {
-        onSyncError: reportSyncError
-      })
-      const freshPrefs = await api.getPreferences()
+      // Fetch latest preferences from the unified store (merged user+device).
+      // Shows current state even if changed in another tab/device.
+      const freshPrefs = await loadTaskPreferences(userType, effectiveSessionId)
       if (freshPrefs) {
         logger.info('[App] Loaded fresh preferences', {
           hasUpdatedAt: !!freshPrefs.updatedAt,
@@ -274,14 +271,9 @@ export default function App(props: TaskAppProps = {}) {
     // Update local state immediately for responsive UI
     setPreferences({ ...preferences, ...prefs, updatedAt: new Date().toISOString() })
 
-    // Save to localStorage AND sync to server (for non-public users)
-    // This happens in api.savePreferences() - it:
-    // 1. Saves to localStorage immediately (instant update)
-    // 2. Background syncs to server (for friend/admin users)
-    const api = createApi(userType as 'public' | 'friend' | 'admin', effectiveSessionId, {
-      onSyncError: reportSyncError
-    })
-    await api.savePreferences(prefs)
+    // Persist through the unified store: scope-split (device vs user) +
+    // optimistic localStorage cache + debounced PUT to prefs-api.
+    await saveTaskPreferences(prefs)
 
     logger.info('[App] Preferences saved successfully')
   }

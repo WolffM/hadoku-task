@@ -18,7 +18,6 @@ import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
 import { deferredBroadcast } from '../utils/broadcast'
 import { createDefaultTasks, createDefaultStats } from '../domain/utils/defaults'
-import { migrateLegacyKeys } from '../utils/preferences'
 import { logger } from '@wolffm/task-ui-components'
 
 /**
@@ -249,49 +248,9 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
     },
 
-    // User preferences (includes device-specific settings like theme)
-    async getPreferences(): Promise<import('../domain/types').UserPreferences> {
-      const key = `${userType}-${sessionId}-preferences`
-      const stored = localStorage.getItem(key)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // One-time legacy key migration — overwrite storage with the
-        // cleaned shape so legacy keys disappear after the first read.
-        const migrated = migrateLegacyKeys(parsed)
-        if (migrated) {
-          localStorage.setItem(key, JSON.stringify(migrated))
-          return migrated
-        }
-        return parsed
-      }
-      // Default preferences - respect browser's color scheme preference
-      const prefersDark =
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-      return {
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        theme: prefersDark ? 'dark' : 'light',
-        showCompleteButton: true,
-        showDeleteButton: true,
-        showTagButton: false
-      }
-    },
-
-    async savePreferences(
-      prefs: Partial<import('../domain/types').UserPreferences>
-    ): Promise<void> {
-      const key = `${userType}-${sessionId}-preferences`
-      const current = await this.getPreferences()
-      const updated = {
-        ...current,
-        ...prefs,
-        version: 1,
-        updatedAt: new Date().toISOString()
-      }
-      localStorage.setItem(key, JSON.stringify(updated))
-    },
+    // User preferences moved to @wolffm/prefs-client (see src/prefs/taskPrefs.ts).
+    // The legacy localStorage `{userType}-{sessionId}-preferences` blob is read
+    // once by the SDK migration, then removed. (Tranche A, 2026-05-22.)
 
     // Batch operations
     async batchMoveTasks(
