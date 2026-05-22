@@ -10,7 +10,7 @@ import {
   getStoredSessionId,
   storeUserType
 } from '../api/session'
-import { createApi } from '../api/client'
+import { loadTaskPreferences } from '../prefs/taskPrefs'
 import { logger } from '@wolffm/task-ui-components'
 import { logPackageVersions } from '../utils/version'
 
@@ -76,46 +76,28 @@ export function useSessionInitialization({
         }
       }
 
-      const serverPreferences = handshakeResult.preferences
-
       // Determine the effective sessionId to use
       let finalSessionId = propsSessionId
       if (userType === 'public') {
         // Public users: use their stable localStorage sessionId
         finalSessionId = getStoredSessionId() || propsSessionId
 
-        // For public users, load preferences from localStorage now
-        const api = createApi('public', finalSessionId)
-        const localPrefs = await api.getPreferences()
-        if (localPrefs) {
-          setPreferences(localPrefs)
-        }
+        // Load preferences from the unified store (SDK). For public/anon the
+        // SDK serves its localStorage cache (prefs-api 401s anon, by design).
+        const prefs = await loadTaskPreferences('public', finalSessionId)
+        setPreferences(prefs)
         setPreferencesLoaded(true)
       } else {
         // Authenticated users: use the sessionId from props (from parent)
         finalSessionId = propsSessionId
 
-        // Priority 1: Check localStorage first (device-specific preferences)
-        const api = createApi(userType as 'public' | 'friend' | 'admin', finalSessionId)
-        const localPrefs = await api.getPreferences()
-
-        // Check if localStorage has actual stored data (not just defaults)
-        const hasLocalData = localPrefs && localPrefs.updatedAt !== undefined
-
-        if (hasLocalData) {
-          // Use localStorage preferences (device-specific) — already
-          // migrated by localStorageApi.getPreferences at read time.
-          logger.info('[App] Using device-specific localStorage preferences')
-          setPreferences(localPrefs)
-        } else if (serverPreferences) {
-          // Priority 2: Use server preferences as fallback
-          logger.info('[App] No localStorage data, using server preferences')
-          setPreferences(serverPreferences)
-          // Save server preferences to localStorage for next time
-          await api.savePreferences(serverPreferences)
-        }
-        // If neither exists, DEFAULT_PREFERENCES will be used
-
+        // Load the merged (user + device) view from the unified store. The SDK
+        // already merges scopes + applies defaults, so the old localStorage-vs-
+        // server priority dance is gone (handshakeResult.preferences was always
+        // null client-side anyway). The one-shot legacy migration runs inside
+        // loadTaskPreferences on first load for this session.
+        const prefs = await loadTaskPreferences(userType, finalSessionId)
+        setPreferences(prefs)
         setPreferencesLoaded(true)
 
         // Clear old session storage keys if sessionId changed
@@ -124,16 +106,12 @@ export function useSessionInitialization({
           clearOldSessionStorage(oldSessionId, userType)
         }
 
-        // Show welcome toast for authenticated users AFTER preferences are loaded
-        // Use the final preferences (either from localStorage or server)
-        const finalPrefs = hasLocalData ? localPrefs : serverPreferences
-        const displayName = finalPrefs?.displayName
-
+        // Welcome toast for authenticated users with a display name (user-scoped,
+        // so it follows the account across devices).
+        const displayName = prefs?.displayName
         if (displayName) {
-          // Only show toast if user has a display name
           showToast(`Welcome back, ${displayName}`, 'success')
         }
-        // Don't show any toast if display name is empty/undefined
       }
 
       // Set the effective sessionId for all hooks to use (only if different)

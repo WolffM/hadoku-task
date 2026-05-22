@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect } from 'react'
-import { createApi } from '../api/client'
 import type { UserPreferences } from '../domain/types'
 import { DEFAULT_PREFERENCES, cleanupOrphanedKeys } from '../utils/preferences'
+import { loadTaskPreferences, saveTaskPreferences } from '../prefs/taskPrefs'
 import { logger } from '@wolffm/task-ui-components'
 
 export interface UsePreferencesReturn {
@@ -45,13 +45,13 @@ export function usePreferences(
       cleanupOrphanedKeys(userType, sessionId)
 
       logger.info('[usePreferences] Loading preferences...', { userType, sessionId })
-      const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
-      const prefs = await api.getPreferences()
+      // Unified prefs store (SDK). Legacy simpleMode→themeMode migration now
+      // lives in the SDK's migrations chain; the one-shot legacy-store
+      // migration runs inside loadTaskPreferences on first load.
+      const prefs = await loadTaskPreferences(userType, sessionId)
       logger.info('[usePreferences] Loaded preferences', { prefs })
 
       if (prefs) {
-        // Legacy key migration (simpleMode→themeMode) is handled at the
-        // localStorage read boundary in localStorageApi.getPreferences.
         setPreferences(prefs)
         logger.info('[usePreferences] Applied preferences to state')
       }
@@ -62,13 +62,14 @@ export function usePreferences(
     void loadPreferences()
   }, [userType, sessionId, skipInitialLoad])
 
-  // Save preferences function
+  // Save preferences function. Optimistically update local state, then persist
+  // the delta through the SDK (scope-split + debounced PUT). We pass `updates`
+  // (the delta) rather than the merged object so each scope only re-writes its
+  // changed fields.
   const savePreferences = async (updates: Partial<UserPreferences>) => {
     const newPrefs = { ...preferences, ...updates, updatedAt: new Date().toISOString() }
     setPreferences(newPrefs)
-
-    const api = createApi(userType as 'public' | 'friend' | 'admin', sessionId)
-    await api.savePreferences(newPrefs)
+    await saveTaskPreferences(updates)
   }
 
   // Compute if current theme is dark
