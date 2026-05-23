@@ -72,6 +72,11 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   const sessionId = storedSessionId || props.sessionId || 'public-session'
 
   const finalProps = { ...props, userType, sessionId }
+  // The host page (Astro) may have rendered a static skeleton into #root to
+  // paint at first paint. Clear it before createRoot so React doesn't render
+  // alongside the static markup. (createRoot on a non-empty container appends
+  // rather than replaces.)
+  el.replaceChildren()
   const root = createRoot(el)
   root.render(
     <ErrorBoundary>

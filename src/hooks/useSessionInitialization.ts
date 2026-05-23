@@ -119,11 +119,17 @@ export function useSessionInitialization({
         setEffectiveSessionId(finalSessionId)
       }
 
-      // Now load full data from API
-      await initialLoad()
-
-      // Mark as fully loaded (session initialized + preferences loaded + data loaded)
+      // Unblock the shell as soon as preferences are resolved. useTasks's own
+      // user-context effect has already hydrated tasks/boards from localStorage
+      // by this point, so the shell renders with cached data immediately.
+      // initialLoad() (which talks to the API and replaces local state with the
+      // server view) runs in the background and surfaces fresh data when ready.
       setIsLoaded(true)
+
+      // Background data sync — don't gate first paint on the network round-trip.
+      void initialLoad().catch(err => {
+        logger.warn('[App] initialLoad failed in background', { error: String(err) })
+      })
     }
 
     void initializeSession()
