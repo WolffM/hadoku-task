@@ -179,7 +179,7 @@
 
 .calendar-task-block__title {
   font-size: var(--hdk-text-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
@@ -313,7 +313,7 @@
   background: var(--color-bg-card);
   border-radius: var(--hdk-radius);
   padding: var(--hdk-space-lg);
-  box-shadow: var(--hdk-shadow-modal);
+  box-shadow: var(--hdk-shadow-lg);
   min-width: 300px;
   display: flex;
   flex-direction: column;

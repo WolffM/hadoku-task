@@ -112,7 +112,7 @@
 
 .settings-field-label {
   font-size: var(--hdk-text-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
@@ -198,7 +198,7 @@
 .settings-error {
   color: var(--color-danger);
   font-size: var(--hdk-text-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
 }
 
 .settings-option {

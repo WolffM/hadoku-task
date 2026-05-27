@@ -22,7 +22,7 @@
   padding: var(--hdk-space-3xl);
   border-radius: var(--hdk-radius);
   max-width: 400px;
-  box-shadow: var(--hdk-shadow-modal);
+  box-shadow: var(--hdk-shadow-lg);
   color: var(--color-text);
 }
 
@@ -192,7 +192,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--hdk-radius-sm);
   font-size: var(--hdk-text-base);
-  background-color: var(--color-bg-input);
+  background-color: var(--color-bg-card);
   color: var(--color-text);
   transition: border-color var(--transition-fast);
 }

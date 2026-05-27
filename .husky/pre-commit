@@ -24,6 +24,16 @@ if ! pnpm exec lint-staged; then
 fi
 echo "✅ Linting and formatting complete!"
 
+# CSS gate — fails on `var(--x)` references to undeclared custom properties
+# (catches typos against @wolffm/themes + local base.css). Always lints the
+# full src/**/*.css set, not just staged files, because var refs depend on
+# defs in other (possibly unstaged) files in the same workspace.
+echo "🎨 Running stylelint..."
+if ! pnpm run lint:css; then
+  echo "❌ stylelint found unknown CSS custom properties — check the var name against @wolffm/themes."
+  exit 1
+fi
+
 # Function to bump version for a package
 bump_package_version() {
   local pkg_path=$1

@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.61",
+  "version": "3.4.62",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
@@ -41,6 +41,7 @@
     "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes --parallel run typecheck && tsc --noEmit",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
+    "lint:css": "stylelint \"src/**/*.css\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "version:patch": "pnpm version patch --no-git-tag-version",
@@ -78,6 +79,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.6.2",
+    "stylelint": "^17.12.0",
+    "stylelint-value-no-unknown-custom-properties": "^6.1.1",
     "tsup": "^8.4.0",
     "typescript": "^5.6.3",
     "vite": "^7.2.4"
