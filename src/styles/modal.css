@@ -47,7 +47,7 @@
 }
 
 .modal-error {
-  color: var(--error-color, var(--color-danger, #d32f2f));
+  color: var(--color-danger);
   font-size: var(--hdk-text-sm);
   margin-top: var(--hdk-space-md);
 }

@@ -42,7 +42,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
-          pnpm update "@wolffm/*" --latest
+          # -r so themes/ + task-ui-components/ workspace subpackages
+          # also pick up any external @wolffm/* dep updates. workspace:*
+          # self-refs are unaffected by --latest.
+          pnpm update -r "@wolffm/*" --latest
 
       - name: Commit and push if changed
         run: |
@@ -54,7 +57,7 @@ jobs:
             exit 0
           fi
 
-          git add package.json pnpm-lock.yaml
+          git add package.json pnpm-lock.yaml themes/package.json task-ui-components/package.json
           git commit -m "chore: auto-update @wolffm/* to latest"
 
           for i in 1 2 3; do
