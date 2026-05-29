@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.63",
+  "version": "3.4.64",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "packageManager": "pnpm@10.23.0",
@@ -56,7 +56,7 @@
     "@wolffm/prefs-client": "^1.0.1",
     "@wolffm/task-ui-components": "workspace:*",
     "@wolffm/themes": "workspace:*",
-    "@wolffm/worker-utils": "^1.0.0",
+    "@wolffm/worker-utils": "^1.2.8",
     "hono": "^4.11.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

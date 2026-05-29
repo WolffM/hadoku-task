@@ -14,7 +14,7 @@
  */
 import { OpenAPIHono } from '@hono/zod-openapi'
 import {
-  createHadokuAuth,
+  createEdgeAuth,
   createCorsMiddleware,
   DEFAULT_HADOKU_ORIGINS,
   logError,
@@ -72,11 +72,14 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     })
   )
 
-  // 2. Authentication Middleware
-  // Uses standard Hadoku auth with task-api extensions for KV storage keys
+  // 2. Authentication Middleware — trusts the edge-stamped tier (centralized
+  // auth channel) instead of validating ADMIN_KEYS/FRIEND_KEYS. Drop-in for
+  // createHadokuAuth: same authContext + extend. Direct *.workers.dev hits
+  // degrade to public; the throttle middleware + route guards handle the rest.
+  // (edge stamps X-Edge-Auth + X-Hadoku-Tier on /task/api/* via handleApiRoute.)
   app.use(
     '*',
-    createHadokuAuth<Env, TaskAuthExtension>({
+    createEdgeAuth<TaskAuthExtension>({
       extend: base => ({
         // sessionId is used as KV key prefix (e.g., tasks:{sessionId}:{boardId})
         // Uses credential or falls back to default for public users

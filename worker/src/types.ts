@@ -4,6 +4,10 @@
 import type { HadokuAuthContext } from '@wolffm/worker-utils'
 
 export interface Env {
+  // Edge provenance secret — createEdgeAuth verifies inbound X-Edge-Auth.
+  EDGE_AUTH_SECRET?: string
+  // ADMIN_KEYS/FRIEND_KEYS no longer read inbound (createEdgeAuth replaced
+  // createHadokuAuth). Kept until Step 5 prunes them from CF secrets.
   ADMIN_KEYS?: string
   FRIEND_KEYS?: string
   TASKS_KV: KVNamespace
