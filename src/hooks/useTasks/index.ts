@@ -8,7 +8,7 @@ import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
 import { withPendingOperation, extractBoardTasks } from './helpers'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 interface UseTasksProps {
   userType: string

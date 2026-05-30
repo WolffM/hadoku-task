@@ -1,7 +1,7 @@
 import type { TasksFile, BoardsFile, Task, CreateTaskInput } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 import { formatError } from '../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 // Type for task updates (partial Task without id and createdAt)
 type TaskPatch = Partial<Omit<Task, 'id' | 'createdAt'>>

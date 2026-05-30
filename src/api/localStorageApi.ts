@@ -18,7 +18,7 @@ import { LocalStorageStorage } from './storage/LocalStorageStorage'
 import * as TaskHandlers from '../domain/handlers/handlers'
 import { deferredBroadcast } from '../utils/broadcast'
 import { createDefaultTasks, createDefaultStats } from '../domain/utils/defaults'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 /**
  * Create a localStorage-based API client that mirrors the server API interface

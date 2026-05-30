@@ -4,7 +4,7 @@
  */
 
 import React, { Component, type ReactNode } from 'react'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 interface Props {
   children: ReactNode

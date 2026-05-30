@@ -6,7 +6,7 @@ import type { Task, BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from './useModalState'
 import { splitTags, formatError } from '../domain/utils/tags'
 import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 interface UseTaskHandlersProps {
   tasks: Task[]

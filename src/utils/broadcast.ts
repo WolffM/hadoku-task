@@ -3,7 +3,7 @@
  * Provides deferred broadcasting to ensure localStorage propagation
  */
 
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import { formatError } from '../domain/utils/tags'
 
 export type BroadcastType = 'tasks-updated' | 'boards-updated'

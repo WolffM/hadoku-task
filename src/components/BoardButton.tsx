@@ -7,7 +7,7 @@ import { useLongPress } from '../hooks/useLongPress'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { Board } from '../domain/types'
 import { formatError } from '../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 interface BoardButtonProps {
   board: Board

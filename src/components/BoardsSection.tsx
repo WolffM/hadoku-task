@@ -10,7 +10,7 @@ import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { MAX_BOARDS } from '../app/constants'
 import { formatError } from '../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 export interface BoardsSectionProps {
   boards: BoardsFile | null

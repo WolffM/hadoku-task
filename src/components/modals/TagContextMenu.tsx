@@ -4,7 +4,8 @@
  */
 
 import React from 'react'
-import { ContextMenu, logger } from '@wolffm/task-ui-components'
+import { ContextMenu } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import { formatError } from '../../domain/utils/tags'
 
 export interface TagContextMenuProps {

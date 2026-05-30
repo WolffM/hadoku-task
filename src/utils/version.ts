@@ -3,7 +3,7 @@
  * Logs version information for debugging cache issues
  */
 
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 // Import package.json to get actual versions at build time
 import packageJson from '../../package.json'

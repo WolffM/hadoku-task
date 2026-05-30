@@ -8,7 +8,7 @@ import { Modal } from '@wolffm/task-ui-components'
 import type { Task } from '../../domain/types'
 import type { PendingTaskOperation } from '../../hooks/useModalState'
 import { getAllTags, formatError } from '../../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 export interface CreateTagModalProps {
   isOpen: boolean

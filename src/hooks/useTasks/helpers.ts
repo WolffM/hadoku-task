@@ -3,7 +3,7 @@
  * Extracts common patterns to reduce duplication
  */
 
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import type { Task, BoardsFile, Board } from '../../domain/types'
 import { DomainError } from '../../domain/types'
 import { formatError } from '../../domain/utils/tags'

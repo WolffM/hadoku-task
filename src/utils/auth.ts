@@ -3,7 +3,7 @@
  * Functions for handling user authentication and key validation
  */
 
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import { formatError } from '../domain/utils/tags'
 import { isMobileApp } from './platform'
 import {

@@ -10,7 +10,7 @@ import {
   saveTaskPreferences,
   DEFAULT_TASK_PREFERENCES
 } from '../prefs/taskPrefs'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 export interface UsePreferencesReturn {
   preferences: UserPreferences

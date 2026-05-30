@@ -22,7 +22,7 @@
 import { z } from 'zod'
 import { createPrefsClient, type PrefsClient } from '@wolffm/prefs-client'
 import type { UserPreferences } from '../domain/types'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 // Zod schema mirroring the FLAT UserPreferences shape (src/domain/types.ts).
 // version + updatedAt are NOT persisted as prefs fields — the SDK manages

@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useCallback, type RefObject } from 'react
 import type { UserPreferences } from '../domain/types'
 import type { ThemeName } from '../app/types'
 import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import { setTheme as applyThemeToDOM, setThemeMode as applyThemeModeToDOM } from '@wolffm/themes'
 
 export interface UseThemeReturn {

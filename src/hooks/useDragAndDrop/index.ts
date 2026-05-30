@@ -6,7 +6,7 @@ import React, { useState, useRef } from 'react'
 import { useEffect } from 'react'
 import type { Task } from '../../domain/types'
 import { splitTags, formatError } from '../../domain/utils/tags'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 
 interface UseDragAndDropProps {
   tasks: Task[]

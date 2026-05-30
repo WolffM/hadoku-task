@@ -11,7 +11,7 @@ import {
   storeUserType
 } from '../api/session'
 import { loadTaskPreferences } from '../prefs/taskPrefs'
-import { logger } from '@wolffm/task-ui-components'
+import { logger } from '@wolffm/logger/client'
 import { logPackageVersions } from '../utils/version'
 
 interface UseSessionInitializationProps {
