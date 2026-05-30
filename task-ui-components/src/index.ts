@@ -72,5 +72,9 @@ export type {
 export type { BentoGridProps, BentoColumns } from './components/BentoGrid'
 export type { BentoCardProps, CardSize } from './components/BentoCard'
 
-// Utilities
-export { logger } from './utils/logger'
+// `logger` was removed in v2.0.0. Migrate to `@wolffm/logger/client`:
+//   - import { logger } from '@wolffm/task-ui-components'
+//   + import { logger } from '@wolffm/logger/client'
+// See packages/logger in hadoku_site for the consolidated cross-runtime
+// implementation. UI helpers (theme, component, preference, apiRequest,
+// apiResponse, fallback) are preserved on the new client logger.
