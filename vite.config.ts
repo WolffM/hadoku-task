@@ -47,8 +47,10 @@ export default defineConfig({
       fileName: () => 'index.js'
     },
     rollupOptions: {
-      // React is provided by hadoku-site via import maps, so externalize it
-      external: ['react', 'react-dom/client', 'react/jsx-runtime'],
+      // React is provided by hadoku-site via import maps, so externalize it.
+      // 'react-dom' (bare) is needed for flushSync in entry.tsx and maps to
+      // /mf/vendor/react-dom.mjs in the host importmap.
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
         assetFileNames: 'style.css',
         entryFileNames: 'index.js',

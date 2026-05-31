@@ -1,5 +1,6 @@
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { flushSync } from 'react-dom'
 import App from './App'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import '@wolffm/themes/style.css'
@@ -76,13 +77,22 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   // paint at first paint. Clear it before createRoot so React doesn't render
   // alongside the static markup. (createRoot on a non-empty container appends
   // rather than replaces.)
+  //
+  // flushSync forces React's first commit to land in the SAME task as the
+  // replaceChildren() clear, so the browser never paints the empty container
+  // between the static skeleton being removed and React's (DOM-identical)
+  // LoadingSkeleton appearing. Without it, createRoot().render() commits
+  // asynchronously a frame+ later, leaving a visible blank flash between the
+  // two skeletons — pronounced on cold/mobile loads where the gap widens.
   el.replaceChildren()
   const root = createRoot(el)
-  root.render(
-    <ErrorBoundary>
-      <App {...finalProps} />
-    </ErrorBoundary>
-  )
+  flushSync(() => {
+    root.render(
+      <ErrorBoundary>
+        <App {...finalProps} />
+      </ErrorBoundary>
+    )
+  })
   ;(el as TaskElement).__root = root
   logger.info('[task-app] Mounted successfully', finalProps)
 }

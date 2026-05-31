@@ -128,13 +128,17 @@ body {
 }
 
 /* Loading skeleton container */
+/* No fadeIn here: React's LoadingSkeleton replaces a DOM-identical static
+   skeleton (TaskSkeleton.astro) that already faded in. Re-running fadeIn on the
+   React node makes the second skeleton visibly fade back in from opacity 0 —
+   reads as the skeleton "loading twice". The handoff must be a seamless
+   continuation, so the React skeleton appears at full opacity instantly. */
 .task-app-loading {
   width: 100%;
   min-height: 100vh;
   background-color: var(--color-bg);
   padding: 1rem;
   box-sizing: border-box;
-  animation: fadeIn 0.2s ease-in;
 }
 
 /* Mobile WebView (Capacitor): apply the same safe-area treatment the
