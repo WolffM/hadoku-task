@@ -47,9 +47,9 @@
     "version:patch": "pnpm version patch --no-git-tag-version",
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e": "pw-isolated playwright test",
+    "test:e2e:ui": "pw-isolated playwright test --ui",
+    "test:e2e:debug": "pw-isolated playwright test --debug"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.1.5",
