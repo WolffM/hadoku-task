@@ -3,5 +3,11 @@ packages:
   - themes
   - task-ui-components
 
+allowBuilds:
+  esbuild: set this to true or false
+
 onlyBuiltDependencies:
   - esbuild
+
+overrides:
+  js-yaml: 4.1.1

@@ -3,7 +3,6 @@
   "version": "3.4.69",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
-  "packageManager": "pnpm@10.23.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WolffM/hadoku-task.git"
@@ -85,11 +84,6 @@
     "tsup": "^8.4.0",
     "typescript": "^5.6.3",
     "vite": "^7.2.4"
-  },
-  "pnpm": {
-    "overrides": {
-      "js-yaml": "4.1.1"
-    }
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

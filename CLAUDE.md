@@ -12,7 +12,7 @@ Pnpm monorepo publishing 3 packages to GitHub Packages (@wolffm scope).
 
 `pnpm run build:all` builds everything in dependency order.
 Package build order: task-ui-components -> themes -> task.
-Pre-commit hook auto-bumps versions and runs lint:fix + format.
+Pre-commit hook runs lint:fix + format. It does NOT bump versions — versioning and publishing are owned by CI (the publish workflows auto-bump to a free version).
 
 ## Exports (what hadoku-site consumes)
 
