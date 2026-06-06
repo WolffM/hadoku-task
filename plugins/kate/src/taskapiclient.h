@@ -53,6 +53,8 @@ public:
     Q_INVOKABLE void completeTask(const QString &id);
     Q_INVOKABLE void deleteTask(const QString &id);
     Q_INVOKABLE void setTaskTags(const QString &id, const QString &spaceSeparatedTags);
+    // Remove a tag from every task on the board and from the board's tag list.
+    Q_INVOKABLE void clearTagEverywhere(const QString &tag);
 
     // Lets QML write into the same log file (UI-side diagnostics).
     Q_INVOKABLE void logUi(const QString &message) const;
@@ -77,6 +79,7 @@ private:
     QString m_boardId = QStringLiteral("main");
     int m_version = 0;
 
+    QVector<Task> m_tasks;                  // last fetched tasks for the current board
     QVariantList m_boards;                  // [{id,name}]
     QHash<QString, QStringList> m_boardTags; // boardId -> persistent tags
     QStringList m_taskTags;                  // tags seen on current board's tasks

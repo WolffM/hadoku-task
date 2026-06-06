@@ -58,6 +58,14 @@ Kirigami.Page {
         taskApi.setTaskTags(taskId, arr.join(" "));
     }
 
+    function removeTagFromTask(taskId, currentTags, tag) {
+        var arr = page.splitTags(currentTags).filter(function (x) {
+            return x !== tag;
+        });
+        taskApi.logUi("remove-tag: #" + tag + " from " + taskId);
+        taskApi.setTaskTags(taskId, arr.join(" "));
+    }
+
     function togglePin(id, on) {
         var p = (pinnedIds || []).slice();
         var i = p.indexOf(id);
@@ -195,6 +203,27 @@ Kirigami.Page {
         }
     }
 
+    // --- Confirm "delete tag everywhere" ------------------------------------
+    QQC2.Dialog {
+        id: confirmDelete
+        property string tag: ""
+        title: i18n("Delete tag")
+        modal: true
+        parent: QQC2.Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(page.width - Kirigami.Units.gridUnit, Kirigami.Units.gridUnit * 18)
+        standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+        onAccepted: taskApi.clearTagEverywhere(tag)
+        contentItem: QQC2.Label {
+            wrapMode: Text.WordWrap
+            text: i18n("Remove #%1 from every task on this board?", confirmDelete.tag)
+        }
+        function openFor(t) {
+            tag = t;
+            open();
+        }
+    }
+
     QQC2.Menu {
         id: boardPickMenu
         Repeater {
@@ -313,6 +342,7 @@ Kirigami.Page {
                     active: taskStore.filterTag === modelData
                     onClicked: taskStore.filterTag = (taskStore.filterTag === modelData ? "" : modelData)
                     onTaskDropped: (taskId, currentTags) => page.assignTag(taskId, currentTags, modelData)
+                    onDeleteRequested: t => confirmDelete.openFor(t)
                 }
             }
         }
@@ -416,6 +446,13 @@ Kirigami.Page {
                                                 color: "white"
                                                 font: Kirigami.Theme.smallFont
                                             }
+                                            HoverHandler { id: pillHover }
+                                            TapHandler {
+                                                acceptedButtons: Qt.RightButton
+                                                onTapped: page.removeTagFromTask(row.taskId, row.tag, modelData)
+                                            }
+                                            QQC2.ToolTip.visible: pillHover.hovered
+                                            QQC2.ToolTip.text: i18n("Right-click to remove tag")
                                         }
                                     }
                                     RowLayout {

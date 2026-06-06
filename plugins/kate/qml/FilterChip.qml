@@ -14,6 +14,13 @@ QQC2.AbstractButton {
 
     // Emitted when a task is dropped on this chip.
     signal taskDropped(string taskId, string currentTags)
+    // Emitted on right-click (used to delete the tag everywhere).
+    signal deleteRequested(string tag)
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: if (chip.tagValue.length > 0) chip.deleteRequested(chip.tagValue)
+    }
 
     implicitHeight: lbl.implicitHeight + Kirigami.Units.smallSpacing
     implicitWidth: lbl.implicitWidth + Kirigami.Units.largeSpacing

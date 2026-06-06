@@ -246,6 +246,7 @@ void TaskApiClient::fetchTasks()
             tasks.push_back(t);
         }
         qCInfo(HadokuTask) << "GET /tasks parsed" << tasks.size() << "tasks, version" << m_version;
+        m_tasks = tasks;
         recomputeTaskTags(tasks);
         recomputeAllTags();
         Q_EMIT tasksReceived(tasks, m_version);
@@ -336,6 +337,34 @@ void TaskApiClient::setTaskTags(const QString &id, const QString &spaceSeparated
             return;
         }
         fetchTasks();
+    });
+}
+
+void TaskApiClient::clearTagEverywhere(const QString &tag)
+{
+    QJsonArray ids;
+    for (const Task &t : m_tasks)
+        if (t.tag.split(QLatin1Char(' '), Qt::SkipEmptyParts).contains(tag))
+            ids.append(t.id);
+    QJsonObject body{
+        {QStringLiteral("boardId"), m_boardId},
+        {QStringLiteral("tag"), tag},
+        {QStringLiteral("taskIds"), ids},
+    };
+    const QString url = m_baseUrl + QStringLiteral("/batch-clear-tag");
+    qCInfo(HadokuTask) << "POST" << url << "tag" << tag << "from" << ids.size() << "tasks";
+    Q_EMIT busyChanged(true);
+    QNetworkReply *reply =
+        m_nam->post(makeRequest(url, false), QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        Q_EMIT busyChanged(false);
+        qCInfo(HadokuTask) << "POST /batch-clear-tag ->" << httpStatus(reply) << reply->errorString();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT errorOccurred(reply->errorString());
+            return;
+        }
+        reload();
     });
 }
 
