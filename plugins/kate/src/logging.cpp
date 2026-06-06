@@ -18,7 +18,12 @@ QMutex g_mutex;
 void messageHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg)
 {
     const QByteArray cat(ctx.category ? ctx.category : "");
-    if (cat.startsWith("hadoku.task") && !g_logPath.isEmpty()) {
+    // Capture our own logs, plus QML/JS engine messages (white-screen errors land
+    // here as "file.qml:line: ..." under the default/qml/js categories).
+    const bool ours = cat.startsWith("hadoku.task");
+    const bool qmlish = cat.startsWith("qml") || cat.startsWith("js")
+                        || msg.contains(QLatin1String(".qml"));
+    if ((ours || qmlish) && !g_logPath.isEmpty()) {
         QMutexLocker locker(&g_mutex);
         QFile f(g_logPath);
         if (f.open(QIODevice::Append | QIODevice::Text)) {

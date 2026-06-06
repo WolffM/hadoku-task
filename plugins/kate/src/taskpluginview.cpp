@@ -110,6 +110,19 @@ QQuickWidget *TaskPluginView::createQuickToolView(KTextEditor::Plugin *plugin,
     // Make i18n() available to the QML; must precede setSource (done by caller).
     KLocalization::setupLocalizedContext(quickWidget->engine());
 
+    // Surface QML load failures (white screen) into the log instead of silently
+    // failing — fires when the caller's setSource() runs.
+    connect(quickWidget, &QQuickWidget::statusChanged, this,
+            [quickWidget, identifier](QQuickWidget::Status status) {
+                if (status == QQuickWidget::Error) {
+                    const auto errs = quickWidget->errors();
+                    for (const auto &e : errs)
+                        qCWarning(HadokuTask) << "QML error in" << identifier << ":" << e.toString();
+                } else {
+                    qCInfo(HadokuTask) << "QML status" << identifier << "=" << status;
+                }
+            });
+
     layout->addWidget(quickWidget);
     qCInfo(HadokuTask) << "tool view created:" << identifier
                        << "quickWidget sizeHint" << quickWidget->sizeHint();
