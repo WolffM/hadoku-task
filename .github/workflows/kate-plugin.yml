@@ -17,12 +17,28 @@ on:
 
 jobs:
   build:
-    # The self-hosted builder is the Debian 13 box that already carries the
-    # KF6/Qt6 dev toolchain (extra-cmake-modules, libkf6texteditor-dev, etc.).
-    runs-on: [self-hosted, hadoku-builder]
+    # GitHub-hosted Ubuntu — the self-hosted builder is a JS-only box without the
+    # KF6/Qt6 toolchain. Ubuntu 24.04 (noble) carries the KF6 dev packages.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install KF6/Qt6 toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            g++ \
+            extra-cmake-modules \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            libkf6texteditor-dev \
+            libkf6coreaddons-dev \
+            libkf6i18n-dev \
+            libkf6xmlgui-dev \
+            libkf6wallet-dev \
+            gettext
 
       - name: Configure
         working-directory: plugins/kate
