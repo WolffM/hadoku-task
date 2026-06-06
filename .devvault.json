@@ -1,6 +1,7 @@
 {
-  "//": "Loaded by ../hadoku_site/scripts/secrets/dev-vault.mjs at pnpm dev time. ADMIN/FRIEND test keys are placeholders — kept in vault so .env stays absent.",
+  "//": "Loaded by ../hadoku_site/scripts/secrets/dev-vault.mjs at pnpm dev time. ADMIN/FRIEND test keys are placeholders \u2014 kept in vault so .env stays absent.",
   "DEPLOY_PACKAGE_TOKEN": "TASK_DEPLOY_PACKAGE_TOKEN",
   "ADMIN_TEST_KEY": "TASK_ADMIN_TEST_KEY",
-  "FRIEND_TEST_KEY": "TASK_FRIEND_TEST_KEY"
+  "FRIEND_TEST_KEY": "TASK_FRIEND_TEST_KEY",
+  "HADOKU_SITE_TOKEN": "HADOKU_SITE_TOKEN"
 }
