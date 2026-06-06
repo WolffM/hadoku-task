@@ -6,12 +6,9 @@ packages:
 allowBuilds:
   esbuild: true
 
-# pnpm's supply-chain age gate (pnpm 11 default) stays ON for third-party
-# packages — protects against malicious versions yanked within days of publish.
-# Our own @wolffm/* scope is exempt: it publishes frequently and we vet "latest"
-# by hand, so the delay only ever hurts us.
-minimumReleaseAgeExclude:
-  - '@wolffm/*'
+# No package-age gate. pnpm 11 defaults a ~24h minimum-release-age supply-chain
+# delay; we disable it so package updates (incl. @wolffm/* auto-sync) aren't held back.
+minimumReleaseAge: 0
 
 onlyBuiltDependencies:
   - esbuild
