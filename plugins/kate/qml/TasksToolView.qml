@@ -336,9 +336,15 @@ Kirigami.Page {
                         DragHandler {
                             id: dragHandler
                             target: card
-                            onActiveChanged: if (!active) {
-                                card.x = 0;
-                                card.y = 0;
+                            onActiveChanged: {
+                                if (!active) {
+                                    // Deliver the drop to whatever DropArea is under the
+                                    // card BEFORE snapping it home — otherwise the reset
+                                    // moves it off the target and the drop is lost.
+                                    card.Drag.drop();
+                                    card.x = 0;
+                                    card.y = 0;
+                                }
                             }
                         }
 
