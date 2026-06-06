@@ -57,6 +57,7 @@ export default [
         PerformanceNavigationTiming: 'readonly',
         PerformanceResourceTiming: 'readonly',
         MutationObserver: 'readonly',
+        DragEvent: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         setTimeout: 'readonly',
