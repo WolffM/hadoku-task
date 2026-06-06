@@ -25,11 +25,17 @@ export function dayStringFromISO(iso: string | null | undefined): string | null 
 }
 
 /**
- * Resolve a task's calendar day: prefer the explicit `date`, else derive it from
- * `startTime` (covers legacy tasks not yet backfilled). Null = not on the calendar.
+ * Resolve a task's calendar day in the viewer's local timezone.
+ *
+ * Timed tasks derive their day from `startTime` (interpreted in the browser's
+ * timezone), which is authoritative — a stored `date` may have been backfilled
+ * server-side in UTC and would land the task on the wrong local day. All-day
+ * tasks have no `startTime`, so they use the stored `date` as-is.
+ * Null = not on the calendar.
  */
 export function taskDay(task: Task): string | null {
-  return task.date ?? dayStringFromISO(task.startTime)
+  if (task.startTime) return dayStringFromISO(task.startTime)
+  return task.date ?? null
 }
 
 /**
