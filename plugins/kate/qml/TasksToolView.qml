@@ -48,24 +48,6 @@ Kirigami.Page {
         return s ? s.split(" ").filter(Boolean) : [];
     }
 
-    function assignTag(taskId, currentTags, newTag) {
-        if (!newTag)
-            return;
-        var arr = page.splitTags(currentTags);
-        if (arr.indexOf(newTag) < 0)
-            arr.push(newTag);
-        taskApi.logUi("drag-tag: #" + newTag + " -> " + taskId);
-        taskApi.setTaskTags(taskId, arr.join(" "));
-    }
-
-    function removeTagFromTask(taskId, currentTags, tag) {
-        var arr = page.splitTags(currentTags).filter(function (x) {
-            return x !== tag;
-        });
-        taskApi.logUi("remove-tag: #" + tag + " from " + taskId);
-        taskApi.setTaskTags(taskId, arr.join(" "));
-    }
-
     function togglePin(id, on) {
         var p = (pinnedIds || []).slice();
         var i = p.indexOf(id);
@@ -90,13 +72,15 @@ Kirigami.Page {
         dragProxy.dragTaskId = id;
         dragProxy.dragTags = tags;
         dragProxy.label = title;
-        dragProxy.visible = true;
         dragProxy.Drag.active = true;
+        // Stay hidden until positioned (updateDrag) so it never flashes at the
+        // previous drag's location.
     }
     function updateDrag(scenePos) {
         var p = page.mapFromItem(null, scenePos.x, scenePos.y);
         dragProxy.x = p.x - dragProxy.width / 2;
         dragProxy.y = p.y - dragProxy.height / 2;
+        dragProxy.visible = true;
     }
     function finishDrag() {
         dragProxy.Drag.drop();
@@ -341,7 +325,7 @@ Kirigami.Page {
                     accent: page.tagColor(modelData)
                     active: taskStore.filterTag === modelData
                     onClicked: taskStore.filterTag = (taskStore.filterTag === modelData ? "" : modelData)
-                    onTaskDropped: (taskId, currentTags) => page.assignTag(taskId, currentTags, modelData)
+                    onTaskDropped: (taskId, currentTags) => taskApi.addTaskTag(taskId, modelData)
                     onDeleteRequested: t => confirmDelete.openFor(t)
                 }
             }
@@ -405,8 +389,16 @@ Kirigami.Page {
                         DragHandler {
                             id: dragHandler
                             target: null
-                            onActiveChanged: active ? page.beginDrag(row.taskId, row.tag, row.title)
-                                                    : page.finishDrag()
+                            onActiveChanged: {
+                                if (active) {
+                                    page.beginDrag(row.taskId, row.tag, row.title);
+                                    // Position at the grab point immediately, before
+                                    // the ghost is shown.
+                                    page.updateDrag(centroid.scenePosition);
+                                } else {
+                                    page.finishDrag();
+                                }
+                            }
                             onCentroidChanged: if (active) page.updateDrag(centroid.scenePosition)
                         }
 
@@ -449,7 +441,7 @@ Kirigami.Page {
                                             HoverHandler { id: pillHover }
                                             TapHandler {
                                                 acceptedButtons: Qt.RightButton
-                                                onTapped: page.removeTagFromTask(row.taskId, row.tag, modelData)
+                                                onTapped: taskApi.removeTaskTag(row.taskId, modelData)
                                             }
                                             QQC2.ToolTip.visible: pillHover.hovered
                                             QQC2.ToolTip.text: i18n("Right-click to remove tag")

@@ -3,11 +3,14 @@
 #include "domain.h"
 
 #include <QHash>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
 #include <QVector>
+
+#include <functional>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -53,6 +56,10 @@ public:
     Q_INVOKABLE void completeTask(const QString &id);
     Q_INVOKABLE void deleteTask(const QString &id);
     Q_INVOKABLE void setTaskTags(const QString &id, const QString &spaceSeparatedTags);
+    // Tag deltas computed against the authoritative local cache (queue-safe under
+    // rapid edits, unlike recomputing a full tag string in the UI).
+    Q_INVOKABLE void addTaskTag(const QString &id, const QString &tag);
+    Q_INVOKABLE void removeTaskTag(const QString &id, const QString &tag);
     // Remove a tag from every task on the board and from the board's tag list.
     Q_INVOKABLE void clearTagEverywhere(const QString &tag);
 
@@ -69,9 +76,20 @@ Q_SIGNALS:
 
 private:
     QNetworkRequest makeRequest(const QString &url, bool withIfMatch) const;
-    void handleConflictThenRefetch();
     void recomputeTaskTags(const QVector<Task> &tasks);
     void recomputeAllTags();
+    int taskIndex(const QString &id) const;
+    void optimisticEmit();
+    void enqueueWrite(const QString &label, std::function<QNetworkReply *()> builder);
+    void runNextWrite();
+
+    // One serialized write at a time so rapid edits never race the board version.
+    struct PendingWrite {
+        QString label;
+        std::function<QNetworkReply *()> builder;
+    };
+    QList<PendingWrite> m_writeQueue;
+    bool m_processing = false;
 
     QNetworkAccessManager *m_nam;
     QString m_baseUrl = QStringLiteral("https://hadoku.me/task/api");
