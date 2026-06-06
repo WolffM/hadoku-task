@@ -17,17 +17,18 @@ on:
 
 jobs:
   build:
-    # GitHub-hosted Ubuntu — the self-hosted builder is a JS-only box without the
-    # KF6/Qt6 toolchain. Ubuntu 24.04 (noble) carries the KF6 dev packages.
     runs-on: ubuntu-24.04
+    # KF6 dev packages only exist on Debian trixie / Ubuntu 25.04, neither of
+    # which is a GitHub-hosted runner. Run inside a Debian 13 (trixie) container,
+    # which carries KF6 6.x — matching the target desktop exactly.
+    container: debian:trixie
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Install KF6/Qt6 toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            git \
             cmake \
             g++ \
             extra-cmake-modules \
@@ -39,6 +40,9 @@ jobs:
             libkf6xmlgui-dev \
             libkf6wallet-dev \
             gettext
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Configure
         working-directory: plugins/kate
