@@ -29,7 +29,12 @@ export const TaskSchema = z
     state: z.enum(['Active', 'Deleted', 'Completed']).openapi({ example: 'Active' }),
     createdAt: z.string().openapi({ example: '2024-01-15T10:30:00.000Z' }),
     updatedAt: z.string().nullable().optional().openapi({ example: '2024-01-15T11:00:00.000Z' }),
-    closedAt: z.string().nullable().optional().openapi({ example: null })
+    closedAt: z.string().nullable().optional().openapi({ example: null }),
+    // Calendar scheduling (optional — tasks without `date` appear only in board view).
+    // `date` = canonical local day; date-only = all-day, date+start+end = timed.
+    date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
+    startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
+    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
   })
   .openapi('Task')
 
@@ -107,6 +112,7 @@ export const CreateTaskInputSchema = z
     tag: z.string().optional().openapi({ example: 'work' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
     createdAt: z.string().optional().openapi({ example: '2024-01-15T10:30:00.000Z' }),
+    date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
     endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
   })
@@ -128,6 +134,7 @@ export const UpdateTaskInputSchema = z
     title: z.string().optional().openapi({ example: 'Updated title' }),
     tag: z.string().nullable().optional().openapi({ example: 'urgent' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
+    date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
     endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
   })

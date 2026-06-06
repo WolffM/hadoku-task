@@ -9,6 +9,17 @@
 import type { Task, TasksFile, StatsFile, Board, BoardsFile, ULID, AuthContext } from '../types.js'
 import { TaskNotFoundError, BoardNotFoundError, VersionConflictError } from '../types.js'
 import type { Storage } from '../../server/storage.js'
+import { dayStringFromISO } from '../utils/calendar.js'
+
+/**
+ * Backfill the canonical `date` for a task that carries a startTime but predates
+ * the `date` field. Idempotent — leaves already-dated and unscheduled tasks alone.
+ * Applied on read so legacy data normalises without a migration.
+ */
+export function backfillTaskDate(task: Task): Task {
+  if (task.date || !task.startTime) return task
+  return { ...task, date: dayStringFromISO(task.startTime) }
+}
 
 /**
  * Find task by ID or throw error
@@ -107,7 +118,7 @@ export function extractTasksFromBoard(
 
 /**
  * Prepare tasks for insertion into target board
- * Preserves IDs, title, tags, and createdAt timestamp
+ * Preserves IDs, title, tags, createdAt timestamp, and calendar scheduling
  */
 export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
   return tasks.map(task => ({
@@ -116,7 +127,10 @@ export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
     tag: task.tag,
     state: 'Active' as const,
     createdAt: task.createdAt,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    date: task.date ?? dayStringFromISO(task.startTime),
+    startTime: task.startTime ?? null,
+    endTime: task.endTime ?? null
   }))
 }
 

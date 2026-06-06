@@ -118,7 +118,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
   async function addTask(
     input: string,
-    schedule?: { startTime?: string | null; endTime?: string | null }
+    schedule?: { date?: string | null; startTime?: string | null; endTime?: string | null }
   ) {
     input = input.trim()
     if (!input) return

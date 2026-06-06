@@ -5,35 +5,40 @@
 import type { Task } from '../types'
 
 /**
- * Get the start of a day (midnight) for a given date
+ * Format a Date as a local calendar-day string, "YYYY-MM-DD".
+ * This is the canonical `Task.date` membership key.
  */
-function startOfDay(date: Date): Date {
-  const result = new Date(date)
-  result.setHours(0, 0, 0, 0)
-  return result
+export function toDayString(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /**
- * Get the end of a day (23:59:59.999) for a given date
+ * Derive the local calendar-day string from an ISO timestamp (used to backfill
+ * `date` for tasks that carry a startTime). Returns null for empty input.
  */
-function endOfDay(date: Date): Date {
-  const result = new Date(date)
-  result.setHours(23, 59, 59, 999)
-  return result
+export function dayStringFromISO(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  return toDayString(new Date(iso))
 }
 
 /**
- * Get tasks that have scheduling and overlap with a specific day
+ * Resolve a task's calendar day: prefer the explicit `date`, else derive it from
+ * `startTime` (covers legacy tasks not yet backfilled). Null = not on the calendar.
+ */
+export function taskDay(task: Task): string | null {
+  return task.date ?? dayStringFromISO(task.startTime)
+}
+
+/**
+ * Get tasks scheduled on a specific day — both all-day (date only) and timed
+ * (date derived from startTime). Membership is keyed off the calendar day.
  */
 export function getCalendarTasks(tasks: Task[], date: Date): Task[] {
-  const dayStart = startOfDay(date).toISOString()
-  const dayEnd = endOfDay(date).toISOString()
-
-  return tasks.filter(task => {
-    if (!task.startTime || !task.endTime) return false
-    // Task overlaps with this day
-    return task.startTime < dayEnd && task.endTime > dayStart
-  })
+  const target = toDayString(date)
+  return tasks.filter(task => taskDay(task) === target)
 }
 
 /**

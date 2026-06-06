@@ -134,7 +134,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async patchTask(
       id: string,
-      updates: Partial<Pick<Task, 'title' | 'tag' | 'startTime' | 'endTime'>>,
+      updates: Partial<Pick<Task, 'title' | 'tag' | 'date' | 'startTime' | 'endTime'>>,
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ): Promise<Task> {
@@ -142,11 +142,13 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const cleanUpdates: {
         title?: string
         tag?: string
+        date?: string | null
         startTime?: string | null
         endTime?: string | null
       } = {}
       if (updates.title !== undefined) cleanUpdates.title = updates.title
       if (updates.tag !== undefined && updates.tag !== null) cleanUpdates.tag = updates.tag
+      if (updates.date !== undefined) cleanUpdates.date = updates.date
       if (updates.startTime !== undefined) cleanUpdates.startTime = updates.startTime
       if (updates.endTime !== undefined) cleanUpdates.endTime = updates.endTime
 

@@ -19,7 +19,12 @@ export interface Task {
   createdAt: string // ISO 8601
   updatedAt?: string | null // ISO 8601 - when task was last modified (edit title/tag)
   closedAt?: string | null // ISO 8601 - when task was completed or deleted
-  // Calendar scheduling (optional - tasks without these appear only in board view)
+  // Calendar scheduling (optional - tasks without `date` appear only in board view)
+  // `date` is the canonical calendar-day membership key (local "YYYY-MM-DD").
+  //   - date set, startTime/endTime null  => all-day "task for this day"
+  //   - date + startTime + endTime         => timed task (date == local day of startTime)
+  // Tasks carrying startTime/endTime are always backfilled with a matching `date`.
+  date?: string | null // local calendar day, "YYYY-MM-DD"
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }
@@ -77,6 +82,7 @@ export interface CreateTaskInput {
   title: string
   tag?: string
   createdAt?: string // Original creation timestamp (optional, for preserving when moving tasks)
+  date?: string | null // local calendar day, "YYYY-MM-DD" (backfilled from startTime when omitted)
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }
@@ -84,6 +90,7 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
   title?: string
   tag?: string
+  date?: string | null // local calendar day, "YYYY-MM-DD"
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
 }

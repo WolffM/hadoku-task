@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar UI mockups</title>
+<style>
+:root{
+  --color-primary:#2563eb;--color-primary-dark:#1d4ed8;--color-primary-light:#dbeafe;
+  --color-primary-bg:#eff6ff;--color-on-primary:#fff;
+  --color-success:#0ea5e9;--color-warning:#f59e0b;--color-danger:#f97316;
+  --color-text:#0f172a;--color-text-secondary:#475569;--color-text-tertiary:#64748b;--color-text-muted:#94a3b8;
+  --color-border:#d0d7de;--color-border-light:#e2e8f0;
+  --color-bg:#f8fafc;--color-bg-card:#fff;--color-bg-alt:#fafafa;--color-bg-hover:#f1f5f9;
+  --r-sm:4px;--r:6px;--r-lg:8px;--r-xl:12px;
+  --sh-sm:0 1px 2px rgba(15,23,42,.04);--sh-md:0 2px 6px rgba(15,23,42,.08);--sh-lg:0 8px 24px rgba(15,23,42,.12);
+  /* tag palette */
+  --t-work:#6366f1;   --t-work-bg:#eef2ff;
+  --t-meet:#0ea5e9;   --t-meet-bg:#e0f2fe;
+  --t-personal:#10b981;--t-personal-bg:#ecfdf5;
+  --t-focus:#8b5cf6;  --t-focus-bg:#f5f3ff;
+  --t-break:#f59e0b;  --t-break-bg:#fffbeb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e9edf2;color:var(--color-text);padding:32px;line-height:1.4}
+.frame{width:960px;margin:0 auto 48px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--r-xl);padding:20px;box-shadow:var(--sh-lg)}
+.frame__label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px}
+.frame__name{font-size:20px;font-weight:600;margin-bottom:2px}
+.frame__desc{font-size:13px;color:var(--color-text-secondary);margin-bottom:18px}
+
+/* ============ shared chrome ============ */
+.cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-title{display:flex;align-items:baseline;gap:10px}
+.cal-title h2{font-size:22px;font-weight:600}
+.cal-title .sub{font-size:13px;color:var(--color-text-muted)}
+.cal-nav{display:flex;align-items:center;gap:6px}
+.nav-btn{width:30px;height:30px;border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:var(--r);cursor:pointer;color:var(--color-text-secondary);font-size:16px;display:flex;align-items:center;justify-content:center}
+.nav-btn:hover{background:var(--color-bg-hover);color:var(--color-text)}
+.today-pill{padding:6px 14px;border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;color:var(--color-text-secondary)}
+.seg{display:inline-flex;background:var(--color-bg-hover);border-radius:99px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 14px;border-radius:99px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer}
+.seg button.on{background:var(--color-bg-card);color:var(--color-text);box-shadow:var(--sh-sm)}
+
+/* ============ A: polished day timeline ============ */
+.dayA{display:grid;grid-template-columns:64px 1fr;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--r-lg);overflow:hidden;position:relative}
+.dayA__hours{border-right:1px solid var(--color-border-light)}
+.dayA__hr{height:56px;text-align:right;padding:2px 10px 0 0;font-size:11px;color:var(--color-text-muted);position:relative}
+.dayA__col{position:relative}
+.dayA__line{position:absolute;left:0;right:0;height:1px;background:var(--color-border-light)}
+.evt{position:absolute;left:8px;right:14px;border-radius:var(--r);padding:6px 10px;font-size:12px;overflow:hidden;border-left:3px solid;box-shadow:var(--sh-sm);cursor:pointer}
+.evt b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evt span{font-size:11px;opacity:.75}
+.evt:hover{box-shadow:var(--sh-md)}
+.e-work{background:var(--t-work-bg);border-color:var(--t-work);color:#312e81}
+.e-meet{background:var(--t-meet-bg);border-color:var(--t-meet);color:#075985}
+.e-personal{background:var(--t-personal-bg);border-color:var(--t-personal);color:#065f46}
+.e-focus{background:var(--t-focus-bg);border-color:var(--t-focus);color:#5b21b6}
+.e-break{background:var(--t-break-bg);border-color:var(--t-break);color:#92400e}
+.nowline{position:absolute;left:64px;right:0;height:2px;background:var(--color-danger);z-index:5}
+.nowline::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--color-danger)}
+.nowbubble{position:absolute;left:8px;top:-9px;transform:translateX(-100%);background:var(--color-danger);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px}
+.collapsed{height:30px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--color-text-muted);background:var(--color-bg-alt);border-bottom:1px solid var(--color-border-light);cursor:pointer}
+.collapsed:hover{background:var(--color-bg-hover)}
+
+/* ============ B: week view ============ */
+.weekwrap{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--r-lg);overflow:hidden}
+.weekhead{display:grid;grid-template-columns:48px repeat(7,1fr);border-bottom:1px solid var(--color-border)}
+.weekhead div{padding:8px 4px;text-align:center;font-size:11px;color:var(--color-text-muted);border-left:1px solid var(--color-border-light)}
+.weekhead div:first-child{border-left:0}
+.weekhead .dnum{display:block;font-size:17px;font-weight:600;color:var(--color-text);margin-top:1px}
+.weekhead .today{color:var(--color-primary)}
+.weekhead .today .dnum{background:var(--color-primary);color:#fff;width:26px;height:26px;line-height:26px;border-radius:50%;margin:1px auto 0}
+.weekgrid{display:grid;grid-template-columns:48px repeat(7,1fr);position:relative;max-height:380px;overflow:hidden}
+.weekgut{border-right:1px solid var(--color-border-light)}
+.weekgut .wh{height:46px;font-size:10px;color:var(--color-text-muted);text-align:right;padding:1px 6px 0 0}
+.weekcol{border-left:1px solid var(--color-border-light);position:relative}
+.weekcol.todaycol{background:rgba(37,99,235,.03)}
+.wline{height:46px;border-bottom:1px solid var(--color-border-light)}
+.wevt{position:absolute;left:2px;right:2px;border-radius:var(--r-sm);padding:3px 5px;font-size:10px;line-height:1.25;border-left:2px solid;overflow:hidden;cursor:pointer}
+.wevt b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ============ C: agenda list ============ */
+.agenda{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--r-lg);padding:6px 0}
+.ag-day{padding:14px 20px 6px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);display:flex;gap:10px;align-items:center}
+.ag-day .badge{background:var(--color-primary);color:#fff;border-radius:99px;font-size:11px;padding:1px 9px;text-transform:none;letter-spacing:0}
+.ag-row{display:grid;grid-template-columns:88px 1fr;gap:14px;padding:7px 20px;align-items:flex-start;position:relative}
+.ag-time{text-align:right;font-size:12px;color:var(--color-text-tertiary);padding-top:11px}
+.ag-time b{display:block;color:var(--color-text);font-size:13px;font-weight:600}
+.ag-card{border:1px solid var(--color-border-light);border-left:4px solid;border-radius:var(--r);padding:10px 14px;background:var(--color-bg-card);box-shadow:var(--sh-sm);cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.ag-card:hover{box-shadow:var(--sh-md)}
+.ag-card h4{font-size:14px;font-weight:600;margin-bottom:3px}
+.ag-card .meta{font-size:12px;color:var(--color-text-muted)}
+.ag-tag{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px}
+.ag-now{display:grid;grid-template-columns:88px 1fr;gap:14px;padding:2px 20px;align-items:center}
+.ag-now .lbl{text-align:right;font-size:11px;font-weight:600;color:var(--color-danger)}
+.ag-now .ln{height:2px;background:var(--color-danger);border-radius:2px;position:relative}
+.ag-now .ln::before{content:'';position:absolute;left:0;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--color-danger)}
+
+/* ============ D: planner with sidebar ============ */
+.planner{display:grid;grid-template-columns:230px 1fr;gap:14px}
+.inbox{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--r-lg);padding:14px}
+.inbox h3{font-size:13px;font-weight:600;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
+.inbox .cnt{background:var(--color-bg-hover);color:var(--color-text-secondary);font-size:11px;font-weight:600;border-radius:99px;padding:1px 8px}
+.inbox .hint{font-size:11px;color:var(--color-text-muted);margin-bottom:12px}
+.chip{border:1px solid var(--color-border-light);border-left:3px solid;border-radius:var(--r);padding:9px 11px;margin-bottom:8px;background:var(--color-bg-card);box-shadow:var(--sh-sm);cursor:grab}
+.chip:hover{box-shadow:var(--sh-md)}
+.chip b{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
+.chip span{font-size:11px;color:var(--color-text-muted)}
+.chip .grip{float:right;color:var(--color-text-muted);font-size:13px;letter-spacing:-1px}
+.dayD{display:grid;grid-template-columns:56px 1fr;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--r-lg);overflow:hidden;position:relative}
+.dayD__hours{border-right:1px solid var(--color-border-light)}
+.dayD__hr{height:50px;text-align:right;padding:2px 8px 0 0;font-size:11px;color:var(--color-text-muted)}
+.dayD__col{position:relative}
+.dropzone{position:absolute;left:8px;right:12px;border:2px dashed var(--color-primary);background:var(--color-primary-bg);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--color-primary)}
+</style>
+</head>
+<body>
+
+<!-- ===================== A ===================== -->
+<section class="frame" id="variantA">
+  <div class="frame__label">Option A</div>
+  <div class="frame__name">Polished Day Timeline</div>
+  <div class="frame__desc">An evolution of what you have now. Same single-day grid, but color-coded by tag, rounded cards with soft shadows, a clear “now” marker, and empty night hours collapsed so the working day fills the view.</div>
+
+  <div class="cal-top">
+    <div class="cal-title"><h2>Friday, June 6</h2><span class="sub">Today · 5 tasks</span></div>
+    <div class="cal-nav">
+      <div class="seg"><button class="on">Day</button><button>Week</button><button>Agenda</button></div>
+      <button class="today-pill">Today</button>
+      <button class="nav-btn">‹</button><button class="nav-btn">›</button>
+    </div>
+  </div>
+
+  <div class="dayA">
+    <div class="dayA__hours" id="hoursA"></div>
+    <div class="dayA__col" id="colA">
+      <div class="collapsed" style="position:absolute;top:0;left:0;right:0">▲ 12 AM – 7 AM</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== B ===================== -->
+<section class="frame" id="variantB">
+  <div class="frame__label">Option B</div>
+  <div class="frame__name">Week View</div>
+  <div class="frame__desc">The Google-Calendar style. Seven day-columns at a glance with today highlighted — far better for planning ahead and seeing how the week is shaping up. Day view stays available via the toggle.</div>
+
+  <div class="cal-top">
+    <div class="cal-title"><h2>June 2 – 8</h2><span class="sub">This week</span></div>
+    <div class="cal-nav">
+      <div class="seg"><button>Day</button><button class="on">Week</button><button>Agenda</button></div>
+      <button class="today-pill">Today</button>
+      <button class="nav-btn">‹</button><button class="nav-btn">›</button>
+    </div>
+  </div>
+
+  <div class="weekwrap">
+    <div class="weekhead" id="weekheadB"></div>
+    <div class="weekgrid" id="weekgridB"></div>
+  </div>
+</section>
+
+<!-- ===================== C ===================== -->
+<section class="frame" id="variantC">
+  <div class="frame__label">Option C</div>
+  <div class="frame__name">Agenda / Schedule List</div>
+  <div class="frame__desc">Drops the rigid grid for a clean, scannable list grouped by day. Reads great on mobile and handles sparse days gracefully — no staring at empty hours. Best when most tasks don’t need exact placement.</div>
+
+  <div class="cal-top">
+    <div class="cal-title"><h2>Upcoming</h2><span class="sub">Next 2 days</span></div>
+    <div class="cal-nav">
+      <div class="seg"><button>Day</button><button>Week</button><button class="on">Agenda</button></div>
+      <button class="today-pill">Today</button>
+    </div>
+  </div>
+
+  <div class="agenda" id="agendaC"></div>
+</section>
+
+<!-- ===================== D ===================== -->
+<section class="frame" id="variantD">
+  <div class="frame__label">Option D</div>
+  <div class="frame__name">Time-Block Planner</div>
+  <div class="frame__desc">Bridges the board and the calendar. Unscheduled tasks live in a sidebar; drag one onto the timeline to schedule it. Turns the calendar into a daily planning tool instead of a separate view.</div>
+
+  <div class="cal-top">
+    <div class="cal-title"><h2>Friday, June 6</h2><span class="sub">3 unscheduled</span></div>
+    <div class="cal-nav">
+      <button class="today-pill">Today</button>
+      <button class="nav-btn">‹</button><button class="nav-btn">›</button>
+    </div>
+  </div>
+
+  <div class="planner">
+    <div class="inbox">
+      <h3>Unscheduled <span class="cnt">3</span></h3>
+      <div class="hint">Drag onto the day to schedule</div>
+      <div class="chip" style="border-left-color:var(--t-work)"><span class="grip">⋮⋮</span><b>Write release notes</b><span>work</span></div>
+      <div class="chip" style="border-left-color:var(--t-focus)"><span class="grip">⋮⋮</span><b>Refactor calendar utils</b><span>focus</span></div>
+      <div class="chip" style="border-left-color:var(--t-personal)"><span class="grip">⋮⋮</span><b>Book dentist</b><span>personal</span></div>
+    </div>
+    <div class="dayD">
+      <div class="dayD__hours" id="hoursD"></div>
+      <div class="dayD__col" id="colD"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+const HRS = (start,end)=>{let a=[];for(let h=start;h<=end;h++)a.push(h);return a;};
+const fmt = h => { const m=h%12||12; return m+(h<12?' AM':' PM'); };
+
+/* ---- A ---- */
+(function(){
+  const H=56, startH=7, endH=22;
+  const hours=document.getElementById('hoursA'), col=document.getElementById('colA');
+  hours.style.paddingTop='30px';
+  HRS(startH,endH).forEach((h,i)=>{
+    const d=document.createElement('div');d.className='dayA__hr';d.textContent=fmt(h);hours.appendChild(d);
+  });
+  col.style.height=(30+(endH-startH+1)*H)+'px';
+  HRS(startH,endH).forEach((h,i)=>{const l=document.createElement('div');l.className='dayA__line';l.style.top=(30+i*H)+'px';col.appendChild(l);});
+  const Y = (h,m)=> 30 + ((h-startH)+m/60)*H;
+  const evts=[
+    [9,0,9,30,'Standup','9:00 – 9:30','e-meet'],
+    [9,45,11,30,'Deep work: calendar UI','9:45 – 11:30','e-focus'],
+    [12,0,13,0,'Lunch','12:00 – 1:00','e-break'],
+    [13,30,14,30,'Design review','1:30 – 2:30','e-meet'],
+    [15,0,16,0,'1:1 with Sam','3:00 – 4:00','e-work'],
+    [18,0,19,0,'Gym','6:00 – 7:00','e-personal'],
+  ];
+  evts.forEach(([sh,sm,eh,em,t,sub,cls])=>{
+    const e=document.createElement('div');e.className='evt '+cls;
+    e.style.top=Y(sh,sm)+'px';e.style.height=(Y(eh,em)-Y(sh,sm)-3)+'px';
+    e.innerHTML='<b>'+t+'</b><span>'+sub+'</span>';col.appendChild(e);
+  });
+  const now=document.createElement('div');now.className='nowline';now.style.top=Y(14,12)+'px';
+  now.innerHTML='<div class="nowbubble">2:12</div>';
+  document.querySelector('#variantA .dayA').appendChild(now);
+})();
+
+/* ---- B ---- */
+(function(){
+  const days=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const nums=[2,3,4,5,6,7,8];const todayIdx=4;
+  const head=document.getElementById('weekheadB');
+  head.appendChild(document.createElement('div'));
+  days.forEach((d,i)=>{const c=document.createElement('div');if(i===todayIdx)c.className='today';c.innerHTML=d+'<span class="dnum">'+nums[i]+'</span>';head.appendChild(c);});
+  const grid=document.getElementById('weekgridB');
+  const H=46,startH=8,endH=15;
+  const gut=document.createElement('div');gut.className='weekgut';
+  HRS(startH,endH).forEach(h=>{const w=document.createElement('div');w.className='wh';w.textContent=fmt(h);gut.appendChild(w);});
+  grid.appendChild(gut);
+  const Y=(h,m)=>((h-startH)+m/60)*H;
+  const week={
+    0:[[9,0,10,0,'Standup','wevt e-meet']],
+    1:[[10,0,11,30,'Sprint plan','wevt e-work'],[14,0,15,0,'Review','wevt e-meet']],
+    2:[[9,30,12,0,'Focus block','wevt e-focus']],
+    3:[[11,0,12,0,'1:1 Sam','wevt e-work'],[13,0,14,0,'Lunch','wevt e-break']],
+    4:[[9,0,9,30,'Standup','wevt e-meet'],[9,45,11,30,'Deep work','wevt e-focus'],[13,30,14,30,'Design review','wevt e-meet']],
+    5:[[10,0,11,0,'Gym','wevt e-personal']],
+    6:[],
+  };
+  days.forEach((d,i)=>{
+    const c=document.createElement('div');c.className='weekcol'+(i===todayIdx?' todaycol':'');
+    HRS(startH,endH).forEach(()=>{const l=document.createElement('div');l.className='wline';c.appendChild(l);});
+    (week[i]||[]).forEach(([sh,sm,eh,em,t,cls])=>{
+      const e=document.createElement('div');e.className=cls;e.style.top=Y(sh,sm)+'px';e.style.height=(Y(eh,em)-Y(sh,sm)-2)+'px';
+      e.innerHTML='<b>'+t+'</b>';c.appendChild(e);
+    });
+    grid.appendChild(c);
+  });
+})();
+
+/* ---- C ---- */
+(function(){
+  const ag=document.getElementById('agendaC');
+  const tagStyle={work:['var(--t-work)','var(--t-work-bg)','#312e81'],meet:['var(--t-meet)','var(--t-meet-bg)','#075985'],focus:['var(--t-focus)','var(--t-focus-bg)','#5b21b6'],break:['var(--t-break)','var(--t-break-bg)','#92400e'],personal:['var(--t-personal)','var(--t-personal-bg)','#065f46']};
+  function row(time,sub,title,meta,tag,now){
+    if(now){const n=document.createElement('div');n.className='ag-now';n.innerHTML='<div class="lbl">2:12 PM</div><div class="ln"></div>';ag.appendChild(n);return;}
+    const r=document.createElement('div');r.className='ag-row';
+    const [bd,bg,fg]=tagStyle[tag];
+    r.innerHTML='<div class="ag-time"><b>'+time+'</b>'+sub+'</div>'+
+      '<div class="ag-card" style="border-left-color:'+bd+'"><div><h4>'+title+'</h4><div class="meta">'+meta+'</div></div>'+
+      '<span class="ag-tag" style="background:'+bg+';color:'+fg+'">'+tag+'</span></div>';
+    ag.appendChild(r);
+  }
+  function day(label,badge){const d=document.createElement('div');d.className='ag-day';d.innerHTML=label+(badge?' <span class="badge">'+badge+'</span>':'');ag.appendChild(d);}
+  day('Today · Fri Jun 6','5');
+  row('9:00','30m','Standup','9:00 – 9:30 AM','meet');
+  row('9:45','1h 45m','Deep work: calendar UI','9:45 – 11:30 AM','focus');
+  row('','',null,null,null,true);
+  row('1:30','1h','Design review','1:30 – 2:30 PM','meet');
+  row('3:00','1h','1:1 with Sam','3:00 – 4:00 PM','work');
+  row('6:00','1h','Gym','6:00 – 7:00 PM','personal');
+  day('Tomorrow · Sat Jun 7','2');
+  row('10:00','1h','Farmers market','10:00 – 11:00 AM','personal');
+  row('2:00','2h','Side project','2:00 – 4:00 PM','focus');
+})();
+
+/* ---- D ---- */
+(function(){
+  const H=50,startH=8,endH=18;
+  const hours=document.getElementById('hoursD'),col=document.getElementById('colD');
+  HRS(startH,endH).forEach(h=>{const d=document.createElement('div');d.className='dayD__hr';d.textContent=fmt(h);hours.appendChild(d);});
+  col.style.height=((endH-startH+1)*H)+'px';
+  HRS(startH,endH).forEach((h,i)=>{const l=document.createElement('div');l.className='dayA__line';l.style.top=(i*H)+'px';col.appendChild(l);});
+  const Y=(h,m)=>((h-startH)+m/60)*H;
+  const evts=[
+    [9,0,9,30,'Standup','9:00 – 9:30','e-meet'],
+    [10,0,12,0,'Deep work: calendar UI','10:00 – 12:00','e-focus'],
+    [13,30,14,30,'Design review','1:30 – 2:30','e-meet'],
+  ];
+  evts.forEach(([sh,sm,eh,em,t,sub,cls])=>{
+    const e=document.createElement('div');e.className='evt '+cls;e.style.top=Y(sh,sm)+'px';e.style.height=(Y(eh,em)-Y(sh,sm)-3)+'px';
+    e.innerHTML='<b>'+t+'</b><span>'+sub+'</span>';col.appendChild(e);
+  });
+  // drop preview
+  const dz=document.createElement('div');dz.className='dropzone';dz.style.top=Y(15,0)+'px';dz.style.height=(H-4)+'px';
+  dz.textContent='Drop “Write release notes” → 3:00 PM';col.appendChild(dz);
+})();
+</script>
+</body>
+</html>

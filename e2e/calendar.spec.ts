@@ -1,20 +1,18 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * Calendar view E2E — proves the two wirings that were previously stubbed:
- *   1. Create a task from a time slot persists startTime/endTime (was TODO).
- *   2. Drag-to-reschedule patches startTime/endTime via the API (was console.log).
+ * Calendar day-view E2E (agenda list).
  *
  * Runs in public mode (localStorage-only, no backend) so it needs no secrets.
- * Assertions read the actual persisted `tasks:*` localStorage blob — not just the
- * DOM — so we prove the data path end-to-end, not merely that a block rendered.
+ * Assertions read the actual persisted `*-tasks` localStorage blob — not just the
+ * DOM — so we prove the create data path end-to-end, not merely that a card rendered.
  */
-
-const HOUR_HEIGHT = 60 // must match CalendarDayView
 
 interface StoredTask {
   id: string
   title: string
+  state?: string
+  date?: string | null
   startTime?: string | null
   endTime?: string | null
 }
@@ -37,109 +35,94 @@ async function readStoredTasks(page: Page): Promise<StoredTask[]> {
   })
 }
 
-const hourOf = (iso?: string | null) => (iso ? new Date(iso).getHours() : -1)
 const minuteOf = (iso?: string | null) => (iso ? new Date(iso).getMinutes() : -1)
+const durationMin = (t?: StoredTask) =>
+  t && t.startTime && t.endTime
+    ? Math.round((new Date(t.endTime).getTime() - new Date(t.startTime).getTime()) / 60000)
+    : -1
 
-test.describe('Calendar view scheduling', () => {
+test.describe('Calendar day view', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?userType=public')
     // Start from a clean slate so assertions are deterministic.
     await page.evaluate(() => localStorage.clear())
     await page.reload()
-    // Switch into the calendar view.
     await page.getByRole('button', { name: 'Calendar', exact: true }).click()
-    await expect(page.locator('.calendar-grid')).toBeVisible()
+    await expect(page.locator('.calendar-day-view')).toBeVisible()
   })
 
-  test('creating a task from a time slot persists startTime/endTime', async ({ page }) => {
-    // Slot index 36 = hour 9, quarter 0 (4 slots per hour). Click the 09:00 slot.
-    await page.locator('.calendar-slot').nth(36).click()
+  test('shows an empty state when nothing is scheduled', async ({ page }) => {
+    await expect(page.locator('.calendar-agenda--empty')).toBeVisible()
+    await expect(page.locator('.calendar-agenda__card')).toHaveCount(0)
+  })
+
+  test('creating a task persists startTime/endTime and renders an agenda card', async ({
+    page
+  }) => {
+    await page.getByRole('button', { name: '+ New task' }).click()
 
     const input = page.locator('.calendar-create-input')
     await expect(input).toBeVisible()
     await input.fill('Verify create task')
     await page.locator('.calendar-create-btn--primary').click()
 
-    // DOM: a task block with the title now renders in the calendar.
-    const block = page.locator('.calendar-task-block', { hasText: 'Verify create task' })
-    await expect(block).toBeVisible()
+    // DOM: an agenda card with the title now renders.
+    const card = page.locator('.calendar-agenda__card', { hasText: 'Verify create task' })
+    await expect(card).toBeVisible()
 
-    // Data: the persisted task carries the slot's start/end times (09:00 -> 09:30).
+    // Data: the persisted task carries a valid on-the-hour, 1-hour default slot.
     await expect
       .poll(async () => {
         const t = (await readStoredTasks(page)).find(t => t.title === 'Verify create task')
-        return t
-          ? `${hourOf(t.startTime)}:${minuteOf(t.startTime)}-${hourOf(t.endTime)}:${minuteOf(t.endTime)}`
-          : 'absent'
+        if (!t || !t.startTime || !t.endTime) return 'absent'
+        return `start-min:${minuteOf(t.startTime)} dur:${durationMin(t)}`
       })
-      .toBe('9:0-9:30')
+      .toBe('start-min:0 dur:60')
   })
 
-  test('dragging a task to a new time reschedules it via the API path', async ({ page }) => {
-    // Seed a task at 09:00-09:30 through the UI.
-    await page.locator('.calendar-slot').nth(36).click()
-    await page.locator('.calendar-create-input').fill('Verify reschedule task')
+  test('creating an all-day task persists date with no time and groups it', async ({ page }) => {
+    await page.getByRole('button', { name: '+ All-day' }).click()
+
+    const input = page.locator('.calendar-create-input')
+    await expect(input).toBeVisible()
+    await input.fill('Pay rent')
     await page.locator('.calendar-create-btn--primary').click()
 
-    const block = page.locator('.calendar-task-block', { hasText: 'Verify reschedule task' })
-    await expect(block).toBeVisible()
+    // DOM: renders inside the pinned "All day" group.
+    const card = page.locator('.calendar-agenda__group .calendar-agenda__card', {
+      hasText: 'Pay rent'
+    })
+    await expect(card).toBeVisible()
 
-    // Confirm starting position.
-    await expect
-      .poll(async () =>
-        hourOf(
-          (await readStoredTasks(page)).find(t => t.title === 'Verify reschedule task')?.startTime
-        )
-      )
-      .toBe(9)
-
-    // HTML5 native drag-and-drop: dispatch the real DragEvents the component
-    // listens for, sharing one DataTransfer across them (Playwright's mouse-based
-    // dragTo does not populate dataTransfer for native DnD). This fires the actual
-    // handleDragStart -> handleDragOver -> handleDrop handlers in CalendarDayView.
-    // Drop Y is grid.top + 840px => 840 minutes => 14:00 (1px == 1min at HOUR_HEIGHT=60).
-    const targetMinutes = 14 * 60
-    await page.evaluate(
-      ({ targetMinutes, hourHeight }) => {
-        const grid = document.querySelector('.calendar-grid') as HTMLElement
-        const blockEl = Array.from(document.querySelectorAll('.calendar-task-block')).find(el =>
-          el.textContent?.includes('Verify reschedule task')
-        ) as HTMLElement
-        const rect = grid.getBoundingClientRect()
-        const clientY = rect.top + (targetMinutes / 60) * hourHeight
-        const clientX = rect.left + rect.width / 2
-        const dt = new DataTransfer()
-
-        const fire = (
-          el: Element,
-          type: string,
-          extra: { clientX?: number; clientY?: number } = {}
-        ) => {
-          const ev = new DragEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            dataTransfer: dt,
-            ...extra
-          })
-          el.dispatchEvent(ev)
-        }
-
-        fire(blockEl, 'dragstart')
-        fire(grid, 'dragover', { clientX, clientY })
-        fire(grid, 'drop', { clientX, clientY })
-        fire(blockEl, 'dragend')
-      },
-      { targetMinutes, hourHeight: HOUR_HEIGHT }
-    )
-
-    // Data: the persisted task moved to 14:00 and kept its 30-minute duration.
+    // Data: persisted with a `date` and NO timeslot.
     await expect
       .poll(async () => {
-        const t = (await readStoredTasks(page)).find(t => t.title === 'Verify reschedule task')
-        return t
-          ? `${hourOf(t.startTime)}:${minuteOf(t.startTime)}-${hourOf(t.endTime)}:${minuteOf(t.endTime)}`
-          : 'absent'
+        const t = (await readStoredTasks(page)).find(t => t.title === 'Pay rent')
+        if (!t) return 'absent'
+        const hasDate = typeof t.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.date)
+        return `date:${hasDate} start:${t.startTime ?? null} end:${t.endTime ?? null}`
       })
-      .toBe('14:0-14:30')
+      .toBe('date:true start:null end:null')
+  })
+
+  test('deleting a task removes its card', async ({ page }) => {
+    await page.getByRole('button', { name: '+ New task' }).click()
+    await page.locator('.calendar-create-input').fill('Verify delete task')
+    await page.locator('.calendar-create-btn--primary').click()
+
+    const card = page.locator('.calendar-agenda__card', { hasText: 'Verify delete task' })
+    await expect(card).toBeVisible()
+
+    await card.hover()
+    await card.getByRole('button', { name: 'Delete task' }).click()
+
+    await expect(card).toHaveCount(0)
+    // Data: the task is no longer Active in storage.
+    await expect
+      .poll(async () => {
+        const t = (await readStoredTasks(page)).find(t => t.title === 'Verify delete task')
+        return t?.state ?? 'removed'
+      })
+      .not.toBe('Active')
   })
 })

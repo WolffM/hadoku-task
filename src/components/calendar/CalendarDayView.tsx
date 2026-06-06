@@ -1,11 +1,14 @@
 /**
  * CalendarDayView component
- * Displays a day view calendar with hour grid and task blocks
+ * Day view rendered as a clean, scannable agenda list (time gutter + cards),
+ * styled to match the board's task items. Supports two kinds of scheduled task:
+ *   - all-day  ("task for this day"): `date` only, shown in a pinned group
+ *   - timed:   `date` + start/end, shown in time order with a "now" marker
  */
 
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import type { Task } from '../../domain/types'
-import { CalendarTaskBlock } from './CalendarTaskBlock'
+import { CalendarAgendaItem } from './CalendarAgendaItem'
 import {
   getCalendarTasks,
   formatCalendarDate,
@@ -13,17 +16,14 @@ import {
   isSameDay,
   formatTime,
   createTimeOnDay,
-  getMinutesFromY,
   getMinutesSinceMidnight,
-  getDurationMinutes
+  toDayString
 } from '../../domain/utils/calendar'
 
-const HOUR_HEIGHT = 60 // pixels per hour
-const HOURS = Array.from({ length: 24 }, (_, i) => i)
-
 export interface CalendarSchedule {
-  startTime: string
-  endTime: string
+  date?: string | null
+  startTime?: string | null
+  endTime?: string | null
 }
 
 export interface CalendarDayViewProps {
@@ -31,10 +31,31 @@ export interface CalendarDayViewProps {
   selectedDate: Date
   onDateChange: (date: Date) => void
   onCreateTask: (title: string, schedule: CalendarSchedule) => void
-  onRescheduleTask: (taskId: string, schedule: CalendarSchedule) => void
+  // Reschedule is not surfaced in the list view yet (no spatial drag target);
+  // kept in the contract so a future grid/week view can wire it back up. Timed-only:
+  // reschedule always moves a task to a concrete start/end.
+  onRescheduleTask?: (
+    taskId: string,
+    schedule: { startTime: string | null; endTime: string | null }
+  ) => void
   onDeleteTask: (taskId: string) => void
   onEditTag: (taskId: string) => void
   pendingOperations: Set<string>
+}
+
+/**
+ * Pick a sensible default slot for a brand-new timed task: the next full hour
+ * (capped so it never spills past the end of the day), one hour long.
+ */
+function defaultCreateSlot(selectedDate: Date): CalendarSchedule {
+  const now = new Date()
+  const base = isSameDay(selectedDate, now) ? now.getHours() + 1 : 9
+  const startHour = Math.min(base, 23)
+  const endHour = Math.min(startHour + 1, 24)
+  return {
+    startTime: createTimeOnDay(selectedDate, startHour, 0),
+    endTime: createTimeOnDay(selectedDate, endHour === 24 ? 23 : endHour, endHour === 24 ? 59 : 0)
+  }
 }
 
 export function CalendarDayView({
@@ -42,122 +63,79 @@ export function CalendarDayView({
   selectedDate,
   onDateChange,
   onCreateTask,
-  onRescheduleTask,
   onDeleteTask,
   onEditTag,
   pendingOperations
 }: CalendarDayViewProps) {
-  const gridRef = useRef<HTMLDivElement>(null)
-  const [hoverSlot, setHoverSlot] = useState<{ hour: number; quarter: number } | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [createTime, setCreateTime] = useState<{ startTime: string; endTime: string } | null>(null)
   const [createTitle, setCreateTitle] = useState('')
+  const [createAllDay, setCreateAllDay] = useState(false)
 
-  const calendarTasks = getCalendarTasks(tasks, selectedDate)
+  const dayTasks = getCalendarTasks(tasks, selectedDate)
+  const allDayTasks = dayTasks.filter(t => !t.startTime)
+  const timedTasks = dayTasks
+    .filter(t => t.startTime)
+    .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''))
+
   const isToday = isSameDay(selectedDate, new Date())
+  const nowMinutes = getMinutesSinceMidnight(new Date().toISOString())
+
+  // Index of the first timed task at or after "now" — where the red current-time
+  // marker slots into the timed list. -1 means every timed task is in the past.
+  const nowIndex = isToday
+    ? timedTasks.findIndex(t => getMinutesSinceMidnight(t.startTime) >= nowMinutes)
+    : -1
 
   const handlePrevDay = () => onDateChange(addDays(selectedDate, -1))
   const handleNextDay = () => onDateChange(addDays(selectedDate, 1))
   const handleToday = () => onDateChange(new Date())
 
-  const handleSlotClick = (hour: number, quarter: number) => {
-    const minutes = hour * 60 + quarter * 15
-    const startTime = createTimeOnDay(selectedDate, Math.floor(minutes / 60), minutes % 60)
-    const endTime = createTimeOnDay(
-      selectedDate,
-      Math.floor((minutes + 30) / 60),
-      (minutes + 30) % 60
-    )
-
-    setCreateTime({ startTime, endTime })
+  const openCreate = (allDay: boolean) => {
+    setCreateAllDay(allDay)
     setCreateTitle('')
     setIsCreating(true)
   }
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!createTitle.trim() || !createTime) return
-
-    onCreateTask(createTitle.trim(), createTime)
-
+    if (!createTitle.trim()) return
+    const schedule: CalendarSchedule = createAllDay
+      ? { date: toDayString(selectedDate) }
+      : defaultCreateSlot(selectedDate)
+    onCreateTask(createTitle.trim(), schedule)
     setIsCreating(false)
-    setCreateTime(null)
     setCreateTitle('')
   }
 
   const handleCreateCancel = () => {
     setIsCreating(false)
-    setCreateTime(null)
     setCreateTitle('')
   }
 
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData('text/plain', taskId)
-    e.dataTransfer.setData('application/x-hadoku-calendar-task', taskId)
-    e.dataTransfer.effectAllowed = 'move'
-  }
+  const renderItem = (task: Task) => (
+    <CalendarAgendaItem
+      key={task.id}
+      task={task}
+      onDelete={onDeleteTask}
+      onEditTag={onEditTag}
+      isPending={
+        pendingOperations.has(`delete-${task.id}`) || pendingOperations.has(`complete-${task.id}`)
+      }
+    />
+  )
 
-  /**
-   * Get minutes from Y position relative to grid
-   * Returns null if grid ref is not available
-   */
-  const getGridMinutes = (clientY: number): number | null => {
-    if (!gridRef.current) return null
-    const rect = gridRef.current.getBoundingClientRect()
-    return getMinutesFromY(clientY, rect.top, HOUR_HEIGHT)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-
-    const minutes = getGridMinutes(e.clientY)
-    if (minutes === null) return
-    const hour = Math.floor(minutes / 60)
-    const quarter = Math.floor((minutes % 60) / 15)
-    setHoverSlot({ hour, quarter })
-  }
-
-  const handleDragLeave = () => {
-    setHoverSlot(null)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setHoverSlot(null)
-
-    const taskId = e.dataTransfer.getData('application/x-hadoku-calendar-task')
-    if (!taskId) return
-
-    const minutes = getGridMinutes(e.clientY)
-    if (minutes === null) return
-
-    // Find the task and calculate new times
-    const task = tasks.find(t => t.id === taskId)
-    if (!task || !task.startTime || !task.endTime) return
-
-    const duration = getDurationMinutes(task.startTime, task.endTime)
-
-    const newStartMinutes = minutes
-    const newEndMinutes = Math.min(newStartMinutes + duration, 24 * 60)
-
-    const newStartTime = createTimeOnDay(
-      selectedDate,
-      Math.floor(newStartMinutes / 60),
-      newStartMinutes % 60
-    )
-    const newEndTime = createTimeOnDay(
-      selectedDate,
-      Math.floor(newEndMinutes / 60),
-      newEndMinutes % 60
-    )
-
-    onRescheduleTask(taskId, { startTime: newStartTime, endTime: newEndTime })
-  }
+  const renderNowMarker = (key: string) => (
+    <div className="calendar-agenda__now" key={key} aria-label="Current time">
+      <div className="calendar-agenda__now-label">
+        {formatTime(Math.floor(nowMinutes / 60), nowMinutes % 60)}
+      </div>
+      <div className="calendar-agenda__now-line" />
+    </div>
+  )
 
   return (
     <div className="calendar-day-view">
-      {/* Navigation header */}
+      {/* Header: navigation + date + new-task actions */}
       <div className="calendar-header">
         <div className="calendar-header__nav">
           <button
@@ -182,67 +160,60 @@ export function CalendarDayView({
           <span className={`calendar-date-label ${isToday ? 'calendar-date-label--today' : ''}`}>
             {formatCalendarDate(selectedDate)}
           </span>
+          <span className="calendar-header__count">
+            {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
+          </span>
           {!isToday && (
             <button className="calendar-today-btn" onClick={handleToday}>
               Today
             </button>
           )}
         </div>
-      </div>
 
-      {/* Hour grid */}
-      <div
-        ref={gridRef}
-        className="calendar-grid"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {HOURS.map(hour => (
-          <div key={hour} className="calendar-hour-row">
-            <div className="calendar-time-label">{formatTime(hour)}</div>
-            <div className="calendar-hour-content">
-              {/* 4 quarter-hour slots */}
-              {[0, 1, 2, 3].map(quarter => (
-                <div
-                  key={quarter}
-                  className={`calendar-slot ${
-                    hoverSlot?.hour === hour && hoverSlot?.quarter === quarter
-                      ? 'calendar-slot--hover'
-                      : ''
-                  }`}
-                  onClick={() => handleSlotClick(hour, quarter)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {/* Task blocks */}
-        <div className="calendar-tasks-layer">
-          {calendarTasks.map(task => (
-            <CalendarTaskBlock
-              key={task.id}
-              task={task}
-              hourHeight={HOUR_HEIGHT}
-              dayStart={selectedDate}
-              onDragStart={handleDragStart}
-              onDelete={onDeleteTask}
-              onEditTag={onEditTag}
-              isPending={
-                pendingOperations.has(`delete-${task.id}`) ||
-                pendingOperations.has(`complete-${task.id}`)
-              }
-            />
-          ))}
+        <div className="calendar-header__actions">
+          <button
+            className="calendar-add-btn calendar-add-btn--ghost"
+            onClick={() => openCreate(true)}
+            title="Add a task for this day with no set time"
+          >
+            + All-day
+          </button>
+          <button className="calendar-add-btn" onClick={() => openCreate(false)}>
+            + New task
+          </button>
         </div>
-
-        {/* Current time indicator */}
-        {isToday && <CurrentTimeIndicator hourHeight={HOUR_HEIGHT} />}
       </div>
 
-      {/* Create task inline form */}
-      {isCreating && createTime && (
+      {/* Agenda list */}
+      {dayTasks.length === 0 ? (
+        <div className="calendar-agenda calendar-agenda--empty">
+          <p className="calendar-agenda__empty-text">Nothing scheduled for this day.</p>
+          <button className="calendar-add-btn" onClick={() => openCreate(false)}>
+            + Schedule a task
+          </button>
+        </div>
+      ) : (
+        <div className="calendar-agenda">
+          {allDayTasks.length > 0 && (
+            <div className="calendar-agenda__group">
+              <div className="calendar-agenda__group-label">All day</div>
+              {allDayTasks.map(renderItem)}
+            </div>
+          )}
+
+          {timedTasks.map((task, i) => (
+            <React.Fragment key={task.id}>
+              {i === nowIndex && renderNowMarker('now')}
+              {renderItem(task)}
+            </React.Fragment>
+          ))}
+          {/* "now" sits after every timed task (all of today's slots are past) */}
+          {isToday && timedTasks.length > 0 && nowIndex === -1 && renderNowMarker('now-end')}
+        </div>
+      )}
+
+      {/* Create task inline form (shared overlay styling) */}
+      {isCreating && (
         <div className="calendar-create-overlay" onClick={handleCreateCancel}>
           <form
             className="calendar-create-form"
@@ -252,11 +223,19 @@ export function CalendarDayView({
             <input
               type="text"
               className="calendar-create-input"
-              placeholder="New task..."
+              placeholder={createAllDay ? 'New all-day task…' : 'New task…'}
               value={createTitle}
               onChange={e => setCreateTitle(e.target.value)}
               autoFocus
             />
+            <label className="calendar-create-allday">
+              <input
+                type="checkbox"
+                checked={createAllDay}
+                onChange={e => setCreateAllDay(e.target.checked)}
+              />
+              All day (no set time)
+            </label>
             <div className="calendar-create-actions">
               <button type="submit" className="calendar-create-btn calendar-create-btn--primary">
                 Create
@@ -268,21 +247,6 @@ export function CalendarDayView({
           </form>
         </div>
       )}
-    </div>
-  )
-}
-
-/**
- * Current time indicator line
- */
-function CurrentTimeIndicator({ hourHeight }: { hourHeight: number }) {
-  const minutes = getMinutesSinceMidnight(new Date().toISOString())
-  const top = (minutes / 60) * hourHeight
-
-  return (
-    <div className="calendar-current-time" style={{ top: `${top}px` }}>
-      <div className="calendar-current-time__dot" />
-      <div className="calendar-current-time__line" />
     </div>
   )
 }

@@ -16,7 +16,9 @@ import type {
 } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
 import { splitTags } from '../utils/tags.js'
+import { dayStringFromISO } from '../utils/calendar.js'
 import {
+  backfillTaskDate,
   findTaskOrThrow,
   findBoardOrThrow,
   extractTasksFromBoard,
@@ -49,7 +51,7 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
 
       return {
         ...board,
-        tasks: tasksFile.tasks,
+        tasks: tasksFile.tasks.map(backfillTaskDate),
         stats: statsFile
       }
     })
@@ -70,7 +72,7 @@ export async function getBoardTasks(
   boardId: string
 ): Promise<Task[]> {
   const tasks = await storage.getTasks(auth.userType, auth.sessionId, boardId)
-  return tasks.tasks
+  return tasks.tasks.map(backfillTaskDate)
 }
 
 /**
@@ -108,12 +110,17 @@ export async function createTask(
       // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
       const createdAt = input.createdAt || timestamp
 
+      // `date` is the canonical calendar-day key: trust an explicit value, else
+      // backfill it from startTime so every timed task carries a matching day.
+      const date = input.date ?? dayStringFromISO(input.startTime)
+
       const newTask: Task = {
         id,
         title: input.title,
         tag: input.tag ?? null,
         state: 'Active',
         createdAt,
+        date,
         startTime: input.startTime ?? null,
         endTime: input.endTime ?? null
       }
@@ -155,6 +162,12 @@ export async function updateTask(
         ...task,
         ...input,
         updatedAt: timestamp
+      }
+
+      // Keep `date` consistent with a (re)scheduled startTime unless the caller set
+      // it explicitly — covers drag-to-reschedule and timed/all-day conversions.
+      if (input.date === undefined && input.startTime !== undefined) {
+        updatedTask.date = dayStringFromISO(input.startTime)
       }
 
       const newTasks = [...tasks.tasks]
