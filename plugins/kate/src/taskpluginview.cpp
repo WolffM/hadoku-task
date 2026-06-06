@@ -54,13 +54,14 @@ TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWin
     tasksView->engine()->rootContext()->setContextProperty(QStringLiteral("session"), m_session);
     tasksView->setSource(QUrl(QStringLiteral("qrc:/qml/TasksToolView.qml")));
 
-    // --- Calendar tab: placeholder until Phase 3 ------------------------------
+    // --- Calendar tab: agenda of scheduled tasks ------------------------------
     QQuickWidget *calendarView = createQuickToolView(plugin,
                                                      QStringLiteral("hadoku_calendar"),
                                                      QStringLiteral("view-calendar"),
                                                      i18n("Calendar"),
                                                      m_calendarToolView);
-    calendarView->setSource(QUrl(QStringLiteral("qrc:/qml/SpikeView.qml")));
+    calendarView->engine()->rootContext()->setContextProperty(QStringLiteral("taskApi"), m_api);
+    calendarView->setSource(QUrl(QStringLiteral("qrc:/qml/CalendarToolView.qml")));
 
     // Initial load.
     m_api->fetchBoards();

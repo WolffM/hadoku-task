@@ -4,5 +4,7 @@
     <file>qml/SpikeView.qml</file>
     <file>qml/TasksToolView.qml</file>
     <file>qml/FilterChip.qml</file>
+    <file>qml/CalendarToolView.qml</file>
+    <file>qml/CalendarAgendaRow.qml</file>
   </qresource>
 </RCC>

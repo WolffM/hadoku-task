@@ -241,6 +241,7 @@ void TaskApiClient::fetchTasks()
             t.tag = o.value(QStringLiteral("tag")).toString();
             t.state = o.value(QStringLiteral("state")).toString();
             t.createdAt = o.value(QStringLiteral("createdAt")).toString();
+            t.date = o.value(QStringLiteral("date")).toString();
             t.startTime = o.value(QStringLiteral("startTime")).toString();
             t.endTime = o.value(QStringLiteral("endTime")).toString();
             tasks.push_back(t);
@@ -250,6 +251,7 @@ void TaskApiClient::fetchTasks()
         recomputeTaskTags(tasks);
         recomputeAllTags();
         Q_EMIT tasksReceived(tasks, m_version);
+        Q_EMIT tasksListChanged();
     });
 }
 
@@ -286,6 +288,26 @@ void TaskApiClient::optimisticEmit()
     recomputeTaskTags(m_tasks);
     recomputeAllTags();
     Q_EMIT tasksReceived(m_tasks, m_version);
+    Q_EMIT tasksListChanged();
+}
+
+QVariantList TaskApiClient::tasksList() const
+{
+    QVariantList out;
+    out.reserve(m_tasks.size());
+    for (const Task &t : m_tasks) {
+        QVariantMap m;
+        m.insert(QStringLiteral("id"), t.id);
+        m.insert(QStringLiteral("title"), t.title);
+        m.insert(QStringLiteral("tag"), t.tag);
+        m.insert(QStringLiteral("state"), t.state);
+        m.insert(QStringLiteral("createdAt"), t.createdAt);
+        m.insert(QStringLiteral("date"), t.date);
+        m.insert(QStringLiteral("startTime"), t.startTime);
+        m.insert(QStringLiteral("endTime"), t.endTime);
+        out.append(m);
+    }
+    return out;
 }
 
 void TaskApiClient::enqueueWrite(const QString &label, std::function<QNetworkReply *()> builder)
@@ -360,6 +382,41 @@ void TaskApiClient::createTask(const QString &input)
     if (!tag.isEmpty())
         body.insert(QStringLiteral("tag"), tag);
     enqueueWrite(QStringLiteral("create"), [this, body]() {
+        return m_nam->post(makeRequest(m_baseUrl, true),
+                           QJsonDocument(body).toJson(QJsonDocument::Compact));
+    });
+}
+
+void TaskApiClient::createScheduledTask(const QString &title, const QString &date,
+                                       const QString &startTime, const QString &endTime)
+{
+    const QString t = title.trimmed();
+    if (t.isEmpty())
+        return;
+    const QString id = generateUlid();
+    // Optimistic insert.
+    Task task;
+    task.id = id;
+    task.title = t;
+    task.state = QStringLiteral("Active");
+    task.date = date;
+    task.startTime = startTime;
+    task.endTime = endTime;
+    m_tasks.prepend(task);
+    optimisticEmit();
+
+    QJsonObject body{
+        {QStringLiteral("id"), id},
+        {QStringLiteral("title"), t},
+        {QStringLiteral("boardId"), m_boardId},
+    };
+    if (!date.isEmpty())
+        body.insert(QStringLiteral("date"), date);
+    if (!startTime.isEmpty())
+        body.insert(QStringLiteral("startTime"), startTime);
+    if (!endTime.isEmpty())
+        body.insert(QStringLiteral("endTime"), endTime);
+    enqueueWrite(QStringLiteral("create-scheduled"), [this, body]() {
         return m_nam->post(makeRequest(m_baseUrl, true),
                            QJsonDocument(body).toJson(QJsonDocument::Compact));
     });

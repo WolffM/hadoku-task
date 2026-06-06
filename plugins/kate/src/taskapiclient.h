@@ -33,6 +33,9 @@ class TaskApiClient : public QObject
     Q_PROPERTY(QString currentBoardId READ currentBoardId NOTIFY currentBoardIdChanged)
     // Union of the current board's persistent tags + tags in use on its tasks.
     Q_PROPERTY(QStringList allTags READ allTags NOTIFY allTagsChanged)
+    // Flat task list (list of maps) for views that need to iterate/group in QML
+    // (the Calendar agenda). Mirrors the same data the TaskStore model holds.
+    Q_PROPERTY(QVariantList tasks READ tasksList NOTIFY tasksListChanged)
 
 public:
     explicit TaskApiClient(QObject *parent = nullptr);
@@ -44,6 +47,7 @@ public:
     QVariantList boards() const { return m_boards; }
     QString currentBoardId() const { return m_boardId; }
     QStringList allTags() const { return m_allTags; }
+    QVariantList tasksList() const;
 
     // Invokable from QML.
     Q_INVOKABLE void fetchBoards();
@@ -53,6 +57,10 @@ public:
     Q_INVOKABLE void switchBoard(const QString &boardId);
     Q_INVOKABLE void createBoard(const QString &name);
     Q_INVOKABLE void createTask(const QString &input); // supports inline "#tag"s
+    // Calendar create: all-day (date only) or timed (startTime/endTime). Empty
+    // strings are omitted from the request.
+    Q_INVOKABLE void createScheduledTask(const QString &title, const QString &date,
+                                         const QString &startTime, const QString &endTime);
     Q_INVOKABLE void completeTask(const QString &id);
     Q_INVOKABLE void deleteTask(const QString &id);
     Q_INVOKABLE void setTaskTags(const QString &id, const QString &spaceSeparatedTags);
@@ -71,6 +79,7 @@ Q_SIGNALS:
     void boardsChanged();
     void currentBoardIdChanged();
     void allTagsChanged();
+    void tasksListChanged();
     void busyChanged(bool busy);
     void errorOccurred(const QString &message);
 
