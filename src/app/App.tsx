@@ -131,6 +131,7 @@ export default function App(props: TaskAppProps = {}) {
     pendingOperations,
     initialLoad,
     addTask,
+    rescheduleTask,
     completeTask,
     deleteTask,
     updateTaskTags,
@@ -448,8 +449,8 @@ export default function App(props: TaskAppProps = {}) {
             tasks={tasks}
             selectedDate={calendarDate}
             onDateChange={setCalendarDate}
-            onCreateTask={handlers.handleAddTask}
-            onUpdateTask={updateTaskTags}
+            onCreateTask={(title, schedule) => void addTask(title, schedule)}
+            onRescheduleTask={rescheduleTask}
             onDeleteTask={deleteTask}
             onEditTag={handlers.handleEditTag}
             pendingOperations={pendingOperations}

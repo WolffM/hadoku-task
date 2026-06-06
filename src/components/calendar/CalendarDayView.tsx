@@ -21,12 +21,17 @@ import {
 const HOUR_HEIGHT = 60 // pixels per hour
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
+export interface CalendarSchedule {
+  startTime: string
+  endTime: string
+}
+
 export interface CalendarDayViewProps {
   tasks: Task[]
   selectedDate: Date
   onDateChange: (date: Date) => void
-  onCreateTask: (title: string) => void
-  onUpdateTask: (taskId: string, updates: { tag: string }) => Promise<void>
+  onCreateTask: (title: string, schedule: CalendarSchedule) => void
+  onRescheduleTask: (taskId: string, schedule: CalendarSchedule) => void
   onDeleteTask: (taskId: string) => void
   onEditTag: (taskId: string) => void
   pendingOperations: Set<string>
@@ -36,8 +41,8 @@ export function CalendarDayView({
   tasks,
   selectedDate,
   onDateChange,
-  onCreateTask: _onCreateTask,
-  onUpdateTask: _onUpdateTask,
+  onCreateTask,
+  onRescheduleTask,
   onDeleteTask,
   onEditTag,
   pendingOperations
@@ -73,9 +78,7 @@ export function CalendarDayView({
     e.preventDefault()
     if (!createTitle.trim() || !createTime) return
 
-    // For now, just create a basic task - the calendar fields will be added via API
-    // TODO: Integrate with addTask that supports startTime/endTime
-    _onCreateTask(createTitle.trim())
+    onCreateTask(createTitle.trim(), createTime)
 
     setIsCreating(false)
     setCreateTime(null)
@@ -149,8 +152,7 @@ export function CalendarDayView({
       newEndMinutes % 60
     )
 
-    // TODO: Update task with new times via API
-    console.log('[CalendarDayView] Drop task', { taskId, newStartTime, newEndTime })
+    onRescheduleTask(taskId, { startTime: newStartTime, endTime: newEndTime })
   }
 
   return (

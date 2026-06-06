@@ -116,19 +116,42 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBoardId, userType, sessionId])
 
-  async function addTask(input: string) {
+  async function addTask(
+    input: string,
+    schedule?: { startTime?: string | null; endTime?: string | null }
+  ) {
     input = input.trim()
     if (!input) return
 
     try {
       const parsed = parseTaskInput(input)
-      await api.createTask(parsed, currentBoardId)
+      await api.createTask({ ...parsed, ...schedule }, currentBoardId)
       await reload()
       return true
     } catch (error) {
       alert((error as Error).message || 'Failed to create task')
       return false
     }
+  }
+
+  // Reschedule a task by patching its calendar times (used by the calendar view's
+  // drag-to-move). Goes through the same patchTask path as tag edits.
+  async function rescheduleTask(
+    taskId: string,
+    schedule: { startTime: string | null; endTime: string | null }
+  ) {
+    await withPendingOperation(
+      `reschedule-${taskId}`,
+      pendingOperations,
+      setPendingOperations,
+      async () => {
+        await api.patchTask(taskId, schedule, currentBoardId)
+        await reload()
+      },
+      {
+        onError: error => alert(error.message || 'Failed to reschedule task')
+      }
+    )
   }
 
   async function completeTask(taskId: string) {
@@ -371,6 +394,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
     // Task operations
     addTask,
+    rescheduleTask,
     completeTask,
     deleteTask,
     addTagToTask,
