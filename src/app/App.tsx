@@ -298,10 +298,11 @@ export default function App(props: TaskAppProps = {}) {
       className="task-app-container task-app-fade-in hdk-advanced-page"
       data-dark-theme={isDarkTheme ? 'true' : 'false'}
       data-mobile-app={isInMobileApp ? 'true' : undefined}
-      onMouseDown={dragAndDrop.selectionStartHandler}
-      onMouseMove={dragAndDrop.selectionMoveHandler}
-      onMouseUp={dragAndDrop.selectionEndHandler}
-      onMouseLeave={dragAndDrop.selectionEndHandler}
+      // Marquee box-selection is a board-only interaction; disable it in calendar view.
+      onMouseDown={currentView === 'board' ? dragAndDrop.selectionStartHandler : undefined}
+      onMouseMove={currentView === 'board' ? dragAndDrop.selectionMoveHandler : undefined}
+      onMouseUp={currentView === 'board' ? dragAndDrop.selectionEndHandler : undefined}
+      onMouseLeave={currentView === 'board' ? dragAndDrop.selectionEndHandler : undefined}
       onClick={e => {
         try {
           const tgt = e.target as HTMLElement
@@ -457,7 +458,9 @@ export default function App(props: TaskAppProps = {}) {
           />
         )}
 
-        <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />
+        {currentView === 'board' && (
+          <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />
+        )}
 
         <AppModals
           confirmClearTag={modals.confirmClearTag}

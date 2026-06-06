@@ -29,15 +29,15 @@
 }
 
 .calendar-nav-btn {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius);
+  background: transparent;
+  border: none;
+  padding: 0;
   width: 32px;
   height: 32px;
-  font-size: var(--hdk-text-base);
-  color: var(--color-text-secondary);
+  font-size: 28px;
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -45,9 +45,7 @@
 }
 
 .calendar-nav-btn:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary);
-  color: var(--color-text);
+  color: var(--color-primary);
 }
 
 .calendar-header__date {
@@ -59,11 +57,11 @@
 .calendar-date-label {
   font-size: var(--hdk-text-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  color: var(--color-primary);
 }
 
 .calendar-date-label--today {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .calendar-header__count {
@@ -88,14 +86,9 @@
   color: var(--color-primary);
 }
 
-/* New-task actions — sit at the end of the header */
-.calendar-header__actions {
-  margin-left: auto;
-  display: flex;
-  gap: var(--hdk-space-sm);
-}
-
+/* New-task button — sits at the end of the header */
 .calendar-add-btn {
+  margin-left: auto;
   background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: var(--color-on-primary);
   border: none;
@@ -110,22 +103,6 @@
 
 .calendar-add-btn:hover {
   box-shadow: var(--hdk-shadow-md);
-}
-
-/* Secondary "all-day" action — outlined rather than filled */
-.calendar-add-btn--ghost {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  box-shadow: none;
-  transition: all var(--transition-fast);
-}
-
-.calendar-add-btn--ghost:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  box-shadow: none;
 }
 
 /* ===== Agenda list ===== */
@@ -393,6 +370,7 @@
 
 .calendar-create-allday input {
   cursor: pointer;
+  accent-color: var(--color-primary);
 }
 
 .calendar-create-actions {

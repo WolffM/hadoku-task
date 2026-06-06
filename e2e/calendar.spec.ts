@@ -81,11 +81,12 @@ test.describe('Calendar day view', () => {
   })
 
   test('creating an all-day task persists date with no time and groups it', async ({ page }) => {
-    await page.getByRole('button', { name: '+ All-day' }).click()
+    await page.getByRole('button', { name: '+ New task' }).click()
 
     const input = page.locator('.calendar-create-input')
     await expect(input).toBeVisible()
     await input.fill('Pay rent')
+    await page.locator('.calendar-create-allday input').check()
     await page.locator('.calendar-create-btn--primary').click()
 
     // DOM: renders inside the pinned "All day" group.

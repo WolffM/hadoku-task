@@ -170,18 +170,9 @@ export function CalendarDayView({
           )}
         </div>
 
-        <div className="calendar-header__actions">
-          <button
-            className="calendar-add-btn calendar-add-btn--ghost"
-            onClick={() => openCreate(true)}
-            title="Add a task for this day with no set time"
-          >
-            + All-day
-          </button>
-          <button className="calendar-add-btn" onClick={() => openCreate(false)}>
-            + New task
-          </button>
-        </div>
+        <button className="calendar-add-btn" onClick={() => openCreate(false)}>
+          + New task
+        </button>
       </div>
 
       {/* Agenda list */}
