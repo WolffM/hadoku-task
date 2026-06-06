@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main  # Trigger on every push to main
+    paths-ignore:
+      # The Kate plugin and docs don't affect the published npm packages —
+      # skip the auto-bump/publish for plugin- or docs-only commits.
+      - 'plugins/**'
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/workflows/kate-plugin.yml'
   workflow_dispatch:  # Allow manual trigger
 
 permissions:

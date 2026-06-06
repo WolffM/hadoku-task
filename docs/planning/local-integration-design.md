@@ -185,6 +185,13 @@ changes) — orthogonal; rerun on next publish.
 
 ### Phase 1 — Plugin skeleton + auth (MVP core)
 
+**Scaffold landed (2026-06-06):** `plugins/kate/` now holds the buildable skeleton — `CMakeLists.txt`
+(KF6/Qt6, installs to `…/kf6/ktexteditor/`), the two-class plugin (`TaskPlugin` +
+`TaskPluginView`), embedded `taskplugin.json` metadata, `qml/SpikeView.qml` (the spike), and CI
+(`.github/workflows/kate-plugin.yml`, self-hosted `hadoku-builder`). `publish.yml` now path-ignores
+`plugins/**`/`docs/**`. **Not yet compiled** — the headless agent sandbox lacks the KF6 toolchain;
+the build + spike run on the KDE box (`plugins/kate/README.md` has the steps + checklist).
+
 **Spike first (de-risk #1):** an empty **Kirigami** tool view in a `QQuickWidget` — tab in, type, tab
 out cleanly; verify focus, HiDPI, render flush, animation smoothness; choose `QQuickWidget` vs
 `createWindowContainer`. Build nothing else until this is smooth.

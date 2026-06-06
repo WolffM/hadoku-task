@@ -1,0 +1,33 @@
+name: Kate Plugin (build check)
+
+# Compile-check only — there is no cloud deploy for the Kate plugin.
+# Distribution is a local `cmake --install` on the user's machine.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins/kate/**'
+      - '.github/workflows/kate-plugin.yml'
+  pull_request:
+    paths:
+      - 'plugins/kate/**'
+      - '.github/workflows/kate-plugin.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    # The self-hosted builder is the Debian 13 box that already carries the
+    # KF6/Qt6 dev toolchain (extra-cmake-modules, libkf6texteditor-dev, etc.).
+    runs-on: [self-hosted, hadoku-builder]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        working-directory: plugins/kate
+        run: cmake -B build -S . -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+
+      - name: Build
+        working-directory: plugins/kate
+        run: cmake --build build --parallel
