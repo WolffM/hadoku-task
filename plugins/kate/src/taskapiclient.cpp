@@ -184,16 +184,14 @@ void TaskApiClient::switchBoard(const QString &boardId)
     if (boardId.isEmpty() || boardId == m_boardId)
         return;
     qCInfo(HadokuTask) << "switchBoard ->" << boardId;
+    // Change state silently and hold the change signals until the new board's
+    // tasks land — emitting board/filter now (with the old tasks still loaded)
+    // is what caused the flicker. Tags are per-board, so the filter is cleared.
     m_boardId = boardId;
-    m_version = 0; // force a fresh version from the new board's GET
-    // Tags are per-board, so a filter from the old board is meaningless here.
-    if (!m_filterTag.isEmpty()) {
-        m_filterTag.clear();
-        Q_EMIT filterTagChanged();
-    }
-    Q_EMIT currentBoardIdChanged();
-    recomputeAllTags();
-    fetchTasks();
+    m_version = 0;
+    m_filterTag.clear();
+    m_boardSwitchPending = true;
+    fetchTasks(); // its completion emits currentBoardIdChanged/filterTagChanged together
 }
 
 void TaskApiClient::createBoard(const QString &name)
@@ -237,7 +235,15 @@ void TaskApiClient::fetchTasks()
         Q_EMIT busyChanged(false);
         qCInfo(HadokuTask) << "GET /tasks ->" << httpStatus(reply)
                            << "err:" << reply->error() << reply->errorString();
+        // Board switch completed (success or fail): release the held board/filter
+        // signals now so they coincide with the task update below — one render.
+        const bool releaseSwitch = m_boardSwitchPending;
+        m_boardSwitchPending = false;
         if (reply->error() != QNetworkReply::NoError) {
+            if (releaseSwitch) {
+                Q_EMIT currentBoardIdChanged();
+                Q_EMIT filterTagChanged();
+            }
             Q_EMIT errorOccurred(reply->errorString());
             return;
         }
@@ -263,6 +269,12 @@ void TaskApiClient::fetchTasks()
         m_tasks = tasks;
         recomputeTaskTags(tasks);
         recomputeAllTags();
+        // Emit the held board-switch signals in the same synchronous block as the
+        // task update, so board highlight + cleared filter + new tasks render at once.
+        if (releaseSwitch) {
+            Q_EMIT currentBoardIdChanged();
+            Q_EMIT filterTagChanged();
+        }
         Q_EMIT tasksReceived(tasks, m_version);
         Q_EMIT tasksListChanged();
     });

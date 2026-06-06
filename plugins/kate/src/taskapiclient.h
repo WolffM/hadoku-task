@@ -104,6 +104,9 @@ private:
     };
     QList<PendingWrite> m_writeQueue;
     bool m_processing = false;
+    // While a board switch is in flight, its board/filter signals are held until
+    // the new tasks arrive so the whole view updates in one render (no flicker).
+    bool m_boardSwitchPending = false;
 
     QNetworkAccessManager *m_nam;
     QString m_baseUrl = QStringLiteral("https://hadoku.me/task/api");
