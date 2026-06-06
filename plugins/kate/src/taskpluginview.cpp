@@ -3,6 +3,7 @@
 #include <KTextEditor/MainWindow>
 #include <KTextEditor/Plugin>
 
+#include <KLocalizedQmlContext>
 #include <KLocalizedString>
 
 #include <QIcon>
@@ -61,6 +62,9 @@ QWidget *TaskPluginView::createKirigamiToolView(KTextEditor::Plugin *plugin,
     // WA_AlwaysStackOnTop guards against the known QQuickWidget stacking quirk
     // (it is drawn before sibling non-OpenGL widgets). Part of what the spike checks.
     quickWidget->setAttribute(Qt::WA_AlwaysStackOnTop);
+    // Make i18n()/xi18n() available to the QML (must be set before setSource so
+    // text bindings resolve; without it they throw ReferenceError and render empty).
+    KLocalization::setupLocalizedContext(quickWidget->engine());
     quickWidget->setSource(QUrl(qmlResource));
 
     layout->addWidget(quickWidget);

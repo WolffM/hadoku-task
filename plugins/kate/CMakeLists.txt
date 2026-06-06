@@ -16,6 +16,8 @@ include(FeatureSummary)
 
 find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Core Gui Widgets Qml Quick QuickControls2 QuickWidgets Network)
+# KF6::I18nQml is not a separate findable component — its target ships with the
+# I18n package's targets file, so finding I18n makes KF6::I18nQml available to link.
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     TextEditor CoreAddons I18n XmlGui Wallet)
 
@@ -33,6 +35,10 @@ target_sources(katehadokutask PRIVATE
     resources.qrc
 )
 
+# setupLocalizedContext() picks this up to scope i18n() calls to our catalog
+# (also silences KLocalizedString's "domain is not set" warning).
+target_compile_definitions(katehadokutask PRIVATE TRANSLATION_DOMAIN="katehadokutask")
+
 target_link_libraries(katehadokutask PRIVATE
     Qt6::Core
     Qt6::Gui
@@ -45,6 +51,7 @@ target_link_libraries(katehadokutask PRIVATE
     KF6::TextEditor
     KF6::CoreAddons
     KF6::I18n
+    KF6::I18nQml
     KF6::XmlGui
     KF6::Wallet
 )
