@@ -6,10 +6,12 @@ packages:
 allowBuilds:
   esbuild: true
 
-# Always resolve to the latest published version — disable pnpm's supply-chain
-# age gate (default in pnpm 11). Our first-party @wolffm/* packages publish
-# frequently and we vet "latest" by hand, so the delay only ever hurts us.
-minimumReleaseAge: 0
+# pnpm's supply-chain age gate (pnpm 11 default) stays ON for third-party
+# packages — protects against malicious versions yanked within days of publish.
+# Our own @wolffm/* scope is exempt: it publishes frequently and we vet "latest"
+# by hand, so the delay only ever hurts us.
+minimumReleaseAgeExclude:
+  - '@wolffm/*'
 
 onlyBuiltDependencies:
   - esbuild
