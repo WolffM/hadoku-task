@@ -89,6 +89,11 @@ QQuickWidget *TaskPluginView::createQuickToolView(KTextEditor::Plugin *plugin,
     auto *quickWidget = new QQuickWidget(toolView);
     quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
     quickWidget->setAttribute(Qt::WA_AlwaysStackOnTop);
+    // Claim vertical space: with SizeRootObjectToView the widget's size hint comes
+    // from the QML implicit size, which is tiny before data loads — leaving the list
+    // at 0 height until the tool view is resized. Expanding + a minimum keeps it open.
+    quickWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    quickWidget->setMinimumHeight(120);
     // StrongFocus: without it the embedded Qt Quick scene never receives keyboard
     // input from Kate's widget world (clicks work, typing doesn't). This is the
     // classic QQuickWidget focus caveat the Phase-1 spike flagged.
