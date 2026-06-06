@@ -186,6 +186,11 @@ void TaskApiClient::switchBoard(const QString &boardId)
     qCInfo(HadokuTask) << "switchBoard ->" << boardId;
     m_boardId = boardId;
     m_version = 0; // force a fresh version from the new board's GET
+    // Tags are per-board, so a filter from the old board is meaningless here.
+    if (!m_filterTag.isEmpty()) {
+        m_filterTag.clear();
+        Q_EMIT filterTagChanged();
+    }
     Q_EMIT currentBoardIdChanged();
     recomputeAllTags();
     fetchTasks();

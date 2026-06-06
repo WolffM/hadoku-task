@@ -157,23 +157,28 @@ Kirigami.Page {
 
         Kirigami.Separator { Layout.fillWidth: true }
 
-        QQC2.ScrollView {
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
 
-            ColumnLayout {
-                width: page.width
-                spacing: 0
+            // Centered empty state (matches the Tasks tab).
+            Kirigami.PlaceholderMessage {
+                anchors.centerIn: parent
+                width: parent.width - Kirigami.Units.gridUnit * 4
+                visible: page.agenda.length === 0
+                icon.name: "view-calendar-day"
+                text: i18n("Nothing scheduled")
+                explanation: i18n("Add a task above, or schedule one from the Tasks tab.")
+            }
 
-                Kirigami.PlaceholderMessage {
-                    Layout.fillWidth: true
-                    Layout.topMargin: Kirigami.Units.gridUnit * 2
-                    visible: page.agenda.length === 0
-                    icon.name: "view-calendar-day"
-                    text: i18n("Nothing scheduled")
-                    explanation: i18n("Add a task above, or schedule one from the Tasks tab.")
-                }
+            QQC2.ScrollView {
+                anchors.fill: parent
+                visible: page.agenda.length > 0
+                clip: true
+
+                ColumnLayout {
+                    width: page.width
+                    spacing: 0
 
                 Repeater {
                     model: page.agenda
@@ -245,7 +250,8 @@ Kirigami.Page {
                     }
                 }
 
-                Item { Layout.fillHeight: true; Layout.preferredHeight: Kirigami.Units.gridUnit }
+                    Item { Layout.fillHeight: true; Layout.preferredHeight: Kirigami.Units.gridUnit }
+                }
             }
         }
     }
