@@ -3,5 +3,6 @@
   <qresource prefix="/">
     <file>qml/SpikeView.qml</file>
     <file>qml/TasksToolView.qml</file>
+    <file>qml/FilterChip.qml</file>
   </qresource>
 </RCC>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 
 /**
  * Hand-written mirror of the `Task` fields from src/domain/types.ts that the UI
@@ -17,4 +18,10 @@ struct Task {
     QString endTime;    // ISO 8601, may be empty
 
     bool isScheduled() const { return !startTime.isEmpty(); }
+};
+
+struct Board {
+    QString id;
+    QString name;
+    QStringList tags; // persistent board tag list (distinct from per-task tags)
 };

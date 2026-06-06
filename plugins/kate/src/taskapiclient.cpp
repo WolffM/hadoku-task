@@ -10,6 +10,8 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QSet>
 #include <QUrl>
 
 namespace
@@ -33,6 +35,43 @@ int httpStatus(QNetworkReply *reply)
 {
     return reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 }
+
+// Mirror of domain/utils/tags.ts extractTags: pull "#tag" tokens, normalise, join.
+QString extractTags(const QString &text)
+{
+    static const QRegularExpression re(QStringLiteral("#[^\\s#]+"));
+    QStringList tags;
+    auto it = re.globalMatch(text);
+    while (it.hasNext()) {
+        QString tag = it.next().captured(0).mid(1).trimmed();
+        tag.replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral("-"));
+        if (!tag.isEmpty())
+            tags << tag;
+    }
+    return tags.join(QLatin1Char(' '));
+}
+
+// Mirror of parseTaskInput: split a quick-add string into title + tag.
+void parseTaskInput(const QString &raw, QString &title, QString &tag)
+{
+    const QString input = raw.trimmed();
+    static const QRegularExpression quoted(QStringLiteral("^[\"']([^\"']+)[\"']\\s*(.*)$"));
+    static const QRegularExpression tagged(QStringLiteral("^(.+?)\\s+(#.+)$"));
+    auto q = quoted.match(input);
+    if (q.hasMatch()) {
+        title = q.captured(1).trimmed();
+        tag = extractTags(q.captured(2));
+        return;
+    }
+    auto t = tagged.match(input);
+    if (t.hasMatch()) {
+        title = t.captured(1).trimmed();
+        tag = extractTags(t.captured(2));
+        return;
+    }
+    title = input;
+    tag.clear();
+}
 }
 
 TaskApiClient::TaskApiClient(QObject *parent)
@@ -45,7 +84,7 @@ void TaskApiClient::setBaseUrl(const QString &baseUrl)
 {
     m_baseUrl = baseUrl;
     while (m_baseUrl.endsWith(QLatin1Char('/')))
-        m_baseUrl.chop(1); // never send the trailing slash (Phase-0 routing note)
+        m_baseUrl.chop(1);
 }
 
 void TaskApiClient::setCredential(const QString &userKey)
@@ -60,11 +99,6 @@ void TaskApiClient::logUi(const QString &message) const
     qCInfo(HadokuTask) << "[ui]" << message;
 }
 
-void TaskApiClient::setBoardId(const QString &boardId)
-{
-    m_boardId = boardId;
-}
-
 QNetworkRequest TaskApiClient::makeRequest(const QString &url, bool withIfMatch) const
 {
     QNetworkRequest req((QUrl(url)));
@@ -76,6 +110,109 @@ QNetworkRequest TaskApiClient::makeRequest(const QString &url, bool withIfMatch)
     return req;
 }
 
+void TaskApiClient::recomputeTaskTags(const QVector<Task> &tasks)
+{
+    QSet<QString> set;
+    for (const Task &t : tasks)
+        for (const QString &one : t.tag.split(QLatin1Char(' '), Qt::SkipEmptyParts))
+            set.insert(one);
+    m_taskTags = QStringList(set.begin(), set.end());
+}
+
+void TaskApiClient::recomputeAllTags()
+{
+    QSet<QString> set;
+    for (const QString &t : m_boardTags.value(m_boardId))
+        set.insert(t);
+    for (const QString &t : m_taskTags)
+        set.insert(t);
+    QStringList all(set.begin(), set.end());
+    all.sort(Qt::CaseInsensitive);
+    if (all != m_allTags) {
+        m_allTags = all;
+        Q_EMIT allTagsChanged();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Boards
+// ---------------------------------------------------------------------------
+void TaskApiClient::fetchBoards()
+{
+    const QString url = m_baseUrl + QStringLiteral("/boards");
+    qCInfo(HadokuTask) << "GET" << url;
+    QNetworkReply *reply = m_nam->get(makeRequest(url, false));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        qCInfo(HadokuTask) << "GET /boards ->" << httpStatus(reply) << reply->errorString();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT errorOccurred(reply->errorString());
+            return;
+        }
+        const QJsonObject obj = QJsonDocument::fromJson(reply->readAll()).object();
+        m_boards.clear();
+        m_boardTags.clear();
+        const QJsonArray arr = obj.value(QStringLiteral("boards")).toArray();
+        for (const QJsonValue &v : arr) {
+            const QJsonObject o = v.toObject();
+            const QString id = o.value(QStringLiteral("id")).toString();
+            QVariantMap m;
+            m.insert(QStringLiteral("id"), id);
+            m.insert(QStringLiteral("name"), o.value(QStringLiteral("name")).toString(id));
+            m_boards.push_back(m);
+            QStringList tags;
+            for (const QJsonValue &tg : o.value(QStringLiteral("tags")).toArray())
+                tags << tg.toString();
+            m_boardTags.insert(id, tags);
+        }
+        qCInfo(HadokuTask) << "GET /boards parsed" << m_boards.size() << "boards";
+        Q_EMIT boardsChanged();
+        recomputeAllTags();
+    });
+}
+
+void TaskApiClient::switchBoard(const QString &boardId)
+{
+    if (boardId.isEmpty() || boardId == m_boardId)
+        return;
+    qCInfo(HadokuTask) << "switchBoard ->" << boardId;
+    m_boardId = boardId;
+    m_version = 0; // force a fresh version from the new board's GET
+    Q_EMIT currentBoardIdChanged();
+    recomputeAllTags();
+    fetchTasks();
+}
+
+void TaskApiClient::createBoard(const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return;
+    // Derive a slug id from the name.
+    QString id = trimmed.toLower();
+    id.replace(QRegularExpression(QStringLiteral("[^a-z0-9]+")), QStringLiteral("-"));
+    id.remove(QRegularExpression(QStringLiteral("(^-+|-+$)")));
+    if (id.isEmpty())
+        id = generateUlid().toLower();
+    QJsonObject body{{QStringLiteral("id"), id}, {QStringLiteral("name"), trimmed}};
+    qCInfo(HadokuTask) << "POST /boards (create)" << id << trimmed;
+    QNetworkReply *reply = m_nam->post(makeRequest(m_baseUrl + QStringLiteral("/boards"), false),
+                                       QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, id]() {
+        reply->deleteLater();
+        qCInfo(HadokuTask) << "POST /boards ->" << httpStatus(reply) << reply->errorString();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT errorOccurred(reply->errorString());
+            return;
+        }
+        fetchBoards();
+        switchBoard(id);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
 void TaskApiClient::fetchTasks()
 {
     Q_EMIT busyChanged(true);
@@ -109,6 +246,8 @@ void TaskApiClient::fetchTasks()
             tasks.push_back(t);
         }
         qCInfo(HadokuTask) << "GET /tasks parsed" << tasks.size() << "tasks, version" << m_version;
+        recomputeTaskTags(tasks);
+        recomputeAllTags();
         Q_EMIT tasksReceived(tasks, m_version);
     });
 }
@@ -119,22 +258,23 @@ void TaskApiClient::handleConflictThenRefetch()
     fetchTasks();
 }
 
-void TaskApiClient::createTask(const QString &title, const QString &tag)
+void TaskApiClient::createTask(const QString &input)
 {
-    const QString trimmed = title.trimmed();
-    qCInfo(HadokuTask) << "createTask called; title.len" << title.size()
-                       << "trimmed.len" << trimmed.size() << "tag" << tag;
-    if (trimmed.isEmpty()) {
+    QString title, tag;
+    parseTaskInput(input, title, tag);
+    qCInfo(HadokuTask) << "createTask: input.len" << input.size() << "-> title" << title
+                       << "tag" << tag;
+    if (title.isEmpty()) {
         qCWarning(HadokuTask) << "createTask: empty title, ignoring";
         return;
     }
     QJsonObject body{
         {QStringLiteral("id"), generateUlid()},
-        {QStringLiteral("title"), trimmed},
+        {QStringLiteral("title"), title},
         {QStringLiteral("boardId"), m_boardId},
     };
-    if (!tag.trimmed().isEmpty())
-        body.insert(QStringLiteral("tag"), tag.trimmed());
+    if (!tag.isEmpty())
+        body.insert(QStringLiteral("tag"), tag);
 
     qCInfo(HadokuTask) << "POST" << m_baseUrl << "(create) If-Match" << m_version;
     Q_EMIT busyChanged(true);
@@ -144,8 +284,7 @@ void TaskApiClient::createTask(const QString &title, const QString &tag)
         reply->deleteLater();
         Q_EMIT busyChanged(false);
         const int status = httpStatus(reply);
-        qCInfo(HadokuTask) << "POST (create) ->" << status << "err:" << reply->error()
-                           << reply->errorString();
+        qCInfo(HadokuTask) << "POST (create) ->" << status << reply->errorString();
         if (status == 409) {
             handleConflictThenRefetch();
             return;
@@ -154,7 +293,35 @@ void TaskApiClient::createTask(const QString &title, const QString &tag)
             Q_EMIT errorOccurred(reply->errorString());
             return;
         }
-        fetchTasks(); // resync list + version
+        fetchTasks();
+    });
+}
+
+void TaskApiClient::setTaskTags(const QString &id, const QString &spaceSeparatedTags)
+{
+    QString cleaned = spaceSeparatedTags.simplified();
+    QJsonObject body{{QStringLiteral("boardId"), m_boardId},
+                     {QStringLiteral("tag"), cleaned}};
+    const QString url = m_baseUrl + QLatin1Char('/') + id;
+    qCInfo(HadokuTask) << "PATCH" << url << "tag ->" << cleaned << "If-Match" << m_version;
+    Q_EMIT busyChanged(true);
+    QNetworkReply *reply =
+        m_nam->sendCustomRequest(makeRequest(url, true), "PATCH",
+                                 QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        Q_EMIT busyChanged(false);
+        const int status = httpStatus(reply);
+        qCInfo(HadokuTask) << "PATCH (tag) ->" << status << reply->errorString();
+        if (status == 409) {
+            handleConflictThenRefetch();
+            return;
+        }
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT errorOccurred(reply->errorString());
+            return;
+        }
+        fetchTasks();
     });
 }
 
@@ -172,7 +339,6 @@ void TaskApiClient::completeTask(const QString &id)
             handleConflictThenRefetch();
             return;
         }
-        // Treat 404 as success: the task is already gone (idempotent close).
         if (reply->error() != QNetworkReply::NoError && status != 404) {
             Q_EMIT errorOccurred(reply->errorString());
             return;
@@ -195,7 +361,6 @@ void TaskApiClient::deleteTask(const QString &id)
             handleConflictThenRefetch();
             return;
         }
-        // Delete idempotency: 404 means it's already deleted — that's success.
         if (reply->error() != QNetworkReply::NoError && status != 404) {
             Q_EMIT errorOccurred(reply->errorString());
             return;

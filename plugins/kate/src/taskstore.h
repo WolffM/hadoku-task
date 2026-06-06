@@ -12,6 +12,8 @@ class TaskStore : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    // When set, only tasks carrying this tag are shown. Empty = show all.
+    Q_PROPERTY(QString filterTag READ filterTag WRITE setFilterTag NOTIFY filterTagChanged)
 
 public:
     enum Roles {
@@ -30,12 +32,20 @@ public:
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    int count() const { return m_tasks.size(); }
+    int count() const { return m_view.size(); }
     void setTasks(const QVector<Task> &tasks);
+
+    QString filterTag() const { return m_filterTag; }
+    void setFilterTag(const QString &tag);
 
 Q_SIGNALS:
     void countChanged();
+    void filterTagChanged();
 
 private:
-    QVector<Task> m_tasks;
+    void applyFilter();
+
+    QVector<Task> m_all;  // everything from the API
+    QVector<Task> m_view; // filtered subset shown by the model
+    QString m_filterTag;
 };

@@ -61,6 +61,7 @@ TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWin
     calendarView->setSource(QUrl(QStringLiteral("qrc:/qml/SpikeView.qml")));
 
     // Initial load.
+    m_api->fetchBoards();
     m_api->fetchTasks();
 }
 
