@@ -24,9 +24,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      # No `version:` input — action-setup@v5 reads pnpm from package.json's
+      # `packageManager` field (single source of truth; specifying both errors).
       - uses: pnpm/action-setup@v5
-        with:
-          version: 11.5.0
 
       - uses: actions/setup-node@v4
         with:
