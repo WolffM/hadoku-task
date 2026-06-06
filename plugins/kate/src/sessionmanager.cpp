@@ -50,3 +50,47 @@ QString SessionManager::userKey() const
                        << "; userKey length" << key.size();
     return key;
 }
+
+static QString configPath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+           + QStringLiteral("/hadoku-task.conf");
+}
+
+void SessionManager::setUserKey(const QString &key)
+{
+    const QString trimmed = key.trimmed();
+    QSettings settings(configPath(), QSettings::IniFormat);
+    settings.setValue(QStringLiteral("Auth/UserKey"), trimmed);
+    settings.sync();
+    QFile::setPermissions(configPath(), QFile::ReadOwner | QFile::WriteOwner);
+
+    // Best-effort: also store in KWallet so the secure store stays authoritative.
+    using KWallet::Wallet;
+    if (Wallet::isEnabled()) {
+        std::unique_ptr<Wallet> wallet(
+            Wallet::openWallet(Wallet::NetworkWallet(), 0, Wallet::Synchronous));
+        if (wallet && wallet->isOpen()) {
+            const QString folder = QStringLiteral("hadoku-task");
+            if (!wallet->hasFolder(folder))
+                wallet->createFolder(folder);
+            if (wallet->setFolder(folder))
+                wallet->writePassword(QStringLiteral("userKey"), trimmed);
+        }
+    }
+    qCInfo(HadokuTask) << "SessionManager: userKey updated, length" << trimmed.size();
+}
+
+QStringList SessionManager::pinnedBoards() const
+{
+    QSettings settings(configPath(), QSettings::IniFormat);
+    return settings.value(QStringLiteral("Boards/Pinned")).toStringList();
+}
+
+void SessionManager::setPinnedBoards(const QStringList &ids)
+{
+    QSettings settings(configPath(), QSettings::IniFormat);
+    settings.setValue(QStringLiteral("Boards/Pinned"), ids);
+    settings.sync();
+    qCInfo(HadokuTask) << "SessionManager: pinned boards =" << ids;
+}

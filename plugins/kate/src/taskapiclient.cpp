@@ -252,6 +252,20 @@ void TaskApiClient::fetchTasks()
     });
 }
 
+void TaskApiClient::reload()
+{
+    qCInfo(HadokuTask) << "reload(): re-syncing boards + tasks";
+    fetchBoards();
+    fetchTasks();
+}
+
+void TaskApiClient::changeKey(const QString &userKey)
+{
+    setCredential(userKey);
+    m_version = 0; // new identity → forget the old board version
+    reload();
+}
+
 void TaskApiClient::handleConflictThenRefetch()
 {
     Q_EMIT errorOccurred(QStringLiteral("Board changed elsewhere — refreshing."));

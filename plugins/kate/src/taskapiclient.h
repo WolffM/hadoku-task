@@ -45,6 +45,8 @@ public:
     // Invokable from QML.
     Q_INVOKABLE void fetchBoards();
     Q_INVOKABLE void fetchTasks();
+    Q_INVOKABLE void reload(); // re-sync boards + tasks from the API
+    Q_INVOKABLE void changeKey(const QString &userKey); // swap credential + reload
     Q_INVOKABLE void switchBoard(const QString &boardId);
     Q_INVOKABLE void createBoard(const QString &name);
     Q_INVOKABLE void createTask(const QString &input); // supports inline "#tag"s

@@ -51,6 +51,7 @@ TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWin
                                                   m_tasksToolView);
     tasksView->engine()->rootContext()->setContextProperty(QStringLiteral("taskStore"), m_store);
     tasksView->engine()->rootContext()->setContextProperty(QStringLiteral("taskApi"), m_api);
+    tasksView->engine()->rootContext()->setContextProperty(QStringLiteral("session"), m_session);
     tasksView->setSource(QUrl(QStringLiteral("qrc:/qml/TasksToolView.qml")));
 
     // --- Calendar tab: placeholder until Phase 3 ------------------------------

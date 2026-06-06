@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 /**
  * Resolves the user key the API client authenticates with.
@@ -22,5 +23,11 @@ public:
     explicit SessionManager(QObject *parent = nullptr);
 
     // Returns the user key, or an empty string if none is configured.
-    QString userKey() const;
+    Q_INVOKABLE QString userKey() const;
+    // Persists a new user key (config file; also KWallet when available).
+    Q_INVOKABLE void setUserKey(const QString &key);
+
+    // Which board ids the user has pinned to the board bar (persisted).
+    Q_INVOKABLE QStringList pinnedBoards() const;
+    Q_INVOKABLE void setPinnedBoards(const QStringList &ids);
 };
