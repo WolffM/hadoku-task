@@ -12,6 +12,9 @@ Kirigami.Page {
     padding: 0
     title: i18n("Tasks")
 
+    onWidthChanged: taskApi.logUi("page resized -> " + Math.round(width) + "x" + Math.round(height))
+    onHeightChanged: taskApi.logUi("page resized -> " + Math.round(width) + "x" + Math.round(height))
+
     function tagColor(tag) {
         if (!tag)
             return Kirigami.Theme.disabledTextColor;

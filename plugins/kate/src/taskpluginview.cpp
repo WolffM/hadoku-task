@@ -18,6 +18,7 @@
 #include <QQuickWidget>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QTimer>
 #include <QWidget>
 
 TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWindow *mainWindow)
@@ -103,6 +104,15 @@ QQuickWidget *TaskPluginView::createQuickToolView(KTextEditor::Plugin *plugin,
     KLocalization::setupLocalizedContext(quickWidget->engine());
 
     layout->addWidget(quickWidget);
-    qCInfo(HadokuTask) << "tool view created:" << identifier;
+    qCInfo(HadokuTask) << "tool view created:" << identifier
+                       << "quickWidget sizeHint" << quickWidget->sizeHint();
+    // Log the size Kate actually hands the tool view + embedded widget once the
+    // sidebar has laid out, so we can see whether Kate expands it.
+    QTimer::singleShot(2500, this, [toolView, quickWidget, identifier]() {
+        if (toolView && quickWidget)
+            qCInfo(HadokuTask) << "post-layout size" << identifier
+                               << "toolView" << toolView->size()
+                               << "quickWidget" << quickWidget->size();
+    });
     return quickWidget;
 }
