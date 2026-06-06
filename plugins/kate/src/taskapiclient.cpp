@@ -1,5 +1,7 @@
 #include "taskapiclient.h"
 
+#include "logging.h"
+
 #include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -49,6 +51,13 @@ void TaskApiClient::setBaseUrl(const QString &baseUrl)
 void TaskApiClient::setCredential(const QString &userKey)
 {
     m_key = userKey;
+    qCInfo(HadokuTask) << "TaskApiClient: credential set, length" << m_key.size()
+                       << "(empty =" << m_key.isEmpty() << ")";
+}
+
+void TaskApiClient::logUi(const QString &message) const
+{
+    qCInfo(HadokuTask) << "[ui]" << message;
 }
 
 void TaskApiClient::setBoardId(const QString &boardId)
@@ -71,10 +80,13 @@ void TaskApiClient::fetchTasks()
 {
     Q_EMIT busyChanged(true);
     const QString url = m_baseUrl + QStringLiteral("/tasks?boardId=") + m_boardId;
+    qCInfo(HadokuTask) << "GET" << url;
     QNetworkReply *reply = m_nam->get(makeRequest(url, false));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         Q_EMIT busyChanged(false);
+        qCInfo(HadokuTask) << "GET /tasks ->" << httpStatus(reply)
+                           << "err:" << reply->error() << reply->errorString();
         if (reply->error() != QNetworkReply::NoError) {
             Q_EMIT errorOccurred(reply->errorString());
             return;
@@ -96,6 +108,7 @@ void TaskApiClient::fetchTasks()
             t.endTime = o.value(QStringLiteral("endTime")).toString();
             tasks.push_back(t);
         }
+        qCInfo(HadokuTask) << "GET /tasks parsed" << tasks.size() << "tasks, version" << m_version;
         Q_EMIT tasksReceived(tasks, m_version);
     });
 }
@@ -109,8 +122,12 @@ void TaskApiClient::handleConflictThenRefetch()
 void TaskApiClient::createTask(const QString &title, const QString &tag)
 {
     const QString trimmed = title.trimmed();
-    if (trimmed.isEmpty())
+    qCInfo(HadokuTask) << "createTask called; title.len" << title.size()
+                       << "trimmed.len" << trimmed.size() << "tag" << tag;
+    if (trimmed.isEmpty()) {
+        qCWarning(HadokuTask) << "createTask: empty title, ignoring";
         return;
+    }
     QJsonObject body{
         {QStringLiteral("id"), generateUlid()},
         {QStringLiteral("title"), trimmed},
@@ -119,13 +136,17 @@ void TaskApiClient::createTask(const QString &title, const QString &tag)
     if (!tag.trimmed().isEmpty())
         body.insert(QStringLiteral("tag"), tag.trimmed());
 
+    qCInfo(HadokuTask) << "POST" << m_baseUrl << "(create) If-Match" << m_version;
     Q_EMIT busyChanged(true);
     QNetworkReply *reply =
         m_nam->post(makeRequest(m_baseUrl, true), QJsonDocument(body).toJson(QJsonDocument::Compact));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         Q_EMIT busyChanged(false);
-        if (httpStatus(reply) == 409) {
+        const int status = httpStatus(reply);
+        qCInfo(HadokuTask) << "POST (create) ->" << status << "err:" << reply->error()
+                           << reply->errorString();
+        if (status == 409) {
             handleConflictThenRefetch();
             return;
         }
@@ -140,6 +161,7 @@ void TaskApiClient::createTask(const QString &title, const QString &tag)
 void TaskApiClient::completeTask(const QString &id)
 {
     const QString url = m_baseUrl + QLatin1Char('/') + id + QStringLiteral("/complete?boardId=") + m_boardId;
+    qCInfo(HadokuTask) << "POST" << url << "(complete) If-Match" << m_version;
     Q_EMIT busyChanged(true);
     QNetworkReply *reply = m_nam->post(makeRequest(url, true), QByteArray());
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
@@ -162,6 +184,7 @@ void TaskApiClient::completeTask(const QString &id)
 void TaskApiClient::deleteTask(const QString &id)
 {
     const QString url = m_baseUrl + QLatin1Char('/') + id + QStringLiteral("?boardId=") + m_boardId;
+    qCInfo(HadokuTask) << "DELETE" << url << "If-Match" << m_version;
     Q_EMIT busyChanged(true);
     QNetworkReply *reply = m_nam->deleteResource(makeRequest(url, true));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {

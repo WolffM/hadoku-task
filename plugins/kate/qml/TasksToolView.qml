@@ -51,14 +51,24 @@ Kirigami.Page {
             QQC2.TextField {
                 id: addField
                 Layout.fillWidth: true
+                focus: true
+                activeFocusOnTab: true
                 placeholderText: i18n("Add a task and press Enter…")
-                onAccepted: page.submitAdd()
+                onActiveFocusChanged: taskApi.logUi("addField activeFocus=" + activeFocus)
+                onTextEdited: taskApi.logUi("addField textEdited len=" + text.length)
+                onAccepted: {
+                    taskApi.logUi("addField onAccepted text='" + text + "'");
+                    page.submitAdd();
+                }
             }
             QQC2.ToolButton {
                 icon.name: "list-add"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18n("Add task")
-                onClicked: page.submitAdd()
+                onClicked: {
+                    taskApi.logUi("add button clicked; addField.text='" + addField.text + "'");
+                    page.submitAdd();
+                }
             }
             QQC2.BusyIndicator {
                 id: busyIndicator
@@ -175,9 +185,17 @@ Kirigami.Page {
 
     function submitAdd() {
         var t = addField.text;
+        taskApi.logUi("submitAdd: text='" + t + "' len=" + (t ? t.length : 0));
         if (t && t.trim().length > 0) {
             taskApi.createTask(t, "");
             addField.text = "";
+        } else {
+            taskApi.logUi("submitAdd: empty, nothing created");
         }
+    }
+
+    Component.onCompleted: {
+        taskApi.logUi("TasksToolView loaded; taskStore.count=" + taskStore.count);
+        addField.forceActiveFocus();
     }
 }

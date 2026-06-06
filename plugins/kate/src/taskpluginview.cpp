@@ -1,5 +1,6 @@
 #include "taskpluginview.h"
 
+#include "logging.h"
 #include "sessionmanager.h"
 #include "taskapiclient.h"
 #include "taskstore.h"
@@ -29,9 +30,16 @@ TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWin
     // Pin the Qt Quick Controls style so the embedded scene matches Kate's chrome.
     QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
 
+    qCInfo(HadokuTask) << "TaskPluginView: constructing";
+
     // Wire API → model.
     connect(m_api, &TaskApiClient::tasksReceived, m_store,
-            [this](const QVector<Task> &tasks, int) { m_store->setTasks(tasks); });
+            [this](const QVector<Task> &tasks, int version) {
+                qCInfo(HadokuTask) << "model updated:" << tasks.size() << "tasks, version" << version;
+                m_store->setTasks(tasks);
+            });
+    connect(m_api, &TaskApiClient::errorOccurred, this,
+            [](const QString &msg) { qCWarning(HadokuTask) << "API error:" << msg; });
     m_api->setCredential(m_session->userKey());
 
     // --- Tasks tab: live list -------------------------------------------------
@@ -81,9 +89,14 @@ QQuickWidget *TaskPluginView::createQuickToolView(KTextEditor::Plugin *plugin,
     auto *quickWidget = new QQuickWidget(toolView);
     quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
     quickWidget->setAttribute(Qt::WA_AlwaysStackOnTop);
+    // StrongFocus: without it the embedded Qt Quick scene never receives keyboard
+    // input from Kate's widget world (clicks work, typing doesn't). This is the
+    // classic QQuickWidget focus caveat the Phase-1 spike flagged.
+    quickWidget->setFocusPolicy(Qt::StrongFocus);
     // Make i18n() available to the QML; must precede setSource (done by caller).
     KLocalization::setupLocalizedContext(quickWidget->engine());
 
     layout->addWidget(quickWidget);
+    qCInfo(HadokuTask) << "tool view created:" << identifier;
     return quickWidget;
 }

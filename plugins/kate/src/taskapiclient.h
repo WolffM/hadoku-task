@@ -39,6 +39,9 @@ public:
     Q_INVOKABLE void completeTask(const QString &id);
     Q_INVOKABLE void deleteTask(const QString &id);
 
+    // Lets QML write into the same log file (UI-side diagnostics).
+    Q_INVOKABLE void logUi(const QString &message) const;
+
 Q_SIGNALS:
     void tasksReceived(const QVector<Task> &tasks, int version);
     void busyChanged(bool busy);

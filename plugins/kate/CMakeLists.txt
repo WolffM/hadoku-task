@@ -35,6 +35,7 @@ target_sources(katehadokutask PRIVATE
     src/taskstore.cpp
     src/taskapiclient.cpp
     src/sessionmanager.cpp
+    src/logging.cpp
     resources.qrc
 )
 

@@ -1,4 +1,5 @@
 #include "taskplugin.h"
+#include "logging.h"
 #include "taskpluginview.h"
 
 #include <KPluginFactory>
@@ -11,12 +12,15 @@ TaskPlugin::TaskPlugin(QObject *parent, const QVariantList &args)
     : KTextEditor::Plugin(parent)
 {
     Q_UNUSED(args)
+    HadokuLog::install();
+    qCInfo(HadokuTask) << "TaskPlugin loaded; log file:" << HadokuLog::logFilePath();
 }
 
 TaskPlugin::~TaskPlugin() = default;
 
 QObject *TaskPlugin::createView(KTextEditor::MainWindow *mainWindow)
 {
+    qCInfo(HadokuTask) << "createView() for main window" << mainWindow;
     return new TaskPluginView(this, mainWindow);
 }
 
