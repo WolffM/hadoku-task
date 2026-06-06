@@ -38,6 +38,19 @@ Kirigami.Page {
         }
     }
 
+    // View-state diagnostics: whenever the model count changes, log what the
+    // ListView actually has and its geometry — so the log reveals empty-vs-collapsed
+    // without a screenshot.
+    Connections {
+        target: taskStore
+        function onCountChanged() {
+            taskApi.logUi("taskStore.count=" + taskStore.count
+                + " list.count=" + list.count
+                + " list[w x h]=" + Math.round(list.width) + "x" + Math.round(list.height)
+                + " page[w x h]=" + Math.round(page.width) + "x" + Math.round(page.height));
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
