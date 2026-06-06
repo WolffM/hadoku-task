@@ -30,7 +30,7 @@ jobs:
             ca-certificates \
             git \
             cmake \
-            g++ \
+            build-essential \
             extra-cmake-modules \
             qt6-base-dev \
             qt6-declarative-dev \
