@@ -15,7 +15,7 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 include(FeatureSummary)
 
 find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
-    Core Gui Widgets Qml Quick QuickWidgets Network)
+    Core Gui Widgets Qml Quick QuickControls2 QuickWidgets Network)
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     TextEditor CoreAddons I18n XmlGui Wallet)
 
@@ -39,6 +39,7 @@ target_link_libraries(katehadokutask PRIVATE
     Qt6::Widgets
     Qt6::Qml
     Qt6::Quick
+    Qt6::QuickControls2
     Qt6::QuickWidgets
     Qt6::Network
     KF6::TextEditor
