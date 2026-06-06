@@ -32,6 +32,9 @@ add_library(katehadokutask MODULE)
 target_sources(katehadokutask PRIVATE
     src/taskplugin.cpp
     src/taskpluginview.cpp
+    src/taskstore.cpp
+    src/taskapiclient.cpp
+    src/sessionmanager.cpp
     resources.qrc
 )
 

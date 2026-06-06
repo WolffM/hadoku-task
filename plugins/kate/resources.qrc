@@ -2,5 +2,6 @@
 <RCC version="1.0">
   <qresource prefix="/">
     <file>qml/SpikeView.qml</file>
+    <file>qml/TasksToolView.qml</file>
   </qresource>
 </RCC>

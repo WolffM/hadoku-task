@@ -11,15 +11,18 @@ class Plugin;
 }
 
 class QWidget;
+class QQuickWidget;
+class TaskStore;
+class TaskApiClient;
+class SessionManager;
 
 /**
- * Per-main-window controller. Creates the two left-sidebar tool views (Tasks and
- * Calendar), each hosting a Kirigami QML scene inside a QQuickWidget.
+ * Per-main-window controller. Creates the two left-sidebar tool views:
+ *   - Tasks    — live Kirigami list backed by TaskStore + TaskApiClient.
+ *   - Calendar — placeholder (SpikeView) until Phase 3.
  *
- * NOTE (Phase-1 spike): right now both tool views load the same SpikeView.qml.
- * The spike exists to prove the QQuickWidget-in-tool-view embedding before any
- * real model/UI is built on it — verify clean focus in/out, typing/IME, HiDPI
- * scaling, and render flush. See docs/planning/local-integration-design.md §3/§8.
+ * QML embedding uses QQuickWidget (spike-confirmed). i18n() needs a localized
+ * context installed before setSource — see createQuickToolView().
  */
 class TaskPluginView : public QObject
 {
@@ -30,14 +33,19 @@ public:
     ~TaskPluginView() override;
 
 private:
-    // Build a tool view whose content is a QQuickWidget loading the given QML resource.
-    QWidget *createKirigamiToolView(KTextEditor::Plugin *plugin,
-                                    const QString &identifier,
-                                    const QString &iconName,
-                                    const QString &title,
-                                    const QString &qmlResource);
+    // Build a tool view hosting a QQuickWidget; returns the widget so the caller
+    // can set context properties before loading QML. outToolView receives the
+    // owning tool-view widget (so it can be deleted on unload).
+    QQuickWidget *createQuickToolView(KTextEditor::Plugin *plugin,
+                                      const QString &identifier,
+                                      const QString &iconName,
+                                      const QString &title,
+                                      QPointer<QWidget> &outToolView);
 
     KTextEditor::MainWindow *m_mainWindow;
+    SessionManager *m_session;
+    TaskApiClient *m_api;
+    TaskStore *m_store;
     QPointer<QWidget> m_tasksToolView;
     QPointer<QWidget> m_calendarToolView;
 };
