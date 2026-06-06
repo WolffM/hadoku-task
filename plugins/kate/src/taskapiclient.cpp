@@ -509,6 +509,27 @@ void TaskApiClient::clearTagEverywhere(const QString &tag)
     });
 }
 
+void TaskApiClient::createTag(const QString &raw)
+{
+    QString tag = raw.trimmed();
+    tag.remove(QRegularExpression(QStringLiteral("^#+")));
+    tag.replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral("-"));
+    if (tag.isEmpty())
+        return;
+    // Optimistic: add to this board's tag list so the chip appears immediately.
+    QStringList &boardTags = m_boardTags[m_boardId];
+    if (!boardTags.contains(tag))
+        boardTags.append(tag);
+    recomputeAllTags();
+
+    QJsonObject body{{QStringLiteral("boardId"), m_boardId}, {QStringLiteral("tag"), tag}};
+    const QString url = m_baseUrl + QStringLiteral("/tags");
+    enqueueWrite(QStringLiteral("create-tag"), [this, url, body]() {
+        return m_nam->post(makeRequest(url, false),
+                           QJsonDocument(body).toJson(QJsonDocument::Compact));
+    });
+}
+
 void TaskApiClient::completeTask(const QString &id)
 {
     const int i = taskIndex(id);

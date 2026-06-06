@@ -74,6 +74,9 @@ public:
     Q_INVOKABLE void removeTaskTag(const QString &id, const QString &tag);
     // Remove a tag from every task on the board and from the board's tag list.
     Q_INVOKABLE void clearTagEverywhere(const QString &tag);
+    // Add a tag to the board's tag list (so it shows as a filter chip with no
+    // tasks yet). Normalizes like the web (strips '#', spaces -> '-').
+    Q_INVOKABLE void createTag(const QString &tag);
 
     // Lets QML write into the same log file (UI-side diagnostics).
     Q_INVOKABLE void logUi(const QString &message) const;

@@ -128,6 +128,23 @@ ColumnLayout {
         function openFor(t) { tag = t; open(); }
     }
 
+    QQC2.Dialog {
+        id: tagDialog
+        title: i18n("New tag")
+        modal: true
+        parent: QQC2.Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(bar.width - Kirigami.Units.gridUnit, Kirigami.Units.gridUnit * 18)
+        standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+        onAccepted: taskApi.createTag(tagNameInput.text)
+        contentItem: QQC2.TextField {
+            id: tagNameInput
+            placeholderText: i18n("tag name")
+            onAccepted: tagDialog.accept()
+        }
+        function openNew() { tagNameInput.text = ""; open(); tagNameInput.forceActiveFocus(); }
+    }
+
     QQC2.Menu {
         id: boardPickMenu
         Repeater {
@@ -215,11 +232,11 @@ ColumnLayout {
         Layout.rightMargin: Kirigami.Units.smallSpacing
         Layout.bottomMargin: Kirigami.Units.smallSpacing
         spacing: Kirigami.Units.smallSpacing
-        visible: taskApi.allTags.length > 0
 
         FilterChip {
             label: i18n("All")
             accent: Kirigami.Theme.highlightColor
+            visible: taskApi.allTags.length > 0
             active: taskApi.filterTag === ""
             onClicked: taskApi.filterTag = ""
         }
@@ -234,6 +251,14 @@ ColumnLayout {
                 onTaskDropped: (taskId, currentTags) => taskApi.addTaskTag(taskId, modelData)
                 onDeleteRequested: t => confirmDelete.openFor(t)
             }
+        }
+        QQC2.ToolButton {
+            icon.name: "list-add"
+            display: QQC2.AbstractButton.IconOnly
+            text: i18n("New tag")
+            QQC2.ToolTip.text: text
+            QQC2.ToolTip.visible: hovered
+            onClicked: tagDialog.openNew()
         }
     }
 
