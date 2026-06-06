@@ -87,6 +87,14 @@ void TaskApiClient::setBaseUrl(const QString &baseUrl)
         m_baseUrl.chop(1);
 }
 
+void TaskApiClient::setFilterTag(const QString &tag)
+{
+    if (tag == m_filterTag)
+        return;
+    m_filterTag = tag;
+    Q_EMIT filterTagChanged();
+}
+
 void TaskApiClient::setCredential(const QString &userKey)
 {
     m_key = userKey;

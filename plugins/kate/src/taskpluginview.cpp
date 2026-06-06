@@ -61,6 +61,7 @@ TaskPluginView::TaskPluginView(KTextEditor::Plugin *plugin, KTextEditor::MainWin
                                                      i18n("Calendar"),
                                                      m_calendarToolView);
     calendarView->engine()->rootContext()->setContextProperty(QStringLiteral("taskApi"), m_api);
+    calendarView->engine()->rootContext()->setContextProperty(QStringLiteral("session"), m_session);
     calendarView->setSource(QUrl(QStringLiteral("qrc:/qml/CalendarToolView.qml")));
 
     // Initial load.

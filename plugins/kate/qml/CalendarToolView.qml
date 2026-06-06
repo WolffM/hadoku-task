@@ -74,10 +74,13 @@ Kirigami.Page {
     // Agenda: [{ day, label, isToday, nowIndex, items:[task...] }, ...]
     readonly property var agenda: {
         page.nowTick; // dependency so this recomputes each minute
+        var filter = taskApi.filterTag; // shared with the Tasks tab
         var groups = {};
         var all = taskApi.tasks;
         for (var i = 0; i < all.length; ++i) {
             var t = all[i];
+            if (filter && page.splitTags(t.tag).indexOf(filter) < 0)
+                continue;
             var day = (t.date && t.date.length) ? t.date : (t.startTime ? page.dayFromISO(t.startTime) : "");
             if (!day)
                 continue;
@@ -119,18 +122,6 @@ Kirigami.Page {
         var e = new Date(s); e.setHours(Math.min(sh + 1, 23), sh + 1 >= 24 ? 59 : 0, 0, 0);
         return { start: s.toISOString(), end: e.toISOString() };
     }
-    function submitCreate() {
-        var t = createField.text;
-        if (!t || !t.trim().length)
-            return;
-        if (allDay.checked) {
-            taskApi.createScheduledTask(t.trim(), page.todayStr(), "", "");
-        } else {
-            var slot = page.defaultSlot();
-            taskApi.createScheduledTask(t.trim(), "", slot.start, slot.end);
-        }
-        createField.text = "";
-    }
 
     Component {
         id: nowMarker
@@ -155,26 +146,12 @@ Kirigami.Page {
         anchors.fill: parent
         spacing: 0
 
-        // --- Quick add ---------------------------------------------------
-        RowLayout {
+        TaskToolbar {
             Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.smallSpacing
-            spacing: Kirigami.Units.smallSpacing
-            QQC2.TextField {
-                id: createField
-                Layout.fillWidth: true
-                placeholderText: i18n("Schedule a task…")
-                onAccepted: page.submitCreate()
-            }
-            QQC2.CheckBox {
-                id: allDay
-                text: i18n("All day")
-            }
-            QQC2.ToolButton {
-                icon.name: "list-add"
-                QQC2.ToolTip.text: i18n("Schedule")
-                QQC2.ToolTip.visible: hovered
-                onClicked: page.submitCreate()
+            placeholder: i18n("Schedule a task…")
+            onSubmitText: text => {
+                var slot = page.defaultSlot();
+                taskApi.createScheduledTask(text, "", slot.start, slot.end);
             }
         }
 

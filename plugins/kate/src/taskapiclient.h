@@ -31,6 +31,8 @@ class TaskApiClient : public QObject
     // Board list for the selector: [{ id, name }, ...].
     Q_PROPERTY(QVariantList boards READ boards NOTIFY boardsChanged)
     Q_PROPERTY(QString currentBoardId READ currentBoardId NOTIFY currentBoardIdChanged)
+    // Active tag filter, shared across the Tasks and Calendar tabs.
+    Q_PROPERTY(QString filterTag READ filterTag WRITE setFilterTag NOTIFY filterTagChanged)
     // Union of the current board's persistent tags + tags in use on its tasks.
     Q_PROPERTY(QStringList allTags READ allTags NOTIFY allTagsChanged)
     // Flat task list (list of maps) for views that need to iterate/group in QML
@@ -46,6 +48,8 @@ public:
 
     QVariantList boards() const { return m_boards; }
     QString currentBoardId() const { return m_boardId; }
+    QString filterTag() const { return m_filterTag; }
+    void setFilterTag(const QString &tag);
     QStringList allTags() const { return m_allTags; }
     QVariantList tasksList() const;
 
@@ -78,6 +82,7 @@ Q_SIGNALS:
     void tasksReceived(const QVector<Task> &tasks, int version);
     void boardsChanged();
     void currentBoardIdChanged();
+    void filterTagChanged();
     void allTagsChanged();
     void tasksListChanged();
     void busyChanged(bool busy);
@@ -104,6 +109,7 @@ private:
     QString m_baseUrl = QStringLiteral("https://hadoku.me/task/api");
     QString m_key;
     QString m_boardId = QStringLiteral("main");
+    QString m_filterTag;
     int m_version = 0;
 
     QVector<Task> m_tasks;                  // last fetched tasks for the current board
