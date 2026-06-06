@@ -1,7 +1,8 @@
 # Local Desktop Integration — Design Doc
 
-Status: **Planning / approved direction.** No implementation yet.
-Date: 2026-06-05
+Status: **In progress.** Phase 0 (API hardening) shipped + published. Phase 1 spike PASSED
+(`QQuickWidget`/Kirigami embedding works in real Kate). Next: Phase 2 (Tasks CRUD).
+Date: 2026-06-05 (updated 2026-06-06)
 Scope: Add local KDE desktop surfaces (Kate editor tabs + Plasma calendar) on top of the
 existing hosted `@wolffm/task` app. **Purely additive** — the hosted web app and its API
 must keep working exactly as-is.
