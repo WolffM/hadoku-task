@@ -185,16 +185,20 @@ changes) — orthogonal; rerun on next publish.
 
 ### Phase 1 — Plugin skeleton + auth (MVP core)
 
-**Scaffold landed (2026-06-06):** `plugins/kate/` now holds the buildable skeleton — `CMakeLists.txt`
-(KF6/Qt6, installs to `…/kf6/ktexteditor/`), the two-class plugin (`TaskPlugin` +
-`TaskPluginView`), embedded `taskplugin.json` metadata, `qml/SpikeView.qml` (the spike), and CI
-(`.github/workflows/kate-plugin.yml`, self-hosted `hadoku-builder`). `publish.yml` now path-ignores
-`plugins/**`/`docs/**`. **Not yet compiled** — the headless agent sandbox lacks the KF6 toolchain;
-the build + spike run on the KDE box (`plugins/kate/README.md` has the steps + checklist).
+**Scaffold landed (2026-06-06):** `plugins/kate/` holds the buildable skeleton — `CMakeLists.txt`
+(KF6/Qt6, installs via `qtpaths6 --plugin-dir` to `…/qt6/plugins/kf6/ktexteditor/`), the two-class
+plugin (`TaskPlugin` + `TaskPluginView`), embedded `taskplugin.json`, `qml/SpikeView.qml`, and CI
+(`.github/workflows/kate-plugin.yml`, `debian:trixie` container — compile-check only).
+`publish.yml` path-ignores `plugins/**`/`docs/**`.
 
-**Spike first (de-risk #1):** an empty **Kirigami** tool view in a `QQuickWidget` — tab in, type, tab
-out cleanly; verify focus, HiDPI, render flush, animation smoothness; choose `QQuickWidget` vs
-`createWindowContainer`. Build nothing else until this is smooth.
+**Spike PASSED ✅ (2026-06-06) — `QQuickWidget` retained.** The Kirigami-in-tool-view embedding
+works in real Kate: plugin loads, both tabs appear, the scene renders with the `org.kde.desktop`
+style, and a button click round-trips (mouse input → JS handler → property update). Confirmed two
+ways: a live click in Kate (`"clicked at …"`) and an offscreen render of the **installed** `.so`
+(deps resolve, embedded `qrc` intact, layout correct). **Gotcha found & fixed:** QML `i18n()` is
+undefined unless `KLocalization::setupLocalizedContext(engine)` is called before `setSource` — without
+it every text binding throws `ReferenceError` and renders blank. `createWindowContainer` not needed.
+Remaining subjective check (low risk): keyboard focus/typing feel on tab in/out.
 Then: KTextEditor plugin loads in Kate; empty Tasks tab; `SessionManager` (key → `/session/create` →
 KWallet → `X-Session-Id`).
 **DoD:** embedded Kirigami spike passes (clean focus in/out + typing); plugin builds via CMake and
@@ -244,15 +248,16 @@ Scratch-file watcher; offline view cache + write queue/reconcile.
 
 **To verify 🔍**
 
-- **#1 RISK — QML/Kirigami in a `QQuickWidget` tool view.** No Kate precedent; threaded-render-loop +
-  stacking + focus caveats. The Phase-1 spike must prove clean focus/typing/HiDPI and pick the
-  embedding mechanism _before_ `TaskStore` is built on it.
+- ~~#1 RISK — QML/Kirigami in a `QQuickWidget` tool view.~~ **RESOLVED — spike passed (see Phase 1).**
+  `QQuickWidget` retained; render + mouse input confirmed in real Kate. Only keyboard focus/typing
+  _feel_ left to judge subjectively (low risk).
 - Plasma calendar PIM **event plugin** (`kdepim-addons`) — only `holidayevents` found; needed for §5 MVP.
 
 **Decided ✅**
 
-- UI toolkit: **QML/Kirigami** (embedding mechanism TBD by the Phase-1 spike — see above). Repo:
-  **`plugins/kate/`** subfolder; local-install distribution; hand-written types + CI parity test.
+- UI toolkit: **QML/Kirigami**, embedded via **`QQuickWidget`** (spike-confirmed; `createWindowContainer`
+  not needed). Repo: **`plugins/kate/`** subfolder; local-install distribution; hand-written types +
+  CI parity test. **QML i18n requires `KLocalization::setupLocalizedContext(engine)` before `setSource`.**
 
 **To decide 🟡**
 
