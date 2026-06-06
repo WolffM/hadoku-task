@@ -70,7 +70,7 @@ async function measureColdLoad(browser: Browser, run: number): Promise<RunResult
   // addInitScript) because Playwright's init-script hook runs in a wrapped
   // context where the observer doesn't see DOM mutations from the parser —
   // verified empirically with observerFired=0 over multiple seconds of
-  // mutations. Polling is what probe-stall.mjs does and what reliably works.
+  // mutations. Tight polling is what reliably works here.
   //
   // 10ms granularity is fine for our scale (skeleton budget is 400ms).
   const t0 = Date.now()

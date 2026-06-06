@@ -1,11 +1,41 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { copyFileSync, mkdirSync } from 'fs'
+import { copyFileSync, mkdirSync, appendFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 
 export default defineConfig({
   plugins: [
     react(),
+    // Dev-only local log sink. The client logger's dev sink POSTs every entry
+    // here (see src/utils/devLogSink.ts); we append one JSON line per event to
+    // .dev-logs/actions.log so local actions are tail-able without edge-router.
+    // `apply: 'serve'` keeps this out of production builds entirely.
+    {
+      name: 'dev-log-sink',
+      apply: 'serve',
+      configureServer(server) {
+        server.middlewares.use('/__devlog', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405
+            res.end()
+            return
+          }
+          let body = ''
+          req.on('data', chunk => (body += chunk))
+          req.on('end', () => {
+            try {
+              const dir = resolve(__dirname, '.dev-logs')
+              mkdirSync(dir, { recursive: true })
+              appendFileSync(resolve(dir, 'actions.log'), body.trim() + '\n')
+            } catch {
+              /* dev-only best-effort; never break the request */
+            }
+            res.statusCode = 204
+            res.end()
+          })
+        })
+      }
+    },
     // Copy manually-maintained type definitions to dist
     // IMPORTANT: src/app/entry.d.ts must be committed to the repo
     // (see .gitignore exception and docs/BUILD_REQUIREMENTS.md)

@@ -8,6 +8,9 @@ dist-ssr/
 *.local
 *.log*
 
+# Local dev log sink (src/utils/devLogSink.ts → vite /__devlog)
+.dev-logs/
+
 # TypeScript compilation artifacts (auto-generated)
 src/**/*.js
 src/**/*.d.ts

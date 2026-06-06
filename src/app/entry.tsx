@@ -6,6 +6,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import '@wolffm/themes/style.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/logger/client'
+import { installDevLogSink } from '../utils/devLogSink'
 import { getStoredSessionId, getStoredUserType } from '../api/session'
 import { isMobileApp } from '../utils/platform'
 import type { UserType } from '../domain/types'
@@ -52,6 +53,7 @@ interface TaskElement extends HTMLElement {
 }
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
+  installDevLogSink()
   ensureSafeAreaViewport()
 
   // Priority for userType and sessionId:
