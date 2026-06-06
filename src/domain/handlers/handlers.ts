@@ -16,7 +16,7 @@ import type {
 } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
 import { splitTags } from '../utils/tags.js'
-import { dayStringFromISO } from '../utils/calendar.js'
+import { utcDayFromISO } from '../utils/calendar.js'
 import {
   backfillTaskDate,
   findTaskOrThrow,
@@ -110,9 +110,11 @@ export async function createTask(
       // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
       const createdAt = input.createdAt || timestamp
 
-      // `date` is the canonical calendar-day key: trust an explicit value, else
-      // backfill it from startTime so every timed task carries a matching day.
-      const date = input.date ?? dayStringFromISO(input.startTime)
+      // `date` is the canonical calendar-day key, persisted as the UTC day so it
+      // is consistent everywhere. Trust an explicit value (all-day picks send the
+      // chosen day), else derive the UTC day from startTime. Display recomputes
+      // the local day from startTime, so this stored value is never shown directly.
+      const date = input.date ?? utcDayFromISO(input.startTime)
 
       const newTask: Task = {
         id,
@@ -166,8 +168,9 @@ export async function updateTask(
 
       // Keep `date` consistent with a (re)scheduled startTime unless the caller set
       // it explicitly — covers drag-to-reschedule and timed/all-day conversions.
+      // Stored as the UTC day (display recomputes the local day from startTime).
       if (input.date === undefined && input.startTime !== undefined) {
-        updatedTask.date = dayStringFromISO(input.startTime)
+        updatedTask.date = utcDayFromISO(input.startTime)
       }
 
       const newTasks = [...tasks.tasks]

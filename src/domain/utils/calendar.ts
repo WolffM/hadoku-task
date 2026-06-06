@@ -16,12 +16,28 @@ export function toDayString(date: Date): string {
 }
 
 /**
- * Derive the local calendar-day string from an ISO timestamp (used to backfill
- * `date` for tasks that carry a startTime). Returns null for empty input.
+ * Derive the *local* calendar-day string from an ISO timestamp. Used for DISPLAY
+ * (which day a timed task occupies in the viewer's timezone). Empty input → null.
  */
 export function dayStringFromISO(iso: string | null | undefined): string | null {
   if (!iso) return null
   return toDayString(new Date(iso))
+}
+
+/**
+ * Derive the *UTC* calendar-day string from an ISO timestamp. This is the
+ * canonical value persisted in `Task.date`, so storage is consistent regardless
+ * of where the (isomorphic) handler runs — server (UTC) or browser (local).
+ * Display always recomputes the local day from startTime, so the stored UTC day
+ * is metadata, never shown directly. Empty input → null.
+ */
+export function utcDayFromISO(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 /**
