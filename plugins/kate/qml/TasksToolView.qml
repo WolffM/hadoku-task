@@ -77,6 +77,53 @@ Kirigami.Page {
         }
     }
 
+    // --- Drag-to-tag: a small ghost follows the cursor (hotspot = cursor) ----
+    function beginDrag(id, tags, title) {
+        dragProxy.dragTaskId = id;
+        dragProxy.dragTags = tags;
+        dragProxy.label = title;
+        dragProxy.visible = true;
+        dragProxy.Drag.active = true;
+    }
+    function updateDrag(scenePos) {
+        var p = page.mapFromItem(null, scenePos.x, scenePos.y);
+        dragProxy.x = p.x - dragProxy.width / 2;
+        dragProxy.y = p.y - dragProxy.height / 2;
+    }
+    function finishDrag() {
+        dragProxy.Drag.drop();
+        dragProxy.Drag.active = false;
+        dragProxy.visible = false;
+    }
+
+    Item {
+        id: dragProxy
+        parent: page
+        z: 99999
+        visible: false
+        property string dragTaskId: ""
+        property string dragTags: ""
+        property string label: ""
+        width: proxyLabel.implicitWidth + Kirigami.Units.largeSpacing
+        height: proxyLabel.implicitHeight + Kirigami.Units.smallSpacing
+        Drag.source: dragProxy
+        Drag.hotSpot.x: width / 2
+        Drag.hotSpot.y: height / 2
+        Rectangle {
+            anchors.fill: parent
+            radius: height / 2
+            color: Kirigami.Theme.highlightColor
+            opacity: 0.92
+            QQC2.Label {
+                id: proxyLabel
+                anchors.centerIn: parent
+                text: dragProxy.label
+                color: "white"
+                font: Kirigami.Theme.smallFont
+            }
+        }
+    }
+
     Connections {
         target: taskApi
         function onErrorOccurred(message) {
@@ -318,34 +365,19 @@ Kirigami.Page {
                         id: card
                         width: row.width
                         height: row.height
-                        x: 0
-                        y: 0
                         radius: 4
-                        color: dragHandler.active ? Kirigami.Theme.alternateBackgroundColor
-                             : (hover.hovered ? Qt.alpha(Kirigami.Theme.highlightColor, 0.08) : "transparent")
-
-                        // Drag payload read by FilterChip's DropArea.
-                        property string dragTaskId: row.taskId
-                        property string dragTags: row.tag
-                        Drag.active: dragHandler.active
-                        Drag.source: card
-                        Drag.hotSpot.x: width / 2
-                        Drag.hotSpot.y: height / 2
+                        opacity: dragHandler.active ? 0.4 : 1
+                        color: hover.hovered ? Qt.alpha(Kirigami.Theme.highlightColor, 0.08) : "transparent"
 
                         HoverHandler { id: hover }
+                        // Card stays put; a page-level ghost (dragProxy) follows the
+                        // cursor so the drop hotspot tracks the pointer, not the card.
                         DragHandler {
                             id: dragHandler
-                            target: card
-                            onActiveChanged: {
-                                if (!active) {
-                                    // Deliver the drop to whatever DropArea is under the
-                                    // card BEFORE snapping it home — otherwise the reset
-                                    // moves it off the target and the drop is lost.
-                                    card.Drag.drop();
-                                    card.x = 0;
-                                    card.y = 0;
-                                }
-                            }
+                            target: null
+                            onActiveChanged: active ? page.beginDrag(row.taskId, row.tag, row.title)
+                                                    : page.finishDrag()
+                            onCentroidChanged: if (active) page.updateDrag(centroid.scenePosition)
                         }
 
                         RowLayout {
