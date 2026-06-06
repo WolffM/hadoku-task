@@ -4,7 +4,8 @@
  * Handles administrative endpoints for monitoring and management
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { logRequest, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { logRequest } from '../logger'
 import {
   getThrottleState,
   getIncidents,

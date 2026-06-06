@@ -5,7 +5,8 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { badRequest, logRequest, logError, requireFields, extractField } from '@wolffm/worker-utils'
+import { badRequest, requireFields, extractField } from '@wolffm/worker-utils'
+import { logRequest, logError } from '../logger'
 import { handleOperation, handleBoardOperation } from './route-utils'
 import { DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext } from '../types'

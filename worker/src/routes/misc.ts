@@ -4,7 +4,8 @@
  * Handles utility endpoints: health check, key validation
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { healthCheck, logRequest } from '@wolffm/worker-utils'
+import { healthCheck } from '@wolffm/worker-utils'
+import { logRequest } from '../logger'
 import type { AppContext } from '../types'
 import { HealthResponseSchema, ValidateKeyResponseSchema } from '../schemas'
 

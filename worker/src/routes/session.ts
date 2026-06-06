@@ -4,7 +4,8 @@
  * Handles session handshake endpoint for establishing and migrating sessions
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { badRequest, logRequest, logError, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { badRequest, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { logRequest, logError } from '../logger'
 import { handleSessionHandshake } from '../session'
 import type { AppContext } from '../types'
 import {

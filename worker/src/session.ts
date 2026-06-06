@@ -15,6 +15,7 @@ import type { KVNamespace } from '@cloudflare/workers-types'
 import { DEFAULT_PREFERENCES as CONSTANTS_DEFAULT_PREFERENCES } from './constants'
 import { preferencesKey, sessionInfoKey, sessionMappingKey } from './kv-keys'
 import { maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { logger } from './logger'
 
 // ============================================================================
 // Types
@@ -131,7 +132,7 @@ export async function updateSessionMapping(
   // This prevents "mystery sessions" that have no session data
   const sessionInfo = await getSessionInfo(kv, sessionId)
   if (!sessionInfo) {
-    console.warn(
+    logger.warn(
       `[SessionMapping] Cannot add session ${maskSessionId(sessionId)} - no session-info exists`
     )
     return
@@ -188,7 +189,7 @@ export async function updateSessionMapping(
 
     // Conflict detected - retry with exponential backoff + jitter
     if (attempt === maxRetries - 1) {
-      console.error(
+      logger.error(
         `[SessionMapping] Failed to update after ${maxRetries} attempts for authKey ${maskKey(authKey)}`
       )
       throw new Error('Session mapping update failed due to concurrent modifications')
@@ -200,7 +201,7 @@ export async function updateSessionMapping(
     const delay = baseDelay + jitter
 
     await new Promise(resolve => setTimeout(resolve, delay))
-    console.log(
+    logger.info(
       `[SessionMapping] Retry ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms for authKey ${maskKey(authKey)}`
     )
   }
@@ -255,7 +256,7 @@ export async function handleSessionHandshake(
   const { oldSessionId, newSessionId } = request
 
   // Log the validated userType for debugging
-  console.log('[Session Handshake] Validated userType from auth middleware:', userType)
+  logger.info('[Session Handshake] Validated userType from auth middleware', { userType })
 
   let preferences: UserPreferences | null = null
   let migratedFrom: string | undefined = undefined
@@ -326,7 +327,9 @@ export async function handleSessionHandshake(
   // Clean up stale sessions (30+ days old) in the background
   // This runs asynchronously and won't block the handshake response
   cleanupStaleSessions(kv, authKey).catch(err => {
-    console.error('[SessionCleanup] Failed to cleanup stale sessions:', err)
+    logger.error('[SessionCleanup] Failed to cleanup stale sessions', {
+      error: err instanceof Error ? err.message : String(err)
+    })
   })
 
   return {
@@ -371,7 +374,7 @@ async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<v
 
         if (!sessionInfo) {
           // Orphaned session - no session-info exists
-          console.log(`[SessionCleanup] Removing orphaned session: ${maskSessionId(sessionId)}`)
+          logger.info(`[SessionCleanup] Removing orphaned session: ${maskSessionId(sessionId)}`)
           return { sessionId, action: 'delete' as const }
         }
 
@@ -380,7 +383,7 @@ async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<v
         const age = now - lastAccessed
 
         if (age > STALE_THRESHOLD_MS) {
-          console.log(
+          logger.info(
             `[SessionCleanup] Removing stale session: ${maskSessionId(sessionId)} (${Math.floor(age / (24 * 60 * 60 * 1000))} days old)`
           )
           return { sessionId, action: 'delete' as const }
@@ -401,7 +404,7 @@ async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<v
 
     // Delete stale sessions
     if (sessionsToDelete.length > 0) {
-      console.log(
+      logger.info(
         `[SessionCleanup] Deleting ${sessionsToDelete.length} stale sessions for authKey: ${maskKey(authKey)}`
       )
 
@@ -418,10 +421,12 @@ async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<v
       mapping.updatedAt = new Date().toISOString()
       await kv.put(sessionMappingKey(authKey), JSON.stringify(mapping))
 
-      console.log(`[SessionCleanup] Cleanup complete. ${validSessions.length} sessions remaining.`)
+      logger.info(`[SessionCleanup] Cleanup complete. ${validSessions.length} sessions remaining.`)
     }
   } catch (error) {
-    console.error('[SessionCleanup] Error during cleanup:', error)
+    logger.error('[SessionCleanup] Error during cleanup', {
+      error: error instanceof Error ? error.message : String(error)
+    })
     // Don't throw - cleanup is best-effort and shouldn't fail handshake
   }
 }

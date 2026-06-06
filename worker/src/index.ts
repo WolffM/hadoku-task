@@ -17,11 +17,11 @@ import {
   createEdgeAuth,
   createCorsMiddleware,
   DEFAULT_HADOKU_ORIGINS,
-  logError,
   simpleValidationHook,
   createErrorHandlers,
   createOpenAPIDocConfig
 } from '@wolffm/worker-utils'
+import { logError, logger } from './logger'
 import {
   checkThrottle,
   recordIncident,
@@ -30,7 +30,7 @@ import {
   type IncidentRecord
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
-import type { AppContext, Env, TaskAuthExtension } from './types'
+import type { AppContext, TaskAuthExtension } from './types'
 
 // Import route modules
 import { createSessionRoutes } from './routes/session'
@@ -95,7 +95,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     const auth = c.get('authContext')
 
     if (!auth) {
-      console.error('[Throttle Middleware] authContext is undefined!')
+      logger.error('[Throttle Middleware] authContext is undefined!')
       return c.json({ error: 'Auth context not available' }, 500)
     }
 
@@ -152,7 +152,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
           }
         } catch (kvError) {
           // Log but don't fail the request if incident recording fails
-          console.warn('[Throttle] Failed to record incident (KV error):', kvError)
+          logger.warn('[Throttle] Failed to record incident (KV error)', {
+            error: kvError instanceof Error ? kvError.message : String(kvError)
+          })
         }
 
         logError('THROTTLE', c.req.path, `Rate limit exceeded: ${throttleResult.reason}`)
@@ -169,7 +171,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     } catch (error) {
       // If KV operations fail (e.g., rate limit exceeded), log and continue
       // This prevents KV issues from breaking the API
-      console.warn('[Throttle] KV operation failed, skipping throttle check:', error)
+      logger.warn('[Throttle] KV operation failed, skipping throttle check', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       // Continue without throttling rather than failing the request
     }
 

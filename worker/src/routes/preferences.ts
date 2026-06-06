@@ -4,7 +4,8 @@
  * Handles user preference management (theme, buttons, experimental flags, layout)
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { badRequest, logRequest, logError, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { badRequest, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { logRequest, logError } from '../logger'
 import {
   getPreferencesBySessionId,
   savePreferencesBySessionId,
