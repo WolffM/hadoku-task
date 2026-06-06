@@ -95,34 +95,41 @@ export async function createTask(
   storage: Storage,
   auth: AuthContext,
   input: CreateTaskInput,
-  boardId: string = 'main'
+  boardId: string = 'main',
+  expectedVersion?: number
 ): Promise<{ ok: boolean; id: ULID }> {
-  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    // Use client-provided ID if available, otherwise generate server-side
-    const id = input.id || generateULID()
-    // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
-    const createdAt = input.createdAt || timestamp
+  return withTaskOperation(
+    storage,
+    auth,
+    boardId,
+    (tasks, stats, timestamp) => {
+      // Use client-provided ID if available, otherwise generate server-side
+      const id = input.id || generateULID()
+      // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
+      const createdAt = input.createdAt || timestamp
 
-    const newTask: Task = {
-      id,
-      title: input.title,
-      tag: input.tag ?? null,
-      state: 'Active',
-      createdAt,
-      startTime: input.startTime ?? null,
-      endTime: input.endTime ?? null
-    }
+      const newTask: Task = {
+        id,
+        title: input.title,
+        tag: input.tag ?? null,
+        state: 'Active',
+        createdAt,
+        startTime: input.startTime ?? null,
+        endTime: input.endTime ?? null
+      }
 
-    return {
-      updatedTasks: {
-        ...tasks,
-        tasks: [newTask, ...tasks.tasks],
-        updatedAt: timestamp
-      },
-      statsEvents: [{ task: newTask, eventType: 'created' }],
-      result: { ok: true, id }
-    }
-  })
+      return {
+        updatedTasks: {
+          ...tasks,
+          tasks: [newTask, ...tasks.tasks],
+          updatedAt: timestamp
+        },
+        statsEvents: [{ task: newTask, eventType: 'created' }],
+        result: { ok: true, id }
+      }
+    },
+    expectedVersion
+  )
 }
 
 /**
@@ -134,30 +141,37 @@ export async function updateTask(
   auth: AuthContext,
   taskId: ULID,
   input: UpdateTaskInput,
-  boardId: string = 'main'
+  boardId: string = 'main',
+  expectedVersion?: number
 ): Promise<{ ok: boolean; message: string }> {
-  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
+  return withTaskOperation(
+    storage,
+    auth,
+    boardId,
+    (tasks, stats, timestamp) => {
+      const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
 
-    const updatedTask: Task = {
-      ...task,
-      ...input,
-      updatedAt: timestamp
-    }
-
-    const newTasks = [...tasks.tasks]
-    newTasks[taskIndex] = updatedTask
-
-    return {
-      updatedTasks: {
-        ...tasks,
-        tasks: newTasks,
+      const updatedTask: Task = {
+        ...task,
+        ...input,
         updatedAt: timestamp
-      },
-      statsEvents: [{ task: updatedTask, eventType: 'edited' }],
-      result: { ok: true, message: `Task ${taskId} updated` }
-    }
-  })
+      }
+
+      const newTasks = [...tasks.tasks]
+      newTasks[taskIndex] = updatedTask
+
+      return {
+        updatedTasks: {
+          ...tasks,
+          tasks: newTasks,
+          updatedAt: timestamp
+        },
+        statsEvents: [{ task: updatedTask, eventType: 'edited' }],
+        result: { ok: true, message: `Task ${taskId} updated` }
+      }
+    },
+    expectedVersion
+  )
 }
 
 /**
@@ -168,17 +182,24 @@ export async function completeTask(
   storage: Storage,
   auth: AuthContext,
   taskId: ULID,
-  boardId: string = 'main'
+  boardId: string = 'main',
+  expectedVersion?: number
 ): Promise<{ ok: boolean; message: string }> {
-  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp)
+  return withTaskOperation(
+    storage,
+    auth,
+    boardId,
+    (tasks, stats, timestamp) => {
+      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp)
 
-    return {
-      updatedTasks,
-      statsEvents: [{ task: closedTask, eventType: 'completed' }],
-      result: { ok: true, message: `Task ${taskId} completed` }
-    }
-  })
+      return {
+        updatedTasks,
+        statsEvents: [{ task: closedTask, eventType: 'completed' }],
+        result: { ok: true, message: `Task ${taskId} completed` }
+      }
+    },
+    expectedVersion
+  )
 }
 
 /**
@@ -188,17 +209,24 @@ export async function deleteTask(
   storage: Storage,
   auth: AuthContext,
   taskId: ULID,
-  boardId: string = 'main'
+  boardId: string = 'main',
+  expectedVersion?: number
 ): Promise<{ ok: boolean; message: string }> {
-  return withTaskOperation(storage, auth, boardId, (tasks, stats, timestamp) => {
-    const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Deleted', timestamp)
+  return withTaskOperation(
+    storage,
+    auth,
+    boardId,
+    (tasks, stats, timestamp) => {
+      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Deleted', timestamp)
 
-    return {
-      updatedTasks,
-      statsEvents: [{ task: closedTask, eventType: 'deleted' }],
-      result: { ok: true, message: `Task ${taskId} deleted` }
-    }
-  })
+      return {
+        updatedTasks,
+        statsEvents: [{ task: closedTask, eventType: 'deleted' }],
+        result: { ok: true, message: `Task ${taskId} deleted` }
+      }
+    },
+    expectedVersion
+  )
 }
 
 // --- Board Operations ---

@@ -7,7 +7,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, requireFields, extractField } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { handleOperation, handleBoardOperation } from './route-utils'
+import { handleOperation, handleBoardOperation, parseIfMatch, getContext } from './route-utils'
 import { DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext } from '../types'
 import {
@@ -57,7 +57,14 @@ export function createTaskRoutes() {
       boardId
     })
 
-    return handleOperation(c, (storage, auth) => TaskHandlers.getBoardTasks(storage, auth, boardId))
+    // Return the board's optimistic-concurrency version alongside tasks (body + ETag)
+    // so clients can hold it and present If-Match on later writes. Additive — legacy
+    // clients ignore the extra field/header.
+    const { storage, auth } = getContext(c)
+    const file = await storage.getTasks(auth.userType, auth.sessionId, boardId)
+    const version = file.version ?? 1
+    c.header('ETag', `"${version}"`)
+    return c.json({ tasks: file.tasks, version })
   }) as never)
 
   // Create Task
@@ -113,8 +120,9 @@ export function createTaskRoutes() {
       taskId: input.id
     })
 
+    const expectedVersion = parseIfMatch(c)
     return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.createTask(storage, auth, input, boardId)
+      TaskHandlers.createTask(storage, auth, input, boardId, expectedVersion)
     )
   }) as never)
 
@@ -170,8 +178,16 @@ export function createTaskRoutes() {
     })
 
     const { boardId: _, ...input } = body
+    const expectedVersion = parseIfMatch(c)
     return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.updateTask(storage, auth, id, input as Record<string, unknown>, boardId)
+      TaskHandlers.updateTask(
+        storage,
+        auth,
+        id,
+        input as Record<string, unknown>,
+        boardId,
+        expectedVersion
+      )
     )
   }) as never)
 
@@ -220,8 +236,9 @@ export function createTaskRoutes() {
       boardId
     })
 
+    const expectedVersion = parseIfMatch(c)
     return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.completeTask(storage, auth, id, boardId)
+      TaskHandlers.completeTask(storage, auth, id, boardId, expectedVersion)
     )
   }) as never)
 
@@ -270,8 +287,9 @@ export function createTaskRoutes() {
       boardId
     })
 
+    const expectedVersion = parseIfMatch(c)
     return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.deleteTask(storage, auth, id, boardId)
+      TaskHandlers.deleteTask(storage, auth, id, boardId, expectedVersion)
     )
   }) as never)
 

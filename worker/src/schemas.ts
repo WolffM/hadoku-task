@@ -93,7 +93,9 @@ export const UserPreferencesSchema = z
 // GET /tasks
 export const GetTasksResponseSchema = z
   .object({
-    tasks: z.array(TaskSchema)
+    tasks: z.array(TaskSchema),
+    // Optimistic-concurrency version of the board (also sent as the ETag header).
+    version: z.number().optional().openapi({ example: 7 })
   })
   .openapi('GetTasksResponse')
 
@@ -114,7 +116,9 @@ export const CreateTaskInputSchema = z
 export const CreateTaskResponseSchema = z
   .object({
     ok: z.literal(true),
-    id: z.string().openapi({ example: '01HXYZ123ABC' })
+    id: z.string().openapi({ example: '01HXYZ123ABC' }),
+    // New board version after the write (also sent as the ETag header).
+    version: z.number().optional().openapi({ example: 8 })
   })
   .openapi('CreateTaskResponse')
 
@@ -133,7 +137,8 @@ export const UpdateTaskInputSchema = z
 export const UpdateTaskResponseSchema = z
   .object({
     ok: z.literal(true),
-    message: z.string().openapi({ example: 'Task 01HXYZ123ABC updated' })
+    message: z.string().openapi({ example: 'Task 01HXYZ123ABC updated' }),
+    version: z.number().optional().openapi({ example: 8 })
   })
   .openapi('UpdateTaskResponse')
 
@@ -141,7 +146,8 @@ export const UpdateTaskResponseSchema = z
 export const CompleteTaskResponseSchema = z
   .object({
     ok: z.literal(true),
-    message: z.string().openapi({ example: 'Task 01HXYZ123ABC completed' })
+    message: z.string().openapi({ example: 'Task 01HXYZ123ABC completed' }),
+    version: z.number().optional().openapi({ example: 8 })
   })
   .openapi('CompleteTaskResponse')
 
@@ -149,7 +155,8 @@ export const CompleteTaskResponseSchema = z
 export const DeleteTaskResponseSchema = z
   .object({
     ok: z.literal(true),
-    message: z.string().openapi({ example: 'Task 01HXYZ123ABC deleted' })
+    message: z.string().openapi({ example: 'Task 01HXYZ123ABC deleted' }),
+    version: z.number().optional().openapi({ example: 8 })
   })
   .openapi('DeleteTaskResponse')
 

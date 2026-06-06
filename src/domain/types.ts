@@ -25,7 +25,9 @@ export interface Task {
 }
 
 export interface TasksFile {
-  version: 1
+  // Monotonic optimistic-concurrency version, bumped on every write.
+  // Legacy blobs were written as the literal 1; widened to number so writes can increment.
+  version: number
   updatedAt: string
   tasks: Task[]
 }
@@ -138,5 +140,18 @@ export class BoardNotFoundError extends DomainError {
   constructor(boardId: string) {
     super(`Board ${boardId} not found`, 'BOARD_NOT_FOUND', 404)
     this.name = 'BoardNotFoundError'
+  }
+}
+
+/**
+ * Error thrown when an optimistic-concurrency check fails: the client presented
+ * an `If-Match` version that no longer matches the stored board version.
+ * Carries the current version so the client can re-pull and retry.
+ * HTTP status: 409 Conflict
+ */
+export class VersionConflictError extends DomainError {
+  constructor(public readonly currentVersion: number) {
+    super(`Version conflict: board has moved to version ${currentVersion}`, 'VERSION_CONFLICT', 409)
+    this.name = 'VersionConflictError'
   }
 }

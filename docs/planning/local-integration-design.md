@@ -10,19 +10,19 @@ must keep working exactly as-is.
 
 ## 1. Locked decisions (recap)
 
-| Area              | Decision                                                                                                                                                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Source of truth   | Cloudflare KV, unchanged. Keys `boards:{cred}` / `tasks:{cred}:{boardId}`. Reuse `src/domain/types.ts` as the contract.                                                                                                                              |
-| Data model        | `Task` (title + tag + state + timestamps + `startTime`/`endTime`). MVP = **no new body/notes field**.                                                                                                                                                |
-| Editor surface    | **Native Kate `KTextEditor::Plugin` (C++/CMake)** — two tool-view tabs: **Tasks** + **Calendar**. KWrite cannot host plugins (sessions/plugins disabled by design); the tabs require Kate.                                                           |
-| Plugin UI toolkit | **QML / Kirigami**, embedded in the C++ tool view via `QQuickWidget`. `QWebEngineView`/React rejected (embedded Chromium). Calendar is the centerpiece → Kirigami's native look + calendar views win; cost is the Qt Quick runtime (modest, native). |
-| Repo location     | **`plugins/kate/` subfolder** of this repo (not a separate repo). Invisible to pnpm (explicit workspace globs); own CMake build + own CI workflow. C++ structs **codegen'd** from `src/domain/types.ts` / `openapi.json` → CI fails on drift.        |
-| Distribution      | **Local install** (`cmake --install` → `~/.local/lib64/qt6/plugins/…`). CI builds/compile-checks only; Flatpak/package deferred.                                                                                                                     |
-| Auth              | Replicate the browser cookie model: enter key **once** → `POST /session/create` → opaque session id → store in **KWallet** → send `X-Session-Id` on every later call. Direct to `hadoku.me/task/api/*`. **No central daemon.**                       |
-| Secret storage    | **KWallet** = local store for the session token. **Vaultwarden** = personal cross-device source of truth for the _raw key_ (seeded manually at setup; not a runtime dependency).                                                                     |
-| Data partition    | Plugin uses **your own user-key**, so its session resolves to the same credential the website cookie does → **same tasks**, both directions. (A separate service key would be a different, empty partition.)                                         |
-| Write safety      | **L1 + L2 optimistic concurrency**: board carries a `version`; writes present `If-Match`; mismatch → `409`, client re-pulls + retries. Backward-compatible (no `If-Match` ⇒ legacy last-write-wins, so the hosted API is unaffected).                |
-| Surfaces          | Kate Tasks + Calendar tabs **and** the Plasma desktop calendar widget.                                                                                                                                                                               |
+| Area              | Decision                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source of truth   | Cloudflare KV, unchanged. Keys `boards:{cred}` / `tasks:{cred}:{boardId}`. Reuse `src/domain/types.ts` as the contract.                                                                                                                                                                                                                                                                                                      |
+| Data model        | `Task` (title + tag + state + timestamps + `startTime`/`endTime`). MVP = **no new body/notes field**.                                                                                                                                                                                                                                                                                                                        |
+| Editor surface    | **Native Kate `KTextEditor::Plugin` (C++/CMake)** — two tool-view tabs: **Tasks** + **Calendar**. KWrite cannot host plugins (sessions/plugins disabled by design); the tabs require Kate.                                                                                                                                                                                                                                   |
+| Plugin UI toolkit | **QML / Kirigami**, embedded in the C++ tool view via `QQuickWidget`. `QWebEngineView`/React rejected (embedded Chromium). Calendar is the centerpiece → Kirigami's native look + calendar views win; cost is the Qt Quick runtime (modest, native). **Embedding mechanics are a Phase-1 spike, not yet proven — see §3/§8.**                                                                                                |
+| Repo location     | **`plugins/kate/` subfolder** of this repo (not a separate repo). Invisible to pnpm (explicit workspace globs); own CMake build + own CI workflow. Drift guard = **hand-written `Task`/`Board` structs + a CI parity test** vs `openapi.json` (codegen deferred — overkill for 2 types).                                                                                                                                     |
+| Distribution      | **Local install** (`cmake --install`). Verified plugin dir (Debian 13 multiarch): system `/usr/lib/x86_64-linux-gnu/qt6/plugins/kf6/ktexteditor/`; user `~/.local/lib/x86_64-linux-gnu/qt6/plugins/kf6/ktexteditor/` (NOT `lib64`). `.so` + embedded `plugin.json`; QML via `.qrc` into the `.so`. CI builds/compile-checks only; Flatpak deferred.                                                                          |
+| Auth              | Replicate the browser cookie model: enter key **once** → `POST /session/create` → opaque session id → store in **KWallet** → send `X-Session-Id` on every later call. Direct to `hadoku.me/task/api/*`. **No central daemon.** Session = **30-day sliding TTL** (re-minted <7d remaining; no refresh endpoint) so `401` is rare; cache the **raw key in KWallet too** for silent re-mint on `401` (vs a ~monthly re-prompt). |
+| Secret storage    | **KWallet** = local store for the session token. **Vaultwarden** = personal cross-device source of truth for the _raw key_ (seeded manually at setup; not a runtime dependency).                                                                                                                                                                                                                                             |
+| Data partition    | Plugin uses **your own user-key**, so its session resolves to the same credential the website cookie does → **same tasks**, both directions. (A separate service key would be a different, empty partition.)                                                                                                                                                                                                                 |
+| Write safety      | **L1 + L2 optimistic concurrency**: board carries a `version`; writes present `If-Match`; mismatch → `409`, client re-pulls + retries. Backward-compatible (no `If-Match` ⇒ legacy last-write-wins). **Narrows lost-update, doesn't eliminate it** — KV is eventually consistent, so even the server's `version` read can be stale (brief false-`409`→re-pull loop possible). True CAS = Durable Object (deferred; see §4).  |
+| Surfaces          | Kate Tasks + Calendar tabs **and** the Plasma desktop calendar widget.                                                                                                                                                                                                                                                                                                                                                       |
 
 ---
 
@@ -67,18 +67,26 @@ plus our own modules. UI is **QML/Kirigami hosted in a `QQuickWidget`** inside e
 (no `Kirigami.ApplicationWindow` — the host window is Kate's); QML shipped via `.qrc`; style pinned
 with `QQuickStyle::setStyle("org.kde.desktop")` to match Kate. No WebEngine.
 
-| Module             | Type / base                         | Responsibility                                                                                                                                                                             |
-| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TaskPlugin`       | `KTextEditor::Plugin`               | Entry point + `plugin.json` metadata; one global instance; `createView()`.                                                                                                                 |
-| `TaskPluginView`   | `QObject`, `KXMLGUIClient`          | Per-MainWindow; creates the two tool views via `createToolView(...)`; registers actions/shortcuts.                                                                                         |
-| `SessionManager`   | `QObject`                           | First-run key prompt → `POST /session/create`; read/write session id in **KWallet**; attach `X-Session-Id`; on `401` trigger re-auth.                                                      |
-| `TaskApiClient`    | `QObject` (`QNetworkAccessManager`) | Thin typed wrapper over REST (`/tasks`, `POST /`, `PATCH /{id}`, `/{id}/complete`, `DELETE /{id}`, `/stats`, boards). Holds board `version`; sends `If-Match`; on `409` → refetch + retry. |
-| `domain` (structs) | plain C++/JSON                      | Mirror of `src/domain/types.ts` (`Task`, `Board`). Kept in lockstep with the TS contract (optionally codegen from `openapi.json`).                                                         |
-| `TaskStore`        | `QAbstractItemModel`                | In-memory model backing both views; current board + version; change signals; optional on-disk cache for offline _viewing_.                                                                 |
-| `TasksToolView`    | `QQuickWidget` + QML                | Kirigami list of tasks; **quick-add input (capture)**; complete/delete/tag actions; tag filter. Bound to `TaskStore`.                                                                      |
-| `CalendarToolView` | `QQuickWidget` + QML                | Kirigami day/timeline of tasks with `startTime`/`endTime`; create-from-timeslot; drag-to-reschedule (mirrors web `CalendarDayView`; borrow Merkuro views). Heaviest UI piece.              |
-| `SyncController`   | `QObject`                           | Pull on a timer + on focus; push on edit; L1 staleness + L2 version-conflict handling; (full build) offline write queue.                                                                   |
-| `TaskConfigPage`   | `KTextEditor::ConfigPage`           | Settings: server base URL, poll interval, default board, re-auth/sign-out.                                                                                                                 |
+> ⚠️ **Unproven — Phase-1 spike required (see §8).** No Kate plugin precedent embeds QML; this
+> composes `createToolView` + `QQuickWidget`. Caveats that bite here: QQuickWidget draws before
+> non-OpenGL widgets (stacking → may need `WA_AlwaysStackOnTop`) and **disables the threaded render
+> loop** (can dull the Kirigami animations we chose it for). The spike must also pick the mechanism —
+> `QQuickWidget` (better focus/stacking, no threaded render) vs `createWindowContainer`+`QQuickView`
+> (threaded render, worse focus) — and verify focus in/out, typing, HiDPI, and render flush before
+> `TaskStore` is built on it.
+
+| Module             | Type / base                         | Responsibility                                                                                                                                                                                                                                                                              |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TaskPlugin`       | `KTextEditor::Plugin`               | Entry point + `plugin.json` metadata; one global instance; `createView()`.                                                                                                                                                                                                                  |
+| `TaskPluginView`   | `QObject`, `KXMLGUIClient`          | Per-MainWindow; creates the two tool views via `createToolView(...)`; registers actions/shortcuts.                                                                                                                                                                                          |
+| `SessionManager`   | `QObject`                           | First-run key prompt → `POST /session/create`; store session id **and raw key** in **KWallet**; attach `X-Session-Id`; on `401` silently re-mint from the stored key (re-prompt only if that also fails).                                                                                   |
+| `TaskApiClient`    | `QObject` (`QNetworkAccessManager`) | Thin typed wrapper over REST (`/tasks`, `POST /`, `PATCH /{id}`, `/{id}/complete`, `DELETE /{id}`, `/stats`, boards). Holds board `version`; sends `If-Match`; on `409` → refetch + retry.                                                                                                  |
+| `domain` (structs) | plain C++/JSON                      | **Hand-written** mirror of `src/domain/types.ts` (`Task`, `Board`) + a CI parity test vs `openapi.json` for drift (codegen deferred — only 2 types).                                                                                                                                        |
+| `TaskStore`        | `QAbstractItemModel`                | In-memory model backing both views; current board + version; change signals; optional on-disk cache for offline _viewing_.                                                                                                                                                                  |
+| `TasksToolView`    | `QQuickWidget` + QML                | Kirigami list of tasks; **quick-add input (capture)**; complete/delete/tag actions; tag filter. Bound to `TaskStore`.                                                                                                                                                                       |
+| `CalendarToolView` | `QQuickWidget` + QML                | Kirigami day/timeline of tasks with `startTime`/`endTime`; create-from-timeslot; drag-to-reschedule (mirrors web `CalendarDayView`). From-scratch Kirigami over `TaskStore`; Merkuro = UX reference only (its views bind to Akonadi's model, not reusable). **Highest-variance line item.** |
+| `SyncController`   | `QObject`                           | Pull on a timer + on focus; push on edit; L1 staleness + L2 version-conflict handling; (full build) offline write queue.                                                                                                                                                                    |
+| `TaskConfigPage`   | `KTextEditor::ConfigPage`           | Settings: server base URL, poll interval, default board, re-auth/sign-out.                                                                                                                                                                                                                  |
 
 ---
 
@@ -92,8 +100,14 @@ Additive changes only; legacy clients keep last-write-wins.
    - present + matches → apply, bump version, return new version;
    - present + stale → `409 Conflict` (+ current version) so client re-pulls/retries;
    - **absent → current behavior** (backward-compatible; hosted web app unaffected).
-4. Keep the existing in-memory per-instance `withBoardLock`. Document the residual cross-instance
-   race + KV eventual-consistency window as acceptable for a single user.
+4. Keep the existing in-memory per-instance `withBoardLock`. **Honest framing: this narrows lost
+   updates, it does not eliminate them** — KV is eventually consistent, so the server's read of
+   `version` at write time can itself be stale (it may accept a write it should `409`, or `409` one
+   it shouldn't; the false-`409` self-heals via re-pull, though a re-pull can also read stale → a
+   brief loop). Acceptable for a single user rarely writing from two colos in the same window.
+   **Escape hatch (not now):** for true compare-and-swap, move the board to a Cloudflare **Durable
+   Object** (atomic, strongly consistent) instead of KV — overkill for single-user, but the
+   documented exit if multi-writer correctness is ever needed.
 5. (Later, optional) migrate the web client (`useTasks`) to send `If-Match` too, so the website
    benefits from the same guard.
 
@@ -101,14 +115,19 @@ Additive changes only; legacy clients keep last-write-wins.
 
 ## 5. Plasma desktop calendar surface
 
-- **MVP (recommended):** API exposes an **ICS feed** of scheduled tasks (tasks with
-  `startTime`/`endTime` → `VEVENT`s), or the capture watcher writes a local `.ics`. Add it as an
-  ICS calendar resource in KOrganizer/Akonadi → the Plasma digital-clock calendar applet renders
-  the events. Reuses Plasma's built-in PIM calendar; minimal new code.
-  - **Verify/install:** the applet's PIM **event plugin** (from `kdepim-addons`) — currently only
-    `holidayevents` is present on this box.
-- **Full:** custom **Plasmoid (QML)** reading tasks directly from the API/local store. More control,
-  more work, not gated on Akonadi.
+This surface is **independent of Phases 1–3** (it doesn't need the plugin), so it's the cheapest
+user-visible win and can be pulled forward.
+
+- **MVP (recommended): local `.ics` file.** A small periodic writer (a systemd **user timer**, not a
+  persistent daemon) pulls scheduled tasks and writes `~/.local/share/.../tasks.ics`; add it to
+  KOrganizer/Akonadi as a **local ICS file** resource → the Plasma calendar applet renders the
+  events. Sidesteps network auth entirely (Akonadi just reads a file).
+- **Avoid: network ICS feed.** A stock Akonadi ICS-from-URL resource can't inject an `X-Session-Id`
+  header → forces an unauthenticated feed or a `?token=` URL, both worse than the local file.
+- **Verify/install:** the applet's PIM **event plugin** (from `kdepim-addons`) — currently only
+  `holidayevents` is present on this box.
+- **Full (later):** custom **Plasmoid (QML)** reading tasks directly from the API/local store. More
+  control, more work, not gated on Akonadi.
 
 ---
 
@@ -126,21 +145,54 @@ Additive changes only; legacy clients keep last-write-wins.
 
 ## 7. Phased plan + Definition of Done
 
-### Phase 0 — API hardening (server, this repo)
+### Phase 0 — API hardening (server, this repo) ✅ DONE (2026-06-06)
 
 Add board `version` + `If-Match`/`409`; backward-compatible. Also fix two bugs found during live
 verification: (a) `POST /task/api/` with a **trailing slash** → 404 (only `/task/api` matches);
 (b) `DELETE`/`PATCH` on a **non-existent or non-active** task → `500` instead of `404` (and not
-idempotent). Plugin client must avoid the trailing slash regardless.
-**DoD:** new field present; `If-Match` mismatch → `409`; absent `If-Match` → unchanged behavior;
-trailing-slash create works or is documented; delete-missing → `404`; existing Playwright e2e green.
+idempotent). Plugin client must avoid the trailing slash regardless, and **treat `404`/already-deleted
+on DELETE as success** — delete idempotency is load-bearing for `SyncController` retries after a blip.
+
+**Implemented:**
+
+- `TasksFile.version` widened `1`→`number` (`src/domain/types.ts`); added `VersionConflictError`
+  (HTTP 409, carries `currentVersion`), exported from `@wolffm/task/api`.
+- `withTaskOperation` (`handlers-utils.ts`) is the single read-modify-write chokepoint: optional
+  `expectedVersion` → L2 check (throws `VersionConflictError` on mismatch); **bumps `version` on
+  every write**; injects the new `version` into object results. Threaded `expectedVersion` through
+  `createTask`/`updateTask`/`completeTask`/`deleteTask`.
+- Worker: global `onError` now maps any `DomainError` (`httpStatus`+`code`, detected structurally)
+  to its status before the generic 500 — fixes 404-vs-500 across task/board/tag routes at once.
+- `GET /tasks` returns `version` (body) + `ETag`; mutations return new `version` (body) + `ETag`.
+  Routes parse `If-Match` (`parseIfMatch`, accepts `3` or `"3"`, `*`/absent ⇒ legacy LWW).
+- Schemas updated (additive optional `version`).
+- **Bug (a) trailing slash:** edge/Hono routing artifact, not a clean server fix (would need a
+  shadow route). Resolution = client never sends the trailing slash (`TaskApiClient` contract).
+
+**Verified (runtime, not just typecheck):** in-process harness boots the real `createTaskHandler()`
+and drives `app.request()` against in-memory KV + stub D1 — **25/25 checks pass**: missing
+delete/patch/complete → `404` (`TASK_NOT_FOUND`), not `500`; GET version+ETag; version bump per
+write; stale `If-Match` → `409` + `currentVersion` (and the write is _not_ applied); correct
+`If-Match` applies; **no `If-Match` still succeeds** (backward-compat). Harness at
+`worker/test/phase0-verify.ts` (bundle w/ esbuild aliasing `@wolffm/task/api`→`dist/server`, run
+w/ node — not wired into CI). Root app typecheck clean; worker bundles; lint+format clean.
+Deploys via the normal CI publish (this repo ships the package; hadoku_site consumes it).
+
+**DoD:** ✅ new field present; ✅ `If-Match` mismatch → `409`; ✅ absent `If-Match` → unchanged;
+trailing-slash → documented as client-avoided; ✅ delete-missing → `404`. ⏳ existing Playwright e2e
+(run vite against **prod**, so they validate the frontend, not these not-yet-deployed server
+changes) — orthogonal; rerun on next publish.
 
 ### Phase 1 — Plugin skeleton + auth (MVP core)
 
-KTextEditor plugin loads in Kate; empty Tasks tab; `SessionManager` (key → `/session/create` →
+**Spike first (de-risk #1):** an empty **Kirigami** tool view in a `QQuickWidget` — tab in, type, tab
+out cleanly; verify focus, HiDPI, render flush, animation smoothness; choose `QQuickWidget` vs
+`createWindowContainer`. Build nothing else until this is smooth.
+Then: KTextEditor plugin loads in Kate; empty Tasks tab; `SessionManager` (key → `/session/create` →
 KWallet → `X-Session-Id`).
-**DoD:** plugin builds via CMake and appears as a tool-view tab; first-run key prompt mints + caches
-a session; session **survives Kate restart**; `whoami` confirms identity.
+**DoD:** embedded Kirigami spike passes (clean focus in/out + typing); plugin builds via CMake and
+appears as a tool-view tab; first-run key prompt mints + caches a session; session **survives Kate
+restart**; `whoami` confirms identity.
 
 ### Phase 2 — Tasks tab (read/write CRUD)
 
@@ -157,7 +209,8 @@ and match the web calendar.
 
 ### Phase 4 — Plasma desktop calendar
 
-ICS feed → Akonadi resource → Plasma applet (install PIM event plugin).
+Local `.ics` writer (user timer) → Akonadi local-file resource → Plasma applet (install PIM event
+plugin). **Independent of Phases 1–3 — can be pulled forward as an early win.**
 **DoD:** a scheduled task shows in the desktop calendar popup within one sync cycle.
 
 ### Phase 5 (optional, "full") — file capture + offline
@@ -184,12 +237,15 @@ Scratch-file watcher; offline view cache + write queue/reconcile.
 
 **To verify 🔍**
 
+- **#1 RISK — QML/Kirigami in a `QQuickWidget` tool view.** No Kate precedent; threaded-render-loop +
+  stacking + focus caveats. The Phase-1 spike must prove clean focus/typing/HiDPI and pick the
+  embedding mechanism _before_ `TaskStore` is built on it.
 - Plasma calendar PIM **event plugin** (`kdepim-addons`) — only `holidayevents` found; needed for §5 MVP.
 
 **Decided ✅**
 
-- UI toolkit: **QML/Kirigami** (embedded via `QQuickWidget`). Repo: **`plugins/kate/`** subfolder;
-  local-install distribution; C++ types codegen'd from the contract.
+- UI toolkit: **QML/Kirigami** (embedding mechanism TBD by the Phase-1 spike — see above). Repo:
+  **`plugins/kate/`** subfolder; local-install distribution; hand-written types + CI parity test.
 
 **To decide 🟡**
 

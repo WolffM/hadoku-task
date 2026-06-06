@@ -136,6 +136,29 @@ export const getContext = (c: Context<AppContext>) => ({
 })
 
 /**
+ * Parse an optimistic-concurrency `If-Match` request header into a board version.
+ * Accepts a bare number (`3`) or a quoted ETag (`"3"`). Returns `undefined` when
+ * absent or when `*` (clients opting out of the check) — legacy last-write-wins.
+ */
+export function parseIfMatch(c: Context<AppContext>): number | undefined {
+  const raw = c.req.header('If-Match')
+  if (!raw || raw === '*') return undefined
+  const parsed = parseInt(raw.replace(/"/g, '').trim(), 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+/** Set the `ETag` response header from a versioned operation result, if present. */
+function setVersionETag(c: Context<AppContext>, result: unknown): void {
+  if (
+    result &&
+    typeof result === 'object' &&
+    typeof (result as { version?: unknown }).version === 'number'
+  ) {
+    c.header('ETag', `"${(result as { version: number }).version}"`)
+  }
+}
+
+/**
  * Generic handler wrapper for operations without locking
  */
 export async function handleOperation<T>(
@@ -210,6 +233,7 @@ export async function handleBoardOperation<T>(
     return operation(storage, auth)
   })
 
+  setVersionETag(c, result)
   return c.json(result)
 }
 

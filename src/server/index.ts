@@ -47,4 +47,9 @@ export type {
 } from '../domain/types.js'
 
 // Error Types (for HTTP status code handling)
-export { DomainError, TaskNotFoundError, BoardNotFoundError } from '../domain/types.js'
+export {
+  DomainError,
+  TaskNotFoundError,
+  BoardNotFoundError,
+  VersionConflictError
+} from '../domain/types.js'

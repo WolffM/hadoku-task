@@ -7,7 +7,7 @@
  */
 
 import type { Task, TasksFile, StatsFile, Board, BoardsFile, ULID, AuthContext } from '../types.js'
-import { TaskNotFoundError, BoardNotFoundError } from '../types.js'
+import { TaskNotFoundError, BoardNotFoundError, VersionConflictError } from '../types.js'
 import type { Storage } from '../../server/storage.js'
 
 /**
@@ -212,7 +212,11 @@ export async function withTaskOperation<T>(
     updatedTasks: TasksFile
     statsEvents: Array<{ task: Task; eventType: 'created' | 'completed' | 'edited' | 'deleted' }>
     result: T
-  }
+  },
+  // Optimistic-concurrency guard (L2). When provided, the operation only applies
+  // if the stored board version still matches; otherwise it throws
+  // VersionConflictError (HTTP 409). Absent ⇒ legacy last-write-wins (unchanged).
+  expectedVersion?: number
 ): Promise<T> {
   const timestamp = new Date().toISOString()
 
@@ -222,8 +226,18 @@ export async function withTaskOperation<T>(
     storage.getStats(auth.userType, auth.sessionId, boardId)
   ])
 
+  // L2 optimistic-concurrency check (only when the client opted in via If-Match)
+  const currentVersion = tasks.version ?? 1
+  if (expectedVersion !== undefined && currentVersion !== expectedVersion) {
+    throw new VersionConflictError(currentVersion)
+  }
+
   // Execute operation
   const { updatedTasks, statsEvents, result } = operation(tasks, stats, timestamp)
+
+  // Bump the monotonic version on every successful write
+  const nextVersion = currentVersion + 1
+  const versionedTasks: TasksFile = { ...updatedTasks, version: nextVersion }
 
   // Update stats with all events
   let updatedStats = stats
@@ -233,10 +247,14 @@ export async function withTaskOperation<T>(
 
   // Save both files
   await Promise.all([
-    storage.saveTasks(auth.userType, auth.sessionId, boardId, updatedTasks),
+    storage.saveTasks(auth.userType, auth.sessionId, boardId, versionedTasks),
     storage.saveStats(auth.userType, auth.sessionId, boardId, updatedStats)
   ])
 
+  // Surface the new version to callers/HTTP layer (additive; legacy clients ignore it)
+  if (result !== null && typeof result === 'object') {
+    return { ...(result as Record<string, unknown>), version: nextVersion } as T
+  }
   return result
 }
 

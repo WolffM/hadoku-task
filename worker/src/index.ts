@@ -254,7 +254,23 @@ This API provides endpoints for:
   // Error handlers
   const { notFoundHandler, errorHandler } = createErrorHandlers('simple')
   app.notFound(notFoundHandler)
-  app.onError(errorHandler)
+  // Map domain errors (TaskNotFound→404, BoardNotFound→404, VersionConflict→409)
+  // to their declared HTTP status before falling back to the generic 500 handler.
+  // Detected structurally so it works regardless of cross-package instanceof identity.
+  app.onError((err, c) => {
+    const domain = err as {
+      httpStatus?: unknown
+      code?: unknown
+      message?: string
+      currentVersion?: unknown
+    }
+    if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
+      const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
+      if (typeof domain.currentVersion === 'number') body.currentVersion = domain.currentVersion
+      return c.json(body, domain.httpStatus as 400 | 404 | 409 | 500)
+    }
+    return errorHandler(err, c)
+  })
 
   return app
 }
