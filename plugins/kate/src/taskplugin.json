@@ -9,7 +9,6 @@
     "Category": "Productivity",
     "Description": "Tasks and Calendar tool views backed by the hadoku task API",
     "Icon": "view-task",
-    "Id": "katehadokutask",
     "License": "MIT",
     "Name": "Hadoku Tasks",
     "Version": "0.1.0"

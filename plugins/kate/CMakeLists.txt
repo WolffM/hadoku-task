@@ -49,9 +49,17 @@ target_link_libraries(katehadokutask PRIVATE
     KF6::Wallet
 )
 
-# KTextEditor discovers plugins under <plugin-dir>/kf6/ktexteditor/.
-# KDE_INSTALL_PLUGINDIR resolves to the correct multiarch Qt6 plugin dir
-# (e.g. /usr/lib/x86_64-linux-gnu/qt6/plugins on Debian, ~/.local/... for --prefix=$HOME/.local).
-install(TARGETS katehadokutask DESTINATION ${KDE_INSTALL_PLUGINDIR}/kf6/ktexteditor)
+# KTextEditor scans <qt-plugin-dir>/kf6/ktexteditor/. On Debian that dir carries
+# a `qt6/` infix (/usr/lib/<arch>/qt6/plugins) which ECM's KDE_INSTALL_PLUGINDIR
+# drops for non-Qt prefixes — so a --prefix=$HOME/.local install lands somewhere
+# Qt never searches. Query qtpaths for the real, absolute plugin dir instead, so a
+# plain `sudo cmake --install build` puts the .so exactly where Kate looks.
+find_program(QTPATHS6 NAMES qtpaths6 qtpaths REQUIRED)
+execute_process(
+    COMMAND ${QTPATHS6} --plugin-dir
+    OUTPUT_VARIABLE QT_PLUGIN_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Qt plugin dir: ${QT_PLUGIN_DIR}")
+install(TARGETS katehadokutask DESTINATION "${QT_PLUGIN_DIR}/kf6/ktexteditor")
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
