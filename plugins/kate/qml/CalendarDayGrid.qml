@@ -66,6 +66,45 @@ Item {
         return out;
     }
 
+    // Column packing for overlapping tasks: id -> { col, cols }. Within each
+    // cluster of mutually-overlapping tasks, each task takes the first free
+    // column; cols = the cluster's max concurrency (so non-overlapping runs use
+    // the full width). Based on committed times (stable during a drag).
+    readonly property var layout: {
+        var items = grid.dayTasks.map(function (t) {
+            var s = grid.minutesOf(t.startTime);
+            var e = t.endTime ? grid.minutesOf(t.endTime) : s + 60;
+            return { id: t.id, s: s, e: Math.max(e, s + 15) };
+        }).sort(function (a, b) { return a.s - b.s || a.e - b.e; });
+
+        var res = {};
+        var cluster = [];
+        var clusterEnd = -1;
+        function flush() {
+            var colEnds = [];
+            for (var i = 0; i < cluster.length; ++i) {
+                var it = cluster[i];
+                var placed = false;
+                for (var k = 0; k < colEnds.length; ++k) {
+                    if (it.s >= colEnds[k]) { colEnds[k] = it.e; it.col = k; placed = true; break; }
+                }
+                if (!placed) { it.col = colEnds.length; colEnds.push(it.e); }
+            }
+            for (var j = 0; j < cluster.length; ++j)
+                res[cluster[j].id] = { col: cluster[j].col, cols: colEnds.length };
+            cluster = [];
+        }
+        for (var i = 0; i < items.length; ++i) {
+            var t = items[i];
+            if (cluster.length > 0 && t.s >= clusterEnd)
+                flush();
+            cluster.push(t);
+            clusterEnd = cluster.length === 1 ? t.e : Math.max(clusterEnd, t.e);
+        }
+        flush();
+        return res;
+    }
+
     function scrollToInteresting() {
         var targetMin;
         if (grid.dayStr(grid.selectedDate) === grid.dayStr(new Date()))
@@ -150,8 +189,14 @@ Item {
                     onBaseStartChanged: curStart = baseStart
                     onBaseEndChanged: curEnd = baseEnd
 
-                    x: grid.gutterW + Kirigami.Units.smallSpacing
-                    width: parent.width - x - Kirigami.Units.smallSpacing
+                    // Column placement for overlaps.
+                    readonly property var lay: grid.layout[modelData.id] || ({ col: 0, cols: 1 })
+                    readonly property real laneX: grid.gutterW + Kirigami.Units.smallSpacing
+                    readonly property real laneW: parent.width - laneX - Kirigami.Units.smallSpacing
+                    readonly property real colGap: lay.cols > 1 ? Kirigami.Units.smallSpacing : 0
+
+                    x: laneX + lay.col * (laneW / lay.cols)
+                    width: laneW / lay.cols - colGap
                     y: curStart / 60 * grid.hourHeight
                     height: Math.max((curEnd - curStart) / 60 * grid.hourHeight, Kirigami.Units.gridUnit)
 
