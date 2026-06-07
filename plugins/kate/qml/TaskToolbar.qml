@@ -263,20 +263,14 @@ ColumnLayout {
                                     : Qt.alpha(Kirigami.Theme.highlightColor, 0.55)
             HoverHandler { id: addHover }
             TapHandler { onTapped: tagDialog.openNew() }
-            // Plus drawn as two centered bars (a text "+" sits on the baseline and
-            // looks off-centre). Both anchor to the circle's centre.
-            Rectangle {
+            // Designed plus icon (vector → crisp + properly centered at any DPI),
+            // tinted white via isMask.
+            Kirigami.Icon {
                 anchors.centerIn: parent
-                width: Math.round(addTagBtn.height * 0.46)
-                height: Math.max(2, Math.round(addTagBtn.height * 0.13))
-                radius: height / 2
-                color: "white"
-            }
-            Rectangle {
-                anchors.centerIn: parent
-                width: Math.max(2, Math.round(addTagBtn.height * 0.13))
-                height: Math.round(addTagBtn.height * 0.46)
-                radius: width / 2
+                width: Math.round(addTagBtn.height * 0.66)
+                height: width
+                source: "list-add"
+                isMask: true
                 color: "white"
             }
             QQC2.ToolTip.text: i18n("New tag")
