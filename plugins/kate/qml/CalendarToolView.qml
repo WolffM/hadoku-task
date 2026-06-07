@@ -184,23 +184,29 @@ Kirigami.Page {
                 onClicked: page.mode = "agenda"
             }
             Item { Layout.fillWidth: true }
+            // Nav is only meaningful in Day mode, but hide it via opacity (not
+            // `visible`) so the row keeps the same height in both modes — otherwise
+            // the toolbar's vertical rhythm shifts when toggling Day/Agenda.
             QQC2.ToolButton {
-                visible: page.mode === "day"
+                opacity: page.mode === "day" ? 1 : 0
+                enabled: page.mode === "day"
                 icon.name: "go-previous"
                 onClicked: page.addDays(-1)
             }
             QQC2.Label {
-                visible: page.mode === "day"
+                opacity: page.mode === "day" ? 1 : 0
                 text: Qt.formatDate(page.selectedDate, "ddd MMM d")
                 font: Kirigami.Theme.smallFont
             }
             QQC2.ToolButton {
-                visible: page.mode === "day"
+                opacity: page.mode === "day" ? 1 : 0
+                enabled: page.mode === "day"
                 icon.name: "go-next"
                 onClicked: page.addDays(1)
             }
             QQC2.ToolButton {
-                visible: page.mode === "day"
+                opacity: page.mode === "day" ? 1 : 0
+                enabled: page.mode === "day"
                 icon.name: "go-jump-today"
                 QQC2.ToolTip.text: i18n("Today")
                 QQC2.ToolTip.visible: hovered
