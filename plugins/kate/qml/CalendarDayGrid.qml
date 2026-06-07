@@ -195,7 +195,7 @@ Item {
                             else grid.commit(block.taskId, block.curStart, block.curEnd);
                         }
                         onCentroidChanged: if (active) {
-                            var dm = grid.snap15((centroid.position.y - centroid.pressPosition.y) / grid.hourHeight * 60);
+                            var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
                             block.curStart = grabStart + dm;
                             block.curEnd = grabEnd + dm;
                         }
@@ -214,7 +214,7 @@ Item {
                                 else grid.commit(block.taskId, block.curStart, block.curEnd);
                             }
                             onCentroidChanged: if (active) {
-                                var dm = grid.snap15((centroid.position.y - centroid.pressPosition.y) / grid.hourHeight * 60);
+                                var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
                                 block.curStart = Math.min(grabStart + dm, block.curEnd - 15);
                             }
                         }
@@ -233,7 +233,7 @@ Item {
                                 else grid.commit(block.taskId, block.curStart, block.curEnd);
                             }
                             onCentroidChanged: if (active) {
-                                var dm = grid.snap15((centroid.position.y - centroid.pressPosition.y) / grid.hourHeight * 60);
+                                var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
                                 block.curEnd = Math.max(grabEnd + dm, block.curStart + 15);
                             }
                         }

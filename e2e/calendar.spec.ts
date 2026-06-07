@@ -106,6 +106,61 @@ test.describe('Calendar day view', () => {
       .toBe('date:true start:null end:null')
   })
 
+  test('shows a source badge and expandable metadata for ingested events', async ({ page }) => {
+    // Create a task so the app materialises its -tasks localStorage key.
+    await page.getByRole('button', { name: '+ New task' }).click()
+    await page.locator('.calendar-create-input').fill('probe')
+    await page.locator('.calendar-create-btn--primary').click()
+    await expect(page.locator('.calendar-agenda__card')).toBeVisible()
+
+    // Seed a provider-ingested event (source + metadata) into that key.
+    await page.evaluate(() => {
+      let key: string | null = null
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.endsWith('-tasks')) {
+          key = k
+          break
+        }
+      }
+      if (!key) throw new Error('no tasks key')
+      const at = (h: number, m: number) => {
+        const d = new Date()
+        d.setHours(h, m, 0, 0)
+        return d.toISOString()
+      }
+      const blob = JSON.parse(localStorage.getItem(key) || '{}')
+      blob.tasks = [
+        {
+          id: 'contact-appt_e2e',
+          title: 'Synced Meeting',
+          tag: 'contact',
+          state: 'Active',
+          createdAt: at(8, 0),
+          startTime: at(14, 0),
+          endTime: at(14, 30),
+          source: 'contact',
+          sourceId: 'appt_e2e',
+          metadata: { scheduledBy: 'jane@example.com', platform: 'discord' }
+        }
+      ]
+      localStorage.setItem(key, JSON.stringify(blob))
+    })
+    await page.reload()
+    await page.getByRole('button', { name: 'Calendar', exact: true }).click()
+
+    const card = page.locator('.calendar-agenda__card', { hasText: 'Synced Meeting' })
+    await expect(card).toBeVisible()
+    await expect(card.locator('.calendar-agenda__source')).toContainText('contact')
+
+    // Metadata is hidden until expanded.
+    await expect(card.locator('.calendar-agenda__details')).toHaveCount(0)
+    await card.hover()
+    await card.getByRole('button', { name: 'Show details' }).click()
+    await expect(card.locator('.calendar-agenda__details')).toContainText('Scheduled By')
+    await expect(card.locator('.calendar-agenda__details')).toContainText('jane@example.com')
+  })
+
   test('deleting a task removes its card', async ({ page }) => {
     await page.getByRole('button', { name: '+ New task' }).click()
     await page.locator('.calendar-create-input').fill('Verify delete task')
