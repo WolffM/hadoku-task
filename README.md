@@ -144,12 +144,13 @@ Choose from 9 theme families via the theme picker (top-right), each with light a
 
 ## 📚 Documentation
 
-| Document                                    | Purpose                                      | Audience                            |
-| ------------------------------------------- | -------------------------------------------- | ----------------------------------- |
-| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, patterns, technical decisions | Developers integrating or extending |
-| **[API.md](docs/API.md)**                   | Complete endpoint reference                  | Backend implementers                |
-| **[CHANGELOG.md](docs/CHANGELOG.md)**       | Version history and changes                  | All users                           |
-| **[CONTRIBUTING.md](CONTRIBUTING.md)**      | Contribution guidelines                      | Contributors                        |
+| Document                                    | Purpose                                       | Audience                            |
+| ------------------------------------------- | --------------------------------------------- | ----------------------------------- |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, patterns, technical decisions  | Developers integrating or extending |
+| **[API.md](docs/API.md)**                   | Complete endpoint reference                   | Backend implementers                |
+| **[MCP.md](docs/MCP.md)**                   | Remote MCP server for agents (tasks/calendar) | Agents & integrators                |
+| **[CHANGELOG.md](docs/CHANGELOG.md)**       | Version history and changes                   | All users                           |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)**      | Contribution guidelines                       | Contributors                        |
 
 ### Quick Links
 
@@ -157,6 +158,7 @@ Choose from 9 theme families via the theme picker (top-right), each with light a
 - **How it works**: [Architecture Overview](docs/ARCHITECTURE.md#overview)
 - **Security model**: [Authentication & Security](docs/ARCHITECTURE.md#security--authentication)
 - **API endpoints**: [Complete API Reference](docs/API.md)
+- **Agents / MCP**: [MCP Server](docs/MCP.md)
 - **Add features**: [Contributing Guide](CONTRIBUTING.md)
 
 ---

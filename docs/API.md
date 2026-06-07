@@ -716,12 +716,26 @@ All endpoints return errors in this format:
 interface Task {
   id: string // ULID format
   title: string
-  tag?: string // Space-separated tags
+  tag?: string | null // Space-separated tags
+  state: 'Active' | 'Deleted' | 'Completed'
   createdAt: string // ISO 8601
-  updatedAt: string // ISO 8601
-  closedAt?: string // ISO 8601 (when completed/deleted)
+  updatedAt?: string | null // ISO 8601
+  closedAt?: string | null // ISO 8601 (when completed/deleted)
+  // Calendar scheduling (see docs/MCP.md for the model)
+  date?: string | null // canonical day "YYYY-MM-DD" (UTC); date-only = all-day task
+  startTime?: string | null // ISO 8601 — timed event start
+  endTime?: string | null // ISO 8601 — timed event end
+  // External provider origin (calendar integrations) + arbitrary detail
+  source?: string | null // e.g. "contact", "admin-mail"
+  sourceId?: string | null // event id within that provider
+  metadata?: Record<string, unknown> | null
 }
 ```
+
+`POST /` and `PATCH /:id` accept `date`, `startTime`, `endTime`, `source`, `sourceId`,
+and `metadata` alongside `title`/`tag`. `date` is persisted as the UTC day and derived
+from `startTime` when omitted. Agents can drive all of this through the
+[MCP server](MCP.md).
 
 ### Board
 

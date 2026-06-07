@@ -21,6 +21,13 @@ Pre-commit hook runs lint:fix + format. It does NOT bump versions — versioning
 - `@wolffm/task/api` -> server handlers [src/server/index.ts]
 - `@wolffm/task/style.css` -> CSS bundle [dist/style.css]
 
+## MCP (agent task/calendar management)
+
+- Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).
+- Source: `worker/src/mcp/` — `tools.ts` (transport-agnostic tool defs) + `handler.ts` (JSON-RPC handler), mounted in `worker/src/index.ts`.
+- Tools wrap the in-process `TaskHandlers`; scoped by `X-User-Key` (same auth as `/task/api/*`). Add a tool = add to `TOOLS` in `tools.ts`.
+- Full docs: `docs/MCP.md`.
+
 ## Cross-Repo
 
 - Publishes trigger `packages_updated` dispatch to WolffM/hadoku_site
