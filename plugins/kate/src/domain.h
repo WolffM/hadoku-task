@@ -14,6 +14,7 @@ struct Task {
     QString tag;        // may be empty
     QString state;      // "Active" | "Completed" | "Deleted"
     QString createdAt;
+    QString updatedAt;  // ISO 8601, bumped on edit; used for calendar column order
     QString date;       // "YYYY-MM-DD" calendar-day key (all-day tasks), may be empty
     QString startTime;  // ISO 8601, may be empty
     QString endTime;    // ISO 8601, may be empty

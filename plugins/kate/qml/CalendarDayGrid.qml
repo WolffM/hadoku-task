@@ -68,23 +68,28 @@ Item {
 
     // Column packing for overlapping tasks: id -> { col, cols }. Clusters of
     // mutually-overlapping tasks are found by a start-time sweep, but WITHIN a
-    // cluster columns are assigned in stable id order (creation order for ULIDs),
-    // not by time. So nudging a task's time keeps it in the same column instead of
-    // swapping left/right with a same-start neighbour. cols = the cluster's max
-    // concurrency. Based on committed times (stable during a drag).
+    // cluster columns are assigned by "last touched" (updatedAt, else createdAt) —
+    // so the task you just dragged in lands in the next column to the right, like a
+    // stack, while the ones already there keep their columns. cols = the cluster's
+    // max concurrency. Based on committed times (stable during a drag).
     readonly property var layout: {
         var items = grid.dayTasks.map(function (t) {
             var s = grid.minutesOf(t.startTime);
             var e = t.endTime ? grid.minutesOf(t.endTime) : s + 60;
-            return { id: t.id, s: s, e: Math.max(e, s + 15) };
+            var key = (t.updatedAt && t.updatedAt.length ? t.updatedAt
+                       : (t.createdAt && t.createdAt.length ? t.createdAt : t.id));
+            return { id: t.id, s: s, e: Math.max(e, s + 15), key: key };
         }).sort(function (a, b) { return a.s - b.s || a.e - b.e; });
 
         var res = {};
         var cluster = [];
         var clusterEnd = -1;
         function flush() {
-            // Stable left→right order = id order, independent of start time.
-            cluster.sort(function (a, b) { return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0); });
+            // Left→right order = last-touched (newest to the right); id breaks ties.
+            cluster.sort(function (a, b) {
+                if (a.key !== b.key) return a.key < b.key ? -1 : 1;
+                return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+            });
             var cols = []; // each column = list of placed intervals
             for (var i = 0; i < cluster.length; ++i) {
                 var it = cluster[i];

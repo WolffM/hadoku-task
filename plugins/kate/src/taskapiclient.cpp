@@ -36,6 +36,12 @@ int httpStatus(QNetworkReply *reply)
     return reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 }
 
+// ISO timestamp for optimistic updatedAt (so a just-edited task sorts newest).
+QString nowIso()
+{
+    return QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+}
+
 // Mirror of domain/utils/tags.ts extractTags: pull "#tag" tokens, normalise, join.
 QString extractTags(const QString &text)
 {
@@ -260,6 +266,7 @@ void TaskApiClient::fetchTasks()
             t.tag = o.value(QStringLiteral("tag")).toString();
             t.state = o.value(QStringLiteral("state")).toString();
             t.createdAt = o.value(QStringLiteral("createdAt")).toString();
+            t.updatedAt = o.value(QStringLiteral("updatedAt")).toString();
             t.date = o.value(QStringLiteral("date")).toString();
             t.startTime = o.value(QStringLiteral("startTime")).toString();
             t.endTime = o.value(QStringLiteral("endTime")).toString();
@@ -327,6 +334,7 @@ QVariantList TaskApiClient::tasksList() const
         m.insert(QStringLiteral("tag"), t.tag);
         m.insert(QStringLiteral("state"), t.state);
         m.insert(QStringLiteral("createdAt"), t.createdAt);
+        m.insert(QStringLiteral("updatedAt"), t.updatedAt);
         m.insert(QStringLiteral("date"), t.date);
         m.insert(QStringLiteral("startTime"), t.startTime);
         m.insert(QStringLiteral("endTime"), t.endTime);
@@ -448,6 +456,7 @@ void TaskApiClient::createScheduledTask(const QString &title, const QString &dat
     task.date = date;
     task.startTime = startTime;
     task.endTime = endTime;
+    task.updatedAt = nowIso();
     m_tasks.prepend(task);
     optimisticEmit();
 
@@ -551,6 +560,7 @@ void TaskApiClient::setTaskSchedule(const QString &id, const QString &date,
         m_tasks[i].date = date;
         m_tasks[i].startTime = startTime;
         m_tasks[i].endTime = endTime;
+        m_tasks[i].updatedAt = nowIso(); // just-dragged → newest → rightmost column
         optimisticEmit();
     }
     QJsonObject body{{QStringLiteral("boardId"), m_boardId}};
