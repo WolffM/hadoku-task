@@ -16,6 +16,15 @@ Kirigami.Page {
     property int nowTick: 0
     Timer { interval: 60000; running: true; repeat: true; onTriggered: page.nowTick++ }
 
+    // "day" = timeline grid (drag to move/resize); "agenda" = scannable list.
+    property string mode: "day"
+    property date selectedDate: new Date()
+    function addDays(n) {
+        var d = new Date(page.selectedDate);
+        d.setDate(d.getDate() + n);
+        page.selectedDate = d;
+    }
+
     function pad(n) { return (n < 10 ? "0" : "") + n; }
     function dayStr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
     function dayFromISO(iso) { var d = new Date(iso); return isNaN(d.getTime()) ? "" : dayStr(d); }
@@ -81,7 +90,8 @@ Kirigami.Page {
             var t = all[i];
             if (filter && page.splitTags(t.tag).indexOf(filter) < 0)
                 continue;
-            var day = (t.date && t.date.length) ? t.date : (t.startTime ? page.dayFromISO(t.startTime) : "");
+            // Timed → local day from startTime (server `date` is UTC); else all-day `date`.
+            var day = t.startTime ? page.dayFromISO(t.startTime) : (t.date && t.date.length ? t.date : "");
             if (!day)
                 continue;
             (groups[day] = groups[day] || []).push(t);
@@ -151,15 +161,67 @@ Kirigami.Page {
             placeholder: i18n("Schedule a task…")
             onSubmitText: text => {
                 var slot = page.defaultSlot();
-                taskApi.createScheduledTask(text, "", slot.start, slot.end);
+                taskApi.createScheduledTask(text, page.todayStr(), slot.start, slot.end);
+            }
+        }
+
+        // View switcher + (day mode) date navigation
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.smallSpacing
+            Layout.rightMargin: Kirigami.Units.smallSpacing
+            Layout.bottomMargin: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
+
+            FilterChip {
+                label: i18n("Day")
+                active: page.mode === "day"
+                onClicked: page.mode = "day"
+            }
+            FilterChip {
+                label: i18n("Agenda")
+                active: page.mode === "agenda"
+                onClicked: page.mode = "agenda"
+            }
+            Item { Layout.fillWidth: true }
+            QQC2.ToolButton {
+                visible: page.mode === "day"
+                icon.name: "go-previous"
+                onClicked: page.addDays(-1)
+            }
+            QQC2.Label {
+                visible: page.mode === "day"
+                text: Qt.formatDate(page.selectedDate, "ddd MMM d")
+                font: Kirigami.Theme.smallFont
+            }
+            QQC2.ToolButton {
+                visible: page.mode === "day"
+                icon.name: "go-next"
+                onClicked: page.addDays(1)
+            }
+            QQC2.ToolButton {
+                visible: page.mode === "day"
+                icon.name: "go-jump-today"
+                QQC2.ToolTip.text: i18n("Today")
+                QQC2.ToolTip.visible: hovered
+                onClicked: page.selectedDate = new Date()
             }
         }
 
         Kirigami.Separator { Layout.fillWidth: true }
 
+        // Day timeline grid (drag to move/resize, proportional blocks).
+        CalendarDayGrid {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: page.mode === "day"
+            selectedDate: page.selectedDate
+        }
+
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: page.mode === "agenda"
 
             // Centered empty state (matches the Tasks tab).
             Kirigami.PlaceholderMessage {

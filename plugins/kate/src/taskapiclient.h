@@ -15,6 +15,7 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QNetworkRequest;
+class QJsonObject;
 
 /**
  * Thin typed wrapper over the hadoku task REST API. Exposed to QML as `taskApi`.
@@ -67,6 +68,10 @@ public:
                                          const QString &startTime, const QString &endTime);
     Q_INVOKABLE void completeTask(const QString &id);
     Q_INVOKABLE void deleteTask(const QString &id);
+    // Set a task's schedule. Timed: ("", startISO, endISO) — server backfills the
+    // day. All-day: ("YYYY-MM-DD", "", ""). Unschedule: ("", "", "").
+    Q_INVOKABLE void setTaskSchedule(const QString &id, const QString &date,
+                                     const QString &startTime, const QString &endTime);
     Q_INVOKABLE void setTaskTags(const QString &id, const QString &spaceSeparatedTags);
     // Tag deltas computed against the authoritative local cache (queue-safe under
     // rapid edits, unlike recomputing a full tag string in the UI).
@@ -99,6 +104,11 @@ private:
     void optimisticEmit();
     void enqueueWrite(const QString &label, std::function<QNetworkReply *()> builder);
     void runNextWrite();
+    // Queued JSON writes (serialized; optional If-Match). Collapse the repeated
+    // m_nam->post/sendCustomRequest/deleteResource boilerplate.
+    void postJson(const QString &label, const QString &url, const QJsonObject &body, bool ifMatch);
+    void patchJson(const QString &label, const QString &url, const QJsonObject &body, bool ifMatch);
+    void deleteAt(const QString &label, const QString &url, bool ifMatch);
 
     // One serialized write at a time so rapid edits never race the board version.
     struct PendingWrite {

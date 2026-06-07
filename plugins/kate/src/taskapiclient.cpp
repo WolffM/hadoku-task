@@ -381,6 +381,30 @@ void TaskApiClient::runNextWrite()
     });
 }
 
+void TaskApiClient::postJson(const QString &label, const QString &url, const QJsonObject &body,
+                            bool ifMatch)
+{
+    enqueueWrite(label, [this, url, body, ifMatch]() {
+        return m_nam->post(makeRequest(url, ifMatch), QJsonDocument(body).toJson(QJsonDocument::Compact));
+    });
+}
+
+void TaskApiClient::patchJson(const QString &label, const QString &url, const QJsonObject &body,
+                             bool ifMatch)
+{
+    enqueueWrite(label, [this, url, body, ifMatch]() {
+        return m_nam->sendCustomRequest(makeRequest(url, ifMatch), "PATCH",
+                                        QJsonDocument(body).toJson(QJsonDocument::Compact));
+    });
+}
+
+void TaskApiClient::deleteAt(const QString &label, const QString &url, bool ifMatch)
+{
+    enqueueWrite(label, [this, url, ifMatch]() {
+        return m_nam->deleteResource(makeRequest(url, ifMatch));
+    });
+}
+
 void TaskApiClient::createTask(const QString &input)
 {
     QString title, tag;
@@ -406,10 +430,7 @@ void TaskApiClient::createTask(const QString &input)
     };
     if (!tag.isEmpty())
         body.insert(QStringLiteral("tag"), tag);
-    enqueueWrite(QStringLiteral("create"), [this, body]() {
-        return m_nam->post(makeRequest(m_baseUrl, true),
-                           QJsonDocument(body).toJson(QJsonDocument::Compact));
-    });
+    postJson(QStringLiteral("create"), m_baseUrl, body, true);
 }
 
 void TaskApiClient::createScheduledTask(const QString &title, const QString &date,
@@ -441,10 +462,7 @@ void TaskApiClient::createScheduledTask(const QString &title, const QString &dat
         body.insert(QStringLiteral("startTime"), startTime);
     if (!endTime.isEmpty())
         body.insert(QStringLiteral("endTime"), endTime);
-    enqueueWrite(QStringLiteral("create-scheduled"), [this, body]() {
-        return m_nam->post(makeRequest(m_baseUrl, true),
-                           QJsonDocument(body).toJson(QJsonDocument::Compact));
-    });
+    postJson(QStringLiteral("create-scheduled"), m_baseUrl, body, true);
 }
 
 void TaskApiClient::setTaskTags(const QString &id, const QString &spaceSeparatedTags)
@@ -457,10 +475,7 @@ void TaskApiClient::setTaskTags(const QString &id, const QString &spaceSeparated
     }
     QJsonObject body{{QStringLiteral("boardId"), m_boardId}, {QStringLiteral("tag"), cleaned}};
     const QString url = m_baseUrl + QLatin1Char('/') + id;
-    enqueueWrite(QStringLiteral("patch-tag"), [this, url, body]() {
-        return m_nam->sendCustomRequest(makeRequest(url, true), "PATCH",
-                                        QJsonDocument(body).toJson(QJsonDocument::Compact));
-    });
+    patchJson(QStringLiteral("patch-tag"), url, body, true);
 }
 
 void TaskApiClient::addTaskTag(const QString &id, const QString &tag)
@@ -507,10 +522,7 @@ void TaskApiClient::clearTagEverywhere(const QString &tag)
         {QStringLiteral("taskIds"), ids},
     };
     const QString url = m_baseUrl + QStringLiteral("/batch-clear-tag");
-    enqueueWrite(QStringLiteral("batch-clear-tag"), [this, url, body]() {
-        return m_nam->post(makeRequest(url, false),
-                           QJsonDocument(body).toJson(QJsonDocument::Compact));
-    });
+    postJson(QStringLiteral("batch-clear-tag"), url, body, false);
 }
 
 void TaskApiClient::createTag(const QString &raw)
@@ -528,10 +540,34 @@ void TaskApiClient::createTag(const QString &raw)
 
     QJsonObject body{{QStringLiteral("boardId"), m_boardId}, {QStringLiteral("tag"), tag}};
     const QString url = m_baseUrl + QStringLiteral("/tags");
-    enqueueWrite(QStringLiteral("create-tag"), [this, url, body]() {
-        return m_nam->post(makeRequest(url, false),
-                           QJsonDocument(body).toJson(QJsonDocument::Compact));
-    });
+    postJson(QStringLiteral("create-tag"), url, body, false);
+}
+
+void TaskApiClient::setTaskSchedule(const QString &id, const QString &date,
+                                   const QString &startTime, const QString &endTime)
+{
+    const int i = taskIndex(id);
+    if (i >= 0) {
+        m_tasks[i].date = date;
+        m_tasks[i].startTime = startTime;
+        m_tasks[i].endTime = endTime;
+        optimisticEmit();
+    }
+    QJsonObject body{{QStringLiteral("boardId"), m_boardId}};
+    body.insert(QStringLiteral("startTime"),
+                startTime.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(startTime));
+    body.insert(QStringLiteral("endTime"),
+                endTime.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(endTime));
+    if (!date.isEmpty())
+        body.insert(QStringLiteral("date"), date); // all-day
+    else if (startTime.isEmpty())
+        body.insert(QStringLiteral("date"), QJsonValue(QJsonValue::Null)); // unschedule
+    // else: timed with no explicit date → let the server backfill from startTime
+
+    const QString url = m_baseUrl + QLatin1Char('/') + id;
+    qCInfo(HadokuTask) << "PATCH" << url << "schedule date=" << date << "start=" << startTime
+                       << "end=" << endTime;
+    patchJson(QStringLiteral("patch-schedule"), url, body, true);
 }
 
 void TaskApiClient::completeTask(const QString &id)
@@ -543,9 +579,7 @@ void TaskApiClient::completeTask(const QString &id)
     }
     const QString url =
         m_baseUrl + QLatin1Char('/') + id + QStringLiteral("/complete?boardId=") + m_boardId;
-    enqueueWrite(QStringLiteral("complete"), [this, url]() {
-        return m_nam->post(makeRequest(url, true), QByteArray());
-    });
+    postJson(QStringLiteral("complete"), url, QJsonObject(), true); // complete ignores the body
 }
 
 void TaskApiClient::deleteTask(const QString &id)
@@ -556,7 +590,5 @@ void TaskApiClient::deleteTask(const QString &id)
         optimisticEmit();
     }
     const QString url = m_baseUrl + QLatin1Char('/') + id + QStringLiteral("?boardId=") + m_boardId;
-    enqueueWrite(QStringLiteral("delete"), [this, url]() {
-        return m_nam->deleteResource(makeRequest(url, true));
-    });
+    deleteAt(QStringLiteral("delete"), url, true);
 }

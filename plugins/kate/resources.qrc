@@ -7,5 +7,6 @@
     <file>qml/TaskToolbar.qml</file>
     <file>qml/CalendarToolView.qml</file>
     <file>qml/CalendarAgendaRow.qml</file>
+    <file>qml/CalendarDayGrid.qml</file>
   </qresource>
 </RCC>
