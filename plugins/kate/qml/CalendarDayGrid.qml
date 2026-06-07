@@ -158,7 +158,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: 4
-                        color: Qt.alpha(grid.tagColor(grid.firstTag(modelData.tag)), moveDh.active ? 0.5 : 0.28)
+                        color: Qt.alpha(grid.tagColor(grid.firstTag(modelData.tag)), dragDh.active ? 0.5 : 0.28)
                         border.width: 1
                         border.color: grid.tagColor(grid.firstTag(modelData.tag))
 
@@ -184,59 +184,51 @@ Item {
                         }
                     }
 
-                    // Move (body)
+                    // One drag handler: press near the top edge → resize start,
+                    // near the bottom edge → resize end, middle → move. A single
+                    // handler avoids the edge/body grab competition that broke
+                    // edge dragging.
                     DragHandler {
-                        id: moveDh
+                        id: dragDh
                         target: null
+                        property int mode: 0 // 0 = move, 1 = resize top, 2 = resize bottom
                         property int grabStart
                         property int grabEnd
+                        property real edgeZone: Math.min(Kirigami.Units.gridUnit, block.height / 3)
                         onActiveChanged: {
-                            if (active) { grabStart = block.curStart; grabEnd = block.curEnd; }
-                            else grid.commit(block.taskId, block.curStart, block.curEnd);
+                            if (active) {
+                                grabStart = block.curStart;
+                                grabEnd = block.curEnd;
+                                var py = centroid.pressPosition.y; // relative to block at press
+                                mode = py < edgeZone ? 1 : (py > block.height - edgeZone ? 2 : 0);
+                            } else {
+                                grid.commit(block.taskId, block.curStart, block.curEnd);
+                            }
                         }
                         onCentroidChanged: if (active) {
                             var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
-                            block.curStart = grabStart + dm;
-                            block.curEnd = grabEnd + dm;
+                            if (dragDh.mode === 1)
+                                block.curStart = Math.min(grabStart + dm, block.curEnd - 15);
+                            else if (dragDh.mode === 2)
+                                block.curEnd = Math.max(grabEnd + dm, block.curStart + 15);
+                            else {
+                                block.curStart = grabStart + dm;
+                                block.curEnd = grabEnd + dm;
+                            }
                         }
                     }
 
-                    // Resize: top edge → start
+                    // Cursor feedback on the resize edges (hover only — no grab).
                     Rectangle {
                         anchors { left: parent.left; right: parent.right; top: parent.top }
-                        height: Kirigami.Units.smallSpacing * 1.5
+                        height: dragDh.edgeZone
                         color: "transparent"
-                        DragHandler {
-                            target: null
-                            property int grabStart
-                            onActiveChanged: {
-                                if (active) grabStart = block.curStart;
-                                else grid.commit(block.taskId, block.curStart, block.curEnd);
-                            }
-                            onCentroidChanged: if (active) {
-                                var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
-                                block.curStart = Math.min(grabStart + dm, block.curEnd - 15);
-                            }
-                        }
                         HoverHandler { cursorShape: Qt.SizeVerCursor }
                     }
-                    // Resize: bottom edge → end
                     Rectangle {
                         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                        height: Kirigami.Units.smallSpacing * 1.5
+                        height: dragDh.edgeZone
                         color: "transparent"
-                        DragHandler {
-                            target: null
-                            property int grabEnd
-                            onActiveChanged: {
-                                if (active) grabEnd = block.curEnd;
-                                else grid.commit(block.taskId, block.curStart, block.curEnd);
-                            }
-                            onCentroidChanged: if (active) {
-                                var dm = grid.snap15((centroid.scenePosition.y - centroid.scenePressPosition.y) / grid.hourHeight * 60);
-                                block.curEnd = Math.max(grabEnd + dm, block.curStart + 15);
-                            }
-                        }
                         HoverHandler { cursorShape: Qt.SizeVerCursor }
                     }
                 }
