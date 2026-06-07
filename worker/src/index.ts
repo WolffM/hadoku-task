@@ -37,6 +37,7 @@ import { createSessionRoutes } from './routes/session'
 import { createPreferencesRoutes } from './routes/preferences'
 import { createBoardRoutes } from './routes/boards'
 import { createTaskRoutes } from './routes/tasks'
+import { handleMcp } from './mcp/handler'
 import { createTagsBatchRoutes } from './routes/tags-batch'
 import { createAdminRoutes } from './routes/admin'
 import { createMiscRoutes } from './routes/misc'
@@ -185,6 +186,11 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // ============================================================================
   // IMPORTANT: Order matters! More specific routes must come before generic ones
   // to avoid route parameter matching issues (e.g., /batch-tag before /:id)
+
+  // MCP endpoint (stateless Streamable-HTTP) — explicit route, mounted before the
+  // generic task routes. Auth/scoping come from the shared authContext (X-User-Key).
+  app.post('/task/api/mcp', c => handleMcp(c))
+  app.get('/task/api/mcp', c => c.text('Method Not Allowed', 405))
 
   // Misc routes (health, validate-key, deprecated endpoints, legacy root)
   app.route('/task/api', createMiscRoutes())
