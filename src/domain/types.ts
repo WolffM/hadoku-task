@@ -27,6 +27,13 @@ export interface Task {
   date?: string | null // local calendar day, "YYYY-MM-DD"
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
+  // External provider origin (calendar integrations). `source` + `sourceId` form an
+  // idempotency key so an ingested event is created once and never duplicated/overwritten.
+  // null source = locally created task.
+  source?: string | null // provider id, e.g. "contact", "admin-mail", "gcal"
+  sourceId?: string | null // the event id within that provider
+  // Arbitrary provider-specific detail (who scheduled it, intro, meeting link, …).
+  metadata?: Record<string, unknown> | null
 }
 
 export interface TasksFile {
@@ -85,6 +92,11 @@ export interface CreateTaskInput {
   date?: string | null // local calendar day, "YYYY-MM-DD" (backfilled from startTime when omitted)
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
+  // Calendar-integration origin. When source + sourceId are supplied, create is
+  // idempotent on that pair (ingest-once): a re-send returns the existing task.
+  source?: string | null
+  sourceId?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export interface UpdateTaskInput {
@@ -93,6 +105,8 @@ export interface UpdateTaskInput {
   date?: string | null // local calendar day, "YYYY-MM-DD"
   startTime?: string | null // ISO 8601 - scheduled start time
   endTime?: string | null // ISO 8601 - scheduled end time or deadline
+  // source/sourceId are immutable (set once on create); metadata may be edited.
+  metadata?: Record<string, unknown> | null
 }
 
 // User preferences (device-specific, stored in localStorage)

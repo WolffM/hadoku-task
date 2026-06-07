@@ -130,7 +130,10 @@ export function prepareTasksForBoard(tasks: Task[], timestamp: string): Task[] {
     updatedAt: timestamp,
     date: task.date ?? utcDayFromISO(task.startTime),
     startTime: task.startTime ?? null,
-    endTime: task.endTime ?? null
+    endTime: task.endTime ?? null,
+    source: task.source ?? null,
+    sourceId: task.sourceId ?? null,
+    metadata: task.metadata ?? null
   }))
 }
 

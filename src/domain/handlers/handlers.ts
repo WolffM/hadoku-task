@@ -104,7 +104,7 @@ export async function createTask(
     storage,
     auth,
     boardId,
-    (tasks, stats, timestamp) => {
+    (tasks, _stats, timestamp) => {
       // Use client-provided ID if available, otherwise generate server-side
       const id = input.id || generateULID()
       // Use client-provided createdAt if available (for preserving during moves), otherwise use current timestamp
@@ -124,7 +124,10 @@ export async function createTask(
         createdAt,
         date,
         startTime: input.startTime ?? null,
-        endTime: input.endTime ?? null
+        endTime: input.endTime ?? null,
+        source: input.source ?? null,
+        sourceId: input.sourceId ?? null,
+        metadata: input.metadata ?? null
       }
 
       return {

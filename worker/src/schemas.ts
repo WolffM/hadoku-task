@@ -34,7 +34,17 @@ export const TaskSchema = z
     // `date` = canonical local day; date-only = all-day, date+start+end = timed.
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
-    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
+    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' }),
+    // Calendar-integration origin + arbitrary provider detail.
+    source: z.string().nullable().optional().openapi({ example: 'contact' }),
+    sourceId: z.string().nullable().optional().openapi({ example: 'appt_01HXYZ' }),
+    metadata: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional()
+      .openapi({
+        example: { scheduledBy: 'jane@example.com', platform: 'discord' }
+      })
   })
   .openapi('Task')
 
@@ -114,7 +124,11 @@ export const CreateTaskInputSchema = z
     createdAt: z.string().optional().openapi({ example: '2024-01-15T10:30:00.000Z' }),
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
-    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
+    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' }),
+    // Provider integration origin (descriptive) + arbitrary event detail.
+    source: z.string().nullable().optional().openapi({ example: 'contact' }),
+    sourceId: z.string().nullable().optional().openapi({ example: 'appt_01HXYZ' }),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional()
   })
   .passthrough()
   .openapi('CreateTaskInput')
@@ -136,7 +150,9 @@ export const UpdateTaskInputSchema = z
     boardId: z.string().optional().openapi({ example: 'main' }),
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),
-    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' })
+    endTime: z.string().nullable().optional().openapi({ example: '2024-01-15T10:00:00.000Z' }),
+    // source/sourceId are immutable; metadata may be edited.
+    metadata: z.record(z.string(), z.unknown()).nullable().optional()
   })
   .passthrough()
   .openapi('UpdateTaskInput')
