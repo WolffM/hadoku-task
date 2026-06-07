@@ -66,10 +66,12 @@ Item {
         return out;
     }
 
-    // Column packing for overlapping tasks: id -> { col, cols }. Within each
-    // cluster of mutually-overlapping tasks, each task takes the first free
-    // column; cols = the cluster's max concurrency (so non-overlapping runs use
-    // the full width). Based on committed times (stable during a drag).
+    // Column packing for overlapping tasks: id -> { col, cols }. Clusters of
+    // mutually-overlapping tasks are found by a start-time sweep, but WITHIN a
+    // cluster columns are assigned in stable id order (creation order for ULIDs),
+    // not by time. So nudging a task's time keeps it in the same column instead of
+    // swapping left/right with a same-start neighbour. cols = the cluster's max
+    // concurrency. Based on committed times (stable during a drag).
     readonly property var layout: {
         var items = grid.dayTasks.map(function (t) {
             var s = grid.minutesOf(t.startTime);
@@ -81,17 +83,24 @@ Item {
         var cluster = [];
         var clusterEnd = -1;
         function flush() {
-            var colEnds = [];
+            // Stable left→right order = id order, independent of start time.
+            cluster.sort(function (a, b) { return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0); });
+            var cols = []; // each column = list of placed intervals
             for (var i = 0; i < cluster.length; ++i) {
                 var it = cluster[i];
-                var placed = false;
-                for (var k = 0; k < colEnds.length; ++k) {
-                    if (it.s >= colEnds[k]) { colEnds[k] = it.e; it.col = k; placed = true; break; }
+                var c = 0;
+                for (;; ++c) {
+                    if (c >= cols.length) { cols.push([it]); it.col = c; break; }
+                    var clash = false;
+                    for (var m = 0; m < cols[c].length; ++m) {
+                        var x = cols[c][m];
+                        if (it.s < x.e && x.s < it.e) { clash = true; break; }
+                    }
+                    if (!clash) { cols[c].push(it); it.col = c; break; }
                 }
-                if (!placed) { it.col = colEnds.length; colEnds.push(it.e); }
             }
             for (var j = 0; j < cluster.length; ++j)
-                res[cluster[j].id] = { col: cluster[j].col, cols: colEnds.length };
+                res[cluster[j].id] = { col: cluster[j].col, cols: cols.length };
             cluster = [];
         }
         for (var i = 0; i < items.length; ++i) {
