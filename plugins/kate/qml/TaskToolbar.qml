@@ -252,13 +252,13 @@ ColumnLayout {
                 onDeleteRequested: t => confirmDelete.openFor(t)
             }
         }
-        QQC2.ToolButton {
-            icon.name: "list-add"
-            display: QQC2.AbstractButton.IconOnly
-            text: i18n("New tag")
-            QQC2.ToolTip.text: text
-            QQC2.ToolTip.visible: hovered
+        // Same FilterChip component as the tag pills, so heights match exactly.
+        FilterChip {
+            label: "+"
+            accent: Kirigami.Theme.highlightColor
             onClicked: tagDialog.openNew()
+            QQC2.ToolTip.text: i18n("New tag")
+            QQC2.ToolTip.visible: hovered
         }
     }
 
