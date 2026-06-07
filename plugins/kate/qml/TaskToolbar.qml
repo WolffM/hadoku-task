@@ -263,15 +263,29 @@ ColumnLayout {
                                     : Qt.alpha(Kirigami.Theme.highlightColor, 0.55)
             HoverHandler { id: addHover }
             TapHandler { onTapped: tagDialog.openNew() }
-            // Designed plus icon (vector → crisp + properly centered at any DPI),
-            // tinted white via isMask.
-            Kirigami.Icon {
-                anchors.centerIn: parent
-                width: Math.round(addTagBtn.height * 0.66)
-                height: width
-                source: "list-add"
-                isMask: true
-                color: "white"
+            // Draw the plus at the exact geometric centre (width/2, height/2) — no
+            // font baseline or icon padding to throw off the alignment.
+            Canvas {
+                id: plusCanvas
+                anchors.fill: parent
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.strokeStyle = "white";
+                    ctx.lineCap = "round";
+                    ctx.lineWidth = Math.max(2, height * 0.12);
+                    var cx = width / 2;
+                    var cy = height / 2;
+                    var arm = height * 0.24;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - arm, cy);
+                    ctx.lineTo(cx + arm, cy);
+                    ctx.moveTo(cx, cy - arm);
+                    ctx.lineTo(cx, cy + arm);
+                    ctx.stroke();
+                }
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
             }
             QQC2.ToolTip.text: i18n("New tag")
             QQC2.ToolTip.visible: addHover.hovered
