@@ -496,6 +496,10 @@ void TaskApiClient::clearTagEverywhere(const QString &tag)
             m_tasks[i].tag = arr.join(QLatin1Char(' ')); // optimistic strip
         }
     }
+    // batch-clear-tag also removes it from the board's tag list server-side, so
+    // drop it locally too — otherwise the filter chip lingers (it's still in
+    // m_boardTags, which fetchTasks doesn't refresh).
+    m_boardTags[m_boardId].removeAll(tag);
     optimisticEmit();
     QJsonObject body{
         {QStringLiteral("boardId"), m_boardId},

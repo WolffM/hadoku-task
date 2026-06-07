@@ -252,13 +252,26 @@ ColumnLayout {
                 onDeleteRequested: t => confirmDelete.openFor(t)
             }
         }
-        // Same FilterChip component as the tag pills, so heights match exactly.
-        FilterChip {
-            label: "+"
-            accent: Kirigami.Theme.highlightColor
-            onClicked: tagDialog.openNew()
+        // Circular filled "+" button, same height as the tag pills.
+        Rectangle {
+            id: addTagBtn
+            FontMetrics { id: chipFm; font: Kirigami.Theme.smallFont }
+            implicitHeight: chipFm.height + Kirigami.Units.smallSpacing
+            implicitWidth: implicitHeight
+            radius: height / 2
+            color: addHover.hovered ? Kirigami.Theme.highlightColor
+                                    : Qt.alpha(Kirigami.Theme.highlightColor, 0.55)
+            HoverHandler { id: addHover }
+            TapHandler { onTapped: tagDialog.openNew() }
+            QQC2.Label {
+                anchors.centerIn: parent
+                text: "+"
+                color: "white"
+                font.bold: true
+                font.pixelSize: Math.round(addTagBtn.height * 0.72)
+            }
             QQC2.ToolTip.text: i18n("New tag")
-            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.visible: addHover.hovered
         }
     }
 
