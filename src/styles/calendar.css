@@ -64,11 +64,6 @@
   color: var(--color-text);
 }
 
-.calendar-header__count {
-  font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
-}
-
 .calendar-today-btn {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -300,10 +295,6 @@
   margin: 0;
   font-size: var(--hdk-text-sm);
   color: var(--color-text-muted);
-}
-
-.calendar-agenda--empty .calendar-add-btn {
-  margin-left: 0;
 }
 
 /* Narrow screens: tighten the time gutter */

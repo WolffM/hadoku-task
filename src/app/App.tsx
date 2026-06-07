@@ -151,7 +151,9 @@ export default function App(props: TaskAppProps = {}) {
   const dragAndDrop = useDragAndDrop({
     tasks,
     onTaskUpdate: updateTaskTags,
-    onBulkUpdate: bulkUpdateTaskTags
+    onBulkUpdate: bulkUpdateTaskTags,
+    // Board-only interaction; disabling in calendar keeps text selectable/copyable.
+    enabled: currentView === 'board'
   })
 
   // Sort hook

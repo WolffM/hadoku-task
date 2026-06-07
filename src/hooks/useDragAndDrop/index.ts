@@ -12,6 +12,9 @@ interface UseDragAndDropProps {
   tasks: Task[]
   onTaskUpdate: (taskId: string, updates: { tag: string }) => Promise<void>
   onBulkUpdate: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
+  // Marquee box-selection is a board-only interaction. When false (e.g. calendar
+  // view) the global mouse listeners aren't attached, so native text selection works.
+  enabled?: boolean
 }
 
 /**
@@ -40,7 +43,8 @@ function buildTagUpdates(
 export function useDragAndDrop({
   tasks,
   onTaskUpdate: _onTaskUpdate,
-  onBulkUpdate
+  onBulkUpdate,
+  enabled = true
 }: UseDragAndDropProps) {
   const [dragOverTag, setDragOverTag] = useState<string | null>(null)
   const [dragOverFilter, setDragOverFilter] = useState<string | null>(null)
@@ -280,8 +284,11 @@ export function useDragAndDrop({
     items.forEach(it => it.classList.remove('selected'))
   }
 
-  // Global listeners so marquee can start even if initial mousedown is outside the app
+  // Global listeners so marquee can start even if initial mousedown is outside the app.
+  // Skipped entirely when disabled (calendar view) so native text selection is preserved.
   useEffect(() => {
+    if (!enabled) return
+
     function onDocMouseDown(e: MouseEvent) {
       // Forward to our handler if left button
       if (e.button !== 0) return
@@ -327,7 +334,7 @@ export function useDragAndDrop({
       document.removeEventListener('mouseup', onDocMouseUp)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [enabled])
 
   function onDragOver(e: React.DragEvent, targetTag: string) {
     e.preventDefault()

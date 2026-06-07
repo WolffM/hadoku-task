@@ -160,9 +160,6 @@ export function CalendarDayView({
           <span className={`calendar-date-label ${isToday ? 'calendar-date-label--today' : ''}`}>
             {formatCalendarDate(selectedDate)}
           </span>
-          <span className="calendar-header__count">
-            {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
-          </span>
           {!isToday && (
             <button className="calendar-today-btn" onClick={handleToday}>
               Today
@@ -179,9 +176,6 @@ export function CalendarDayView({
       {dayTasks.length === 0 ? (
         <div className="calendar-agenda calendar-agenda--empty">
           <p className="calendar-agenda__empty-text">Nothing scheduled for this day.</p>
-          <button className="calendar-add-btn" onClick={() => openCreate(false)}>
-            + Schedule a task
-          </button>
         </div>
       ) : (
         <div className="calendar-agenda">
