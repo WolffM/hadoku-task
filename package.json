@@ -56,7 +56,7 @@
     "@wolffm/prefs-client": "^1.0.2",
     "@wolffm/task-ui-components": "workspace:*",
     "@wolffm/themes": "workspace:*",
-    "@wolffm/worker-utils": "^1.2.10",
+    "@wolffm/worker-utils": "^1.2.11",
     "hono": "^4.12.23",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
