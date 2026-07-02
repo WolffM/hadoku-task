@@ -9,6 +9,7 @@ import type { ThemeName } from '../app/types'
 import { getThemeFamilies, isExperimentalTheme, type ThemeFamily } from '../app/themeConfig'
 import { logger } from '@wolffm/logger/client'
 import { setTheme as applyThemeToDOM, setThemeMode as applyThemeModeToDOM } from '@wolffm/themes'
+import { THEME_STORAGE_KEY, normalizeThemeName, writeStoredTheme } from '../utils/theme'
 
 export interface UseThemeReturn {
   theme: ThemeName
@@ -131,7 +132,8 @@ export function useTheme(
     preferencesLoaded
   ])
 
-  const setTheme = useCallback(
+  // Shared apply path: optimistic state + DOM + persisted preference.
+  const applyTheme = useCallback(
     (newTheme: ThemeName) => {
       setPendingTheme(newTheme)
       applyThemeToDOM(newTheme)
@@ -139,6 +141,38 @@ export function useTheme(
     },
     [savePreferences]
   )
+
+  // Explicit in-app theme change: additionally publish to the shared
+  // sessionStorage key ('hadoku-theme') so the FOUC script and the hadoku.me
+  // host page see the user's choice. This is the ONLY place the app writes
+  // that key — inherited host themes must never be clobbered on load.
+  const setTheme = useCallback(
+    (newTheme: ThemeName) => {
+      writeStoredTheme(newTheme)
+      applyTheme(newTheme)
+    },
+    [applyTheme]
+  )
+
+  // Theme pushed down from the hadoku.me host page: it sets our data-theme
+  // attribute and dispatches a synthetic StorageEvent for 'hadoku-theme'.
+  // Normalize (bare family tokens like 'coffee' expand per color scheme) and
+  // adopt it through the same state mechanism as setTheme — without writing
+  // sessionStorage back, since the host owns that value here.
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== THEME_STORAGE_KEY) return
+      const prefersDark =
+        window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      const incoming = normalizeThemeName(e.newValue, prefersDark)
+      if (!incoming || incoming === theme) return
+      logger.info(`[useTheme] Adopting theme pushed from host page: ${incoming}`)
+      applyTheme(incoming)
+    }
+
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [theme, applyTheme])
 
   // Apply theme to both document root and container (for microfrontend compatibility)
   useEffect(() => {

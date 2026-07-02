@@ -23,6 +23,7 @@ import { z } from 'zod'
 import { createPrefsClient, type PrefsClient } from '@wolffm/prefs-client'
 import type { UserPreferences } from '../domain/types'
 import { logger } from '@wolffm/logger/client'
+import { readStoredTheme } from '../utils/theme'
 
 // Zod schema mirroring the FLAT UserPreferences shape (src/domain/types.ts).
 // version + updatedAt are NOT persisted as prefs fields — the SDK manages
@@ -57,7 +58,10 @@ function getDefaultTheme(): string {
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches
-  return prefersDark ? 'dark' : 'light'
+  // A theme inherited from the hadoku.me host page (sessionStorage
+  // 'hadoku-theme', bare family tokens expanded per color scheme) beats the
+  // plain system-preference default.
+  return readStoredTheme(prefersDark) ?? (prefersDark ? 'dark' : 'light')
 }
 
 let cachedClient: PrefsClient<TaskPrefs> | null = null
@@ -89,11 +93,12 @@ function getClient(): PrefsClient<TaskPrefs> {
         }
         return blob
       }
-    ],
-    // Keep the inline <head> FOUC script working: it reads
-    // sessionStorage['hadoku-theme'] and applies it as data-theme before
-    // React mounts. The SDK write-throughs the resolved theme on every read.
-    bootstrapToSessionStorage: { theme: 'hadoku-theme' }
+    ]
+    // NOTE: no bootstrapToSessionStorage here. sessionStorage['hadoku-theme']
+    // is a shared contract with the hadoku.me host page (and the inline <head>
+    // FOUC script): the host seeds it, and useTheme writes it only on explicit
+    // in-app theme changes. A read-path write-through would clobber an
+    // inherited theme with the app's own resolved default on every hydrate.
   })
   return cachedClient
 }
