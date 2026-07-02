@@ -208,10 +208,16 @@ async function migrateOnce(userType: string, sessionId: string): Promise<void> {
   try {
     const legacy = await readLegacyPrefs(userType, sessionId)
     if (legacy) {
-      await saveSplit(legacy)
+      // Map legacy simpleMode → themeMode here: saveSplit only forwards
+      // known scope fields, so the SDK-level migration never sees simpleMode.
+      const { simpleMode, ...rest } = legacy as UserPreferences & { simpleMode?: boolean }
+      if (simpleMode !== undefined && rest.themeMode === undefined) {
+        rest.themeMode = simpleMode ? 'simple' : 'advanced'
+      }
+      await saveSplit(rest)
       logger.info('[taskPrefs] Migrated legacy prefs into unified store', {
         userType,
-        fields: Object.keys(legacy)
+        fields: Object.keys(rest)
       })
     }
   } catch (err) {
