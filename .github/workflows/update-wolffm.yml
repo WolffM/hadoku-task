@@ -33,10 +33,15 @@ jobs:
           node-version: '22'
           cache: pnpm
 
-      - name: Configure .npmrc for GitHub Packages
+      # Auth goes in ~/.npmrc, NOT the repo's tracked .npmrc (which carries the
+      # registry line and nothing else). Writing the token into the tracked file
+      # leaves the tree permanently dirty, which defeats the no-op check below —
+      # and puts a secret one stray `git add .` away from being committed.
+      # Mirrors publish.yml.
+      - name: Configure npm auth for GitHub Packages
         run: |
-          echo "@wolffm:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" > ~/.npmrc
+          echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
 
       - name: Update @wolffm/* to latest
         env:
@@ -52,12 +57,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if [ -z "$(git status --porcelain)" ]; then
+          # Scope the no-op check to exactly the files we commit. A repo-wide
+          # `git status` check would let any unrelated dirt fall through to an
+          # empty `git commit`, which exits non-zero and fails the run.
+          FILES="package.json pnpm-lock.yaml themes/package.json task-ui-components/package.json"
+
+          if [ -z "$(git status --porcelain -- $FILES)" ]; then
             echo "✅ No @wolffm package updates available"
             exit 0
           fi
 
-          git add package.json pnpm-lock.yaml themes/package.json task-ui-components/package.json
+          git add $FILES
           git commit -m "chore: auto-update @wolffm/* to latest"
 
           for i in 1 2 3; do
