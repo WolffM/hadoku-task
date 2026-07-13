@@ -18,11 +18,15 @@ export interface Env {
  * Extended auth context for task-api
  *
  * Extends HadokuAuthContext with:
- * - sessionId: Used as KV storage key prefix (actually the credential, not browser session)
+ * - sessionId: Storage key prefix. Historically the raw credential; being migrated
+ *   to prefer `userId` (the stable per-key UUID) so data survives key rotation.
+ * - userId: Edge-injected X-User-Id (registry-derived stable UUID). Present when the
+ *   request arrived through edge-router; absent on direct *.workers.dev hits.
  * - key: Alias for credential (backward compat for throttle middleware)
  */
 export interface TaskAuthExtension {
   sessionId: string
+  userId?: string
   key: string | undefined
   [key: string]: unknown
 }

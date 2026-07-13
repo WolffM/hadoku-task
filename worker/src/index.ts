@@ -91,6 +91,22 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     })
   )
 
+  // 2b. X-User-Id plumbing (migration publish 1 — no-op keying change).
+  // edge-router injects the stable per-key UUID (registry-derived) as X-User-Id
+  // on /task/api/*. Read it into the auth context so a later publish can key
+  // storage by identity instead of the raw credential — the change that lets
+  // task data survive key rotation. createEdgeAuth's `extend` only sees the auth
+  // base (credential), not the request headers, so this runs as its own step.
+  // NOTHING keys by userId yet; this is purely additive plumbing.
+  app.use('*', async (c, next) => {
+    const auth = c.get('authContext')
+    if (auth) {
+      const userId = c.req.header('X-User-Id')
+      if (userId) auth.userId = userId
+    }
+    return next()
+  })
+
   // 3. Throttle Middleware - Rate limiting per sessionId
   app.use('*', async (c, next) => {
     const auth = c.get('authContext')
