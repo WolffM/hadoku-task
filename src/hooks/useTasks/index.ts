@@ -2,7 +2,7 @@
  * Hook for managing task operations
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createApi, type SyncErrorReporter } from '../../api/client'
 import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
@@ -29,6 +29,20 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
 
+  // `reload` runs async and is often kicked off unawaited (mount, BroadcastChannel,
+  // mutations). Reading the selected board from state would capture whatever was
+  // selected when the closure was created, so a board switch during an in-flight
+  // load would render the *previous* board's tasks. The ref always holds the live
+  // selection, so a load that resolves after a switch slices the correct board.
+  const currentBoardIdRef = useRef(currentBoardId)
+  const selectBoard = useCallback((boardId: string) => {
+    currentBoardIdRef.current = boardId
+    setCurrentBoardId(boardId)
+  }, [])
+
+  // Monotonic counter so a slow reload can't clobber the results of a newer one.
+  const reloadSeqRef = useRef(0)
+
   async function initialLoad() {
     logger.info('[useTasks] initialLoad called')
     // ✅ Sync from API first (only on initial load, if not public mode)
@@ -40,13 +54,22 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   }
 
   async function reload() {
-    logger.info('[useTasks] reload called', {
-      currentBoardId,
-      stack: new Error().stack?.split('\n').slice(1, 4).join('\n')
-    })
+    const seq = ++reloadSeqRef.current
+    logger.info('[useTasks] reload called', { currentBoardId: currentBoardIdRef.current, seq })
+
     const bf = await api.getBoards()
+
+    // A newer reload started while this one was awaiting — its result wins.
+    if (seq !== reloadSeqRef.current) {
+      logger.info('[useTasks] reload superseded, discarding stale result', {
+        seq,
+        latest: reloadSeqRef.current
+      })
+      return
+    }
+
     setBoards(bf)
-    const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardId)
+    const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardIdRef.current)
     setTasks(boardTasks)
   }
 
@@ -59,7 +82,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     setTasks([])
     setPendingOperations(new Set())
     setBoards(null)
-    setCurrentBoardId('main')
+    selectBoard('main')
     void reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, sessionId])
@@ -295,13 +318,9 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // Board helpers
   async function createBoard(boardId: string) {
     await api.createBoard(boardId)
-    // Switch to the new board first, then reload
-    setCurrentBoardId(boardId)
-    // Fetch the boards and set tasks for the new board
-    const bf = await api.getBoards()
-    setBoards(bf)
-    const { tasks: boardTasks } = extractBoardTasks(bf, boardId)
-    setTasks(boardTasks)
+    // Switch first: reload slices against the live selection.
+    selectBoard(boardId)
+    await reload()
   }
 
   // Move multiple tasks to another board
@@ -336,11 +355,8 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
       // Switch to the target board and reload it
       logger.info('[useTasks] moveTasksToBoard: switching to target board', { targetBoardId })
-      setCurrentBoardId(targetBoardId)
-      const bf = await api.getBoards()
-      setBoards(bf)
-      const { tasks: boardTasks } = extractBoardTasks(bf, targetBoardId)
-      setTasks(boardTasks)
+      selectBoard(targetBoardId)
+      await reload()
       logger.info('[useTasks] moveTasksToBoard END')
     } catch (error) {
       logger.error('[useTasks] moveTasksToBoard ERROR', {
@@ -352,18 +368,11 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
   async function deleteBoard(boardId: string) {
     await api.deleteBoard(boardId)
-    // If we're deleting the current board, switch to main and load its tasks
+    // If we're deleting the current board, fall back to main before reloading.
     if (currentBoardId === boardId) {
-      setCurrentBoardId('main')
-      // Fetch boards and explicitly load main board's tasks
-      const bf = await api.getBoards()
-      setBoards(bf)
-      const { tasks: boardTasks } = extractBoardTasks(bf, 'main')
-      setTasks(boardTasks)
-    } else {
-      // If we're not on the deleted board, just reload normally
-      await reload()
+      selectBoard('main')
     }
+    await reload()
   }
 
   async function createTagOnBoard(tag: string) {
@@ -377,12 +386,13 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   }
 
   function switchBoard(boardId: string) {
-    setCurrentBoardId(boardId)
+    selectBoard(boardId)
     const { tasks: boardTasks, foundBoard } = extractBoardTasks(boards, boardId)
     if (foundBoard) {
       setTasks(boardTasks)
     } else {
-      // Board not present in memory (race) - reload from API
+      // Board not in memory yet (initial load still in flight) — reload will slice
+      // this board once it lands, and supersede any load already running.
       void reload()
     }
   }
