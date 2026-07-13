@@ -433,6 +433,12 @@ export const UnblacklistResponseSchema = z
 export const ValidateKeyResponseSchema = z
   .object({
     valid: z.boolean().openapi({ example: true }),
-    userType: z.string().openapi({ example: 'admin' })
+    userType: z.string().openapi({ example: 'admin' }),
+    // Stable per-user UUID that edge-router resolves from the key registry and
+    // injects as X-User-Id. It survives key rotation, so it is the identity that
+    // storage keys off (replacing the raw credential). Absent on direct
+    // *.workers.dev hits, which bypass the edge and so get no injection.
+    // Safe to return: it is the caller's own identifier, never key material.
+    userId: z.string().optional().openapi({ example: '3f2a9c7e-1b4d-4c8a-9e2f-7a6b5c4d3e2f' })
   })
   .openapi('ValidateKeyResponse')

@@ -56,14 +56,19 @@ export function createMiscRoutes() {
     const authContext = c.get('authContext')
     const userType = authContext.userType
     const valid = userType !== 'public'
+    // Edge-injected stable identity (see TaskAuthExtension.userId). Surfacing it
+    // lets a caller discover the id its data is keyed under, and is the signal
+    // that confirms edge-router's X-User-Id injection is reaching this worker.
+    const userId = authContext.userId
 
     logRequest('POST', '/task/api/validate-key', {
       valid,
       userType,
-      hasKey: !!authContext.key
+      hasKey: !!authContext.key,
+      hasUserId: !!userId
     })
 
-    return c.json({ valid, userType }, 200)
+    return c.json({ valid, userType, ...(userId ? { userId } : {}) }, 200)
   })
 
   return app
