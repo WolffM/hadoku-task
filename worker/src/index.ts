@@ -91,18 +91,35 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     })
   )
 
-  // 2b. X-User-Id plumbing (migration publish 1 — no-op keying change).
-  // edge-router injects the stable per-key UUID (registry-derived) as X-User-Id
-  // on /task/api/*. Read it into the auth context so a later publish can key
-  // storage by identity instead of the raw credential — the change that lets
-  // task data survive key rotation. createEdgeAuth's `extend` only sees the auth
-  // base (credential), not the request headers, so this runs as its own step.
-  // NOTHING keys by userId yet; this is purely additive plumbing.
+  // 2b. Identity scoping — key storage by the STABLE userId, not the raw credential.
+  //
+  // edge-router injects X-User-Id on /task/api/*: the registry-derived UUID that
+  // stays constant when a user's auth key is rotated. Historically `sessionId`
+  // (the storage key prefix) WAS the raw credential, so rotating a key orphaned
+  // every board/task/stat. Scoping by userId is what makes rotation data-safe:
+  // a rotation only re-points which key resolves to the userId; data never moves.
+  //
+  // The previous raw-credential namespace is preserved as `legacyId` so the
+  // storage layer can dual-read it and copy-forward on a hit (read-repair) —
+  // pre-migration data is therefore never lost, even if a backfill missed it or
+  // raced a concurrent write.
+  //
+  // Runs as its own middleware because createEdgeAuth's `extend` only sees the
+  // auth base (credential), not request headers. Callers that bypass the edge
+  // (direct *.workers.dev) get no X-User-Id and keep the legacy raw-key scoping.
   app.use('*', async (c, next) => {
     const auth = c.get('authContext')
     if (auth) {
       const userId = c.req.header('X-User-Id')
-      if (userId) auth.userId = userId
+      if (userId) {
+        auth.userId = userId
+        // Only record a legacy namespace when there was a real credential to
+        // fall back to (public callers scope to DEFAULT_SESSION_ID, not a key).
+        if (auth.sessionId && auth.sessionId !== DEFAULT_SESSION_ID) {
+          auth.legacyId = auth.sessionId
+        }
+        auth.sessionId = userId
+      }
     }
     return next()
   })

@@ -25,8 +25,21 @@ export interface Env {
  * - key: Alias for credential (backward compat for throttle middleware)
  */
 export interface TaskAuthExtension {
+  /**
+   * The storage scope key. Prefers `userId` (stable across key rotation); falls
+   * back to the raw credential for callers that bypass the edge (no X-User-Id).
+   */
   sessionId: string
+  /** Edge-injected X-User-Id — the stable per-key UUID from the registry. */
   userId?: string
+  /**
+   * The RAW-credential namespace this user's data used to live under, before the
+   * move to userId-scoped storage. Set only when we actually flipped (i.e. a
+   * userId was present). The storage layer dual-reads this and copy-forwards on a
+   * hit (read-repair), so pre-migration data is never orphaned.
+   */
+  legacyId?: string
+  /** Alias for credential (backward compat for throttle middleware). */
   key: string | undefined
   [key: string]: unknown
 }

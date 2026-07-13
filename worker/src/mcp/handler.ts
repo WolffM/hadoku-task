@@ -36,7 +36,9 @@ const err = (id: string | number | null, code: number, message: string) => ({
 export async function handleMcp(c: Context<AppContext>): Promise<Response> {
   const auth = c.get('authContext')
   const ctx: ToolCtx = {
-    storage: createKVStorage(c.env),
+    // legacyId enables dual-read + read-repair of the pre-flip raw-key namespace,
+    // so MCP callers see the same migrated data as the HTTP routes.
+    storage: createKVStorage(c.env, auth?.legacyId),
     auth,
     defaultBoard: DEFAULT_BOARD_ID
   }

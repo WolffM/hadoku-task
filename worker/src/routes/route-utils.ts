@@ -24,14 +24,45 @@ import { maskKey } from '@wolffm/worker-utils'
 import type { AppContext, Env } from '../types'
 
 /**
- * Create KV-backed storage adapter for @wolffm/task package
+ * Create KV-backed storage adapter for @wolffm/task package.
+ *
+ * `legacyId` is the RAW-credential namespace a user's data lived under before
+ * storage moved to userId scoping (see the identity-scoping middleware in
+ * index.ts). When present, reads DUAL-READ: try the userId namespace first, and
+ * on a miss fall back to the legacy raw-key namespace and COPY-FORWARD the hit
+ * (read-repair) so the entry migrates exactly once, lazily, from whatever the
+ * live legacy data currently is.
+ *
+ * Doing the migration lazily on read — rather than trusting an ahead-of-time
+ * bulk copy — is what makes it race-free: a write that landed in the legacy
+ * namespace after any bulk copy is still the source of truth until the first
+ * post-flip read migrates it. Writes always go to the userId namespace only.
  */
-export function createKVStorage(env: Env): TaskStorage {
+export function createKVStorage(env: Env, legacyId?: string): TaskStorage {
+  /**
+   * Read `primaryKey`; on a miss, fall back to `legacyKey` and copy the value
+   * forward into `primaryKey`. Returns null when neither exists.
+   */
+  async function readWithRepair<T>(primaryKey: string, legacyKey: string | null): Promise<T | null> {
+    const hit = await env.TASKS_KV.get<T>(primaryKey, 'json')
+    if (hit) return hit
+    if (!legacyKey || legacyKey === primaryKey) return null
+    const legacy = await env.TASKS_KV.get<T>(legacyKey, 'json')
+    if (!legacy) return null
+    // Read-repair: migrate into the userId namespace so later reads hit directly.
+    // The legacy entry is intentionally left in place — a later cleanup step
+    // prunes it once the flip has soaked, so a rollback stays possible.
+    await env.TASKS_KV.put(primaryKey, JSON.stringify(legacy))
+    return legacy
+  }
+
   return {
     // --- Boards ---
     async getBoards(userType: UserType, sessionId?: string): Promise<BoardsFile> {
-      const kvKey = boardsKey(sessionId)
-      const data = await env.TASKS_KV.get<BoardsFile>(kvKey, 'json')
+      const data = await readWithRepair<BoardsFile>(
+        boardsKey(sessionId),
+        legacyId ? boardsKey(legacyId) : null
+      )
       if (data) return data
       // Default with a single default board
       return {
@@ -46,8 +77,10 @@ export function createKVStorage(env: Env): TaskStorage {
     }, // --- Tasks (board scoped) ---
     async getTasks(userType: UserType, sessionId?: string, boardId?: string) {
       if (!boardId) boardId = DEFAULT_BOARD_ID
-      const kvKey = tasksKey(sessionId, boardId)
-      const data = await env.TASKS_KV.get<TasksFile>(kvKey, 'json')
+      const data = await readWithRepair<TasksFile>(
+        tasksKey(sessionId, boardId),
+        legacyId ? tasksKey(legacyId, boardId) : null
+      )
       if (data) return data
       return {
         version: 1,
@@ -73,8 +106,24 @@ export function createKVStorage(env: Env): TaskStorage {
       const userKey = sessionId ? maskKey(sessionId) : 'public'
 
       // Query D1 for real-time stats
-      const counters = await getD1BoardStats(env.DB, userKey, boardId)
-      const timeline = await getBoardTimeline(env.DB, userKey, boardId, 100)
+      let counters = await getD1BoardStats(env.DB, userKey, boardId)
+      let timeline = await getBoardTimeline(env.DB, userKey, boardId, 100)
+
+      // Dual-read: rows written before the userId flip are keyed by the masked RAW
+      // credential. Until the one-time D1 rewrite moves them, fall back to that
+      // namespace when the userId namespace has nothing yet, so historical stats
+      // stay visible. No copy-forward here — moving rows is the migration
+      // script's job (a copy would double-count). Once the rewrite has run, the
+      // legacy key matches zero rows and this is a no-op.
+      const noRows =
+        timeline.length === 0 && Object.values(counters).every(v => !v || v === 0)
+      if (noRows && legacyId) {
+        const legacyKey = maskKey(legacyId)
+        if (legacyKey !== userKey) {
+          counters = await getD1BoardStats(env.DB, legacyKey, boardId)
+          timeline = await getBoardTimeline(env.DB, legacyKey, boardId, 100)
+        }
+      }
 
       return {
         version: 2,
@@ -119,10 +168,22 @@ export function createKVStorage(env: Env): TaskStorage {
       const taskKey = tasksKey(sessionId, boardId)
       // Use masked sessionId for D1 operations
       const maskedSessionId = maskKey(sessionId)
-      await Promise.all([
+      const deletions: Promise<unknown>[] = [
         env.TASKS_KV.delete(taskKey),
         deleteBoardEvents(env.DB, maskedSessionId, boardId)
-      ])
+      ]
+      // CRITICAL: also purge the pre-flip raw-key namespace. Without this, the
+      // delete would remove only the userId copy and the very next read would
+      // dual-read the surviving legacy entry and RESURRECT the deleted board.
+      // Same for its D1 events, which are still keyed by the masked raw
+      // credential until the one-time rewrite runs.
+      if (legacyId && legacyId !== sessionId) {
+        deletions.push(
+          env.TASKS_KV.delete(tasksKey(legacyId, boardId)),
+          deleteBoardEvents(env.DB, maskKey(legacyId), boardId)
+        )
+      }
+      await Promise.all(deletions)
     }
   }
 }
@@ -130,10 +191,12 @@ export function createKVStorage(env: Env): TaskStorage {
 /**
  * Helper to get storage and auth from context
  */
-export const getContext = (c: Context<AppContext>) => ({
-  storage: createKVStorage(c.env),
-  auth: c.get('authContext')
-})
+export const getContext = (c: Context<AppContext>) => {
+  const auth = c.get('authContext')
+  // Pass the pre-flip raw-credential namespace so storage can dual-read +
+  // read-repair it. Undefined for callers that never flipped (no X-User-Id).
+  return { storage: createKVStorage(c.env, auth?.legacyId), auth }
+}
 
 /**
  * Parse an optimistic-concurrency `If-Match` request header into a board version.
