@@ -9,14 +9,26 @@ import { test, expect, type Page } from '@playwright/test'
  *   3. The Simple/Advanced toggle is visible only when the active theme has
  *      an advanced visual contract (light, cyberpunk-dark) and hidden
  *      otherwise (e.g. coffee-light)
- *   4. Clicking the toggle flips data-theme-mode and persists across reload
- *   5. Legacy `simpleMode: true` saved preferences are migrated to
- *      `themeMode: 'simple'` on first load and the legacy key is dropped
+ *   4. Clicking the toggle flips data-theme-mode and persists to the
+ *      prefs-client cache (unified prefs store)
+ *   5. Legacy `simpleMode` saved preferences are migrated to `themeMode`
+ *      on first load and the legacy localStorage key is dropped
  */
 
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-test-session'
 const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
+// @wolffm/prefs-client optimistic cache: `prefs-cache:{userId}:{appId}`.
+// The mocked whoami below resolves the anon user, so the key is stable.
+const SDK_CACHE_KEY = 'prefs-cache:anon:task'
+
+/** Read the prefs-client cache envelope's blob from localStorage. */
+function readSdkCacheBlob(page: Page): Promise<Record<string, unknown> | null> {
+  return page.evaluate(key => {
+    const raw = window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
+  }, SDK_CACHE_KEY)
+}
 
 async function setupRoutes(page: Page) {
   await page.route('**/task/api/session/handshake', async route => {
@@ -37,6 +49,54 @@ async function setupRoutes(page: Page) {
         boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
       })
     })
+  })
+
+  // Hermetic prefs backend for the @wolffm/prefs-client SDK — without it the
+  // tests depend on real hadoku.me network behavior (a successful GET after a
+  // debounced PUT would clobber the optimistic cache with live server state).
+  // The endpoints are cross-origin from the vite dev server, so every fulfill
+  // needs CORS headers and the PUT preflight must be answered.
+  const corsHeaders = (origin: string) => ({
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Content-Type, X-User-Key, X-Device-Id',
+    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
+  })
+
+  await page.route('**/session/whoami', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: corsHeaders(route.request().headers()['origin'] ?? '*'),
+      body: JSON.stringify({ userId: 'anon', userType: 'public' })
+    })
+  })
+
+  // PUTs are accepted (writes flush cleanly); GETs return 404 so the SDK's
+  // background refresh keeps the optimistic localStorage cache authoritative.
+  // A 200 GET would clobber not-yet-flushed patches from the other save scope
+  // (the SDK overwrites its optimistic state with the server's merged blob
+  // while patches are still debounce-pending) — asserting on the optimistic
+  // cache matches what the app actually renders from.
+  const versions = { user: 0, device: 0 }
+  await page.route('**/prefs/api/v1/task', async route => {
+    const request = route.request()
+    const headers = corsHeaders(request.headers()['origin'] ?? '*')
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers })
+      return
+    }
+    if (request.method() === 'PUT') {
+      const { scope } = request.postDataJSON() as { scope: 'user' | 'device' }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers,
+        body: JSON.stringify({ scope, version: ++versions[scope] })
+      })
+      return
+    }
+    await route.fulfill({ status: 404, headers })
   })
 }
 
@@ -188,7 +248,9 @@ test.describe('Theme Mode', () => {
     await expect(page.locator('.theme-picker__mode-btn').nth(0)).toHaveClass(/active/)
   })
 
-  test('clicking Advanced flips data-theme-mode and persists to localStorage', async ({ page }) => {
+  test('clicking Advanced flips data-theme-mode and persists to the prefs cache', async ({
+    page
+  }) => {
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -209,14 +271,10 @@ test.describe('Theme Mode', () => {
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
       .toBe('advanced')
 
-    // Persistence: the public-user prefs key in localStorage should now have themeMode='advanced'
+    // Persistence: the prefs-client cache (unified store) should now have
+    // themeMode='advanced' — the legacy PREFS_KEY blob is gone post-migration.
     await expect
-      .poll(() =>
-        page.evaluate(key => {
-          const raw = window.localStorage.getItem(key)
-          return raw ? (JSON.parse(raw).themeMode as string) : null
-        }, PREFS_KEY)
-      )
+      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null)
       .toBe('advanced')
   })
 
@@ -236,14 +294,17 @@ test.describe('Theme Mode', () => {
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
       .toBe('simple')
 
-    const stored = await page.evaluate(key => {
-      const raw = window.localStorage.getItem(key)
-      return raw ? JSON.parse(raw) : null
-    }, PREFS_KEY)
+    // Migration outcome: the legacy localStorage blob is removed and the
+    // unified store's cache carries themeMode with the simpleMode key dropped.
+    await expect
+      .poll(() => page.evaluate(key => window.localStorage.getItem(key), PREFS_KEY))
+      .toBeNull()
 
-    expect(stored).not.toBeNull()
-    expect(stored.themeMode).toBe('simple')
-    expect('simpleMode' in stored).toBe(false)
+    // Poll past the SDK's 1s save debounce + post-flush refresh.
+    await expect
+      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null, { timeout: 10000 })
+      .toBe('simple')
+    expect('simpleMode' in ((await readSdkCacheBlob(page)) ?? {})).toBe(false)
   })
 
   test('legacy simpleMode=false migrates to themeMode=advanced', async ({ page }) => {
@@ -261,12 +322,13 @@ test.describe('Theme Mode', () => {
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
       .toBe('advanced')
 
-    const stored = await page.evaluate(key => {
-      const raw = window.localStorage.getItem(key)
-      return raw ? JSON.parse(raw) : null
-    }, PREFS_KEY)
+    await expect
+      .poll(() => page.evaluate(key => window.localStorage.getItem(key), PREFS_KEY))
+      .toBeNull()
 
-    expect(stored.themeMode).toBe('advanced')
-    expect('simpleMode' in stored).toBe(false)
+    await expect
+      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null, { timeout: 10000 })
+      .toBe('advanced')
+    expect('simpleMode' in ((await readSdkCacheBlob(page)) ?? {})).toBe(false)
   })
 })

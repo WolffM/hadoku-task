@@ -23,6 +23,7 @@ import { z } from 'zod'
 import { createPrefsClient, type PrefsClient } from '@wolffm/prefs-client'
 import type { UserPreferences } from '../domain/types'
 import { logger } from '@wolffm/logger/client'
+import { readStoredTheme } from '../utils/theme'
 
 // Zod schema mirroring the FLAT UserPreferences shape (src/domain/types.ts).
 // version + updatedAt are NOT persisted as prefs fields — the SDK manages
@@ -57,7 +58,10 @@ function getDefaultTheme(): string {
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches
-  return prefersDark ? 'dark' : 'light'
+  // A theme inherited from the hadoku.me host page (sessionStorage
+  // 'hadoku-theme', bare family tokens expanded per color scheme) beats the
+  // plain system-preference default.
+  return readStoredTheme(prefersDark) ?? (prefersDark ? 'dark' : 'light')
 }
 
 let cachedClient: PrefsClient<TaskPrefs> | null = null
@@ -89,11 +93,22 @@ function getClient(): PrefsClient<TaskPrefs> {
         }
         return blob
       }
-    ],
-    // Keep the inline <head> FOUC script working: it reads
-    // sessionStorage['hadoku-theme'] and applies it as data-theme before
-    // React mounts. The SDK write-throughs the resolved theme on every read.
-    bootstrapToSessionStorage: { theme: 'hadoku-theme' }
+    ]
+    // NOTE: no bootstrapToSessionStorage here — still required as of
+    // @wolffm/prefs-client@1.0.2 (see package.json), which write-throughs the
+    // resolved blob to sessionStorage on every read/hydrate/refresh/broadcast.
+    // sessionStorage['hadoku-theme'] is a shared contract with the hadoku.me
+    // host page (and the inline <head> FOUC script): the host seeds it, and
+    // useTheme writes it only on explicit in-app theme changes (see
+    // writeStoredTheme in ../utils/theme.ts). A read-path write-through would
+    // clobber an inherited theme with the app's own resolved default.
+    //
+    // A prefs-client fix (mirrors only on explicit save() by default, with a
+    // mirrorBootstrapOnRead opt-in for the old behavior) is prepared on
+    // hadoku_site's fix/prefs-client-race branch but not yet published. Once
+    // this app depends on a version that includes it, bootstrapToSessionStorage
+    // + the manual writeStoredTheme path can likely be consolidated — verify
+    // against e2e/theme-inheritance.spec.ts before removing either side.
   })
   return cachedClient
 }
@@ -203,10 +218,16 @@ async function migrateOnce(userType: string, sessionId: string): Promise<void> {
   try {
     const legacy = await readLegacyPrefs(userType, sessionId)
     if (legacy) {
-      await saveSplit(legacy)
+      // Map legacy simpleMode → themeMode here: saveSplit only forwards
+      // known scope fields, so the SDK-level migration never sees simpleMode.
+      const { simpleMode, ...rest } = legacy as UserPreferences & { simpleMode?: boolean }
+      if (simpleMode !== undefined && rest.themeMode === undefined) {
+        rest.themeMode = simpleMode ? 'simple' : 'advanced'
+      }
+      await saveSplit(rest)
       logger.info('[taskPrefs] Migrated legacy prefs into unified store', {
         userType,
-        fields: Object.keys(legacy)
+        fields: Object.keys(rest)
       })
     }
   } catch (err) {

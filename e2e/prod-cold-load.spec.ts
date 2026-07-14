@@ -173,7 +173,9 @@ test.describe('Production cold-load performance', () => {
   })
 
   test.afterAll(async () => {
-    await browser.close()
+    // browser is undefined when the suite is skipped (RUN_PROD_PERF unset) —
+    // afterAll still runs and an unguarded close() fails the skipped suite.
+    await browser?.close()
   })
 
   test(`cold load: skeleton < ${SKELETON_BUDGET_MS}ms, app < ${APP_BUDGET_MS}ms (median of ${RUNS})`, async () => {
