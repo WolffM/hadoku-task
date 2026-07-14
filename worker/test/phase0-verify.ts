@@ -55,6 +55,14 @@ function headers(extra: Record<string, string> = {}) {
   }
 }
 
+/** The response fields these checks actually read. */
+interface ResponseBody {
+  version?: number
+  currentVersion?: number
+  code?: string
+  tasks?: unknown[]
+}
+
 async function req(
   method: string,
   path: string,
@@ -69,7 +77,7 @@ async function req(
     },
     env
   )
-  let json: any = null
+  let json: ResponseBody | null = null
   try {
     json = await res.clone().json()
   } catch {
