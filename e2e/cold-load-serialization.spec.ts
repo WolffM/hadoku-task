@@ -111,6 +111,16 @@ test.describe('Cold-load critical path', () => {
       .waitFor({ state: 'attached', timeout: 20000 })
     marks.dataOnScreen = t0()
 
+    // The whole point of the fix is that data lands BEFORE the handshake comes
+    // back — so by now the handshake response usually hasn't been delivered yet.
+    // Wait for it, since it's the baseline every assertion below compares against.
+    await expect
+      .poll(() => marks.handshakeDelivered ?? null, {
+        timeout: 20000,
+        message: 'handshake response should eventually be delivered'
+      })
+      .not.toBeNull()
+
     const { handshakeSent, handshakeDelivered, prefsSent, boardsSent } = marks
     if (
       handshakeSent == null ||
