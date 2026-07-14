@@ -87,13 +87,13 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, sessionId])
 
-  // Listen for broadcasted updates about tasks or boards
+  // Listen for broadcasted updates about tasks or boards.
+  //
+  // Keyed on the user context only — NOT on currentBoardId. The handler doesn't
+  // need it (reload() reads the live board from currentBoardIdRef), so including
+  // it just tore the channel down and rebuilt it on every board switch.
   useEffect(() => {
-    logger.info('[useTasks] Setting up BroadcastChannel listener', {
-      currentBoardId,
-      userType,
-      sessionId
-    })
+    logger.info('[useTasks] Setting up BroadcastChannel listener', { userType, sessionId })
     try {
       const bcListener = new BroadcastChannel('tasks')
       bcListener.onmessage = e => {
@@ -101,7 +101,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
         logger.info('[useTasks] BroadcastChannel message received', {
           msg,
           sessionId: SESSION_ID,
-          currentBoardId,
+          currentBoardId: currentBoardIdRef.current,
           currentContext: { userType, sessionId }
         })
 
@@ -122,13 +122,13 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
         if (msg.type === 'tasks-updated' || msg.type === 'boards-updated') {
           logger.info('[useTasks] BroadcastChannel: triggering reload for currentBoardId', {
-            currentBoardId
+            currentBoardId: currentBoardIdRef.current
           })
           void reload()
         }
       }
       return () => {
-        logger.info('[useTasks] Cleaning up BroadcastChannel listener', { currentBoardId })
+        logger.info('[useTasks] Cleaning up BroadcastChannel listener')
         bcListener.close()
       }
     } catch (err) {
@@ -137,7 +137,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBoardId, userType, sessionId])
+  }, [userType, sessionId])
 
   async function addTask(
     input: string,
