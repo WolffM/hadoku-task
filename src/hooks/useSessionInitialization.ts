@@ -50,52 +50,62 @@ export function useSessionInitialization({
       // Get old sessionId before handshake
       const oldSessionId = getStoredSessionId()
 
-      // Perform handshake (for public users, this ensures stable sessionId in localStorage)
-      const handshakeResult = await performSessionHandshake(propsSessionId, userType)
+      // The handshake is server-side session bookkeeping (KV writes: preferences,
+      // session-info, authKey->session mapping). The only thing the client needs
+      // out of it is serverUserType, for the rare session-expiry case. So we start
+      // it here but do NOT await it before painting — awaiting it used to serialize
+      // handshake -> prefs -> boards and put the whole chain on the critical path.
+      const handshakePromise = performSessionHandshake(propsSessionId, userType)
 
-      // Check for session expiration - server userType differs from client
-      if (handshakeResult.serverUserType !== userType) {
+      /** Session expired server-side: tell the user and reload. */
+      function handleExpiry(serverUserType: string): boolean {
+        if (serverUserType === userType) return false
         logger.warn('[App] User type changed - session may have expired', {
           expected: userType,
-          actual: handshakeResult.serverUserType
+          actual: serverUserType
         })
-
-        // If user was authenticated but session expired (now treated as public)
-        if (userType !== 'public' && handshakeResult.serverUserType === 'public') {
-          // Update stored userType to match server
-          storeUserType(handshakeResult.serverUserType)
-
-          // Notify user and reload to reinitialize with correct state
+        if (userType !== 'public' && serverUserType === 'public') {
+          storeUserType(serverUserType)
           showToast('Your session has expired. Please enter your key again.', 'info')
-
-          // Small delay to let the toast show before reload
           setTimeout(() => {
             window.location.reload()
           }, 1500)
-          return
+          return true
         }
+        return false
       }
 
-      // Determine the effective sessionId to use
       let finalSessionId = propsSessionId
+
       if (userType === 'public') {
-        // Public users: use their stable localStorage sessionId
+        // Public handshake never touches the network — it just settles a stable
+        // sessionId in localStorage, which finalSessionId depends on. Awaiting it
+        // is free.
+        const handshakeResult = await handshakePromise
+        if (handleExpiry(handshakeResult.serverUserType)) return
+
         finalSessionId = getStoredSessionId() || propsSessionId
 
-        // Load preferences from the unified store (SDK). For public/anon the
-        // SDK serves its localStorage cache (prefs-api 401s anon, by design).
+        // For public/anon the SDK serves its localStorage cache (prefs-api 401s
+        // anon, by design).
         const prefs = await loadTaskPreferences('public', finalSessionId)
         setPreferences(prefs)
         setPreferencesLoaded(true)
       } else {
-        // Authenticated users: use the sessionId from props (from parent)
+        // Authenticated: finalSessionId is propsSessionId, known without the
+        // handshake. So prefs and the board sync can both run concurrently with
+        // the in-flight handshake instead of queueing behind it.
         finalSessionId = propsSessionId
 
-        // Load the merged (user + device) view from the unified store. The SDK
-        // already merges scopes + applies defaults, so the old localStorage-vs-
-        // server priority dance is gone (handshakeResult.preferences was always
-        // null client-side anyway). The one-shot legacy migration runs inside
-        // loadTaskPreferences on first load for this session.
+        // Kick the board sync off now. It's the long pole (the boards fetch is
+        // the slowest call in the load), and it needs nothing from the handshake
+        // or from prefs — useTasks already holds the right sessionId on first
+        // render. Starting it here rather than after both awaits is what gets
+        // tasks on screen sooner.
+        const boardSync = initialLoad().catch(err => {
+          logger.warn('[App] initialLoad failed in background', { error: String(err) })
+        })
+
         const prefs = await loadTaskPreferences(userType, finalSessionId)
         setPreferences(prefs)
         setPreferencesLoaded(true)
@@ -112,6 +122,14 @@ export function useSessionInitialization({
         if (displayName) {
           showToast(`Welcome back, ${displayName}`, 'success')
         }
+
+        // Expiry is handled off the critical path. If the key was revoked the
+        // board sync 401s and reports through onSyncError anyway; this just adds
+        // the explicit "enter your key again" prompt + reload.
+        void handshakePromise
+          .then(r => handleExpiry(r.serverUserType))
+          .catch(err => logger.warn('[App] handshake failed', { error: String(err) }))
+        void boardSync
       }
 
       // Set the effective sessionId for all hooks to use (only if different)
@@ -122,14 +140,14 @@ export function useSessionInitialization({
       // Unblock the shell as soon as preferences are resolved. useTasks's own
       // user-context effect has already hydrated tasks/boards from localStorage
       // by this point, so the shell renders with cached data immediately.
-      // initialLoad() (which talks to the API and replaces local state with the
-      // server view) runs in the background and surfaces fresh data when ready.
       setIsLoaded(true)
 
-      // Background data sync — don't gate first paint on the network round-trip.
-      void initialLoad().catch(err => {
-        logger.warn('[App] initialLoad failed in background', { error: String(err) })
-      })
+      if (userType === 'public') {
+        // Public has no syncFromApi; this just re-reads localStorage.
+        void initialLoad().catch(err => {
+          logger.warn('[App] initialLoad failed in background', { error: String(err) })
+        })
+      }
     }
 
     void initializeSession()

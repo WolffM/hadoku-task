@@ -126,16 +126,21 @@ export async function updateSessionMapping(
   kv: KVNamespace,
   authKey: string,
   sessionId: string,
-  maxRetries = 10
+  maxRetries = 10,
+  // Callers that just wrote session-info themselves can skip the existence
+  // read — it's a global KV round-trip whose answer they already know.
+  sessionInfoKnownToExist = false
 ): Promise<void> {
   // Verify session-info exists before adding to mapping
   // This prevents "mystery sessions" that have no session data
-  const sessionInfo = await getSessionInfo(kv, sessionId)
-  if (!sessionInfo) {
-    logger.warn(
-      `[SessionMapping] Cannot add session ${maskSessionId(sessionId)} - no session-info exists`
-    )
-    return
+  if (!sessionInfoKnownToExist) {
+    const sessionInfo = await getSessionInfo(kv, sessionId)
+    if (!sessionInfo) {
+      logger.warn(
+        `[SessionMapping] Cannot add session ${maskSessionId(sessionId)} - no session-info exists`
+      )
+      return
+    }
   }
 
   const key = sessionMappingKey(authKey)
@@ -263,27 +268,31 @@ export async function handleSessionHandshake(
   let isNewSession = true
   let sessionIdToDelete: string | null = null
 
-  // Try to load preferences from oldSessionId (explicit migration)
-  if (oldSessionId) {
-    preferences = await getPreferencesBySessionId(kv, oldSessionId)
-    if (preferences) {
-      migratedFrom = oldSessionId
-      isNewSession = false
-      sessionIdToDelete = oldSessionId // Only delete if explicitly migrating
-    }
+  // The old-session preference lookup and the authKey->session mapping lookup are
+  // independent, and every KV read is a global round-trip. Fetch them together
+  // instead of in series. The mapping is needed again below (migration cleanup),
+  // so reading it up front costs nothing extra in the common path.
+  const [oldSessionPrefs, mapping] = await Promise.all([
+    oldSessionId ? getPreferencesBySessionId(kv, oldSessionId) : Promise.resolve(null),
+    getSessionMapping(kv, authKey)
+  ])
+
+  // Preferences from oldSessionId (explicit migration)
+  if (oldSessionId && oldSessionPrefs) {
+    preferences = oldSessionPrefs
+    migratedFrom = oldSessionId
+    isNewSession = false
+    sessionIdToDelete = oldSessionId // Only delete if explicitly migrating
   }
 
-  // If oldSessionId not provided or not found, try authKey mapping as fallback
+  // Otherwise fall back to the authKey mapping's last session.
   // Note: We DON'T delete this - it might be another device still using it
-  if (!preferences) {
-    const mapping = await getSessionMapping(kv, authKey)
-    if (mapping && mapping.lastSessionId) {
-      preferences = await getPreferencesBySessionId(kv, mapping.lastSessionId)
-      if (preferences) {
-        migratedFrom = mapping.lastSessionId
-        isNewSession = false
-        // DON'T mark for deletion - this might be a new device
-      }
+  if (!preferences && mapping?.lastSessionId) {
+    preferences = await getPreferencesBySessionId(kv, mapping.lastSessionId)
+    if (preferences) {
+      migratedFrom = mapping.lastSessionId
+      isNewSession = false
+      // DON'T mark for deletion - this might be a new device
     }
   }
 
@@ -292,24 +301,6 @@ export async function handleSessionHandshake(
     preferences = { ...DEFAULT_PREFERENCES }
   }
 
-  // Save preferences to newSessionId
-  await savePreferencesBySessionId(kv, newSessionId, preferences)
-
-  // Delete old preferences and session info ONLY if explicitly migrating
-  if (sessionIdToDelete && sessionIdToDelete !== newSessionId) {
-    await kv.delete(preferencesKey(sessionIdToDelete))
-    await kv.delete(sessionInfoKey(sessionIdToDelete))
-
-    // Remove old sessionId from mapping
-    const mapping = await getSessionMapping(kv, authKey)
-    if (mapping) {
-      mapping.sessionIds = mapping.sessionIds.filter(id => id !== sessionIdToDelete)
-      await kv.put(sessionMappingKey(authKey), JSON.stringify(mapping))
-    }
-  }
-
-  // Create session info for newSessionId FIRST (before updating mapping)
-  // This ensures session-info exists when updateSessionMapping checks for it
   const now = new Date().toISOString()
   const sessionInfo: SessionInfo = {
     sessionId: newSessionId,
@@ -318,11 +309,32 @@ export async function handleSessionHandshake(
     createdAt: now,
     lastAccessedAt: now
   }
-  await saveSessionInfo(kv, sessionInfo)
 
-  // Add new sessionId to mapping (AFTER session-info is created)
-  // This prevents "mystery sessions" in the mapping without session-info
-  await updateSessionMapping(kv, authKey, newSessionId)
+  // Preferences and session-info are independent writes — issue them together.
+  // The mapping update must still land AFTER session-info exists, otherwise the
+  // mapping can reference a session that has no session-info ("mystery sessions").
+  await Promise.all([
+    savePreferencesBySessionId(kv, newSessionId, preferences),
+    saveSessionInfo(kv, sessionInfo)
+  ])
+
+  // Delete old preferences and session info ONLY if explicitly migrating.
+  // Reuses the mapping already read above.
+  if (sessionIdToDelete && sessionIdToDelete !== newSessionId) {
+    const cleanup: Promise<unknown>[] = [
+      kv.delete(preferencesKey(sessionIdToDelete)),
+      kv.delete(sessionInfoKey(sessionIdToDelete))
+    ]
+    if (mapping) {
+      mapping.sessionIds = mapping.sessionIds.filter(id => id !== sessionIdToDelete)
+      cleanup.push(kv.put(sessionMappingKey(authKey), JSON.stringify(mapping)))
+    }
+    await Promise.all(cleanup)
+  }
+
+  // Add new sessionId to mapping (AFTER session-info is created).
+  // We wrote session-info in the Promise.all above, so skip the existence re-read.
+  await updateSessionMapping(kv, authKey, newSessionId, 10, true)
 
   // Clean up stale sessions (30+ days old) in the background
   // This runs asynchronously and won't block the handshake response
