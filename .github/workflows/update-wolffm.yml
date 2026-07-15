@@ -14,6 +14,7 @@ concurrency:
 permissions:
   contents: write
   packages: read
+  actions: write # dispatch publish.yml after an auto-update commit (see below)
 
 jobs:
   update:
@@ -53,6 +54,9 @@ jobs:
           pnpm update -r "@wolffm/*" --latest
 
       - name: Commit and push if changed
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -70,9 +74,29 @@ jobs:
           git add $FILES
           git commit -m "chore: auto-update @wolffm/* to latest"
 
+          # Push, then explicitly dispatch publish.yml. This push is authenticated
+          # with GITHUB_TOKEN, and GitHub refuses to trigger `on: push` workflows
+          # from a GITHUB_TOKEN push (loop-prevention) — so publish.yml would never
+          # fire on its own, and the freshly-bumped @wolffm/* deps would sit in the
+          # lockfile without ever being rebuilt into a published @wolffm/task. The
+          # dispatch closes that gap; it only runs when we actually pushed a change.
           for i in 1 2 3; do
             if git push; then
-              echo "✅ Pushed"
+              echo "✅ Pushed — dispatching publish.yml so the bump reaches the registry"
+              # REST dispatch (no gh dependency on the self-hosted runner). Needs
+              # the actions:write permission declared above. Non-fatal: if it fails
+              # the bump is still committed, just not yet published.
+              http=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/$REPO/actions/workflows/publish.yml/dispatches" \
+                -d '{"ref":"main"}') || true
+              if [ "$http" = "204" ]; then
+                echo "✅ publish.yml dispatched"
+              else
+                echo "⚠️  publish dispatch returned HTTP $http — run it manually: gh workflow run publish.yml --ref main"
+              fi
               exit 0
             fi
             echo "Push failed (attempt $i), rebasing..."
