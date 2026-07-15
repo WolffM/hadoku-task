@@ -61,3 +61,6 @@ test-results/
 
 # per-repo vault key (Phase 2 of per-key ACL plan; never commit)
 .devvault.local.json
+
+# Cold-load profiler run logs (scripts/profile-cold-load.mjs)
+.profiler/

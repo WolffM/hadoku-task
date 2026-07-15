@@ -21,6 +21,11 @@ Pre-commit hook runs lint:fix + format. It does NOT bump versions — versioning
 - `@wolffm/task/api` -> server handlers [src/server/index.ts]
 - `@wolffm/task/style.css` -> CSS bundle [dist/style.css]
 
+## Profiling / performance
+
+- Cold-load profiler: `pnpm run profile` (authenticated, measures timing + API waterfall + duplicate requests, writes `.profiler/latest.json`).
+- Full method, deeper techniques (CDP initiator stacks, render counts, simulated-KV server timing), regression guards, and the current baseline: `docs/PROFILING.md`. Start there whenever the ask is "profile" / "perf" / "why is it slow".
+
 ## MCP (agent task/calendar management)
 
 - Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).
