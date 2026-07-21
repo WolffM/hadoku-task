@@ -52,23 +52,62 @@ theme×family combinations; that pairing is why badges kept coming out unreadabl
 
 ## Work list, measured
 
-"Breakage" = references to deleted tokens. These render as nothing — the only
-thing that is actually visibly wrong. Counts are from a scan on 2026-07-21;
-re-measure before you start.
+All known breakage has been fixed as of 2026-07-21. What remains is hygiene
+(`var()` fallbacks) and wiring the gate into repos that lack it. **Re-measure
+before trusting this table** — use the deployed-bundle check below.
 
-| repo                  | on 3.0.1? | breakage  | what                                                   |
-| --------------------- | --------- | --------- | ------------------------------------------------------ |
-| hadoku-jobplatform    | not yet   | **13**    | `muted-bg`×7, `danger-darker`×3, `danger-light`×3      |
-| hadoku-contact-ui     | not yet   | **9**     | `primary-light`×4, `danger-light`×4, `danger-darker`×1 |
-| hadoku-aggregator     | not yet   | **7**     | `danger-light`×5, `primary-light`×1, `muted-bg`×1      |
-| hadoku-printTool      | not yet   | **3**     | `danger-light`×3                                       |
-| hadoku-trader         | not yet   | **0**     | gate/hygiene pass only                                 |
-| personal-dataplatform | not yet   | **0**     | gate/hygiene pass only                                 |
-| hadoku-resume-bot     | **yes**   | 0 (fixed) | ~78 `var()` fallbacks remain                           |
+| repo                  | on 3.0.1? | breakage            | what                                              |
+| --------------------- | --------- | ------------------- | ------------------------------------------------- |
+| hadoku-jobplatform    | yes       | **done** `a507e9a`  | fallback hygiene may remain                       |
+| hadoku-contact-ui     | yes       | **done** `9996ceb`  | prod bundle was stale; redeploys clean            |
+| hadoku-aggregator     | yes       | **done** `e387240`  | local checkout is diverged from origin — see note |
+| hadoku-printTool      | yes       | **done** `92b93a2`  | fallback hygiene may remain                       |
+| personal-dataplatform | yes       | **done** `3def316`  | —                                                 |
+| hadoku-trader         | yes       | none needed         | 0 dead refs; gate/hygiene pass only               |
+| hadoku-resume-bot     | yes       | **done** `ae91c46`  | ~78 `var()` fallbacks remain                      |
+| tenhands              | yes       | **done** `3d76ee8`  | auto-update no-ops — see note below               |
+| watchpart2            | yes       | **done** `ee4ff19a` | manifest in `apps/ui/`                            |
 
-Repos with no `@wolffm/themes` dependency — skip unless they gain one:
-`tenhands`, `watchpart2`, `upcominganimego`, `hadoku-task-mobile`,
-`brave-quartet`, `color_palette_picker`, `fileSystemAgent`.
+### Do NOT scope this by `package.json` dependency
+
+An earlier version of this doc said to skip repos that don't depend on
+`@wolffm/themes`. **That was wrong and it hid live prod breakage.** A
+micro-frontend gets its tokens from hadoku_site at runtime, so it can use
+`var(--color-*)` and Tailwind colour classes while declaring no dependency at
+all — or while pinned to a stale 2.x that never auto-updated.
+
+Two repos were broken on prod for exactly this reason and have since been fixed:
+
+- **tenhands** — 24 dead refs + 19 tint anti-patterns (`3d76ee8`). Its manifest
+  lives in `frontend/`, and `update-wolffm.yml` runs `pnpm update -r` at the repo
+  root where there is no `package.json`, so **its auto-update silently no-ops**.
+- **watchpart2** — hand-rolled colour `@theme` with four stale self-references,
+  plus local aliases (`--color-text-primary`, `--color-success-text`) (`ee4ff19a`).
+  Manifest is in `apps/ui/`.
+
+**Scope by token usage, not by dependency**, and mind that source roots vary
+(`frontend/src`, `apps/ui/src`, not always `./src`):
+
+```sh
+# find every repo that touches theme tokens, however it declares them
+grep -rl -E 'var\(--color-|(bg|text|border)-(primary|success|warning|danger|neutral)' \
+  ~/repos/*/ --include=*.css --include=*.tsx --include=*.astro 2>/dev/null \
+  | grep -v node_modules | cut -d/ -f5 | sort -u
+```
+
+Then confirm against the **deployed** bundles, which is ground truth:
+
+```sh
+for mf in contact aggregator printtool jobplatform dataplatform task resume tenhands watchparty; do
+  n=$(curl -s "https://hadoku.me/mf/$mf/style.css" \
+      | grep -coE 'var\(--color-(danger-light|primary-light|muted-bg|neutral-light|neutral-lighter|danger-darker)\)')
+  echo "$mf: $n dead refs"
+done
+```
+
+Still believed clear (no token usage found): `upcominganimego`,
+`hadoku-task-mobile`, `brave-quartet`, `color_palette_picker`, `fileSystemAgent`.
+Re-check with the grep above rather than trusting this list.
 
 ### Breakage vs hygiene — keep these separate
 
@@ -122,6 +161,18 @@ Then:
 - **Add a Colors section to the repo's `CLAUDE.md`** — copy the one from
   `hadoku-task/CLAUDE.md` or `hadoku_site/CLAUDE.md`. Agents read CLAUDE.md; a
   standalone guide only helps if something points at it.
+
+## Known false positive in the gate
+
+`check-usage` validates Tailwind classes against the **package's** token set
+only. A repo that defines its own alias in a local `@theme` block — e.g.
+`--color-text-primary: var(--color-text)` — makes `text-text-primary` a working
+class, but the gate still reports it as "not mapped by @wolffm/themes".
+
+Before "fixing" an `unknown-class` report, check whether the repo defines it
+locally. If it does, the class works; the right move is still to drop the local
+alias and use the real token, but it is cleanup, not breakage. (`var()` checks
+do not have this problem — those already account for local definitions.)
 
 ## Two gotchas that will cost you an hour each
 
