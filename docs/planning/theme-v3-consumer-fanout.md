@@ -63,7 +63,6 @@ before trusting this table** — use the deployed-bundle check below.
 | hadoku-aggregator     | yes       | **done** `e387240`  | local checkout is diverged from origin — see note |
 | hadoku-printTool      | yes       | **done** `92b93a2`  | fallback hygiene may remain                       |
 | personal-dataplatform | yes       | **done** `3def316`  | —                                                 |
-| hadoku-trader         | yes       | none needed         | 0 dead refs; gate/hygiene pass only               |
 | hadoku-resume-bot     | yes       | **done** `ae91c46`  | ~78 `var()` fallbacks remain                      |
 | tenhands              | yes       | **done** `3d76ee8`  | auto-update no-ops — see note below               |
 | watchpart2            | yes       | **done** `ee4ff19a` | manifest in `apps/ui/`                            |
@@ -108,6 +107,10 @@ done
 Still believed clear (no token usage found): `upcominganimego`,
 `hadoku-task-mobile`, `brave-quartet`, `color_palette_picker`, `fileSystemAgent`.
 Re-check with the grep above rather than trusting this list.
+
+**Out of scope — do not touch:** `hadoku-trader` is archived and decommissioned.
+It has no route, no registry entry, no consumers, and its Actions are disabled.
+Skip it in every sweep; it needs nothing and can accept nothing.
 
 ### Breakage vs hygiene — keep these separate
 
