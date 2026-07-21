@@ -65,6 +65,8 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         fetch: 'readonly',
+        AbortSignal: 'readonly',
+        AbortController: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
         prompt: 'readonly',

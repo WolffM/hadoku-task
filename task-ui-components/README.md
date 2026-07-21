@@ -34,6 +34,20 @@ This allows the package to bundle its CSS automatically. **This is a one-time se
 
 ## Components
 
+### AppHeader (Overview)
+
+The ecosystem-standard top bar for every hadoku.me app: title on the left, an
+action bar on the right holding the theme picker and the unified settings gear.
+Enforces the shared header contract so child apps stop drifting. See
+[Unified app header](#unified-app-header-recommended-for-hadokume-apps) below.
+
+### ConnectedSettings (Overview)
+
+The unified per-user settings gear + popout (access tier, display name, global
+content-visibility level, auth-key swap). "Connected": it self-wires to the
+hadoku.me edge-router via same-origin fetches, so it needs zero props. Injected
+automatically by `AppHeader`; can also be used standalone.
+
 ### ThemePicker (Overview)
 
 A gorgeous theme picker with light/dark pill design. Fully customizable to work with any theme system.
@@ -59,6 +73,51 @@ Generic settings dialog with section-based organization and multiple field types
 Toast notification system with success, error, and info variants.
 
 ## Usage
+
+### Unified app header (recommended for hadoku.me apps)
+
+Every app under `hadoku.me` should render the same top bar. `AppHeader` gives
+you the enforced layout — title left, `[ status? · ThemePicker · Settings ]`
+right — and injects the hadoku-wired `ConnectedSettings` gear for you. Pass your
+own `ConnectedThemePicker` (theme state stays app-side):
+
+```tsx
+import { AppHeader, ConnectedThemePicker } from '@wolffm/task-ui-components'
+import { useTheme, THEME_FAMILIES, THEME_ICON_MAP } from '@wolffm/themes'
+import '@wolffm/themes/style.css'
+import '@wolffm/task-ui-components/theme-picker.css'
+import '@wolffm/task-ui-components/app-header.css'
+
+function App() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <>
+      <AppHeader
+        title="Print Tool"
+        themePicker={
+          <ConnectedThemePicker
+            themeFamilies={THEME_FAMILIES}
+            currentTheme={theme}
+            onThemeChange={setTheme}
+            getThemeIcon={t => {
+              const Icon = THEME_ICON_MAP[t as keyof typeof THEME_ICON_MAP]
+              return Icon ? <Icon /> : null
+            }}
+          />
+        }
+      />
+      {/* app body — the app's own concern */}
+    </>
+  )
+}
+```
+
+`ConnectedSettings` self-resolves the caller's tier/name via `/session/whoami`
+and hits the edge-router's `/session/*` + `/prefs/api/v1/content-level` routes.
+Off `hadoku.me` (e.g. Storybook) every call resolves to a safe default and the
+gear renders a read-only shell — it never throws. Pass `settingsProps={{ userType,
+name }}` when the app already knows the identity to skip the extra fetch, or
+`showSettings={false}` to omit the gear.
 
 ### Quick Start with @wolffm/themes (Recommended)
 

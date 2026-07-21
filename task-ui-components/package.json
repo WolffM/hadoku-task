@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task-ui-components",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "Reusable UI components with Bento grid and metallic gradient support",
   "type": "module",
   "main": "dist/index.js",
@@ -21,6 +21,7 @@
       "require": "./dist/index.js"
     },
     "./theme-picker.css": "./dist/theme-picker.css",
+    "./app-header.css": "./dist/app-header.css",
     "./toaster.css": "./dist/toaster.css",
     "./context-menu.css": "./dist/context-menu.css",
     "./bento.css": "./dist/bento.css",
@@ -29,9 +30,9 @@
   "scripts": {
     "build": "vite build && tsc --emitDeclarationOnly && node ../scripts/fix-imports.cjs dist && pnpm run copy-css",
     "typecheck": "tsc --noEmit",
-    "copy-css": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/task-ui-components.css', 'dist/styles.css'); fs.copyFileSync('src/theme-picker.css', 'dist/theme-picker.css'); fs.copyFileSync('src/toaster.css', 'dist/toaster.css'); fs.copyFileSync('src/context-menu.css', 'dist/context-menu.css'); fs.copyFileSync('src/bento.css', 'dist/bento.css')\"",
+    "copy-css": "node -e \"const fs=require('fs'); fs.copyFileSync('dist/task-ui-components.css', 'dist/styles.css'); fs.copyFileSync('src/theme-picker.css', 'dist/theme-picker.css'); fs.copyFileSync('src/app-header.css', 'dist/app-header.css'); fs.copyFileSync('src/toaster.css', 'dist/toaster.css'); fs.copyFileSync('src/context-menu.css', 'dist/context-menu.css'); fs.copyFileSync('src/bento.css', 'dist/bento.css')\"",
     "prepublishOnly": "pnpm run build",
-    "_comment": "copy-css requires source CSS files: theme-picker.css, toaster.css, context-menu.css (validated in CI)"
+    "_comment": "copy-css requires source CSS files: theme-picker.css, app-header.css, toaster.css, context-menu.css (validated in CI)"
   },
   "keywords": [
     "theme-picker",
