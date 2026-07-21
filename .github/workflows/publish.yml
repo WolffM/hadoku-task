@@ -24,18 +24,23 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
-      
-      # No `version:` input — action-setup@v5 reads pnpm from package.json's
-      # `packageManager` field (single source of truth; specifying both errors).
-      - uses: pnpm/action-setup@v5
 
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: https://npm.pkg.github.com
           scope: '@wolffm'
-          cache: pnpm
-      
+
+      # pnpm via corepack, pinned by the `packageManager` field in package.json.
+      # Replaces pnpm/action-setup, whose self-installer shares one directory
+      # across every runner instance on the host and dies with
+      # `ENOENT ... uv_cwd` when concurrent jobs race it.
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
+          pnpm --version
+
       - name: Configure npm for GitHub Packages
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" > ~/.npmrc
