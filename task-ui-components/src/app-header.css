@@ -1,0 +1,235 @@
+/* AppHeader + ConnectedSettings styles for @wolffm/task-ui-components.
+ *
+ * All colors come from @wolffm/themes semantic tokens so the header themes with
+ * everything else. Import alongside theme-picker.css:
+ *   import '@wolffm/task-ui-components/app-header.css'
+ */
+
+/* ── Header layout ─────────────────────────────────────────────────────────
+ * Title left, action bar right, vertically centered. Full width of whatever
+ * column the app places it in. */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-header__title {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: var(--hdk-text-lg);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ── ConnectedSettings: gear toggle ────────────────────────────────────────
+ * Round toggle matched to .theme-toggle-btn so the gear sits flush next to the
+ * theme button in the same row. */
+.settings-popout {
+  position: relative;
+  display: inline-flex;
+}
+
+.settings-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  opacity: 0.7;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+}
+.settings-toggle-btn:hover {
+  background-color: var(--color-primary-hover);
+  opacity: 1;
+}
+.settings-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+/* Full-viewport click-catcher, same trick ThemePicker uses. */
+.settings-popout__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: transparent;
+}
+
+.settings-popout__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  color: var(--color-text);
+}
+
+.settings-popout__header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.settings-popout__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.settings-popout__row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.settings-popout__label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.settings-popout__value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.settings-popout__inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-popout__tier {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.settings-popout__tier--admin {
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+  border-color: var(--color-primary);
+}
+
+.settings-popout__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.settings-popout__input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-bg);
+}
+
+.settings-popout__btn {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.settings-popout__btn:hover:not(:disabled) {
+  background: var(--color-bg-alt);
+}
+.settings-popout__btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.settings-popout__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+.settings-popout__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Content pill — a chunked "volume slider": segments 1..maxLevel, everything
+ * up to and including the selected level reads as filled. */
+.settings-popout__pill {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+.settings-popout__seg {
+  flex: 1 1 0;
+  padding: 7px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+.settings-popout__seg:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.settings-popout__seg:last-child {
+  border-radius: 0 8px 8px 0;
+}
+.settings-popout__seg--filled {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.settings-popout__seg:disabled {
+  cursor: default;
+}
+
+.settings-popout__hint {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--color-text-tertiary);
+}
+
+.settings-popout__error {
+  font-size: 0.75rem;
+  color: var(--color-danger);
+}

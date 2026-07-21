@@ -7,6 +7,8 @@
 // Main components
 export { ThemePicker } from './components/ThemePicker'
 export { ConnectedThemePicker } from './components/ConnectedThemePicker'
+export { AppHeader } from './components/AppHeader'
+export { ConnectedSettings } from './components/ConnectedSettings'
 export { Toast } from './components/Toast'
 export { Toaster } from './components/Toaster'
 export { Modal } from './components/Modal'
@@ -52,6 +54,9 @@ export {
 // Types
 export type { ThemeName, ThemeFamily, ThemePickerProps, DropdownPlacement } from './types'
 export type { ConnectedThemePickerProps } from './components/ConnectedThemePicker'
+export type { AppHeaderProps } from './components/AppHeader'
+export type { ConnectedSettingsProps } from './components/ConnectedSettings'
+export type { ContentLevelState, Identity, KeySwapResult, Tier } from './lib/settingsClient'
 export type { ToastProps } from './components/Toast'
 export type { ToasterProps, ToastState } from './components/Toaster'
 export type { UseToastReturn } from './hooks/useToast'
