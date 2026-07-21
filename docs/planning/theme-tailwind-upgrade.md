@@ -1,8 +1,57 @@
 # Theme System Upgrade — full Tailwind color package + ecosystem de-handrolling + usage guide
 
-**Status:** proposed — ready to execute
+**Status:** Task 1 ✅ and Task 3 ✅ shipped in `@wolffm/themes@3.0.1` (2026-07-21).
+**Task 2 (consumer migration) is the only thing left.**
 **Owner:** whoever picks this up in `hadoku-task`
 **Scope:** `@wolffm/themes` (this repo) + every consumer repo in the ecosystem
+
+## Where this stands (read before starting Task 2)
+
+Shipped, live on the registry and in prod:
+
+- Symmetric 41-token set. **No back-compat aliases** — the six legacy names are
+  gone (see `themes/THEME_GRAVEYARD.md`). This was a deliberate call: aliases
+  would be permanent debt guarding a gap Task 2 closes anyway.
+- `@wolffm/themes/tailwind-colors.css` — all 41 tokens mapped, generated from
+  `style.css`, CI-verified in sync.
+- `themes/THEME_USAGE_GUIDE.md` (Task 3) + a Colors section in `CLAUDE.md`.
+- Four gates in `lint:css` + pre-commit: `check-contrast` (558 WCAG pairs),
+  `check-tailwind`, `check-docs`, `check-usage`.
+
+Deviations from this plan, both because measurement contradicted it:
+
+1. **The 5-token set could not deliver its own decision table.** `text-<f>` on
+   `bg-<f>-bg` failed AA in 62 of 90 theme×family combinations, so the canonical
+   set is **six** tokens per family — `--color-on-<f>-bg` was added. Update
+   step 2 of the decision table below accordingly.
+2. **`--color-text-tertiary` / `-muted` are decorative-only** — they fail AA in
+   5 and 14 themes respectively. Any text a user must read takes `--color-text`
+   or `--color-text-secondary`. Consumers should be swept for this too.
+
+Also fixed en route: the default light theme was shipping three WCAG-failing
+buttons (2.15–2.80:1), and `--color-text-primary` never existed but was masked
+by a `var()` fallback.
+
+### What Task 2 actually has to do now
+
+`check-usage.mjs` ships in the package, so per repo the loop is:
+
+```sh
+node node_modules/@wolffm/themes/scripts/check-usage.mjs ./src
+```
+
+and fix what it reports. It catches all five failure modes (unknown tokens,
+unmapped Tailwind classes in `.tsx`, `var()` fallbacks, layered `style.css`
+imports, and the tint anti-pattern).
+
+**hadoku_site is already on 3.0.1 and is NOT broken** — verified in prod. Its
+dead references live only in its hand-rolled `@theme` block (generating
+utilities nothing uses) and in `TaskSkeleton.astro`, which defines those names
+locally with literal values. Both still need cleaning up, but neither is
+urgent: delete the `@theme` colour block, and rename the skeleton's locals
+(`hadoku-task` renamed its equivalent to `--skeleton-shimmer`).
+
+---
 
 This plan is self-contained. It came out of a cross-ecosystem audit (Nov 2026)
 of why "colors are fucked in light/dark mode" keeps recurring across apps. Read
