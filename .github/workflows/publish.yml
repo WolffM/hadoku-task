@@ -44,7 +44,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
@@ -299,7 +299,7 @@ jobs:
 
           # Update lock file
           echo "🔄 Updating lock file..."
-          pnpm install --lockfile-only
+          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
 
           # Configure git
           git config user.name "github-actions[bot]"
@@ -321,7 +321,7 @@ jobs:
           echo "🔨 Rebuilding packages with new versions..."
           
           # Reinstall to pick up new versions
-          pnpm install --frozen-lockfile
+          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --frozen-lockfile
           
           # Rebuild in dependency order
           pnpm --filter @wolffm/task-ui-components run build

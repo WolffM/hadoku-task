@@ -51,7 +51,7 @@ jobs:
           # -r so themes/ + task-ui-components/ workspace subpackages
           # also pick up any external @wolffm/* dep updates. workspace:*
           # self-refs are unaffected by --latest.
-          pnpm update -r "@wolffm/*" --latest
+          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store update -r "@wolffm/*" --latest
 
       - name: Commit and push if changed
         env:
