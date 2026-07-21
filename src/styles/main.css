@@ -43,7 +43,7 @@
   height: 40px;
   border-radius: 50%;
   background: var(--color-bg-card);
-  box-shadow: var(--hdk-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.15));
+  box-shadow: var(--hdk-shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,7 +153,7 @@
   border: none;
   border-radius: var(--hdk-radius);
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
   font-size: var(--hdk-text-base);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
@@ -333,7 +333,7 @@
   border-radius: 999px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition:
     background-color var(--transition-fast),
@@ -450,7 +450,7 @@
 }
 
 .task-app__input::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   opacity: 0.6;
 }
 
@@ -524,7 +524,7 @@
 }
 
 .context-menu-item:hover {
-  background-color: var(--color-neutral-light);
+  background-color: var(--color-bg-hover);
 }
 
 .context-menu-item.context-menu-item--danger {
@@ -532,6 +532,6 @@
 }
 
 .context-menu-item.context-menu-item--danger:hover {
-  background-color: var(--color-danger-light);
-  color: var(--color-danger-dark);
+  background-color: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
 }

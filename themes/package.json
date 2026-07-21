@@ -1,7 +1,7 @@
 {
   "name": "@wolffm/themes",
-  "version": "2.0.16",
-  "description": "18 beautiful themes with OKLCH metallic gradient support and Tailwind v4 compatibility - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
+  "version": "3.0.0",
+  "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
     "type": "git",
@@ -16,12 +16,18 @@
     "src/style.css",
     "src/advanced.css",
     "src/tailwind-integration.css",
-    "README.md"
+    "src/tailwind-colors.css",
+    "scripts",
+    "README.md",
+    "THEME_USAGE_GUIDE.md"
   ],
   "exports": {
     "./style.css": "./src/style.css",
     "./advanced.css": "./src/advanced.css",
     "./tailwind-integration.css": "./src/tailwind-integration.css",
+    "./tailwind-colors.css": "./src/tailwind-colors.css",
+    "./THEME_USAGE_GUIDE.md": "./THEME_USAGE_GUIDE.md",
+    "./check-usage": "./scripts/check-usage.mjs",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -31,7 +37,14 @@
     "build": "tsc && node ../scripts/fix-imports.cjs dist",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm run build",
-    "dev": "node dev/save-server.js"
+    "dev": "node dev/save-server.js",
+    "audit:tokens": "node scripts/audit-tokens.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "check:usage": "node scripts/check-usage.mjs ..",
+    "check:tailwind": "node scripts/generate-tailwind-colors.mjs --check",
+    "check:docs": "node scripts/check-docs.mjs",
+    "generate:tailwind": "node scripts/generate-tailwind-colors.mjs",
+    "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:usage"
   },
   "keywords": [
     "themes",

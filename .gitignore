@@ -53,6 +53,7 @@ themes/dev/save-server.js
 # Playwright test outputs
 playwright-report/
 test-results/
+.playwright-mcp/
 
 # Tooling caches (under node_modules/.cache/* but list explicitly for clarity)
 .eslintcache

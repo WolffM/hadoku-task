@@ -89,7 +89,7 @@
 
 .task-app__item-age {
   font-size: var(--hdk-text-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-left: auto;
   padding-left: var(--hdk-space-md);
   flex-shrink: 0;

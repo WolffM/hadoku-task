@@ -129,91 +129,58 @@ THEME_FAMILIES.forEach(f => {
   THEME_ICON_MAP[f.darkTheme] = f.darkIcon
 })
 
+/**
+ * Every semantic family exposes the SAME six tokens. The set is a rectangle on
+ * purpose — an asymmetric one is what made agents reach for names like
+ * `--color-danger-bg` that didn't exist. Keep it symmetric.
+ */
+const FAMILY_VARS = f => [
+  `--color-${f}`,
+  `--color-${f}-dark`,
+  `--color-${f}-bg`,
+  `--color-${f}-hover`,
+  `--color-on-${f}`,
+  `--color-on-${f}-bg`
+]
+
 export const COLOR_VARS = {
-  primary: [
-    '--color-primary',
-    '--color-primary-dark',
-    '--color-primary-light',
-    '--color-primary-bg',
-    '--color-primary-hover',
-    '--color-on-primary'
-  ],
-  success: [
-    '--color-success',
-    '--color-success-dark',
-    '--color-on-success',
-    '--color-success-bg',
-    '--color-success-hover'
-  ],
-  warning: ['--color-warning', '--color-warning-bg', '--color-on-warning', '--color-warning-hover'],
-  danger: [
-    '--color-danger',
-    '--color-danger-dark',
-    '--color-danger-darker',
-    '--color-danger-light',
-    '--color-on-danger',
-    '--color-danger-hover'
-  ],
-  neutral: [
-    '--color-neutral',
-    '--color-neutral-light',
-    '--color-neutral-lighter',
-    '--color-on-neutral',
-    '--color-neutral-hover',
-    '--color-muted-bg'
-  ],
+  primary: FAMILY_VARS('primary'),
+  success: FAMILY_VARS('success'),
+  warning: FAMILY_VARS('warning'),
+  danger: FAMILY_VARS('danger'),
+  neutral: FAMILY_VARS('neutral'),
   text: ['--color-text', '--color-text-secondary', '--color-text-tertiary', '--color-text-muted'],
   border: ['--color-border', '--color-border-light'],
   bg: ['--color-bg', '--color-bg-card', '--color-bg-alt', '--color-bg-hover', '--color-bg-overlay']
 }
 
-// Root colors that auto-cascade to derived variants when changed
+/**
+ * Root colors that auto-cascade to derived variants when changed.
+ *
+ * Every family cascades identically — same three derived tokens, same math.
+ * The old per-family variations (primary darkened 15, success 12, danger 10;
+ * primary's tint solid while the others were alpha) are exactly the drift this
+ * system is meant to eliminate.
+ *
+ * These are HSL approximations for live editing feedback. They are NOT the
+ * authority: run `node themes/scripts/audit-tokens.mjs` after authoring — it
+ * derives in OKLCH and verifies every WCAG pair.
+ */
+const familyCascade = f => ({
+  // Bottom stop of the filled-button gradient — must stay readable under on-<f>.
+  [`--color-${f}-dark`]: (h, s, l) => ({ h, s, l: Math.max(0, l - 12) }),
+  // Faint tint surface for badges/banners.
+  [`--color-${f}-bg`]: (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 10 }),
+  // Translucent overlay for ghost/hover states.
+  [`--color-${f}-hover`]: (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
+})
+
 export const CASCADE_MAP = {
-  '--color-primary': {
-    '--color-primary-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 15) }),
-    '--color-primary-light': (h, s, l, isDark) =>
-      isDark
-        ? { h, s: Math.max(0, s - 30), l: Math.max(0, l - 30) }
-        : { h, s: Math.min(100, s - 20), l: Math.min(100, l + 25) },
-    '--color-primary-bg': (h, s, l, isDark) =>
-      isDark
-        ? { h, s: Math.max(0, s - 40), l: 15, a: 100 }
-        : { h, s: Math.min(100, s - 10), l: 97, a: 100 },
-    '--color-primary-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 8 })
-  },
-  '--color-success': {
-    '--color-success-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 12) }),
-    '--color-success-bg': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 10 }),
-    '--color-success-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
-  },
-  '--color-warning': {
-    '--color-warning-bg': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 15 : 10 }),
-    '--color-warning-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
-  },
-  '--color-danger': {
-    '--color-danger-dark': (h, s, l) => ({ h, s, l: Math.max(0, l - 10) }),
-    '--color-danger-darker': (h, s, l) => ({ h, s, l: Math.max(0, l - 20) }),
-    '--color-danger-light': (h, s, l, isDark) =>
-      isDark
-        ? { h, s: Math.max(0, s - 30), l: Math.max(0, l - 35) }
-        : { h, s: Math.min(100, s - 20), l: Math.min(100, l + 30) },
-    '--color-danger-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 })
-  },
-  '--color-neutral': {
-    '--color-neutral-light': (h, s, l, isDark) =>
-      isDark
-        ? { h, s, l: Math.max(0, l - 15) }
-        : { h, s: Math.max(0, s - 10), l: Math.min(100, l + 20) },
-    '--color-neutral-lighter': (h, s, l, isDark) =>
-      isDark
-        ? { h, s, l: Math.max(0, l - 25) }
-        : { h, s: Math.max(0, s - 15), l: Math.min(100, l + 30) },
-    '--color-neutral-hover': (h, s, l, isDark) => ({ h, s, l, a: isDark ? 10 : 6 }),
-    '--color-muted-bg': (h, s, l, isDark) =>
-      isDark
-        ? { h, s, l: Math.max(0, l - 15) }
-        : { h, s: Math.max(0, s - 10), l: Math.min(100, l + 15) }
-  },
+  '--color-primary': familyCascade('primary'),
+  '--color-success': familyCascade('success'),
+  '--color-warning': familyCascade('warning'),
+  '--color-danger': familyCascade('danger'),
+  '--color-neutral': familyCascade('neutral'),
   '--color-bg': {
     '--color-bg-card': (h, s, l, isDark) =>
       isDark ? { h, s, l: Math.min(100, l + 3) } : { h, s, l: Math.min(100, l + 2) },
@@ -224,13 +191,25 @@ export const CASCADE_MAP = {
   }
 }
 
-// Maps root colors to their auto-calculated contrast text colors
+/**
+ * Maps each fill to the contrast text that sits ON it.
+ *
+ * Two pairings per family, because they are different surfaces with different
+ * maths (THEME_SYSTEM_RULES §2 — a container needs its own on-container colour):
+ *   --color-<f>     is filled  → text is --color-on-<f>
+ *   --color-<f>-bg  is a tint  → text is --color-on-<f>-bg
+ */
 export const TEXT_CONTRAST_MAP = {
   '--color-primary': '--color-on-primary',
   '--color-success': '--color-on-success',
   '--color-warning': '--color-on-warning',
   '--color-danger': '--color-on-danger',
-  '--color-neutral': '--color-on-neutral'
+  '--color-neutral': '--color-on-neutral',
+  '--color-primary-bg': '--color-on-primary-bg',
+  '--color-success-bg': '--color-on-success-bg',
+  '--color-warning-bg': '--color-on-warning-bg',
+  '--color-danger-bg': '--color-on-danger-bg',
+  '--color-neutral-bg': '--color-on-neutral-bg'
 }
 
 // Per-theme gradient stop configuration. A theme has an advanced

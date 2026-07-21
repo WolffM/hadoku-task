@@ -34,9 +34,9 @@ All button pairs pass WCAG AA:
 | Success | `#0ea5e9` | black | 7.58:1 | ✅  |
 | Warning | `#f59e0b` | black | 9.78:1 | ✅  |
 | Danger  | `#f97316` | black | 7.49:1 | ✅  |
-| Neutral | `#64748b` | white | 4.76:1 | ✅  |
+| Neutral | `#637389` | white | 4.83:1 | ✅  |
 
-**But "pass" ≠ "good".** Neutral at 4.76:1 barely clears 4.5:1. Material Design targets higher floors.
+**"Pass" ≠ "good".** Neutral used to sit at 4.76:1 — clearing the bar with no room for the button gradient beneath it. v3.0.0 nudged it to 4.83:1 and every derived shade is now bounded so the pair cannot drop below 4.5:1 anywhere on the gradient. These five rows are regenerated from `style.css`; `check-contrast.mjs` verifies them and the other 17 themes on every run.
 
 ---
 
@@ -212,14 +212,22 @@ When designing a system that supports user-created themes:
 | Priority     | Issue                                                     | Status                                                               |
 | ------------ | --------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Done**     | `--color-*-text` renamed to `--color-on-*`                | ✅ Completed — all 107 values fixed                                  |
-| **Done**     | Light theme button text inconsistent (mix of black/white) | ✅ All `--color-on-*` set to white in light theme                    |
+| **Done**     | Light theme button text inconsistent (mix of black/white) | ✅ v3.0.0 — `on-*` derived per colour by measured WCAG ratio         |
 | **Done**     | Button hover effects inconsistent                         | ✅ Unified to `color-mix(in oklch, ..., black)`                      |
 | **Accepted** | Success is not green in some themes                       | By design — themes express personality (see THEME_CREATION_GUIDE.md) |
-| **P1**       | No `--color-on-X-container` variables                     | Badge text color is unvalidated against badge bg                     |
-| **P1**       | Auto-calculated `on-X` is not verified                    | Add contrast validation to theme editor export                       |
+| **Done**     | No `--color-on-X-container` variables                     | ✅ v3.0.0 — added `--color-on-<f>-bg` for all 5 families             |
+| **Done**     | Auto-calculated `on-X` is not verified                    | ✅ v3.0.0 — check-contrast.mjs gates all 324 pairs in CI             |
 | **P2**       | Some dark themes use pure white text                      | Consider `#e2e8f0` or similar off-white                              |
 | **P2**       | Advanced surface mode incomplete                          | Simple/Advanced toggle exists but needs comprehensive design plan    |
 | **P3**       | Theme editor doesn't show contrast ratios                 | Add live contrast ratio display in the editor panel                  |
+
+> **How this table caused a bug.** The second row previously read \_"All
+> `--color-on-*` set to white in light theme" — a blanket change that
+> contradicted §1's own table, which specifies **black** on success/warning/
+> danger at 7.58/9.78/7.49. The stylesheet followed §10, §1 was never updated,
+> and the default light theme shipped three buttons at 2.15–2.80:1 until v3.0.0.
+> Prose status tables drift. The §1 and §2 contracts are now enforced by
+> `themes/scripts/check-contrast.mjs` in CI rather than asserted in Markdown.
 
 ---
 

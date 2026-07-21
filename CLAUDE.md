@@ -14,6 +14,16 @@ Pnpm monorepo publishing 3 packages to GitHub Packages (@wolffm scope).
 Package build order: task-ui-components -> themes -> task.
 Pre-commit hook runs lint:fix + format. It does NOT bump versions — versioning and publishing are owned by CI (the publish workflows auto-bump to a free version).
 
+## Colors
+
+Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
+
+- **A token names a semantic role, not a hue.** Light/dark is automatic — never branch on theme mode or `[data-theme]`.
+- `<f>` ∈ `primary | success | warning | danger | neutral`. Every family has exactly six tokens: `--color-<f>`, `-dark`, `-bg`, `-hover`, `--color-on-<f>`, `--color-on-<f>-bg`. If a name isn't in that shape, it doesn't exist.
+- **Filled button** → `bg-<f>` + `text-on-<f>`. **Tint badge** → `bg-<f>-bg` + `text-on-<f>-bg` (NOT `text-<f>` — that fails AA in most themes). **Body text** → `text-text`. **Card** → `bg-bg-card`. **Border** → `border-border`.
+- **Never** `var(--color-x, #hex)` fallbacks, `text-white`/hex literals on a filled bg, or a hand-written `@theme` color block — import `@wolffm/themes/tailwind-colors.css` instead. Import `style.css` **unlayered** or every color resolves to nothing.
+- Verify with `pnpm run lint:css` (runs the token/contrast/usage gates). Contracts: `docs/THEME_SYSTEM_RULES.md`.
+
 ## Exports (what hadoku-site consumes)
 
 - `@wolffm/task/frontend` -> `mount(el, props)`, `unmount(el)` [src/app/entry.tsx]

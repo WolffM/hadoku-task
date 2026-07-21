@@ -65,59 +65,35 @@ These are the only colors you need to select from the input palette. **Be creati
    - Lightest color for light themes
    - Darkest color for dark themes
 
-All other 35 variables (29 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
+All other 42 variables (36 colors + 6 shadows) are **derived** from these 5 main colors using color manipulation.
 
 ---
 
 ### Required Variables by Category
 
-#### 1. Primary Colors (6 variables)
+#### 1–5. Semantic Families (6 variables each)
 
-**Purpose:** Main interactive elements, buttons, links
+All five families — `primary`, `success`, `warning`, `danger`, `neutral` —
+take **exactly the same six tokens**. There are no per-family exceptions; an
+asymmetric set is what made consumers reach for names that did not exist.
 
-- `--color-primary` - **MAIN:** Primary brand color
-- `--color-primary-dark` - **ALT:** Darker shade (darken 10-15%)
-- `--color-primary-light` - **ALT:** Light tint for light themes / dark shade for dark themes
-- `--color-primary-bg` - **ALT:** Very subtle background (5-10% opacity)
-- `--color-primary-hover` - **ALT:** Hover state (primary at 6-15% opacity)
-- `--color-on-primary` - **ALT:** Text ON primary-colored surfaces. Compute from primary's luminance, NOT from theme mode. (white for dark colors, black for light colors)
+| token               | purpose                                                   | how to derive                                                                      |
+| ------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--color-<f>`       | **MAIN:** the solid fill                                  | your palette choice                                                                |
+| `--color-<f>-dark`  | bottom stop of the filled-button gradient / pressed state | darken ~0.07 OKLCH L, bounded so `on-<f>` still clears 4.5:1                       |
+| `--color-<f>-bg`    | faint tint surface for badges, chips, banners             | the fill at 10% alpha (light) / 15% (dark)                                         |
+| `--color-<f>-hover` | translucent overlay for ghost + row hover                 | the fill at 6% alpha (light) / 10% (dark)                                          |
+| `--color-on-<f>`    | text/icons ON the solid fill                              | black or white — whichever scores the higher WCAG ratio, NOT a luminance threshold |
+| `--color-on-<f>-bg` | text/icons ON the tint                                    | the fill's hue/chroma, lightness walked away from the tint until ≥4.5:1            |
 
-#### 2. Success Colors (4 variables)
+**Purposes:** `primary` = main interactive elements · `success` = positive/
+completed · `warning` = caution/pending · `danger` = destructive/errors ·
+`neutral` = non-critical, disabled, unknown.
 
-**Purpose:** Positive actions, completed tasks, checkmarks
-
-- `--color-success` - **MAIN:** Success/completion indicator
-- `--color-success-dark` - **ALT:** Darker shade (~10-15% darker, or pick complementary from palette)
-- `--color-on-success` - **ALT:** Text ON success-colored surfaces. Compute from success color's luminance. (white for dark colors, black for light colors)
-- `--color-success-bg` - **ALT:** Background for success badges (10-15% opacity of success color)
-
-#### 3. Warning Colors (3 variables)
-
-**Purpose:** Intermediate states, caution indicators, pending actions
-
-- `--color-warning` - **MAIN:** Warning/caution indicator (typically amber/yellow)
-- `--color-warning-bg` - **ALT:** Background for warning badges (10-15% opacity of warning color)
-- `--color-on-warning` - **ALT:** Text ON warning-colored surfaces. Compute from warning color's luminance. (usually black since warning colors tend to be bright amber/yellow)
-
-#### 4. Danger Colors (5 variables)
-
-**Purpose:** Destructive actions, errors, warnings
-
-- `--color-danger` - **MAIN:** Error/danger indicator
-- `--color-danger-dark` - **ALT:** Darker shade (darken 10-15%)
-- `--color-danger-darker` - **ALT:** Even darker (darken 20-30%)
-- `--color-danger-light` - **ALT:** Light tint/background shade
-- `--color-on-danger` - **ALT:** Text ON danger-colored surfaces. Compute from danger color's luminance. (white for dark colors, black for light colors)
-
-#### 5. Neutral Colors (5 variables)
-
-**Purpose:** Non-critical UI elements, disabled states, unknown/neutral badges
-
-- `--color-neutral` - **MAIN:** Neutral gray or muted color
-- `--color-neutral-light` - **ALT:** Lighter/darker variant for subtle backgrounds
-- `--color-neutral-lighter` - **ALT:** Even lighter/darker for hover states
-- `--color-on-neutral` - **ALT:** Text ON neutral-colored surfaces. Compute from neutral color's luminance. (white for dark neutrals, black for light neutrals)
-- `--color-muted-bg` - **ALT:** Background for neutral/unknown badges
+> Do not hand-compute these. Author the five MAIN colours, then run
+> `node themes/scripts/normalize-tokens.mjs` to derive the rest in OKLCH and
+> `node themes/scripts/check-contrast.mjs` to verify every pair. The editor's
+> live HSL cascade is a preview, not the authority.
 
 #### 6. Text Colors (4 variables)
 
@@ -247,60 +223,26 @@ Given a color list like:
 
 **Pro Tip:** Success and Danger should be visually distinct from Primary AND from each other. Test them side-by-side!
 
-### Step 3: Generate 22 Alt Colors + 6 Shadows
+### Step 3: Generate 36 Derived Colors + 6 Shadows
 
 Use color manipulation functions:
 
 ```javascript
-// === From PRIMARY ===
---color-primary-dark: darken(primary, 15%)
---color-primary-light: lighten(primary, 40%) // light theme
---color-primary-light: darken(primary, 30%)  // dark theme
---color-primary-bg: rgba(primary, 0.05)      // light theme
---color-primary-bg: rgba(primary, 0.15)      // dark theme
---color-primary-hover: rgba(primary, 0.08)   // light theme
---color-primary-hover: rgba(primary, 0.15)   // dark theme
+// Every family derives identically — same three tokens, same maths.
+// f ∈ { primary, success, warning, danger, neutral }
 
-// === From SUCCESS ===
---color-success-dark: darken(success, 15%)
---color-on-success: getContrastText(success) // auto: white or black based on SUCCESS color luminance
+--color-<f>-dark:  darkenOklch(<f>, 0.07)   // bounded: on-<f> must stay ≥ 4.5:1
+--color-<f>-bg:    rgba(<f>, 0.10)          // light theme;  0.15 in dark themes
+--color-<f>-hover: rgba(<f>, 0.06)          // light theme;  0.10 in dark themes
 
-// === From DANGER ===
---color-danger-dark: darken(danger, 15%)
---color-danger-darker: darken(danger, 30%)
---color-danger-light: lighten(danger, 40%)     // light theme
---color-danger-light: darken(danger, 30%)      // dark theme
---color-on-danger: getContrastText(danger)   // auto: white or black based on DANGER color luminance
-
-// === From NEUTRAL ===
---color-neutral-light: lighten(neutral, 20%)   // light theme
---color-neutral-light: darken(neutral, 20%)    // dark theme
---color-neutral-lighter: lighten(neutral, 30%) // light theme
---color-neutral-lighter: darken(neutral, 30%)  // dark theme
+// Contrast text — pick by MEASURED WCAG ratio, never a luminance threshold
+--color-on-<f>:    higherContrastOf(black, white, <f>)
+--color-on-<f>-bg: shiftLightness(<f>) away from <f>-bg until ratio ≥ 4.5:1
 
 // === From BACKGROUND ===
 --color-text: getContrastText(bg)           // auto: dark or light for 4.5:1
 --color-text-secondary: rgba(text, 0.8)
 --color-text-tertiary: rgba(text, 0.6)
---color-text-muted: rgba(text, 0.4)
-
---color-bg-card: lighten(bg, 3%)            // light theme
---color-bg-card: lighten(bg, 5%)            // dark theme
---color-bg-alt: darken(bg, 2%)              // light theme
---color-bg-alt: darken(bg, 5%)              // dark theme
---color-bg-hover: mix(bg, bg-alt, 50%)      // subtle hover state
---color-bg-overlay: rgba(text, 0.5)
-
---color-border: mix(neutral, bg, 70%)
---color-border-light: mix(neutral, bg, 50%)
-
-// === Shadows (from primary or black) ===
---hdk-shadow-sm: 0 1px 2px rgba(primary, 0.08)      // or rgba(0,0,0,0.4) for dark
---hdk-shadow-md: 0 2px 4px rgba(primary, 0.12)
---hdk-shadow-lg: 0 8px 24px rgba(primary, 0.2)
---hdk-shadow-focus: 0 0 0 3px rgba(primary, 0.25)
---hdk-shadow-focus-sm: 0 0 0 2px rgba(primary, 0.25)
---hdk-shadow-focus-alt: 0 0 0 2px rgba(primary, 0.15)
 ```
 
 ### Step 4: Validate Contrast
@@ -340,12 +282,12 @@ Ensure WCAG AA compliance:
   --color-neutral: #e0e0e0; /* Light gray */
   --color-bg: #ffffff; /* Pure white */
 
-  /* ===== 22 ALT COLORS + 6 SHADOWS (derived) ===== */
+  /* ===== 36 DERIVED COLORS + 6 SHADOWS ===== */
 
   /* From Primary */
   --color-primary-dark: #e65a2a; /* darken 10% */
-  --color-primary-light: #ffe0d5; /* lighten 50% */
-  --color-primary-bg: #fff5f2; /* rgba 5% */
+  --color-primary-bg: #fff5f2; /* 10% tint */
+  --color-on-primary: black; /* auto-contrast, measured */
   --color-primary-hover: rgba(255, 107, 53, 0.08);
 
   /* From Success */
@@ -354,13 +296,13 @@ Ensure WCAG AA compliance:
 
   /* From Danger */
   --color-danger-dark: #003d6e; /* darken 15% */
-  --color-danger-darker: #002c4f; /* darken 30% */
-  --color-danger-light: #e6f2ff; /* lighten 40% */
+  --color-danger-bg: #e6f2ff; /* 10% tint */
+  --color-on-danger-bg: #003d6e; /* text on the tint */
   --color-on-danger: white; /* auto-contrast: danger is dark blue, so white text */
 
   /* From Neutral */
-  --color-neutral-light: #f4f4f4; /* lighten 20% */
-  --color-neutral-lighter: #fafafa; /* lighten 30% */
+  --color-neutral-bg: #f4f4f4; /* 10% tint */
+  --color-neutral-dark: #c7c7c7; /* darken 0.07 L */
 
   /* From Background (auto-calculated) */
   --color-text: #2d2d2d; /* auto: dark for light bg */

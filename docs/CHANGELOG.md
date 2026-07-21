@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🎨 @wolffm/themes 3.0.0 — symmetric token set + full Tailwind color package
+
+**BREAKING: six tokens removed with no back-compat aliases.**
+
+| Removed                   | Use instead                                                     |
+| ------------------------- | --------------------------------------------------------------- |
+| `--color-primary-light`   | `--color-primary-bg`                                            |
+| `--color-danger-light`    | `--color-danger-bg`                                             |
+| `--color-danger-darker`   | `--color-danger-dark`                                           |
+| `--color-neutral-light`   | `--color-neutral-bg` (or `--color-bg-hover` for hover surfaces) |
+| `--color-neutral-lighter` | `--color-neutral-bg`                                            |
+| `--color-muted-bg`        | `--color-neutral-bg`                                            |
+
+**Added:** `--color-warning-dark`, `--color-neutral-dark`, `--color-danger-bg`,
+`--color-neutral-bg`, and `--color-on-<f>-bg` for all five families. The token
+set is now a rectangle — every semantic family carries exactly
+`{base, -dark, -bg, -hover, on-<f>, on-<f>-bg}`. 41 color tokens, all defined in
+all 18 themes.
+
+**Why:** the old set was structurally asymmetric — each family had a different,
+underivable mix of variants — so the symmetric guess (`--color-danger-bg`) named
+something that didn't exist. Across the ecosystem, 8 of 15 color-fix commits
+were "a token that drifted or never existed → the real token."
+
+#### New: complete Tailwind v4 color mapping
+
+`@wolffm/themes/tailwind-colors.css` maps all 41 tokens, so `bg-primary`,
+`text-on-primary`, `bg-success-bg`, `text-on-danger-bg`, `border-border` and
+`bg-bg-card` work out of the box. Consumers must **delete their hand-written
+`@theme` color blocks** — that local copy is the drift this replaces. The file is
+generated from `style.css` and CI fails if they disagree.
+
+> Import `style.css` **unlayered**. Tailwind emits `@theme` entries into
+> `@layer theme` as `:root { --x: var(--x) }`, which resolves only because
+> `style.css` is outside any cascade layer. `@import … layer(base)` makes all 41
+> colors silently `transparent` — verified.
+
+#### Accessibility fixes
+
+- **The default light theme shipped three WCAG failures.** `on-success`,
+  `on-warning` and `on-danger` were `white` on light fills — 2.77:1, 2.15:1 and
+  2.80:1. `THEME_SYSTEM_RULES.md` §1 documented these as **black** at
+  7.58/9.78/7.49 the whole time; a blanket "set all on-\* to white" change in §10
+  overrode §1 and nobody re-checked. Now derived per color by measured WCAG ratio.
+- **Badge text was an unvalidated pair** (logged P1 since the rules doc was
+  written). `text-<f>` on `bg-<f>-bg` failed AA in **62 of 90** theme×family
+  combinations. Fixed by adding `--color-on-<f>-bg`; all 90 now pass.
+- 15 further values adjusted for contrast: 8 base colors nudged out of the
+  luminance dead zone (ΔL 0.005–0.045, hue preserved) and 5 `-dark` shades
+  re-derived where the authored value broke its `on-<f>` pair.
+
+#### New: gates that make regressions loud
+
+`pnpm --filter @wolffm/themes run validate` (wired into `lint:css` + pre-commit):
+
+- `check-contrast` — token symmetry + 324 WCAG pairs across all 18 themes
+- `check-tailwind` — `tailwind-colors.css` in sync with `style.css`
+- `check-docs` — `THEME_USAGE_GUIDE.md` lists exactly the tokens that exist
+- `check-usage` — unknown tokens, unmapped Tailwind classes **in `.tsx`**, banned
+  `var()` fallbacks, and layered `style.css` imports
+
+The last one covers what stylelint structurally cannot: it never reads `.tsx`,
+and it ignores `var(--typo, #fallback)` by design.
+
+#### New: `THEME_USAGE_GUIDE.md`
+
+Ships in the package. A decision table, the complete token list, and the
+anti-patterns — the doc that tells you _which_ token to use, which never existed
+before (`THEME_CREATION_GUIDE.md` is about authoring a palette).
+
 ### 🎨 Theme Contrast System Overhaul
 
 **BREAKING CHANGE: CSS variable rename `--color-*-text` → `--color-on-*`**
@@ -121,7 +191,7 @@ Added 4 new semantic color variables across all 18 themes to support badges and 
 | `--color-success-bg` | Background for success badges (10-15% opacity of success color) |
 | `--color-warning`    | Warning/intermediate state foreground (typically amber/yellow)  |
 | `--color-warning-bg` | Background for warning badges (10-15% opacity of warning color) |
-| `--color-muted-bg`   | Background for unknown/neutral badges                           |
+| `--color-neutral-bg` | Background for unknown/neutral badges                           |
 
 **Documentation Updates:**
 
@@ -130,7 +200,7 @@ Added 4 new semantic color variables across all 18 themes to support badges and 
   - Color variable count: 27 → 31 colors (33 → 37 total with shadows)
   - Added Warning Colors section (2 variables)
   - Added `--color-success-bg` to Success Colors section
-  - Added `--color-muted-bg` to Neutral Colors section
+  - Added `--color-neutral-bg` to Neutral Colors section
   - Updated theme checklist
 
 ---

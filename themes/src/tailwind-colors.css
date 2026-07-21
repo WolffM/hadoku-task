@@ -1,0 +1,88 @@
+/**
+ * Tailwind v4 colour mapping for @wolffm/themes — GENERATED, DO NOT EDIT.
+ *
+ * Regenerate with: node themes/scripts/generate-tailwind-colors.mjs
+ * Source of truth:  themes/src/style.css
+ *
+ * Mapping every theme token into Tailwind's `--color-*` namespace makes the
+ * whole token set available as utilities — `bg-primary`, `text-on-primary`,
+ * `bg-success-bg`, `text-on-success-bg`, `border-border`, `bg-bg-card` — with
+ * no hand-written `@theme` block in any consumer.
+ *
+ * USAGE — import order matters:
+ *
+ *   @import "@wolffm/themes/style.css";          // 1. token values (UNLAYERED)
+ *   @import "tailwindcss";                        // 2. Tailwind
+ *   @import "@wolffm/themes/tailwind-colors.css"; // 3. this mapping
+ *
+ * WHY style.css MUST STAY UNLAYERED
+ * =================================
+ * Tailwind emits every `@theme` entry into `@layer theme` as `:root { --x: var(--x) }`
+ * — a self-reference that is invalid on its own. It resolves correctly only
+ * because style.css declares the same properties OUTSIDE any cascade layer,
+ * and unlayered declarations beat layered ones. Importing style.css with
+ * `layer(...)` puts both declarations in layers, the self-reference can win,
+ * and EVERY colour silently resolves to nothing.
+ *
+ * So: never `@import "@wolffm/themes/style.css" layer(base)`.
+ * `themes/scripts/check-usage.mjs` enforces this.
+ */
+
+@theme {
+  /* Primary */
+  --color-on-primary: var(--color-on-primary);
+  --color-on-primary-bg: var(--color-on-primary-bg);
+  --color-primary: var(--color-primary);
+  --color-primary-bg: var(--color-primary-bg);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-hover: var(--color-primary-hover);
+
+  /* Success */
+  --color-on-success: var(--color-on-success);
+  --color-on-success-bg: var(--color-on-success-bg);
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-success-dark: var(--color-success-dark);
+  --color-success-hover: var(--color-success-hover);
+
+  /* Warning */
+  --color-on-warning: var(--color-on-warning);
+  --color-on-warning-bg: var(--color-on-warning-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-warning-dark: var(--color-warning-dark);
+  --color-warning-hover: var(--color-warning-hover);
+
+  /* Danger */
+  --color-danger: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-danger-dark: var(--color-danger-dark);
+  --color-danger-hover: var(--color-danger-hover);
+  --color-on-danger: var(--color-on-danger);
+  --color-on-danger-bg: var(--color-on-danger-bg);
+
+  /* Neutral */
+  --color-neutral: var(--color-neutral);
+  --color-neutral-bg: var(--color-neutral-bg);
+  --color-neutral-dark: var(--color-neutral-dark);
+  --color-neutral-hover: var(--color-neutral-hover);
+  --color-on-neutral: var(--color-on-neutral);
+  --color-on-neutral-bg: var(--color-on-neutral-bg);
+
+  /* Text */
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-tertiary: var(--color-text-tertiary);
+
+  /* Borders */
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+
+  /* Surfaces */
+  --color-bg: var(--color-bg);
+  --color-bg-alt: var(--color-bg-alt);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-bg-overlay: var(--color-bg-overlay);
+}

@@ -2,7 +2,6 @@
 [data-theme='light-custom'] {
   --color-primary: #99b9ff; /* modified */
   --color-primary-dark: #4d84ff; /* modified */
-  --color-primary-light: hsla(231, 21%, 95%, 0.5); /* modified */
   --color-primary-bg: #d4e2fc; /* modified */
   --color-primary-hover: hsla(221, 100%, 60%, 0.08); /* modified */
   --color-success: #99ffc2; /* modified */
@@ -16,16 +15,13 @@
   --color-warning-hover: hsla(38, 100%, 60%, 0.06); /* modified */
   --color-danger: #ff6633; /* modified */
   --color-danger-dark: #ff4000; /* modified */
-  --color-danger-darker: #cc3300; /* modified */
-  --color-danger-light: #fadbd1; /* modified */
+  --color-danger-bg: #fadbd1; /* modified */
   --color-on-danger: #000000;
   --color-danger-hover: rgba(255, 102, 51, 0.06); /* modified */
   --color-neutral: #a6b0bf; /* modified */
-  --color-neutral-light: #e4e5e7; /* modified */
-  --color-neutral-lighter: #ffffff; /* modified */
+  --color-neutral-bg: #e4e5e7; /* modified */
   --color-on-neutral: #000000;
   --color-neutral-hover: rgba(166, 176, 191, 0.06); /* modified */
-  --color-muted-bg: #d6d8db; /* modified */
   --color-text: #05112e; /* modified */
   --color-text-secondary: #475569;
   --color-text-tertiary: #64748b;

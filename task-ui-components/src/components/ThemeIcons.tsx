@@ -145,7 +145,7 @@ export const SettingsIcon = () => (
     <circle cx="12" cy="12" r="7" fill="currentColor" />
 
     {/* Center hole */}
-    <circle cx="12" cy="12" r="4" fill="var(--color-bg-card, #ffffff)" />
+    <circle cx="12" cy="12" r="4" fill="var(--color-bg-card)" />
   </svg>
 )
 

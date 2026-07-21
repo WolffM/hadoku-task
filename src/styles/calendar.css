@@ -35,7 +35,7 @@
   width: 32px;
   height: 32px;
   font-size: 28px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: color var(--transition-fast);
   line-height: 1;
@@ -120,7 +120,7 @@
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   padding: var(--hdk-space-xs) 0 var(--hdk-space-xs) 0;
 }
 
@@ -148,7 +148,7 @@
 
 .calendar-agenda__time span {
   font-size: var(--hdk-text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 /* Card mirrors .task-app__item */
@@ -201,7 +201,7 @@
   align-items: center;
   gap: var(--hdk-space-md);
   font-size: var(--hdk-text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   margin-top: var(--hdk-space-xs);
 }
 
@@ -243,7 +243,7 @@
 }
 
 .calendar-agenda__detail dt {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -258,7 +258,7 @@
 }
 
 .calendar-agenda__meta-empty {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 600px) {
@@ -303,15 +303,15 @@
 }
 
 .calendar-agenda__btn--delete:hover {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
   border-color: var(--color-danger);
 }
 
 .calendar-agenda__btn--on {
   background: var(--color-primary-bg);
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-on-primary-bg);
 }
 
 /* Current-time marker between rows */
@@ -361,7 +361,7 @@
 .calendar-agenda__empty-text {
   margin: 0;
   font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 /* Narrow screens: tighten the time gutter */

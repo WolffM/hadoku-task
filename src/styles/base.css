@@ -100,7 +100,7 @@ body {
 
 /* Only apply hover to buttons without specific classes (filter buttons) */
 .task-app__filters button:hover:not(.task-app__filter-drag-over) {
-  background-color: var(--color-neutral-light);
+  background-color: var(--color-bg-hover);
 }
 
 .task-app-container button.on {
@@ -151,18 +151,22 @@ body {
   padding-right: calc(1rem + env(safe-area-inset-right, 0px));
 }
 
+/* The skeleton paints before @wolffm/themes is applied, so it carries its own
+   literal values. --skeleton-shimmer is app-local on purpose: it is not a
+   theme token and must not be named like one. */
+
 /* Dark theme for loading skeleton */
 .task-app-loading[data-dark-theme='true'] {
   --color-bg: #1a1a1a;
   --color-bg-alt: #2a2a2a;
-  --color-neutral-light: #3a3a3a;
+  --skeleton-shimmer: #3a3a3a;
 }
 
 /* Light theme for loading skeleton */
 .task-app-loading[data-dark-theme='false'] {
   --color-bg: #ffffff;
   --color-bg-alt: #f0f0f0;
-  --color-neutral-light: #e0e0e0;
+  --skeleton-shimmer: #e0e0e0;
 }
 
 .task-app-loading__skeleton {
@@ -193,7 +197,7 @@ body {
   background: linear-gradient(
     90deg,
     var(--color-bg-alt) 0%,
-    var(--color-neutral-light) 50%,
+    var(--skeleton-shimmer) 50%,
     var(--color-bg-alt) 100%
   );
   background-size: 1000px 100%;

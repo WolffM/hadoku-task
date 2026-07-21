@@ -451,7 +451,7 @@ body {
     outline-color: var(--color-primary);
   }
   50% {
-    outline-color: var(--color-primary-light);
+    outline-color: var(--color-primary-bg);
   }
 }
 
@@ -487,21 +487,23 @@ body {
   font-weight: var(--font-weight-semibold);
 }
 
+/* Badges are the canonical tint pair: `<f>-bg` surface, `on-<f>-bg` text.
+   Using `<f>` as the text colour here is what failed WCAG in 62 of 90 cases. */
 .badge.success {
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--color-on-success-bg);
 }
 .badge.warning {
   background: var(--color-warning-bg);
-  color: var(--color-warning);
+  color: var(--color-on-warning-bg);
 }
 .badge.danger {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
 }
 .badge.muted {
-  background: var(--color-muted-bg);
-  color: var(--color-text-secondary);
+  background: var(--color-neutral-bg);
+  color: var(--color-on-neutral-bg);
 }
 
 /* ===== Text Samples ===== */

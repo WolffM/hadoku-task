@@ -63,19 +63,35 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 
 ## CSS Variables
 
-Each theme defines ~40 variables (34 color + 6 shadow). Variables are **namespaced with `--hdk-*`** prefix for Tailwind v4 compatibility.
+Each theme defines 47 variables (41 color + 6 shadow). Color variables use the
+`--color-*` namespace — which is also Tailwind v4's — so they map straight to
+utilities. Everything else is namespaced `--hdk-*` to avoid colliding with
+Tailwind internals.
 
-### Colors (no prefix needed)
+> **Which token do I use for X?** → [`THEME_USAGE_GUIDE.md`](./THEME_USAGE_GUIDE.md).
+> That is the doc to read (and to point agents at) before writing any styles.
 
-- `--color-primary` (+ dark, light, bg, hover variants) / `--color-on-primary`
-- `--color-success` (+ dark, bg, hover variants) / `--color-on-success`
-- `--color-warning` (+ bg, hover variants) / `--color-on-warning`
-- `--color-danger` (+ dark, darker, light, hover variants) / `--color-on-danger`
-- `--color-neutral` (+ light, lighter, hover variants) / `--color-on-neutral`
-- `--color-muted-bg` - background for neutral/unknown badges
-- `--color-text` (+ secondary, tertiary, muted variants)
-- `--color-border` (+ light variant)
-- `--color-bg` (+ card, alt, hover, overlay variants)
+### Colors — 5 semantic families × 6 tokens
+
+Every family carries an identical set. The rectangle is the point: the
+symmetric guess is always correct.
+
+|           | fill              | gradient/pressed | tint  | hover overlay | text on fill         | text on tint            |
+| --------- | ----------------- | ---------------- | ----- | ------------- | -------------------- | ----------------------- |
+| `primary` | `--color-primary` | `-dark`          | `-bg` | `-hover`      | `--color-on-primary` | `--color-on-primary-bg` |
+| `success` | `--color-success` | `-dark`          | `-bg` | `-hover`      | `--color-on-success` | `--color-on-success-bg` |
+| `warning` | `--color-warning` | `-dark`          | `-bg` | `-hover`      | `--color-on-warning` | `--color-on-warning-bg` |
+| `danger`  | `--color-danger`  | `-dark`          | `-bg` | `-hover`      | `--color-on-danger`  | `--color-on-danger-bg`  |
+| `neutral` | `--color-neutral` | `-dark`          | `-bg` | `-hover`      | `--color-on-neutral` | `--color-on-neutral-bg` |
+
+### Colors — structural
+
+- `--color-text` (+ `-secondary`, `-tertiary`, `-muted`)
+- `--color-border` (+ `-light`)
+- `--color-bg` (+ `-card`, `-alt`, `-hover`, `-overlay`)
+
+Every `on-*` pair is verified ≥4.5:1 against its surface in all 18 themes by
+`scripts/check-contrast.mjs`.
 
 ### Typography
 
@@ -142,32 +158,32 @@ Without namespacing, a theme variable like `--spacing-md: 8px` would break `max-
 | `--shadow-sm`     | `--hdk-shadow-sm` |
 | `--shadow-modal`  | `--hdk-shadow-lg` |
 
-### Tailwind Integration (Optional)
+### Tailwind Integration
 
-If you want Tailwind utilities like `rounded-md` and `shadow-sm` to use your theme values, create a CSS file:
+Three imports, no hand-written `@theme` block:
 
 ```css
-/* tailwind-theme.css */
-@import 'tailwindcss';
-
-@theme {
-  /* Map theme variables to Tailwind utilities */
-  --radius-sm: var(--hdk-radius-sm);
-  --radius: var(--hdk-radius);
-  --radius-lg: var(--hdk-radius-lg);
-
-  --shadow-sm: var(--hdk-shadow-sm);
-  --shadow: var(--hdk-shadow-md);
-  --shadow-lg: var(--hdk-shadow-lg);
-
-  --text-xs: var(--hdk-text-xs);
-  --text-sm: var(--hdk-text-sm);
-  --text-base: var(--hdk-text-base);
-  --text-lg: var(--hdk-text-lg);
-}
+@import '@wolffm/themes/style.css'; /* 1. tokens — MUST be unlayered */
+@import 'tailwindcss'; /* 2. Tailwind */
+@import '@wolffm/themes/tailwind-colors.css'; /* 3. all 41 colours */
+@import '@wolffm/themes/tailwind-integration.css'; /* 4. radius/shadow/type (optional) */
 ```
 
-This is opt-in - your theme variables work independently of Tailwind.
+You now get `bg-primary`, `text-on-primary`, `bg-success-bg`,
+`text-on-danger-bg`, `border-border`, `bg-bg-card` — every token, as a utility.
+
+**Never hand-roll a `@theme` colour block.** A local copy is exactly the drift
+this package exists to prevent; `tailwind-colors.css` is generated from
+`style.css` and CI fails if the two disagree.
+
+**Step 1 must stay unlayered.** Tailwind emits each `@theme` entry into
+`@layer theme` as `:root { --x: var(--x) }`, which is self-referential and
+invalid on its own. It resolves only because `style.css` declares the same
+properties outside any cascade layer, and unlayered wins. Import it with
+`layer(...)` and all 41 colours silently become `transparent`.
+
+`tailwind-integration.css` (step 4) is separate and optional — it maps
+`--hdk-*` radius/shadow/type onto `rounded-*`, `shadow-*`, `text-*`.
 
 ### Migration from v1.x
 

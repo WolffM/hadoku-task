@@ -40,7 +40,7 @@
     "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes --parallel run typecheck && tsc --noEmit",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
-    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:css": "stylelint \"src/**/*.css\" && pnpm --filter @wolffm/themes run validate",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "version:patch": "pnpm version patch --no-git-tag-version",

@@ -9,7 +9,7 @@
   padding: var(--hdk-space-sm) var(--hdk-space-md);
   border-radius: 999px;
   font-size: var(--hdk-text-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition:
     background-color var(--transition-fast),
@@ -66,7 +66,7 @@
 
 .task-app__info-btn:hover {
   opacity: 1;
-  background-color: var(--color-neutral-light);
+  background-color: var(--color-bg-hover);
 }
 
 /* Action buttons - base styles */
@@ -170,7 +170,7 @@
 }
 
 .task-app__sort-btn:hover {
-  background-color: var(--color-neutral-light);
+  background-color: var(--color-bg-hover);
 }
 
 .task-app__sort-btn--active {
@@ -205,8 +205,8 @@
 
 .task-app__clear-tag-btn:hover {
   opacity: 1;
-  color: var(--color-danger-dark);
-  background-color: var(--color-danger-light);
+  color: var(--color-on-danger-bg);
+  background-color: var(--color-danger-bg);
 }
 
 /* Clear all button */

@@ -30,13 +30,19 @@ if ! pnpm exec lint-staged; then
 fi
 echo "✅ Linting and formatting complete!"
 
-# CSS gate — fails on `var(--x)` references to undeclared custom properties
-# (catches typos against @wolffm/themes + local base.css). Always lints the
-# full src/**/*.css set, not just staged files, because var refs depend on
-# defs in other (possibly unstaged) files in the same workspace.
-echo "🎨 Running stylelint..."
+# CSS + theme-token gate. Always runs over the full file set, not just staged
+# files, because var refs depend on defs in other (possibly unstaged) files.
+#   stylelint          — unknown custom properties in .css
+#   check-contrast     — token symmetry + every WCAG pair in all 18 themes
+#   check-tailwind     — tailwind-colors.css still matches style.css
+#   check-docs         — THEME_USAGE_GUIDE.md still lists exactly the real tokens
+#   check-usage        — unknown tokens, unmapped Tailwind classes in .tsx,
+#                        banned var() fallbacks, layered style.css imports
+# The last three cover blind spots stylelint has by design: it never reads
+# .tsx, and it deliberately ignores `var(--typo, #fallback)`.
+echo "🎨 Running stylelint + theme token validation..."
 if ! pnpm run lint:css; then
-  echo "❌ stylelint found unknown CSS custom properties — check the var name against @wolffm/themes."
+  echo "❌ CSS/theme gate failed — check the var name or class against @wolffm/themes."
   exit 1
 fi
 

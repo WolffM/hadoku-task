@@ -1,6 +1,32 @@
 # Theme Graveyard
 
-Archived themes no longer active in the Hadoku Theme System.
+Archived themes and removed tokens, no longer active in the Hadoku Theme System.
+
+---
+
+## Removed Tokens
+
+### v3.0.0 — token set consolidated to a symmetric rectangle
+
+**Removed**: 2026-07-21 | **Reason**: the token set was structurally asymmetric —
+each family carried a different, unpredictable set of variants, so the symmetric
+guess (`--color-danger-bg`) named something that didn't exist. Six tokens were
+removed with **no back-compat aliases**; every consumer migrates.
+
+| Removed token             | Replacement           | Note                                                |
+| ------------------------- | --------------------- | --------------------------------------------------- |
+| `--color-primary-light`   | `--color-primary-bg`  | tint surface, now uniform across families           |
+| `--color-danger-light`    | `--color-danger-bg`   | same value, renamed onto the `<family>-bg` pattern  |
+| `--color-danger-darker`   | `--color-danger-dark` | `danger` was the only family with two dark shades   |
+| `--color-neutral-light`   | `--color-neutral-bg`  | for hover _surfaces_ use `--color-bg-hover` instead |
+| `--color-neutral-lighter` | `--color-neutral-bg`  | third neutral shade, unused in practice             |
+| `--color-muted-bg`        | `--color-neutral-bg`  | orphan name that broke the `<family>-bg` pattern    |
+
+**Added** in the same release: `--color-warning-dark`, `--color-neutral-dark`,
+`--color-danger-bg`, `--color-neutral-bg`, and `--color-on-<f>-bg` for all five
+families (the tint's text color — see `THEME_USAGE_GUIDE.md`).
+
+---
 
 ## Kitsune Theme Contest (2025)
 
