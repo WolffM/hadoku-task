@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hadoku.me/task/schemas/board-automation.schema.json",
+  "title": "Board automation activation payload",
+  "description": "Body of POST /task/api/boards/{boardId}/activate-automation. Defines the lane vocabulary a provider imposes on a board. hadoku-task interprets only the fields declared here and preserves any others verbatim — additionalProperties is true throughout, on purpose, so a provider can carry its own pipeline metadata without this repo learning about it.",
+  "type": "object",
+  "required": ["schemaId", "schemaVersion", "lanes"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The provider's own label for this contract. Stored verbatim; never interpreted."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The provider's own version. Bump it and re-POST to update a board's lane set in place."
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Optional human-readable name for the contract, shown in the board settings UI."
+    },
+    "dryRun": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, changes nothing and returns a preview: per existing tag, how many tasks carry it and where it lands; which tasks fall through to the Inbox; any collisions. The preview returns a digest that the committing call must echo back."
+    },
+    "digest": {
+      "type": "string",
+      "description": "The digest returned by a prior dryRun. Required on a committing call, so an automated activation cannot silently reshape a board nobody previewed."
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "description": "The board's lanes. Order within the array is irrelevant; `order` decides rendering.",
+      "items": {
+        "type": "object",
+        "required": ["tag", "label", "order", "editableBy"],
+        "additionalProperties": true,
+        "properties": {
+          "tag": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+            "description": "The literal tag written on the task. Unique within the board. Lowercase, digits and dashes — it has to survive being a space-separated tag token."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "Display name for the section."
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Fixed position within its track. Never frequency-ranked."
+          },
+          "editableBy": {
+            "enum": ["user", "agent"],
+            "description": "The only permission. 'user' renders left and a human drags freely; a runner may also route tasks here on release. 'agent' renders right, is writable only while holding a claim token, and becomes draggable-out once no claim is live so work is never stranded."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional note shown in board settings. Never interpreted."
+          }
+        }
+      }
+    }
+  },
+  "$comment": "Validation performed server-side is structural only: lane tags unique within the board, editableBy in {user,agent}, order present. We never reject a lane for being named something we didn't expect, and we never reject unknown keys — see agent-boards-design.md §5.1."
+}

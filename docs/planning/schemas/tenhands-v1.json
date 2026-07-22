@@ -1,0 +1,18 @@
+{
+  "schemaId": "tenhands",
+  "schemaVersion": 1,
+  "label": "TenHands OSS Contribution",
+  "description": "EXAMPLE activation payload TenHands would POST to /task/api/boards/{id}/activate-automation. hadoku-task stores no pipeline knowledge — no jobs, no routing, no retry policy. A lane is four fields. `editableBy: user` renders left and you drag tasks in and out; `editableBy: agent` renders right, is written only while holding a claim token, and becomes draggable again if a claim expires so work is never stranded. Lane names and the user/agent split are TenHands' to choose.",
+  "lanes": [
+    { "tag": "triage", "label": "Triage", "order": 0, "editableBy": "user" },
+    { "tag": "planning", "label": "Planning", "order": 1, "editableBy": "agent" },
+    { "tag": "plan-review", "label": "Plan Review", "order": 2, "editableBy": "user" },
+    { "tag": "approved", "label": "Approved", "order": 3, "editableBy": "user" },
+    { "tag": "working", "label": "Working", "order": 4, "editableBy": "agent" },
+    { "tag": "pr-review", "label": "PR Review", "order": 5, "editableBy": "user" },
+    { "tag": "submit", "label": "Submit", "order": 6, "editableBy": "user" },
+    { "tag": "submitting", "label": "Submitting", "order": 7, "editableBy": "agent" },
+    { "tag": "submitted", "label": "Submitted", "order": 8, "editableBy": "user" },
+    { "tag": "stalled", "label": "Stalled", "order": 9, "editableBy": "user" }
+  ]
+}
