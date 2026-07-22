@@ -3,14 +3,25 @@
  * Fail the build if any `exports` subpath in package.json points at a file that
  * wasn't produced.
  *
- * @wolffm/task 3.4.93-3.4.96 shipped with `./api` -> dist/server/index.js while
- * dist/server/ was missing entirely, because `tsc -p tsconfig.server.json` runs
- * with `incremental: true` and a warm .tsbuildinfo on the persistent
- * self-hosted runner: `vite build` wipes dist/, tsc sees no *source* changes
- * (it tracks sources, not whether the output still exists), emits nothing, and
- * exits 0. The tarball then packed without dist/server and every consumer hit
- * `Could not resolve "@wolffm/task/api"` — which took down the task-api worker
+ * @wolffm/task 3.4.95-3.4.96 shipped with `./api` -> dist/server/index.js while
+ * dist/server/ was missing entirely. Every consumer then hit
+ * `Could not resolve "@wolffm/task/api"`, which took down the task-api worker
  * deploy.
+ *
+ * The cause is publish.yml building TWICE in one job: it builds, then bumps the
+ * version, then runs "Rebuild after version bump". On the second `build:all`,
+ * `vite build` wipes dist/ and `tsc -p tsconfig.server.json` — which inherited
+ * `incremental: true` — sees no *source* changes and emits nothing, exiting 0.
+ * TypeScript's incremental mode tracks sources, not whether its output still
+ * exists. Only runs where the rebuild step fired produced a broken tarball;
+ * single-build runs were fine, which is why this looked intermittent.
+ *
+ * (It is NOT runner-workspace reuse: actions/checkout cleans with
+ * `git clean -ffdx` every run, so .tsbuildinfo cannot survive between runs.)
+ *
+ * The structural fix is to bump the version BEFORE building so the job builds
+ * once; until then, `incremental: false` on the server build makes the second
+ * build correct.
  *
  * tsconfig.server.json now sets `incremental: false`, so that specific cause is
  * gone. This check is the backstop: any future build that silently drops an
