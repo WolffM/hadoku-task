@@ -41,6 +41,10 @@ export interface ConnectedSettingsProps {
   onNameChange?: (name: string | null) => void
   /** Optional extra class on the root. */
   className?: string
+  /** App-specific settings rendered as a final section in the same popout —
+   *  so an app with its own preferences keeps ONE unified gear + modal instead
+   *  of a second control. Shown under an "App preferences" divider. */
+  children?: React.ReactNode
 }
 
 /** Rejection sink for fire-and-forget settings actions. The client helpers
@@ -62,7 +66,8 @@ export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
   onNameChange,
-  className = ''
+  className = '',
+  children
 }: ConnectedSettingsProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -347,6 +352,13 @@ export function ConnectedSettings({
             )}
             {keyError && <span className="settings-popout__error">{keyError}</span>}
           </section>
+
+          {/* App-specific settings (optional) — same popout, one gear. */}
+          {children && (
+            <section className="settings-popout__row settings-popout__row--stack settings-popout__app">
+              {children}
+            </section>
+          )}
         </div>
       )}
     </div>

@@ -28,24 +28,21 @@ test.describe('Data Sync Flow', () => {
       await page.reload()
 
       // Wait for app to load
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
-      // Open settings and enter key
-      await page.locator('h1.task-app__header').click()
-      await page.waitForSelector('.modal-overlay', { state: 'visible', timeout: 5000 })
+      // Open the settings gear and swap in the key (shared ConnectedSettings)
+      await page.getByRole('button', { name: 'User settings' }).click()
+      await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+      await page.getByRole('button', { name: /change key/i }).click()
 
-      const keyInput = page.locator('input[name="key"]')
+      const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
       await keyInput.waitFor({ state: 'visible', timeout: 5000 })
       await keyInput.fill(FRIEND_TEST_KEY)
-
-      // Find submit button within the key input group
-      const keyInputGroup = keyInput.locator('..')
-      const submitButton = keyInputGroup.locator('button.settings-field-button')
-      await submitButton.click()
+      await page.getByRole('button', { name: 'Switch' }).click()
 
       // Wait for page reload after auth
       await page.waitForEvent('load', { timeout: 15000 })
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
       // Give time for sync to complete
       await page.waitForTimeout(3000)
@@ -83,22 +80,20 @@ test.describe('Data Sync Flow', () => {
       const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
       if (userType !== 'friend') {
-        // Need to authenticate first
-        await page.locator('h1.task-app__header').click()
-        await page.waitForSelector('.modal-overlay', { state: 'visible', timeout: 5000 })
+        // Need to authenticate first (shared ConnectedSettings gear)
+        await page.getByRole('button', { name: 'User settings' }).click()
+        await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+        await page.getByRole('button', { name: /change key/i }).click()
 
-        const keyInput = page.locator('input[name="key"]')
+        const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
         await keyInput.waitFor({ state: 'visible', timeout: 5000 })
         await keyInput.fill(FRIEND_TEST_KEY)
-
-        const keyInputGroup = keyInput.locator('..')
-        const submitButton = keyInputGroup.locator('button.settings-field-button')
-        await submitButton.click()
+        await page.getByRole('button', { name: 'Switch' }).click()
 
         await page.waitForEvent('load', { timeout: 15000 })
       }
 
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
       // Wait for data to load
       await page.waitForTimeout(3000)
@@ -115,7 +110,7 @@ test.describe('Data Sync Flow', () => {
 
       // Reload the page
       await page.reload()
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
       // Wait for sync
       await page.waitForTimeout(3000)
@@ -210,7 +205,7 @@ test.describe('Data Sync Flow', () => {
       })
 
       await page.goto('/')
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
       // Wait for sync to complete
       await page.waitForTimeout(2000)
@@ -295,7 +290,7 @@ test.describe('Data Sync Flow', () => {
       })
 
       await page.goto('/')
-      await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
       await page.waitForTimeout(2000)
 
       const tasksData = await page.evaluate(() => {

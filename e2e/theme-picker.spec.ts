@@ -34,7 +34,7 @@ test.describe('Theme Picker', () => {
     })
 
     await page.goto('/')
-    await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
+    await page.waitForSelector('h1.app-header__title', { timeout: 10000 })
   })
 
   test('should open dropdown when toggle button is clicked', async ({ page }) => {
@@ -138,7 +138,7 @@ test.describe('Theme Picker', () => {
     })
 
     await page.goto('/')
-    await page.waitForSelector('h1.task-app__header', { timeout: 10000 })
+    await page.waitForSelector('h1.app-header__title', { timeout: 10000 })
 
     // Open the theme picker
     await page.locator('.theme-toggle-btn').click()

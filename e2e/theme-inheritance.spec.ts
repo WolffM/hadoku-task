@@ -50,7 +50,7 @@ async function seedHostTheme(page: Page, theme: string) {
 
 async function loadApp(page: Page) {
   await page.goto('/')
-  await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+  await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 }
 
 function getAppliedTheme(page: Page): Promise<string | null> {

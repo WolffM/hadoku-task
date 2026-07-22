@@ -82,6 +82,10 @@
   z-index: 100;
   width: 300px;
   max-width: calc(100vw - 32px);
+  /* Cap height so an app that adds its own preferences section stays on screen;
+   * the popout scrolls rather than overflowing the viewport. */
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -91,6 +95,12 @@
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   color: var(--color-text);
+}
+
+/* Divider above the optional app-specific settings section. */
+.settings-popout__app {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
 }
 
 .settings-popout__header {
