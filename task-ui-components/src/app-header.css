@@ -32,6 +32,17 @@
   gap: 1rem;
 }
 
+/* In the header the theme picker sits directly left of the settings gear, and
+ * the base ThemePicker opens its dropdown SIDEWAYS (which suits a vertical /
+ * sidebar placement). Here that would cover the gear — so scope it to drop
+ * straight DOWN, right-aligned, opening into the header away from the gear. */
+.app-header .theme-picker__dropdown,
+.app-header .theme-picker--open-left .theme-picker__dropdown {
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+}
+
 /* ── ConnectedSettings: gear toggle ────────────────────────────────────────
  * Round toggle matched to .theme-toggle-btn so the gear sits flush next to the
  * theme button in the same row. */

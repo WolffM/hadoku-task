@@ -338,7 +338,7 @@ export function ConnectedSettings({
                     doKeySwap().catch(reportErr)
                   }}
                 >
-                  {keySwapping ? '…' : 'Switch'}
+                  {keySwapping ? '…' : 'Apply'}
                 </button>
               </span>
             ) : (

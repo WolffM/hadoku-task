@@ -2,6 +2,8 @@
  *
  * Main App component
  *
+ * (Rebuild trigger: pick up @wolffm/task-ui-components 2.2.1 — theme dropdown
+ * opens downward in the header + "Apply" key button.)
  */
 
 import React, { useEffect, useRef, useState } from 'react'
