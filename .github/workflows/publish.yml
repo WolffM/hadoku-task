@@ -41,6 +41,62 @@ jobs:
           corepack prepare pnpm@11.5.0 --activate
           pnpm --version
 
+      # Detect which packages changed ONCE, up front, from the FULL push range
+      # (event.before..sha) — before any later step moves HEAD. Every downstream
+      # step reads these outputs and never re-runs `git diff HEAD~1 HEAD`.
+      #
+      # Why this matters: the auto-bump step below commits + pushes a version
+      # bump. Any change-detection that runs AFTER that would diff the auto-bump
+      # commit (package.json + lockfile only) and conclude "task-ui-components did
+      # not change" — silently skipping its publish while `task` still ships
+      # pinned to the never-published version. That exact bug stranded the
+      # registry twice. HEAD~1..HEAD is also wrong for squash merges and
+      # multi-commit pushes; event.before..sha covers all three.
+      - name: Detect changed packages
+        id: changes
+        run: |
+          ui=false; themes=false; task=false
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual run = reconcile mode: consider every package so any version
+            # not yet on the registry gets (re)published. Already-published
+            # versions no-op on publish and are confirmed by the verify step.
+            echo "workflow_dispatch → reconcile mode (all packages considered)"
+            ui=true; themes=true; task=true
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+            elif ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              # Base is deeper than fetch-depth — pull just that commit, else fall
+              # back to the immediate parent.
+              git fetch --depth=1 origin "$BEFORE" 2>/dev/null || true
+              git cat-file -e "${BEFORE}^{commit}" 2>/dev/null || \
+                BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+            fi
+            echo "Comparing ${BEFORE}..HEAD"
+            CHANGED="$(git diff --name-only "$BEFORE" HEAD)"
+            echo "--- changed files ---"
+            echo "$CHANGED"
+            echo "---------------------"
+
+            if echo "$CHANGED" | grep -qE "^task-ui-components/"; then ui=true; fi
+            if echo "$CHANGED" | grep -qE "^themes/"; then themes=true; fi
+            if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
+
+            # Dependency chain: `task` bundles both themes + task-ui-components,
+            # and themes imports task-ui-components. A dependency change must
+            # republish its dependents so their bundled copy AND pinned version
+            # stay in sync — otherwise the published `task` ships a stale bundle.
+            if [ "$ui" = "true" ]; then themes=true; task=true; fi
+            if [ "$themes" = "true" ]; then task=true; fi
+          fi
+
+          echo "ui=$ui" >> $GITHUB_OUTPUT
+          echo "themes=$themes" >> $GITHUB_OUTPUT
+          echo "task=$task" >> $GITHUB_OUTPUT
+          echo "Detected → task-ui-components=$ui themes=$themes task=$task"
+
       - name: Configure npm for GitHub Packages
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" > ~/.npmrc
@@ -119,14 +175,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
-      - name: Debug - Show changed files
-        run: |
-          echo "Files changed in this push:"
-          git diff --name-only HEAD~1 HEAD
-          echo "---"
-
-      # Fallback version bump check - ensures version was incremented even if pre-commit hook failed
-      # IMPORTANT: These patterns must match the pre-commit hook patterns in .husky/pre-commit
+      # Fallback version bump check - ensures the version was incremented even if
+      # the pre-commit hook was skipped. Uses the up-front change flags (never a
+      # fresh diff) so the auto-bump commit can't mask the real changes.
       - name: Verify version bump (fallback check)
         id: version_check
         run: |
@@ -155,43 +206,37 @@ jobs:
           needs_themes_bump=false
           needs_task_bump=false
 
-          # Check task-ui-components if SOURCE files changed (matches pre-commit hook pattern)
-          # Pattern: task-ui-components/(src/|package.json|tsconfig.|vite.config.)
-          if git diff --name-only HEAD~1 HEAD | grep -qE "^task-ui-components/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
-            echo "📦 task-ui-components source files changed, checking version..."
+          if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
+            echo "📦 task-ui-components changed, checking version..."
             if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
               echo "::warning::task-ui-components version was not bumped! Will auto-bump."
               version_issues=1
               needs_ui_bump=true
             fi
           else
-            echo "ℹ️  task-ui-components: no source changes (skipping version check)"
+            echo "ℹ️  task-ui-components: no changes (skipping version check)"
           fi
 
-          # Check themes if SOURCE files changed (matches pre-commit hook pattern)
-          # Pattern: themes/(src/|package.json|tsconfig.|vite.config.)
-          if git diff --name-only HEAD~1 HEAD | grep -qE "^themes/(src/|package\.json|tsconfig\.|vite\.config\.)"; then
-            echo "📦 themes source files changed, checking version..."
+          if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
+            echo "📦 themes changed, checking version..."
             if ! check_version_published "@wolffm/themes" "./themes"; then
               echo "::warning::themes version was not bumped! Will auto-bump."
               version_issues=1
               needs_themes_bump=true
             fi
           else
-            echo "ℹ️  themes: no source changes (skipping version check)"
+            echo "ℹ️  themes: no changes (skipping version check)"
           fi
 
-          # Check task package if SOURCE files changed (matches pre-commit hook pattern)
-          # Pattern: (src/|worker/|package.json|vite.config.|tsconfig.|tsup.) at root level
-          if git diff --name-only HEAD~1 HEAD | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then
-            echo "📦 task source files changed, checking version..."
+          if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
+            echo "📦 task changed, checking version..."
             if ! check_version_published "@wolffm/task" "."; then
               echo "::warning::task version was not bumped! Will auto-bump."
               version_issues=1
               needs_task_bump=true
             fi
           else
-            echo "ℹ️  task: no source changes (skipping version check)"
+            echo "ℹ️  task: no changes (skipping version check)"
           fi
 
           # Export flags for the auto-bump step
@@ -222,7 +267,7 @@ jobs:
         if: steps.version_check.outputs.version_issues == '1'
         run: |
           echo "🤖 Auto-bumping versions that were missed by pre-commit hook..."
-          
+
           # Function to compute the next version (handles .20 rollover to next minor)
           next_version() {
             local v=$1
@@ -310,9 +355,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Commit and push changes
+          # Commit and push changes.
+          # [skip ci] is REQUIRED: this run already builds + publishes below with
+          # the freshly bumped versions, so the bump commit is only a bookkeeping
+          # record. Without it the push re-triggers this workflow, which then sees
+          # its own bump commit as "task changed", bumps again, and churns the
+          # patch number on every run.
           git add -A
-          git commit -m "chore: auto-bump versions (pre-commit hook was bypassed)"
+          git commit -m "chore: auto-bump versions (pre-commit hook was bypassed) [skip ci]"
           git push
 
           echo "✅ Versions auto-bumped and pushed successfully!"
@@ -324,78 +374,46 @@ jobs:
         if: steps.version_check.outputs.version_issues == '1'
         run: |
           echo "🔨 Rebuilding packages with new versions..."
-          
+
           # Reinstall to pick up new versions
           pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --frozen-lockfile
-          
+
           # Rebuild in dependency order
           pnpm --filter @wolffm/task-ui-components run build
           pnpm --filter @wolffm/themes run build
           pnpm run build:all
-          
+
           echo "✅ Rebuild complete!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
-      - name: Check if themes package changed
-        id: themes_changed
-        run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q "^themes/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "✓ Themes package has changes"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✗ No changes in themes package"
-          fi
-
-      - name: Check if task-ui-components package changed
-        id: ui_components_changed
-        run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q "^task-ui-components/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "✓ UI Components package has changes"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✗ No changes in UI components package"
-          fi
-
-      - name: Check if task package changed
-        id: task_changed
-        run: |
-          # Check if any files changed outside of themes/ and task-ui-components/ directories
-          if git diff --name-only HEAD~1 HEAD | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "✓ Task package has changes"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✗ No changes in task package"
-          fi
-      
-      # Publish in dependency order: UI Components → Themes → Task
-      # This ensures dependencies are available before dependent packages
+      # Publish in dependency order: UI Components → Themes → Task, gated on the
+      # up-front change flags (steps.changes) — NOT a fresh diff, which the
+      # auto-bump commit would have corrupted.
       - name: Publish UI Components package
-        if: steps.ui_components_changed.outputs.changed == 'true'
+        if: steps.changes.outputs.ui == 'true'
         run: pnpm --filter @wolffm/task-ui-components publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
       - name: Publish Themes package
-        if: steps.themes_changed.outputs.changed == 'true'
+        if: steps.changes.outputs.themes == 'true'
         run: pnpm --filter @wolffm/themes publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
       - name: Publish Task package
-        if: steps.task_changed.outputs.changed == 'true'
+        if: steps.changes.outputs.task == 'true'
         run: pnpm --filter @wolffm/task publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
       # Defense in depth: pnpm publish does not fail loudly on duplicate-version
-      # no-ops in pnpm 9+. Verify each package actually landed on the registry
-      # so any future bump-logic regression fails the workflow loudly.
+      # no-ops in pnpm 9+. Verify each package that was SUPPOSED to publish
+      # actually landed on the registry, so any bump/detection regression fails
+      # the workflow loudly instead of stranding a dependent on a missing pin.
       - name: Verify publishes appeared on registry
-        if: steps.themes_changed.outputs.changed == 'true' || steps.ui_components_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
+        if: steps.changes.outputs.ui == 'true' || steps.changes.outputs.themes == 'true' || steps.changes.outputs.task == 'true'
         run: |
           verify_published() {
             local pkg_name=$1
@@ -407,20 +425,20 @@ jobs:
             fi
             echo "✓ Verified ${pkg_name}@${version} on registry"
           }
-          if [ "${{ steps.ui_components_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
             verify_published "@wolffm/task-ui-components" "./task-ui-components"
           fi
-          if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
             verify_published "@wolffm/themes" "./themes"
           fi
-          if [ "${{ steps.task_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
             verify_published "@wolffm/task" "."
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
 
       - name: Notify parent about package updates
-        if: steps.themes_changed.outputs.changed == 'true' || steps.ui_components_changed.outputs.changed == 'true' || steps.task_changed.outputs.changed == 'true'
+        if: steps.changes.outputs.ui == 'true' || steps.changes.outputs.themes == 'true' || steps.changes.outputs.task == 'true'
         env:
           HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
@@ -436,13 +454,13 @@ jobs:
           first=true
 
           # UI Components first (no dependencies)
-          if [ "${{ steps.ui_components_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
             updated_packages="${updated_packages}\"@wolffm/task-ui-components\""
             first=false
           fi
 
           # Themes second (depends on UI Components)
-          if [ "${{ steps.themes_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
             if [ "$first" = "false" ]; then
               updated_packages="${updated_packages},"
             fi
@@ -451,7 +469,7 @@ jobs:
           fi
 
           # Task last (depends on both)
-          if [ "${{ steps.task_changed.outputs.changed }}" = "true" ]; then
+          if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
             if [ "$first" = "false" ]; then
               updated_packages="${updated_packages},"
             fi
@@ -459,9 +477,9 @@ jobs:
           fi
 
           updated_packages="${updated_packages}]"
-          
+
           echo "Updated packages: $updated_packages"
-          
+
           payload=$(cat <<EOF
             {
               "event_type": "packages_updated",
