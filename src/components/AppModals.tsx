@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import type { Task, BoardsFile, UserPreferences } from '../domain/types'
+import type { Task, BoardsFile } from '../domain/types'
 import { Toaster, type ToastState } from '@wolffm/task-ui-components'
 import {
   ClearTagModal,
@@ -13,9 +13,6 @@ import {
   BoardContextMenu,
   TagContextMenu
 } from './modals'
-// Eager import: same staleness footgun as Calendar — lazy chunks vanish
-// when their hash changes on a new deploy, breaking users with cached entries.
-import { SettingsModal } from './modals/SettingsModal'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 
 interface AppModalsProps {
@@ -23,7 +20,6 @@ interface AppModalsProps {
   confirmClearTag: { tag: string; count: number } | null
   showNewBoardDialog: boolean
   showNewTagDialog: boolean
-  showSettingsModal: boolean
   editTagModal: { taskId: string; currentTag: string | null } | null
   boardContextMenu: { boardId: string; x: number; y: number } | null
   tagContextMenu: { tag: string; x: number; y: number } | null
@@ -38,11 +34,6 @@ interface AppModalsProps {
   tasks: Task[]
   boards: BoardsFile | null
   currentBoardId: string
-  preferences: UserPreferences
-  showCompleteButton: boolean
-  showDeleteButton: boolean
-  showTagButton: boolean
-  userType: string
   effectiveSessionId: string
 
   // Toasts
@@ -61,11 +52,6 @@ interface AppModalsProps {
   onConfirmCreateTag: (tagName: string) => Promise<void>
   onTagInputChange: (value: string) => void
 
-  onCloseSettingsModal: () => void
-  onSavePreferences: (prefs: Partial<UserPreferences>) => Promise<void>
-  onValidateKey: (key: string) => Promise<boolean>
-  onShowToast: (message: string, type?: 'success' | 'error' | 'info') => void
-
   onCloseEditTagModal: () => void
   onConfirmEditTag: () => Promise<void>
   onEditTagInputChange: (value: string) => void
@@ -83,7 +69,6 @@ export function AppModals({
   confirmClearTag,
   showNewBoardDialog,
   showNewTagDialog,
-  showSettingsModal,
   editTagModal,
   boardContextMenu,
   tagContextMenu,
@@ -94,11 +79,6 @@ export function AppModals({
   tasks,
   boards,
   currentBoardId,
-  preferences,
-  showCompleteButton,
-  showDeleteButton,
-  showTagButton,
-  userType,
   effectiveSessionId: _effectiveSessionId,
   toasts,
   onCloseConfirmClearTag,
@@ -110,10 +90,6 @@ export function AppModals({
   onCloseNewTagDialog,
   onConfirmCreateTag,
   onTagInputChange,
-  onCloseSettingsModal,
-  onSavePreferences,
-  onValidateKey,
-  onShowToast,
   onCloseEditTagModal,
   onConfirmEditTag,
   onEditTagInputChange,
@@ -153,21 +129,6 @@ export function AppModals({
         onConfirm={onConfirmCreateTag}
         onInputChange={onTagInputChange}
       />
-
-      {showSettingsModal && (
-        <SettingsModal
-          isOpen={showSettingsModal}
-          preferences={preferences}
-          showCompleteButton={showCompleteButton}
-          showDeleteButton={showDeleteButton}
-          showTagButton={showTagButton}
-          userType={userType}
-          onClose={onCloseSettingsModal}
-          onSavePreferences={onSavePreferences}
-          onValidateKey={onValidateKey}
-          onShowToast={onShowToast}
-        />
-      )}
 
       <EditTagModal
         isOpen={!!editTagModal}

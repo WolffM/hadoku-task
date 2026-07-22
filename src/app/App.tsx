@@ -23,7 +23,10 @@ import { useSessionInitialization } from '../hooks/useSessionInitialization'
 import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
-import { AppHeader } from '../components/AppHeader'
+import { AppHeader, ConnectedThemePicker } from '@wolffm/task-ui-components'
+import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
+import { getThemeIcon } from './themeConfig'
+import type { ThemeName } from './types'
 import { BoardsSection } from '../components/BoardsSection'
 import { ViewSwitcher, type ViewType } from '../components/ViewSwitcher'
 import { TagFiltersSection } from '../components/TagFiltersSection'
@@ -36,7 +39,7 @@ import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { getRandomPlaceholder } from '../utils/placeholders'
-import { loadTaskPreferences, saveTaskPreferences } from '../prefs/taskPrefs'
+import { saveTaskPreferences } from '../prefs/taskPrefs'
 import type { UserPreferences } from '../domain/types'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
@@ -90,15 +93,13 @@ export default function App(props: TaskAppProps = {}) {
     setPreferences,
     setPreferencesLoaded
   } = usePreferences(userType, effectiveSessionId, true)
-  const {
-    theme,
-    showThemePicker,
-    setShowThemePicker,
-    THEME_FAMILIES,
-    setTheme,
-    isThemeReady,
-    isInitialThemeLoad
-  } = useTheme(preferences, savePreferences, containerRef, preferencesLoaded, initialTheme)
+  const { theme, THEME_FAMILIES, setTheme, isThemeReady, isInitialThemeLoad } = useTheme(
+    preferences,
+    savePreferences,
+    containerRef,
+    preferencesLoaded,
+    initialTheme
+  )
 
   // Compute mobile layout
   const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false
@@ -244,30 +245,6 @@ export default function App(props: TaskAppProps = {}) {
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
   const topTags = getTopTags(tasks, isMobile ? 3 : 6)
 
-  // Handle settings modal open - fetch fresh preferences
-  const handleSettingsOpen = async () => {
-    logger.info('[App] Opening settings modal, fetching fresh preferences...')
-    modals.setShowSettingsModal(true)
-
-    try {
-      // Fetch latest preferences from the unified store (merged user+device).
-      // Shows current state even if changed in another tab/device.
-      const freshPrefs = await loadTaskPreferences(userType, effectiveSessionId)
-      if (freshPrefs) {
-        logger.info('[App] Loaded fresh preferences', {
-          hasUpdatedAt: !!freshPrefs.updatedAt,
-          keys: Object.keys(freshPrefs)
-        })
-        setPreferences(freshPrefs)
-      }
-    } catch (error) {
-      logger.warn('[App] Failed to fetch fresh preferences', {
-        error: formatError(error)
-      })
-      // Modal still opens with current preferences - graceful degradation
-    }
-  }
-
   // Handle preference changes from settings modal
   const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
     logger.info('[App] Saving preferences', { keys: Object.keys(prefs) })
@@ -337,18 +314,30 @@ export default function App(props: TaskAppProps = {}) {
       )}
       <div className="task-app">
         <AppHeader
-          theme={theme}
-          experimentalThemes={preferences.experimentalThemes || false}
-          showThemePicker={showThemePicker}
-          onThemePickerToggle={() => setShowThemePicker(!showThemePicker)}
-          onThemeChange={setTheme}
-          onSettingsClick={handleSettingsOpen}
-          THEME_FAMILIES={THEME_FAMILIES}
-          themeMode={preferences.themeMode ?? 'simple'}
-          onThemeModeChange={mode => {
-            void savePreferences({ themeMode: mode })
+          title="Tasks"
+          themePicker={
+            <ConnectedThemePicker
+              themeFamilies={THEME_FAMILIES}
+              currentTheme={theme}
+              onThemeChange={t => setTheme(t as ThemeName)}
+              getThemeIcon={t =>
+                getThemeIcon(t as ThemeName, preferences.experimentalThemes || false)
+              }
+              themeMode={preferences.themeMode ?? 'simple'}
+              onThemeModeChange={mode => {
+                void savePreferences({ themeMode: mode })
+              }}
+              hasAdvanced={hasAdvanced(theme)}
+            />
+          }
+          settingsProps={{
+            children: (
+              <TaskPreferencesSection
+                preferences={preferences}
+                onSavePreferences={handleSavePreferences}
+              />
+            )
           }}
-          hasAdvanced={hasAdvanced(theme)}
         />
 
         <BoardsSection
@@ -468,7 +457,6 @@ export default function App(props: TaskAppProps = {}) {
           confirmClearTag={modals.confirmClearTag}
           showNewBoardDialog={modals.showNewBoardDialog}
           showNewTagDialog={modals.showNewTagDialog}
-          showSettingsModal={modals.showSettingsModal}
           editTagModal={modals.editTagModal}
           boardContextMenu={modals.boardContextMenu}
           tagContextMenu={modals.tagContextMenu}
@@ -479,11 +467,6 @@ export default function App(props: TaskAppProps = {}) {
           tasks={tasks}
           boards={boards}
           currentBoardId={currentBoardId}
-          preferences={preferences}
-          showCompleteButton={showCompleteButton}
-          showDeleteButton={showDeleteButton}
-          showTagButton={showTagButton}
-          userType={userType}
           effectiveSessionId={effectiveSessionId}
           toasts={toasts}
           onCloseConfirmClearTag={() => modals.setConfirmClearTag(null)}
@@ -505,25 +488,6 @@ export default function App(props: TaskAppProps = {}) {
           }}
           onConfirmCreateTag={handlers.handleCreateTag}
           onTagInputChange={modals.setInputValue}
-          onCloseSettingsModal={() => modals.setShowSettingsModal(false)}
-          onSavePreferences={handleSavePreferences}
-          onValidateKey={async (key: string) => {
-            // Always call server for key validation (regardless of current user type)
-            // since key validation is for authentication, not data operations
-            try {
-              const response = await fetch('/task/api/validate-key', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-User-Key': key
-                }
-              })
-              return response.ok
-            } catch {
-              return false
-            }
-          }}
-          onShowToast={showToast}
           onCloseEditTagModal={() => {
             modals.setEditTagModal(null)
             modals.setEditTagInput('')
