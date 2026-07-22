@@ -120,7 +120,7 @@ async function seedPublicSession(page: Page, prefs: Record<string, unknown> | nu
 }
 
 async function waitForApp(page: Page) {
-  await page.waitForSelector('h1.task-app__header', { timeout: 15000 })
+  await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
   // The data-theme-mode attribute is applied in a useEffect after the
   // preferences load, so wait for it explicitly rather than racing with paint.
   await page.waitForFunction(
