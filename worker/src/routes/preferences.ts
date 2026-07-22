@@ -4,15 +4,15 @@
  * Handles user preference management (theme, buttons, experimental flags, layout)
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { badRequest, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { badRequest, maskSessionId } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
-  getPreferencesBySessionId,
+  readPreferencesWithRepair,
   savePreferencesBySessionId,
   type UserPreferences
 } from '../session'
-import { getSessionIdFromRequest } from '../request-utils'
-import { DEFAULT_SESSION_ID, DEFAULT_THEME } from '../constants'
+import { resolvePrefsIdentity } from '../request-utils'
+import { DEFAULT_THEME } from '../constants'
 import type { AppContext } from '../types'
 import {
   GetPreferencesResponseSchema,
@@ -30,9 +30,10 @@ export function createPreferencesRoutes() {
     path: '/preferences',
     tags: ['Preferences'],
     summary: 'Get user preferences',
-    description: `Fetches preferences by sessionId from X-Session-Id header.
+    description: `Fetches preferences keyed by the stable user identity (edge-injected X-User-Id).
 Returns all preferences (theme, buttons, experimental flags, layout, etc.)
-Falls back to legacy authKey-based prefs if session-based prefs not found.`,
+Recovers preferences stranded under an ephemeral sessionId or a pre-rotation raw
+key by copying them forward into the stable namespace (read-repair).`,
     responses: {
       200: {
         description: 'User preferences',
@@ -47,36 +48,18 @@ Falls back to legacy authKey-based prefs if session-based prefs not found.`,
 
   app.openapi(getPreferencesRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    const sessionId = getSessionIdFromRequest(c, auth)
+    const { id, legacyIds } = resolvePrefsIdentity(c, auth)
 
     logRequest('GET', '/task/api/preferences', {
       userType: auth.userType,
-      sessionId: maskSessionId(sessionId)
+      prefsId: maskSessionId(id)
     })
 
     try {
-      const prefs = await getPreferencesBySessionId(c.env.TASKS_KV, sessionId)
+      const prefs = await readPreferencesWithRepair(c.env.TASKS_KV, id, legacyIds, auth.key)
 
       if (prefs) {
         return c.json(prefs, 200)
-      }
-
-      const authKey = auth.key || auth.sessionId
-      if (authKey && authKey !== sessionId && authKey !== DEFAULT_SESSION_ID) {
-        const legacyKey = `prefs:${authKey}`
-        const legacyPrefs = await c.env.TASKS_KV.get(legacyKey, 'json')
-
-        if (legacyPrefs) {
-          logRequest('GET', '/task/api/preferences', {
-            note: 'Found legacy prefs, migrating',
-            authKey: maskKey(authKey)
-          })
-
-          await savePreferencesBySessionId(c.env.TASKS_KV, sessionId, legacyPrefs)
-          await c.env.TASKS_KV.delete(legacyKey)
-
-          return c.json(legacyPrefs, 200)
-        }
       }
 
       const defaultPrefs: UserPreferences = {
@@ -113,9 +96,9 @@ Falls back to legacy authKey-based prefs if session-based prefs not found.`,
     path: '/preferences',
     tags: ['Preferences'],
     summary: 'Save user preferences',
-    description: `Saves preferences by sessionId from X-Session-Id header.
+    description: `Saves preferences keyed by the stable user identity (edge-injected X-User-Id).
 Accepts ALL preference fields (theme, buttons, experimental flags, layout, etc.)
-Merges with existing preferences.`,
+Merges with existing preferences, including any recovered from a legacy namespace.`,
     request: {
       body: {
         content: {
@@ -147,19 +130,23 @@ Merges with existing preferences.`,
 
   app.openapi(updatePreferencesRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    const sessionId = getSessionIdFromRequest(c, auth)
+    const { id, legacyIds } = resolvePrefsIdentity(c, auth)
 
     try {
       const body = c.req.valid('json')
 
       logRequest('PUT', '/task/api/preferences', {
         userType: auth.userType,
-        sessionId: maskSessionId(sessionId),
+        prefsId: maskSessionId(id),
         fields: Object.keys(body)
       })
 
+      // Merge onto the recovered blob, not just whatever sits at `id`. A user
+      // whose first write after this fix lands before their first read would
+      // otherwise have their stranded preferences overwritten by a partial
+      // patch on top of {}.
       const existing: Partial<UserPreferences> =
-        (await getPreferencesBySessionId(c.env.TASKS_KV, sessionId)) || {}
+        (await readPreferencesWithRepair(c.env.TASKS_KV, id, legacyIds, auth.key)) || {}
 
       const updated: UserPreferences = {
         ...existing,
@@ -167,7 +154,7 @@ Merges with existing preferences.`,
         lastUpdated: new Date().toISOString()
       }
 
-      await savePreferencesBySessionId(c.env.TASKS_KV, sessionId, updated)
+      await savePreferencesBySessionId(c.env.TASKS_KV, id, updated)
 
       return c.json({ ok: true as const, message: 'Preferences saved', preferences: updated }, 200)
     } catch (error: unknown) {

@@ -7,8 +7,8 @@
  * optimistic-concurrency version/ETag, If-Match/409, and backward-compat
  * (writes without If-Match still succeed).
  *
- * Run via: node_modules/.bin/esbuild ... | node   (see scripts/run-phase0-verify.sh)
- * Not a committed test suite — a throwaway proof for the Phase-0 change.
+ * Run via: pnpm run test:worker   (scripts/run-worker-verify.mjs bundles + runs
+ * every worker/test/*-verify.ts harness).
  */
 import { createTaskHandler } from '../src/index'
 

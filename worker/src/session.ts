@@ -1,14 +1,22 @@
 /**
  * Session Management Module
  *
- * Handles sessionId-based storage, preferences migration, and session mapping.
+ * Handles session bookkeeping, preferences storage, and session mapping.
  *
  * Key Concepts:
- * - Storage by sessionId (not authKey)
- * - One preferences object per sessionId
+ * - Preferences are keyed by the STABLE user identity (edge-injected X-User-Id),
+ *   the same identity boards and tasks use. One preferences object per USER.
+ * - Session bookkeeping (session-info, session-map) stays keyed by sessionId,
+ *   because that genuinely is per-session state.
  * - Multiple sessionIds per authKey (multi-device support)
- * - Session mapping: authKey → sessionId list (tracks active sessions)
- * - Never delete old sessionId preferences
+ * - Session mapping: authKey → sessionId list (tracks active sessions), which
+ *   doubles as the recovery index for preferences stranded under an old
+ *   sessionId — see readPreferencesWithRepair.
+ *
+ * History: preferences used to be keyed by sessionId. edge-router mints a fresh
+ * sessionId on every login, so that orphaned a user's settings on each new login
+ * or device — 302 stray `prefs:*` blobs for ~9 real users. readPreferencesWithRepair
+ * exists to pull those forward.
  */
 
 import type { KVNamespace } from '@cloudflare/workers-types'
@@ -77,6 +85,106 @@ export async function savePreferencesBySessionId(
     lastUpdated: new Date().toISOString()
   }
   await kv.put(key, JSON.stringify(data))
+}
+
+/**
+ * Timestamp a preferences blob was last written, as epoch ms. Blobs carry
+ * `lastUpdated` (written by savePreferencesBySessionId) and older ones also
+ * carry `updatedAt` from the client shape. Unparseable/absent → 0, which just
+ * makes the blob lose every comparison rather than throwing.
+ */
+function prefsTimestamp(prefs: UserPreferences): number {
+  const raw = prefs.lastUpdated ?? prefs.updatedAt
+  if (typeof raw !== 'string') return 0
+  const ms = Date.parse(raw)
+  return Number.isNaN(ms) ? 0 : ms
+}
+
+/**
+ * How many historical sessionIds to sweep when recovering stranded prefs.
+ * Only ever paid once per user (the hit is copied forward), and the sweep runs
+ * in parallel, but a user with a long login history shouldn't fan out
+ * unboundedly. Newest sessionIds are checked first — see below.
+ */
+const MAX_RECOVERY_SESSIONS = 40
+
+/**
+ * Read preferences for a stable identity, recovering anything stranded under an
+ * ephemeral sessionId.
+ *
+ * Mirrors the read-repair pattern the board/task storage already uses
+ * (`readWithRepair` in routes/route-utils.ts): read the primary namespace, fall
+ * back to legacy namespaces, and copy a hit forward so later reads land
+ * directly.
+ *
+ * Recovery order:
+ *   1. `prefs:{id}` — the stable, correct location.
+ *   2. Each id in `legacyIds` — the session id presented on this request and
+ *      the pre-userId-flip raw credential.
+ *   3. Every sessionId this authKey has ever used, via the existing
+ *      `session-map:{authKey}` record, newest first. This is the step that
+ *      actually rescues the stranded blobs: after a fresh login the current
+ *      X-Session-Id is brand new and holds nothing, so the user's real
+ *      preferences are only reachable through their session history.
+ *
+ * The legacy entry is deliberately left in place on copy-forward, matching
+ * readWithRepair — pruning is the cleanup cron's job, and leaving it keeps a
+ * rollback possible.
+ */
+export async function readPreferencesWithRepair(
+  kv: KVNamespace,
+  id: string,
+  legacyIds: string[] = [],
+  authKey?: string
+): Promise<UserPreferences | null> {
+  const primary = await getPreferencesBySessionId(kv, id)
+  if (primary) return primary
+
+  const copyForward = async (prefs: UserPreferences, from: string): Promise<UserPreferences> => {
+    // Preserve the blob's own lastUpdated: savePreferencesBySessionId stamps
+    // `now`, which would make a rescued 2025 blob look freshly written and beat
+    // out a genuinely newer one on a later comparison.
+    await kv.put(preferencesKey(id), JSON.stringify(prefs))
+    logger.info('[Prefs] Recovered stranded preferences', {
+      from: maskSessionId(from),
+      to: maskSessionId(id)
+    })
+    return prefs
+  }
+
+  for (const legacyId of legacyIds) {
+    const legacy = await getPreferencesBySessionId(kv, legacyId)
+    if (legacy) return copyForward(legacy, legacyId)
+  }
+
+  if (!authKey) return null
+
+  const mapping = await getSessionMapping(kv, authKey)
+  if (!mapping?.sessionIds?.length) return null
+
+  // sessionIds is append-ordered, so the tail is the most recent. Check newest
+  // first and cap the fan-out.
+  const candidates = mapping.sessionIds
+    .slice()
+    .reverse()
+    .filter(sid => sid !== id && !legacyIds.includes(sid))
+    .slice(0, MAX_RECOVERY_SESSIONS)
+  if (candidates.length === 0) return null
+
+  const found = await Promise.all(
+    candidates.map(async sid => ({ sid, prefs: await getPreferencesBySessionId(kv, sid) }))
+  )
+
+  // Append order tells us nothing about which session was written to LAST, so
+  // pick by the blob's own timestamp rather than trusting position.
+  let best: { sid: string; prefs: UserPreferences } | null = null
+  for (const { sid, prefs } of found) {
+    if (!prefs) continue
+    if (!best || prefsTimestamp(prefs) > prefsTimestamp(best.prefs)) best = { sid, prefs }
+  }
+  if (!best) return null
+
+  return copyForward(best.prefs, best.sid)
 }
 
 /**
@@ -241,13 +349,19 @@ export interface HandshakeResponse {
  * Handle session handshake
  *
  * Logic:
- * 1. If oldSessionId provided, try to load preferences from it
- * 2. If oldSessionId not found, check authKey mapping for last sessionId (for fallback only, don't delete)
- * 3. If nothing found, use default preferences
- * 4. MOVE preferences to newSessionId ONLY if oldSessionId was provided (delete old, save new)
- * 5. Update authKey → sessionId mapping
- * 6. Create session info for newSessionId with the VALIDATED userType (from auth middleware)
- * 7. Delete old session info if it was migrated
+ * 1. Load preferences from the STABLE identity (`storageId`), recovering from
+ *    oldSessionId / this authKey's session history if nothing is there yet.
+ * 2. If nothing found, use default preferences
+ * 3. Save preferences back to `storageId` — never to newSessionId
+ * 4. Update authKey → sessionId mapping
+ * 5. Create session info for newSessionId with the VALIDATED userType (from auth middleware)
+ * 6. Delete old session info if it was migrated
+ *
+ * `storageId` is the edge-injected X-User-Id (stable per user, survives key
+ * rotation). Session bookkeeping — session-info and session-map — stays keyed by
+ * the ephemeral sessionId, because that genuinely IS per-session state.
+ * Preferences are not: writing them per-session is what stranded ~270 blobs in
+ * TASKS_KV, one per login.
  *
  * IMPORTANT: The userType parameter comes from auth middleware which has already validated
  * the authKey. This ensures we always return the current, correct userType based on key validity.
@@ -256,7 +370,8 @@ export async function handleSessionHandshake(
   kv: KVNamespace,
   authKey: string,
   userType: 'admin' | 'friend' | 'public',
-  request: HandshakeRequest
+  request: HandshakeRequest,
+  storageId: string
 ): Promise<HandshakeResponse> {
   const { oldSessionId, newSessionId } = request
 
@@ -268,32 +383,25 @@ export async function handleSessionHandshake(
   let isNewSession = true
   let sessionIdToDelete: string | null = null
 
-  // The old-session preference lookup and the authKey->session mapping lookup are
-  // independent, and every KV read is a global round-trip. Fetch them together
-  // instead of in series. The mapping is needed again below (migration cleanup),
-  // so reading it up front costs nothing extra in the common path.
-  const [oldSessionPrefs, mapping] = await Promise.all([
-    oldSessionId ? getPreferencesBySessionId(kv, oldSessionId) : Promise.resolve(null),
+  // Resolve preferences from the stable identity, falling back to oldSessionId
+  // and then to this authKey's whole session history. readPreferencesWithRepair
+  // copies whatever it finds forward, so the recovery is paid once.
+  //
+  // The mapping is read alongside it because the migration cleanup below needs
+  // it, and every KV read is a global round-trip.
+  const [resolvedPrefs, mapping] = await Promise.all([
+    readPreferencesWithRepair(kv, storageId, oldSessionId ? [oldSessionId] : [], authKey),
     getSessionMapping(kv, authKey)
   ])
 
-  // Preferences from oldSessionId (explicit migration)
-  if (oldSessionId && oldSessionPrefs) {
-    preferences = oldSessionPrefs
-    migratedFrom = oldSessionId
+  if (resolvedPrefs) {
+    preferences = resolvedPrefs
     isNewSession = false
-    sessionIdToDelete = oldSessionId // Only delete if explicitly migrating
-  }
-
-  // Otherwise fall back to the authKey mapping's last session.
-  // Note: We DON'T delete this - it might be another device still using it
-  if (!preferences && mapping?.lastSessionId) {
-    preferences = await getPreferencesBySessionId(kv, mapping.lastSessionId)
-    if (preferences) {
-      migratedFrom = mapping.lastSessionId
-      isNewSession = false
-      // DON'T mark for deletion - this might be a new device
-    }
+    // Report the source the client asked us to migrate from, when it had one.
+    migratedFrom = oldSessionId ?? mapping?.lastSessionId
+    // Only the explicitly-migrated session is safe to delete; a session from
+    // the mapping may still be live on another device.
+    if (oldSessionId) sessionIdToDelete = oldSessionId
   }
 
   // Use defaults if nothing found
@@ -311,20 +419,23 @@ export async function handleSessionHandshake(
   }
 
   // Preferences and session-info are independent writes — issue them together.
+  // Preferences go to the STABLE id; session-info is genuinely per-session.
   // The mapping update must still land AFTER session-info exists, otherwise the
   // mapping can reference a session that has no session-info ("mystery sessions").
   await Promise.all([
-    savePreferencesBySessionId(kv, newSessionId, preferences),
+    savePreferencesBySessionId(kv, storageId, preferences),
     saveSessionInfo(kv, sessionInfo)
   ])
 
   // Delete old preferences and session info ONLY if explicitly migrating.
   // Reuses the mapping already read above.
   if (sessionIdToDelete && sessionIdToDelete !== newSessionId) {
-    const cleanup: Promise<unknown>[] = [
-      kv.delete(preferencesKey(sessionIdToDelete)),
-      kv.delete(sessionInfoKey(sessionIdToDelete))
-    ]
+    const cleanup: Promise<unknown>[] = [kv.delete(sessionInfoKey(sessionIdToDelete))]
+    // Never delete the stable namespace we just wrote to — only a genuinely
+    // session-scoped leftover.
+    if (sessionIdToDelete !== storageId) {
+      cleanup.push(kv.delete(preferencesKey(sessionIdToDelete)))
+    }
     if (mapping) {
       mapping.sessionIds = mapping.sessionIds.filter(id => id !== sessionIdToDelete)
       cleanup.push(kv.put(sessionMappingKey(authKey), JSON.stringify(mapping)))
@@ -336,9 +447,11 @@ export async function handleSessionHandshake(
   // We wrote session-info in the Promise.all above, so skip the existence re-read.
   await updateSessionMapping(kv, authKey, newSessionId, 10, true)
 
-  // Clean up stale sessions (30+ days old) in the background
-  // This runs asynchronously and won't block the handshake response
-  cleanupStaleSessions(kv, authKey).catch(err => {
+  // Clean up stale sessions (30+ days old) in the background.
+  // This runs asynchronously and won't block the handshake response. Safe to run
+  // after recovery: readPreferencesWithRepair above already copied any stranded
+  // blob forward into `storageId`, synchronously, before we prune anything.
+  cleanupStaleSessions(kv, authKey, storageId).catch(err => {
     logger.error('[SessionCleanup] Failed to cleanup stale sessions', {
       error: err instanceof Error ? err.message : String(err)
     })
@@ -365,7 +478,11 @@ export async function handleSessionHandshake(
  * - Sessions not accessed in 30+ days
  * - Orphaned session-info entries (in mapping but no session-info exists)
  */
-async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<void> {
+async function cleanupStaleSessions(
+  kv: KVNamespace,
+  authKey: string,
+  storageId?: string
+): Promise<void> {
   const STALE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
   const now = Date.now()
 
@@ -420,11 +537,14 @@ async function cleanupStaleSessions(kv: KVNamespace, authKey: string): Promise<v
         `[SessionCleanup] Deleting ${sessionsToDelete.length} stale sessions for authKey: ${maskKey(authKey)}`
       )
 
-      // Delete preferences and session-info for each stale session
-      const deletePromises = sessionsToDelete.flatMap(sessionId => [
-        kv.delete(preferencesKey(sessionId)),
-        kv.delete(sessionInfoKey(sessionId))
-      ])
+      // Delete preferences and session-info for each stale session. The stable
+      // preferences namespace is never session-scoped, so it must survive even
+      // if it happens to collide with a sessionId being pruned.
+      const deletePromises = sessionsToDelete.flatMap(sessionId =>
+        sessionId === storageId
+          ? [kv.delete(sessionInfoKey(sessionId))]
+          : [kv.delete(preferencesKey(sessionId)), kv.delete(sessionInfoKey(sessionId))]
+      )
 
       await Promise.all(deletePromises)
 

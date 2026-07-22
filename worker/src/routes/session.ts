@@ -67,6 +67,11 @@ export function createSessionRoutes() {
       }
 
       const authKey = auth.key || auth.sessionId || 'public'
+      // Preferences are keyed by the stable per-user identity, NOT the freshly
+      // minted sessionId. The identity middleware (index.ts) points
+      // auth.sessionId at X-User-Id when the request came through edge-router;
+      // direct *.workers.dev callers fall back to the raw credential.
+      const storageId = auth.userId || auth.sessionId || authKey
 
       logRequest('POST', '/task/api/session/handshake', {
         userType: auth.userType,
@@ -79,7 +84,8 @@ export function createSessionRoutes() {
         c.env.TASKS_KV,
         authKey,
         auth.userType as 'admin' | 'friend' | 'public',
-        body
+        body,
+        storageId
       )
 
       return c.json(response, 200)

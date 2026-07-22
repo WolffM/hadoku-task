@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { KEY_SUBMIT_LABEL } from './helpers/settings'
 
 /**
  * E2E tests for the key-swap and session management flow.
@@ -7,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test'
  * the AppHeader), not the old task-local SettingsModal. The flow is:
  *   1. User opens the gear ("User settings") → ConnectedSettings popout.
  *   2. Clicks "Change key…" → a password field appears.
- *   3. Types the new key, clicks "Switch".
+ *   3. Types the new key, clicks the submit button (see KEY_SUBMIT_LABEL).
  *   4. ConnectedSettings POSTs the key (X-User-Key) to /session/create and, on
  *      { valid:true, sessionId, userType, name }, writes hadoku_session_id +
  *      hadoku_user_type to localStorage and calls window.location.reload().
@@ -33,7 +34,7 @@ async function swapKey(page: Page, key: string) {
   await keyInput.waitFor({ state: 'visible', timeout: 5000 })
   await keyInput.fill(key)
 
-  await page.getByRole('button', { name: 'Switch' }).click()
+  await page.getByRole('button', { name: KEY_SUBMIT_LABEL }).click()
 }
 
 /** Mock the whoami identity ConnectedSettings GETs when the popout opens. */

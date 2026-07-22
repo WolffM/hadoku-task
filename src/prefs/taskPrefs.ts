@@ -7,9 +7,15 @@
  *
  * This is the ONLY client prefs path — the legacy client code (api/client.ts
  * prefs methods, utils/preferences.ts) was deleted in Tranche A. The only
- * legacy remnant is the worker route /task/api/preferences (KV
- * `prefs:{sessionId}`), retained for the 30-day migration window so stale
- * users still migrate; readLegacyPrefs() reads it. Deleted in Tranche B.
+ * legacy remnant is the worker route /task/api/preferences, retained for the
+ * migration window so stale users still migrate; readLegacyPrefs() reads it.
+ * Deleted in Tranche B.
+ *
+ * That route now keys off the STABLE user identity (X-User-Id) and recovers
+ * blobs stranded under old session ids. It previously keyed off X-Session-Id,
+ * which edge-router re-mints on every login — so this migration read usually
+ * missed and users silently got defaults. The X-Session-Id header below is now
+ * only a recovery hint, not the lookup key.
  *
  * Per-field scope split (locked decision):
  *   device-scoped (differs per device): theme, themeMode, alwaysVerticalLayout,
