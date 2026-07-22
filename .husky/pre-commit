@@ -8,6 +8,16 @@
 # free version, verifies the publish landed, and only publishes packages whose
 # files actually changed. Bumping here too was redundant and churned lockfiles
 # on every commit (incl. dev-only edits), so it's gone.
+#
+# CI / automated commits must NOT run these interactive dev gates. publish.yml's
+# auto-bump step does a `git commit`, which fires this hook inside the runner —
+# where typecheck needs an install that hasn't happened yet, so the bump fails
+# and the publish dies with "TypeScript errors" that don't exist in the tree.
+# CI has its own gates (this same workflow runs typecheck and lint:css
+# explicitly). GitHub Actions always sets CI=true.
+# Mirrors the guard hadoku_site added for the same failure.
+[ "$CI" = "true" ] && exit 0
+
 echo "🔍 Running pre-commit checks..."
 
 # TS gate — prevents commits that break tsc (resilience plan track 1).
