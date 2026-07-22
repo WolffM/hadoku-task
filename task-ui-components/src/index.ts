@@ -2,6 +2,8 @@
  * @wolffm/task-ui-components
  * Reusable UI components for task management applications
  * Production-ready and fully typed
+ *
+ * 2.2.0 — AppHeader + ConnectedSettings (with a `children` extension slot).
  */
 
 // Main components
