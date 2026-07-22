@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "3.4.100",
+  "version": "3.4.101",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "repository": {
