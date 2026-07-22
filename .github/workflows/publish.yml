@@ -57,40 +57,39 @@ jobs:
         run: |
           ui=false; themes=false; task=false
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Manual run = reconcile mode: consider every package so any version
-            # not yet on the registry gets (re)published. Already-published
-            # versions no-op on publish and are confirmed by the verify step.
-            echo "workflow_dispatch → reconcile mode (all packages considered)"
-            ui=true; themes=true; task=true
-          else
-            BEFORE="${{ github.event.before }}"
-            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+          # Base of the comparison. On push this is the commit before the push
+          # (covers squash merges + multi-commit pushes). On workflow_dispatch
+          # github.event.before is empty, so we fall back to the parent of HEAD
+          # — i.e. a manual run simply re-evaluates the last commit, which also
+          # recovers a publish that a previous run left stranded (a missing
+          # version gets published as-is, with no spurious bump of packages whose
+          # current version is already on the registry).
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          elif ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            # Base is deeper than fetch-depth — pull just that commit, else fall
+            # back to the immediate parent.
+            git fetch --depth=1 origin "$BEFORE" 2>/dev/null || true
+            git cat-file -e "${BEFORE}^{commit}" 2>/dev/null || \
               BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
-            elif ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
-              # Base is deeper than fetch-depth — pull just that commit, else fall
-              # back to the immediate parent.
-              git fetch --depth=1 origin "$BEFORE" 2>/dev/null || true
-              git cat-file -e "${BEFORE}^{commit}" 2>/dev/null || \
-                BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
-            fi
-            echo "Comparing ${BEFORE}..HEAD"
-            CHANGED="$(git diff --name-only "$BEFORE" HEAD)"
-            echo "--- changed files ---"
-            echo "$CHANGED"
-            echo "---------------------"
-
-            if echo "$CHANGED" | grep -qE "^task-ui-components/"; then ui=true; fi
-            if echo "$CHANGED" | grep -qE "^themes/"; then themes=true; fi
-            if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
-
-            # Dependency chain: `task` bundles both themes + task-ui-components,
-            # and themes imports task-ui-components. A dependency change must
-            # republish its dependents so their bundled copy AND pinned version
-            # stay in sync — otherwise the published `task` ships a stale bundle.
-            if [ "$ui" = "true" ]; then themes=true; task=true; fi
-            if [ "$themes" = "true" ]; then task=true; fi
           fi
+          echo "Comparing ${BEFORE}..HEAD"
+          CHANGED="$(git diff --name-only "$BEFORE" HEAD)"
+          echo "--- changed files ---"
+          echo "$CHANGED"
+          echo "---------------------"
+
+          if echo "$CHANGED" | grep -qE "^task-ui-components/"; then ui=true; fi
+          if echo "$CHANGED" | grep -qE "^themes/"; then themes=true; fi
+          if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
+
+          # Dependency chain: `task` bundles both themes + task-ui-components,
+          # and themes imports task-ui-components. A dependency change must
+          # republish its dependents so their bundled copy AND pinned version
+          # stay in sync — otherwise the published `task` ships a stale bundle.
+          if [ "$ui" = "true" ]; then themes=true; task=true; fi
+          if [ "$themes" = "true" ]; then task=true; fi
 
           echo "ui=$ui" >> $GITHUB_OUTPUT
           echo "themes=$themes" >> $GITHUB_OUTPUT
