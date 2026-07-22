@@ -61,6 +61,9 @@ public:
     Q_INVOKABLE void changeKey(const QString &userKey); // swap credential + reload
     Q_INVOKABLE void switchBoard(const QString &boardId);
     Q_INVOKABLE void createBoard(const QString &name);
+    // Move a task to another board (drag-to-board). Its tags travel with it; any
+    // tag the destination board doesn't yet register is created there first.
+    Q_INVOKABLE void moveTaskToBoard(const QString &id, const QString &targetBoardId);
     Q_INVOKABLE void createTask(const QString &input); // supports inline "#tag"s
     // Calendar create: all-day (date only) or timed (startTime/endTime). Empty
     // strings are omitted from the request.

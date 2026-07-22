@@ -8,12 +8,15 @@ QQC2.AbstractButton {
     id: chip
     property string label: ""
     property string tagValue: ""        // actual tag ("" for the All chip — not a drop target)
+    property string boardValue: ""      // board id (set for board chips — a move target)
     property color accent: Kirigami.Theme.highlightColor
     property bool active: false
     property bool dropHover: false
 
-    // Emitted when a task is dropped on this chip.
+    // Emitted when a task is dropped on a tag chip (assigns the tag).
     signal taskDropped(string taskId, string currentTags)
+    // Emitted when a task is dropped on a board chip (moves it; tags travel along).
+    signal taskMovedToBoard(string taskId, string currentTags)
     // Emitted on right-click (used to delete the tag everywhere).
     signal deleteRequested(string tag)
 
@@ -45,12 +48,16 @@ QQC2.AbstractButton {
 
     DropArea {
         anchors.fill: parent
-        enabled: chip.tagValue.length > 0
+        enabled: chip.tagValue.length > 0 || chip.boardValue.length > 0
         onEntered: chip.dropHover = true
         onExited: chip.dropHover = false
         onDropped: drop => {
             chip.dropHover = false;
-            if (drop.source && drop.source.dragTaskId !== undefined)
+            if (!drop.source || drop.source.dragTaskId === undefined)
+                return;
+            if (chip.boardValue.length > 0)
+                chip.taskMovedToBoard(drop.source.dragTaskId, drop.source.dragTags || "");
+            else
                 chip.taskDropped(drop.source.dragTaskId, drop.source.dragTags || "");
         }
     }

@@ -179,7 +179,9 @@ ColumnLayout {
                     label: modelData.name
                     accent: Kirigami.Theme.highlightColor
                     active: taskApi.currentBoardId === modelData.id
+                    boardValue: modelData.id
                     onClicked: taskApi.switchBoard(modelData.id)
+                    onTaskMovedToBoard: (taskId, currentTags) => taskApi.moveTaskToBoard(taskId, modelData.id)
                 }
             }
             QQC2.ToolButton {

@@ -227,6 +227,43 @@ void TaskApiClient::createBoard(const QString &name)
     });
 }
 
+void TaskApiClient::moveTaskToBoard(const QString &id, const QString &targetBoardId)
+{
+    const QString target = targetBoardId.trimmed();
+    if (target.isEmpty() || target == m_boardId)
+        return;
+    const int i = taskIndex(id);
+    if (i < 0)
+        return;
+
+    // Tags travel with the task (the move preserves its `tag` field). Make sure
+    // the destination board's tag registry knows each one — otherwise the chip
+    // wouldn't persist there once the task moves on again. Create the missing
+    // ones (and optimistically reflect them in the local registry).
+    const QStringList tags = m_tasks.at(i).tag.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    QStringList &targetTags = m_boardTags[target];
+    for (const QString &tag : tags) {
+        if (targetTags.contains(tag))
+            continue;
+        targetTags.append(tag);
+        QJsonObject tagBody{{QStringLiteral("boardId"), target}, {QStringLiteral("tag"), tag}};
+        postJson(QStringLiteral("move-create-tag"), m_baseUrl + QStringLiteral("/tags"), tagBody, false);
+    }
+
+    // Optimistic: the task leaves the current board immediately.
+    m_tasks.removeAt(i);
+    optimisticEmit();
+
+    QJsonObject body{
+        {QStringLiteral("sourceBoardId"), m_boardId},
+        {QStringLiteral("targetBoardId"), target},
+        {QStringLiteral("taskIds"), QJsonArray{id}},
+    };
+    qCInfo(HadokuTask) << "POST /batch-move" << id << m_boardId << "->" << target
+                       << "with" << tags.size() << "tag(s)";
+    postJson(QStringLiteral("batch-move"), m_baseUrl + QStringLiteral("/batch-move"), body, false);
+}
+
 // ---------------------------------------------------------------------------
 // Tasks
 // ---------------------------------------------------------------------------
