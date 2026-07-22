@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { KEY_SUBMIT_LABEL } from './helpers/settings'
+import { KEY_SUBMIT_LABEL_PROD } from './helpers/settings'
 
 /**
  * E2E tests for data synchronization between localStorage and API
@@ -39,7 +39,7 @@ test.describe('Data Sync Flow', () => {
       const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
       await keyInput.waitFor({ state: 'visible', timeout: 5000 })
       await keyInput.fill(FRIEND_TEST_KEY)
-      await page.getByRole('button', { name: KEY_SUBMIT_LABEL }).click()
+      await page.getByRole('button', { name: KEY_SUBMIT_LABEL_PROD }).click()
 
       // Wait for page reload after auth
       await page.waitForEvent('load', { timeout: 15000 })
@@ -89,7 +89,7 @@ test.describe('Data Sync Flow', () => {
         const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
         await keyInput.waitFor({ state: 'visible', timeout: 5000 })
         await keyInput.fill(FRIEND_TEST_KEY)
-        await page.getByRole('button', { name: KEY_SUBMIT_LABEL }).click()
+        await page.getByRole('button', { name: KEY_SUBMIT_LABEL_PROD }).click()
 
         await page.waitForEvent('load', { timeout: 15000 })
       }

@@ -1,14 +1,23 @@
 /**
  * Shared selectors for the settings popout (@wolffm/task-ui-components
- * ConnectedSettings), which both the local build and production render.
+ * ConnectedSettings).
  */
 
 /**
- * The key-swap submit button.
+ * The key-swap submit button as rendered by the LOCAL build.
  *
- * Published @wolffm/task-ui-components 2.2.0 labels it "Switch"; the workspace
- * source (2.2.1+) renames it to "Apply". A local run and production can sit on
- * either side of that rename at any given moment, so match both rather than
- * pinning to one label and breaking the moment the package version flips.
+ * Local specs resolve @wolffm/task-ui-components to the workspace source (see
+ * the `workspace:*` dep in themes/package.json — without it, vite pre-bundles
+ * the published tarball instead and local edits are invisible). So this is an
+ * exact match on purpose: renaming the button in the workspace source SHOULD
+ * fail this spec.
  */
-export const KEY_SUBMIT_LABEL = /^(Apply|Switch)$/
+export const KEY_SUBMIT_LABEL = 'Apply'
+
+/**
+ * The same button as rendered by PRODUCTION, which serves the last published
+ * build and can therefore trail the workspace by a publish cycle. The label was
+ * "Switch" up to published 2.2.0 and "Apply" from 2.2.1, so a prod-targeting
+ * spec must tolerate both rather than break during a deploy lag.
+ */
+export const KEY_SUBMIT_LABEL_PROD = /^(Apply|Switch)$/
