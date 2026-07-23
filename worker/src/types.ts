@@ -12,6 +12,11 @@ export interface Env {
   FRIEND_KEYS?: string
   TASKS_KV: KVNamespace
   DB: D1Database
+  // Storage backend selector. 'd1' routes boards + tasks through createD1Storage
+  // (the T1 cutover); anything else (default) keeps the legacy KV blob store.
+  // Set as a wrangler [vars] entry so the flip is a deploy, not a code change,
+  // and can be rolled back without republishing @wolffm/task.
+  TASK_STORAGE?: string
 }
 
 /**

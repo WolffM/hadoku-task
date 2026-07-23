@@ -12,6 +12,7 @@ import type {
   StatsFile,
   BoardsFile
 } from '@wolffm/task/api'
+import { createD1Storage } from './d1-storage'
 import { boardsKey, tasksKey } from '../kv-keys'
 import { DEFAULT_BOARD_ID, DEFAULT_BOARD_NAME } from '../constants'
 import {
@@ -43,7 +44,10 @@ export function createKVStorage(env: Env, legacyId?: string): TaskStorage {
    * Read `primaryKey`; on a miss, fall back to `legacyKey` and copy the value
    * forward into `primaryKey`. Returns null when neither exists.
    */
-  async function readWithRepair<T>(primaryKey: string, legacyKey: string | null): Promise<T | null> {
+  async function readWithRepair<T>(
+    primaryKey: string,
+    legacyKey: string | null
+  ): Promise<T | null> {
     const hit = await env.TASKS_KV.get<T>(primaryKey, 'json')
     if (hit) return hit
     if (!legacyKey || legacyKey === primaryKey) return null
@@ -115,8 +119,7 @@ export function createKVStorage(env: Env, legacyId?: string): TaskStorage {
       // stay visible. No copy-forward here — moving rows is the migration
       // script's job (a copy would double-count). Once the rewrite has run, the
       // legacy key matches zero rows and this is a no-op.
-      const noRows =
-        timeline.length === 0 && Object.values(counters).every(v => !v || v === 0)
+      const noRows = timeline.length === 0 && Object.values(counters).every(v => !v || v === 0)
       if (noRows && legacyId) {
         const legacyKey = maskKey(legacyId)
         if (legacyKey !== userKey) {
@@ -195,7 +198,14 @@ export const getContext = (c: Context<AppContext>) => {
   const auth = c.get('authContext')
   // Pass the pre-flip raw-credential namespace so storage can dual-read +
   // read-repair it. Undefined for callers that never flipped (no X-User-Id).
-  return { storage: createKVStorage(c.env, auth?.legacyId), auth }
+  // TASK_STORAGE=d1 flips to the D1-backed adapter (T1 cutover); it migrates
+  // each user's KV blob into D1 lazily on first read. Default stays KV so the
+  // flip is a deploy-time var, independently rollback-able.
+  const storage =
+    c.env.TASK_STORAGE === 'd1'
+      ? createD1Storage(c.env, auth?.legacyId)
+      : createKVStorage(c.env, auth?.legacyId)
+  return { storage, auth }
 }
 
 /**
