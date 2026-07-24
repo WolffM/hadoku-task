@@ -7,7 +7,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, requireFields, extractField } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { handleOperation, handleBoardOperation, parseIfMatch, getContext } from './route-utils'
+import { handleBoardOperation, parseIfMatch, getBoardContext } from './route-utils'
 import { DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext } from '../types'
 import {
@@ -59,9 +59,11 @@ export function createTaskRoutes() {
 
     // Return the board's optimistic-concurrency version alongside tasks (body + ETag)
     // so clients can hold it and present If-Match on later writes. Additive — legacy
-    // clients ignore the extra field/header.
-    const { storage, auth } = getContext(c)
-    const file = await storage.getTasks(auth.userType, auth.sessionId, boardId)
+    // clients ignore the extra field/header. Board-aware (§7): a shared board reads
+    // the owner's tasks; readonly access still reads fine.
+    const ctx = await getBoardContext(c, boardId)
+    if (!ctx) return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    const file = await ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId)
     const version = file.version ?? 1
     c.header('ETag', `"${version}"`)
     return c.json({ tasks: file.tasks, version })
@@ -121,8 +123,11 @@ export function createTaskRoutes() {
     })
 
     const expectedVersion = parseIfMatch(c)
-    return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.createTask(storage, auth, input, boardId, expectedVersion)
+    return handleBoardOperation(
+      c,
+      boardId,
+      (storage, auth, bid) => TaskHandlers.createTask(storage, auth, input, bid, expectedVersion),
+      { write: true }
     )
   }) as never)
 
@@ -179,15 +184,19 @@ export function createTaskRoutes() {
 
     const { boardId: _, ...input } = body
     const expectedVersion = parseIfMatch(c)
-    return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.updateTask(
-        storage,
-        auth,
-        id,
-        input as Record<string, unknown>,
-        boardId,
-        expectedVersion
-      )
+    return handleBoardOperation(
+      c,
+      boardId,
+      (storage, auth, bid) =>
+        TaskHandlers.updateTask(
+          storage,
+          auth,
+          id,
+          input as Record<string, unknown>,
+          bid,
+          expectedVersion
+        ),
+      { write: true }
     )
   }) as never)
 
@@ -237,8 +246,11 @@ export function createTaskRoutes() {
     })
 
     const expectedVersion = parseIfMatch(c)
-    return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.completeTask(storage, auth, id, boardId, expectedVersion)
+    return handleBoardOperation(
+      c,
+      boardId,
+      (storage, auth, bid) => TaskHandlers.completeTask(storage, auth, id, bid, expectedVersion),
+      { write: true }
     )
   }) as never)
 
@@ -288,8 +300,11 @@ export function createTaskRoutes() {
     })
 
     const expectedVersion = parseIfMatch(c)
-    return handleBoardOperation(c, boardId, (storage, auth) =>
-      TaskHandlers.deleteTask(storage, auth, id, boardId, expectedVersion)
+    return handleBoardOperation(
+      c,
+      boardId,
+      (storage, auth, bid) => TaskHandlers.deleteTask(storage, auth, id, bid, expectedVersion),
+      { write: true }
     )
   }) as never)
 
@@ -325,7 +340,10 @@ export function createTaskRoutes() {
       boardId
     })
 
-    return handleOperation(c, (storage, auth) => TaskHandlers.getBoardStats(storage, auth, boardId))
+    const ctx = await getBoardContext(c, boardId)
+    if (!ctx) return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    const result = await TaskHandlers.getBoardStats(ctx.storage, ctx.auth, ctx.boardId)
+    return c.json(result)
   }) as never)
 
   return app

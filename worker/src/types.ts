@@ -12,6 +12,12 @@ export interface Env {
   FRIEND_KEYS?: string
   TASKS_KV: KVNamespace
   DB: D1Database
+  // Read-only key registry (§7.3). edge-router owns `key:{rawKey}` →
+  // { userId, name, tier }; task-api binds the same SESSIONS_KV namespace to
+  // resolve a grantee key → userId when granting a board share. Same pattern as
+  // prefs-api. Optional so local/dev without the binding still boots (grant-by-key
+  // then returns a clear error; grant-by-userId still works).
+  SESSIONS_KV?: KVNamespace
 }
 
 /**

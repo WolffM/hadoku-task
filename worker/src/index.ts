@@ -36,6 +36,7 @@ import type { AppContext, TaskAuthExtension } from './types'
 import { createSessionRoutes } from './routes/session'
 import { createPreferencesRoutes } from './routes/preferences'
 import { createBoardRoutes } from './routes/boards'
+import { createShareRoutes } from './routes/shares'
 import { createTaskRoutes } from './routes/tasks'
 import { handleMcp } from './mcp/handler'
 import { createTagsBatchRoutes } from './routes/tags-batch'
@@ -236,6 +237,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
   // Boards
   app.route('/task/api', createBoardRoutes())
+
+  // Board share management (§7): grant / list / revoke / leave.
+  app.route('/task/api', createShareRoutes())
 
   // Tags and batch operations - MUST come before tasks to avoid /batch-tag matching /:id
   app.route('/task/api', createTagsBatchRoutes())

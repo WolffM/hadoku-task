@@ -16,10 +16,27 @@ import type {
   UpdateTaskInput
 } from '@wolffm/task/api'
 
-export interface ToolCtx {
+/** A board reference resolved to its owner's data scope + the caller's access (§7). */
+export interface ResolvedBoard {
   storage: TaskStorage
   auth: AuthContext
+  /** The owner's slug for the board (differs from a shared handle the caller passed). */
+  boardId: string
+  access: 'owner' | 'contributor' | 'readonly'
+}
+
+export interface ToolCtx {
+  /** Caller-scoped storage, for non-board-scoped tools (list_boards). */
+  storage: TaskStorage
+  /** Caller-scoped auth. */
+  auth: AuthContext
   defaultBoard: string
+  /**
+   * Resolve a board ref to the owner's scope + caller's access. Own boards
+   * resolve to the caller with 'owner'; a shared handle resolves to the owner
+   * with the granted level; a real handle with no share resolves to null.
+   */
+  resolve: (ref: string) => Promise<ResolvedBoard | null>
 }
 
 export interface ToolDef {
@@ -47,14 +64,37 @@ const requireId = (args: Record<string, unknown>): string => {
 const boardOf = (args: Record<string, unknown>, ctx: ToolCtx): string =>
   str(args.board) ?? ctx.defaultBoard
 
-async function findTask(ctx: ToolCtx, board: string, id: string): Promise<Task | undefined> {
-  const tasks = await TaskHandlers.getBoardTasks(ctx.storage, ctx.auth, board)
+/**
+ * Resolve the board arg through the sharing layer so a shared handle reaches the
+ * owner's data (§7). Throws a clear error for an unknown/unshared board, and —
+ * when `write` — for a readonly grantee, mirroring the HTTP routes' 404/403.
+ */
+async function resolveBoard(
+  args: Record<string, unknown>,
+  ctx: ToolCtx,
+  opts: { write?: boolean } = {}
+): Promise<ResolvedBoard> {
+  const ref = boardOf(args, ctx)
+  const r = await ctx.resolve(ref)
+  if (!r) throw new Error(`Board ${ref} not found`)
+  if (opts.write && r.access === 'readonly') {
+    throw new Error(`Read-only access to board ${ref}`)
+  }
+  return r
+}
+
+async function findTask(r: ResolvedBoard, id: string): Promise<Task | undefined> {
+  const tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
   return tasks.find(t => t.id === id)
 }
 
 // Shared JSON-Schema fragments
 const boardProp = {
-  board: { type: 'string', description: 'Board id. Defaults to "main".' }
+  board: {
+    type: 'string',
+    description:
+      'Board reference. Your own board: its id (defaults to "main"). A board shared with you: its `handle` from list_boards.'
+  }
 }
 const scheduleProps = {
   date: {
@@ -82,13 +122,13 @@ export const TOOLS: ToolDef[] = [
       }
     },
     handler: async (args, ctx) => {
-      const board = boardOf(args, ctx)
-      let tasks = await TaskHandlers.getBoardTasks(ctx.storage, ctx.auth, board)
+      const r = await resolveBoard(args, ctx)
+      let tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
       const date = str(args.date)
       if (date) tasks = tasks.filter(t => dayOf(t) === date)
       const tag = str(args.tag)
       if (tag) tasks = tasks.filter(t => tagsOf(t).includes(tag))
-      return { board, count: tasks.length, tasks }
+      return { board: boardOf(args, ctx), count: tasks.length, tasks }
     }
   },
   {
@@ -100,9 +140,9 @@ export const TOOLS: ToolDef[] = [
       required: ['id']
     },
     handler: async (args, ctx) => {
-      const board = boardOf(args, ctx)
-      const task = await findTask(ctx, board, requireId(args))
-      if (!task) throw new Error(`Task ${str(args.id)} not found on board ${board}`)
+      const r = await resolveBoard(args, ctx)
+      const task = await findTask(r, requireId(args))
+      if (!task) throw new Error(`Task ${str(args.id)} not found on board ${boardOf(args, ctx)}`)
       return task
     }
   },
@@ -125,7 +165,7 @@ export const TOOLS: ToolDef[] = [
     handler: async (args, ctx) => {
       const title = str(args.title)
       if (!title) throw new Error('`title` is required')
-      const board = boardOf(args, ctx)
+      const r = await resolveBoard(args, ctx, { write: true })
       const input: CreateTaskInput = {
         title,
         notes: str(args.notes) ?? null,
@@ -135,8 +175,8 @@ export const TOOLS: ToolDef[] = [
         endTime: str(args.endTime) ?? null,
         metadata: obj(args.metadata) ?? null
       }
-      const { id } = await TaskHandlers.createTask(ctx.storage, ctx.auth, input, board)
-      return findTask(ctx, board, id)
+      const { id } = await TaskHandlers.createTask(r.storage, r.auth, input, r.boardId)
+      return findTask(r, id)
     }
   },
   {
@@ -157,7 +197,7 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (args, ctx) => {
       const id = requireId(args)
-      const board = boardOf(args, ctx)
+      const r = await resolveBoard(args, ctx, { write: true })
       const input: UpdateTaskInput = {}
       if (args.title !== undefined) input.title = str(args.title)
       if (args.notes !== undefined) input.notes = str(args.notes) ?? null
@@ -166,8 +206,8 @@ export const TOOLS: ToolDef[] = [
       if (args.startTime !== undefined) input.startTime = str(args.startTime) ?? null
       if (args.endTime !== undefined) input.endTime = str(args.endTime) ?? null
       if (args.metadata !== undefined) input.metadata = obj(args.metadata) ?? null
-      await TaskHandlers.updateTask(ctx.storage, ctx.auth, id, input, board)
-      return findTask(ctx, board, id)
+      await TaskHandlers.updateTask(r.storage, r.auth, id, input, r.boardId)
+      return findTask(r, id)
     }
   },
   {
@@ -185,10 +225,10 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (args, ctx) => {
       const id = requireId(args)
-      const board = boardOf(args, ctx)
+      const r = await resolveBoard(args, ctx, { write: true })
       const notes = str(args.notes) ?? ''
-      await TaskHandlers.updateTask(ctx.storage, ctx.auth, id, { notes }, board)
-      return findTask(ctx, board, id)
+      await TaskHandlers.updateTask(r.storage, r.auth, id, { notes }, r.boardId)
+      return findTask(r, id)
     }
   },
   {
@@ -207,7 +247,7 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (args, ctx) => {
       const id = requireId(args)
-      const board = boardOf(args, ctx)
+      const r = await resolveBoard(args, ctx, { write: true })
       const input: UpdateTaskInput =
         args.clear === true
           ? { date: null, startTime: null, endTime: null }
@@ -216,8 +256,8 @@ export const TOOLS: ToolDef[] = [
               startTime: str(args.startTime) ?? null,
               endTime: str(args.endTime) ?? null
             }
-      await TaskHandlers.updateTask(ctx.storage, ctx.auth, id, input, board)
-      return findTask(ctx, board, id)
+      await TaskHandlers.updateTask(r.storage, r.auth, id, input, r.boardId)
+      return findTask(r, id)
     }
   },
   {
@@ -230,8 +270,8 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (args, ctx) => {
       const id = requireId(args)
-      const board = boardOf(args, ctx)
-      return TaskHandlers.completeTask(ctx.storage, ctx.auth, id, board)
+      const r = await resolveBoard(args, ctx, { write: true })
+      return TaskHandlers.completeTask(r.storage, r.auth, id, r.boardId)
     }
   },
   {
@@ -244,17 +284,27 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (args, ctx) => {
       const id = requireId(args)
-      const board = boardOf(args, ctx)
-      return TaskHandlers.deleteTask(ctx.storage, ctx.auth, id, board)
+      const r = await resolveBoard(args, ctx, { write: true })
+      return TaskHandlers.deleteTask(r.storage, r.auth, id, r.boardId)
     }
   },
   {
     name: 'list_boards',
-    description: 'List the available boards.',
+    description:
+      'List the available boards — your own plus any shared with you. For a SHARED board (access "contributor"/"readonly"), address task tools by its `handle`, not its `id`; your own board `id` only ever resolves within your own tasks.',
     inputSchema: { type: 'object', properties: {} },
     handler: async (_args, ctx) => {
       const boards = await TaskHandlers.getBoards(ctx.storage, ctx.auth)
-      return { boards: boards.boards.map(b => ({ id: b.id, name: b.name, tags: b.tags })) }
+      return {
+        boards: boards.boards.map(b => ({
+          id: b.id,
+          name: b.name,
+          tags: b.tags,
+          handle: b.handle,
+          access: b.access ?? 'owner',
+          ownerUserId: b.ownerUserId
+        }))
+      }
     }
   }
 ]

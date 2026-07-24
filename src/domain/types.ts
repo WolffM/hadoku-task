@@ -65,6 +65,15 @@ export interface Board {
   // (two-track vertical flow). Selects the BoardTypeConfig. Optional/absent ⇒
   // standard.
   mode?: string | null
+  // Globally-unique opaque board reference (§7.1). Slugs (`id`) collide across
+  // users — every user has a `main` — so the API disambiguates shared boards by
+  // `handle`. Own boards may still be addressed by slug.
+  handle?: string
+  // Sharing (§7). Present on every board in a GET /boards response so a client
+  // knows what it may offer before the user acts. `ownerUserId` is the board's
+  // owner; `access` is THIS caller's level on it.
+  ownerUserId?: string
+  access?: 'owner' | 'contributor' | 'readonly'
 }
 
 export interface BoardsFile {
@@ -98,7 +107,18 @@ export interface StatsFile {
 
 export interface AuthContext {
   userType: UserType
+  // The DATA scope: whose namespace this operation reads/writes. For own-board
+  // access this is the caller; for a shared board it is resolved to the board's
+  // OWNER (§7.1), so the 16 handler signatures + the Storage interface never
+  // learn about sharing — only board resolution does.
   sessionId?: string
+  // The AUTHORISATION identity: the authenticated key's userId, always the
+  // caller regardless of whose data `sessionId` points at. Undefined ⇒ same as
+  // sessionId (own-board access, the common path).
+  callerId?: string
+  // The caller's access level on the resolved board. Undefined ⇒ 'owner' (own
+  // board). Routes gate writes on this without trusting the caller's word.
+  access?: 'owner' | 'contributor' | 'readonly'
 }
 
 export interface CreateTaskInput {

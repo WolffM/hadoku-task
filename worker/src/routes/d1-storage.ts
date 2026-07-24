@@ -76,6 +76,10 @@ interface BoardRow {
   repo: string | null
   version: number
   tasks_version: number
+  handle: string
+  // Sharing (§7): the board's owner and THIS viewer's access level.
+  owner_user_id: string
+  access: 'owner' | 'contributor' | 'readonly'
   // From the board_prefs LEFT JOIN (COALESCEd, so always present on read).
   pinned: number
   position: number
@@ -108,7 +112,10 @@ function rowToBoard(r: BoardRow): Board {
     tasks: [], // metadata only; the handler fans out getTasks per board (§5.5)
     pinned: r.pinned === 1,
     position: r.position,
-    mode: r.mode
+    mode: r.mode,
+    handle: r.handle,
+    ownerUserId: r.owner_user_id,
+    access: r.access
   }
 }
 
@@ -161,18 +168,33 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // boards (a grantee pins under the sharer's owner_id). COALESCE so a board
       // with no pref row reads as unpinned (0,0). Pinned first, then by position,
       // then stable by creation — so the top bar order is deterministic.
+      // Owned boards UNION boards shared with this viewer (§7.1). Both carry the
+      // owner id + this viewer's access level, and both join board_prefs keyed by
+      // the VIEWER (§7.2) so a grantee's pins are their own. Pinned-first order is
+      // stable across the union.
       const { results } = await db
         .prepare(
-          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version,
+          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version, b.handle,
+                  b.user_id AS owner_user_id, 'owner' AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
                   COALESCE(p.position, 0) AS position
              FROM boards b
              LEFT JOIN board_prefs p
-               ON p.user_id = ? AND p.owner_id = ? AND p.board_id = b.id
+               ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
             WHERE b.user_id = ?
-            ORDER BY pinned DESC, position ASC, b.created_at, b.id`
+           UNION ALL
+           SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version, b.handle,
+                  b.user_id AS owner_user_id, s.level AS access,
+                  COALESCE(p.pinned, 0)   AS pinned,
+                  COALESCE(p.position, 0) AS position
+             FROM board_shares s
+             JOIN boards b ON b.user_id = s.owner_user_id AND b.id = s.board_id
+             LEFT JOIN board_prefs p
+               ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
+            WHERE s.grantee_user_id = ?
+            ORDER BY pinned DESC, position ASC, owner_user_id, id`
         )
-        .bind(uid, uid, uid)
+        .bind(uid, uid, uid, uid)
         .all<BoardRow>()
       const boards = results.length
         ? results.map(rowToBoard)

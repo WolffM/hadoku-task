@@ -13,6 +13,7 @@
 import type { Context } from 'hono'
 import type { AppContext } from '../types'
 import { createD1Storage } from '../routes/d1-storage'
+import { resolveBoardCtx } from '../routes/route-utils'
 import { DEFAULT_BOARD_ID } from '../constants'
 import { TOOLS, callTool, type ToolCtx } from './tools'
 
@@ -40,7 +41,10 @@ export async function handleMcp(c: Context<AppContext>): Promise<Response> {
     // path's masked-key dual-read, matching the HTTP routes.
     storage: createD1Storage(c.env, auth?.legacyId),
     auth,
-    defaultBoard: DEFAULT_BOARD_ID
+    defaultBoard: DEFAULT_BOARD_ID,
+    // Share-aware board resolution — identical to the HTTP routes, so a shared
+    // handle reaches the owner's data and a readonly grantee's writes are refused.
+    resolve: ref => resolveBoardCtx(c.env, auth, ref)
   }
 
   let payload: JsonRpcMessage | JsonRpcMessage[]
