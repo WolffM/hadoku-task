@@ -55,6 +55,32 @@ export function storeSessionId(sessionId: string): void {
 }
 
 /**
+ * Anon-session storage key.
+ *
+ * DELIBERATELY NOT `hadoku_session_id`: the host page's micro-frontend loader
+ * (hadoku_site mf-loader.js) OWNS `hadoku_session_id` and wipes it on every boot
+ * when the server says the user is public — it treats any stored value as a
+ * stale *auth* session. Our anon local session is a different thing, so it needs
+ * a key the host never touches; otherwise the host wipes it, we re-mint a fresh
+ * id, and every reload strands the previous anon user's tasks.
+ */
+const ANON_SESSION_KEY = 'task_anon_session_id'
+
+/**
+ * The stable per-browser anon (public-user) sessionId. Minted once and reused
+ * across reloads, so an unauthenticated user's local tasks survive a reload.
+ */
+export function getAnonSessionId(): string {
+  let id = localStorage.getItem(ANON_SESSION_KEY)
+  if (!id) {
+    id = `public-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    localStorage.setItem(ANON_SESSION_KEY, id)
+    logger.info('[Session] Minted anon sessionId', { id })
+  }
+  return id
+}
+
+/**
  * Get the stored userType from localStorage
  */
 export function getStoredUserType(): UserType | null {
@@ -84,18 +110,12 @@ export async function performSessionHandshake(
 ): Promise<HandshakeResult> {
   const oldSessionId = getStoredSessionId()
 
-  // Public users: don't perform handshake, use stable localStorage-based sessionId
+  // Public users: no server handshake. Resolve (and, first time, mint) the stable
+  // anon sessionId from a host-independent key so it survives reloads — the host
+  // wipes `hadoku_session_id` for public users on every boot (see ANON_SESSION_KEY).
   if (userType === 'public') {
-    // If we have a stored sessionId, keep using it (stable across reloads)
-    if (oldSessionId) {
-      logger.info('[Session] Public user - using existing sessionId', { oldSessionId })
-      return { preferences: null, serverUserType: 'public' }
-    }
-
-    // First time public user - generate and store a stable sessionId
-    const publicSessionId = `public-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    storeSessionId(publicSessionId)
-    logger.info('[Session] Public user - created stable sessionId', { publicSessionId })
+    const anonId = getAnonSessionId()
+    logger.info('[Session] Public user - using anon sessionId', { anonId })
     return { preferences: null, serverUserType: 'public' }
   }
 

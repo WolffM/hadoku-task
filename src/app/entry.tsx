@@ -7,7 +7,7 @@ import '@wolffm/themes/style.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/logger/client'
 import { installDevLogSink } from '../utils/devLogSink'
-import { getStoredSessionId, getStoredUserType } from '../api/session'
+import { getStoredSessionId, getStoredUserType, getAnonSessionId } from '../api/session'
 import { isMobileApp } from '../utils/platform'
 import type { UserType } from '../domain/types'
 
@@ -72,7 +72,13 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   const userType =
     storedUserType || props.userType || (urlParams.get('userType') as UserType) || 'public'
 
-  const sessionId = storedSessionId || props.sessionId || 'public-session'
+  // Authed users' sessionId comes from the host (via hadoku_session_id / props).
+  // Public users get the stable, host-independent anon id so their local tasks
+  // survive reloads (the host wipes hadoku_session_id for public every boot).
+  const sessionId =
+    userType === 'public'
+      ? getAnonSessionId()
+      : storedSessionId || props.sessionId || 'public-session'
 
   const finalProps = { ...props, userType, sessionId }
   // The host page (Astro) may have rendered a static skeleton into #root to

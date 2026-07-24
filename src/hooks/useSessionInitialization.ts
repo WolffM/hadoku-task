@@ -8,6 +8,7 @@ import {
   performSessionHandshake,
   clearOldSessionStorage,
   getStoredSessionId,
+  getAnonSessionId,
   storeUserType
 } from '../api/session'
 import { loadTaskPreferences } from '../prefs/taskPrefs'
@@ -84,7 +85,9 @@ export function useSessionInitialization({
         const handshakeResult = await handshakePromise
         if (handleExpiry(handshakeResult.serverUserType)) return
 
-        finalSessionId = getStoredSessionId() || propsSessionId
+        // Public users key their local data by the host-independent anon id, NOT
+        // hadoku_session_id (which the host wipes for public users every boot).
+        finalSessionId = getAnonSessionId()
 
         // For public/anon the SDK serves its localStorage cache (prefs-api 401s
         // anon, by design).

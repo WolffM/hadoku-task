@@ -22,6 +22,7 @@ import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator'
 import { isMobileApp } from '../utils/platform'
 import { useTaskHandlers } from '../hooks/useTaskHandlers'
 import { useSessionInitialization } from '../hooks/useSessionInitialization'
+import { getAnonSessionId } from '../api/session'
 import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -77,11 +78,11 @@ export default function App(props: TaskAppProps = {}) {
 
   // Initialize effectiveSessionId immediately for public users to prevent storage churn
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
-    // For public users, use stored sessionId immediately if available
-    if (userType === 'public') {
-      const stored =
-        typeof window !== 'undefined' ? localStorage.getItem('hadoku_session_id') : null
-      return stored || propsSessionId
+    // Public users get the stable, host-independent anon id (see getAnonSessionId)
+    // so their local tasks survive reloads. entry.tsx passes the same value in as
+    // propsSessionId, so this is belt-and-suspenders for a direct mount.
+    if (userType === 'public' && typeof window !== 'undefined') {
+      return getAnonSessionId()
     }
     return propsSessionId
   })
