@@ -9,6 +9,7 @@ import type {
   Task,
   TasksFile,
   StatsFile,
+  Board,
   BoardsFile,
   CreateTaskInput,
   UpdateTaskInput,
@@ -321,6 +322,71 @@ export async function deleteBoard(
         updatedBoards,
         result: { ok: true, message: `Board ${boardId} deleted` }
       }
+    },
+    expectedVersion
+  )
+}
+
+/**
+ * Rename a board (and, in future tranches, other board metadata). Goes through
+ * the board-collection OCC so a concurrent rename/reorder yields 409, not a
+ * silent clobber.
+ */
+export async function updateBoard(
+  storage: Storage,
+  auth: AuthContext,
+  boardId: string,
+  patch: { name?: string },
+  expectedVersion?: number
+): Promise<{ ok: boolean; board: Board }> {
+  return withBoardOperation(
+    storage,
+    auth,
+    (boards, timestamp) => {
+      const { board } = findBoardOrThrow(boards, boardId)
+      const updated: Board = {
+        ...board,
+        ...(patch.name !== undefined ? { name: patch.name } : {})
+      }
+      const updatedBoards: BoardsFile = {
+        ...boards,
+        updatedAt: timestamp,
+        boards: boards.boards.map(b => (b.id === boardId ? updated : b))
+      }
+      return { updatedBoards, result: { ok: true, board: updated } }
+    },
+    expectedVersion
+  )
+}
+
+/**
+ * Set the pinned board set and its order in one operation — this is pin, unpin
+ * and reorder all at once. `orderedIds` is the exact desired top-bar order:
+ * every listed board becomes pinned with position = its index; every board NOT
+ * listed becomes unpinned. Goes through board-collection OCC (concurrent reorder
+ * → 409). Unknown ids are ignored so a stale client can't wedge the operation.
+ */
+export async function setPinnedBoards(
+  storage: Storage,
+  auth: AuthContext,
+  orderedIds: string[],
+  expectedVersion?: number
+): Promise<{ ok: boolean; boards: Board[] }> {
+  return withBoardOperation(
+    storage,
+    auth,
+    (boards, timestamp) => {
+      const orderOf = new Map(orderedIds.map((id, i) => [id, i]))
+      const updated = boards.boards.map(b => {
+        const pos = orderOf.get(b.id)
+        return { ...b, pinned: pos !== undefined, position: pos ?? 0 }
+      })
+      const updatedBoards: BoardsFile = {
+        ...boards,
+        updatedAt: timestamp,
+        boards: updated
+      }
+      return { updatedBoards, result: { ok: true, boards: updated } }
     },
     expectedVersion
   )

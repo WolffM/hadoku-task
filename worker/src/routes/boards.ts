@@ -188,5 +188,106 @@ export function createBoardRoutes() {
     return c.json(result, 200)
   }) as never)
 
+  // Update a board's metadata (rename). Goes through board-collection OCC.
+  const updateBoardRoute = createRoute({
+    method: 'patch',
+    path: '/boards/{boardId}',
+    tags: ['Boards'],
+    summary: 'Update a board',
+    description: 'Renames a board. Send If-Match with the board-collection version for a safe write.',
+    request: {
+      params: z.object({ boardId: z.string().openapi({ example: 'work-board' }) }),
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({ name: z.string().min(1).max(100) })
+          }
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Board updated',
+        content: { 'application/json': { schema: z.object({ ok: z.boolean() }).passthrough() } }
+      },
+      400: { description: 'Invalid request', content: { 'application/json': { schema: ErrorResponseSchema } } }
+    }
+  })
+
+  app.openapi(updateBoardRoute, (async (c: any) => {
+    const { boardId } = c.req.valid('param')
+    const body = c.req.valid('json')
+
+    const validationError = validateBoardId(boardId)
+    if (validationError) {
+      logError('PATCH', '/task/api/boards/:boardId', validationError)
+      return badRequest(c, validationError)
+    }
+
+    logRequest('PATCH', `/task/api/boards/${boardId}`, {
+      userType: c.get('authContext').userType,
+      boardId
+    })
+
+    const { storage, auth } = getContext(c)
+    const lockKey = boardsKey(auth.sessionId)
+    const expectedVersion = parseIfMatch(c)
+
+    const result = await withBoardLock(lockKey, async () => {
+      return TaskHandlers.updateBoard(storage, auth, boardId, { name: body.name }, expectedVersion)
+    })
+
+    const v = (result as unknown as { version?: number }).version
+    if (typeof v === 'number') c.header('ETag', `"${v}"`)
+    return c.json(result, 200)
+  }) as never)
+
+  // Set the pinned board set + order (pin, unpin, reorder in one write).
+  const setPinnedRoute = createRoute({
+    method: 'put',
+    path: '/boards/pinned',
+    tags: ['Boards'],
+    summary: 'Set pinned boards',
+    description:
+      'Replaces the pinned set with `order` (exact top-bar order); boards not listed become unpinned. If-Match honoured.',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({ order: z.array(z.string()).max(1000) })
+          }
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Pinned set updated',
+        content: { 'application/json': { schema: z.object({ ok: z.boolean() }).passthrough() } }
+      },
+      400: { description: 'Invalid request', content: { 'application/json': { schema: ErrorResponseSchema } } }
+    }
+  })
+
+  app.openapi(setPinnedRoute, (async (c: any) => {
+    const body = c.req.valid('json')
+
+    logRequest('PUT', '/task/api/boards/pinned', {
+      userType: c.get('authContext').userType,
+      count: body.order.length
+    })
+
+    const { storage, auth } = getContext(c)
+    const lockKey = boardsKey(auth.sessionId)
+    const expectedVersion = parseIfMatch(c)
+
+    const result = await withBoardLock(lockKey, async () => {
+      return TaskHandlers.setPinnedBoards(storage, auth, body.order, expectedVersion)
+    })
+
+    const v = (result as unknown as { version?: number }).version
+    if (typeof v === 'number') c.header('ETag', `"${v}"`)
+    return c.json(result, 200)
+  }) as never)
+
   return app
 }

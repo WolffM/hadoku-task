@@ -8,7 +8,7 @@ import { BoardButton } from './BoardButton'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
-import { MAX_BOARDS } from '../app/constants'
+import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/logger/client'
 
@@ -45,12 +45,23 @@ export function BoardsSection({
 }: BoardsSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
 
-  const boardsList =
-    boards && boards.boards
-      ? boards.boards.slice(0, MAX_BOARDS)
+  // The top bar shows the pinned boards (server-ordered by position), capped at
+  // TOPBAR_BOARD_SLOTS. Before a user has pinned anything, fall back to the first
+  // N in server order so existing users don't get an empty bar. The active board
+  // is always surfaced even when it's unpinned (reached via the picker).
+  const allBoards =
+    boards && boards.boards && boards.boards.length
+      ? boards.boards
       : [{ id: 'main', name: 'main', tasks: [], tags: [] }]
+  const pinned = allBoards.filter(b => b.pinned)
+  const base = pinned.length > 0 ? pinned : allBoards
+  const topBar = base.slice(0, TOPBAR_BOARD_SLOTS)
+  const boardsList = topBar.some(b => b.id === currentBoardId)
+    ? topBar
+    : [...topBar, ...allBoards.filter(b => b.id === currentBoardId)]
 
-  const canAddMoreBoards = !boards || (boards.boards && boards.boards.length < MAX_BOARDS)
+  // The server never capped board count; creation is always available now.
+  const canAddMoreBoards = true
 
   const handleSyncClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isSyncing) return

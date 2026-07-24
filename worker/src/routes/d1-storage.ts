@@ -80,6 +80,9 @@ interface BoardRow {
   repo: string | null
   version: number
   tasks_version: number
+  // From the board_prefs LEFT JOIN (COALESCEd, so always present on read).
+  pinned: number
+  position: number
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -105,7 +108,9 @@ function rowToBoard(r: BoardRow): Board {
     id: r.id,
     name: r.name,
     tags: r.tags ? (JSON.parse(r.tags) as string[]) : [],
-    tasks: [] // metadata only; the handler fans out getTasks per board (§5.5)
+    tasks: [], // metadata only; the handler fans out getTasks per board (§5.5)
+    pinned: r.pinned === 1,
+    position: r.position
   }
 }
 
@@ -252,12 +257,23 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         .prepare('SELECT version, updated_at FROM board_meta WHERE user_id = ?')
         .bind(uid)
         .first<{ version: number; updated_at: string }>()
+      // LEFT JOIN board_prefs for this viewer's pin/position state (§7.2). For
+      // own boards owner_id = uid; the join stays correct when T5 adds shared
+      // boards (a grantee pins under the sharer's owner_id). COALESCE so a board
+      // with no pref row reads as unpinned (0,0). Pinned first, then by position,
+      // then stable by creation — so the top bar order is deterministic.
       const { results } = await db
         .prepare(
-          `SELECT id, name, tags, mode, repo, version, tasks_version
-             FROM boards WHERE user_id = ? ORDER BY created_at, id`
+          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version,
+                  COALESCE(p.pinned, 0)   AS pinned,
+                  COALESCE(p.position, 0) AS position
+             FROM boards b
+             LEFT JOIN board_prefs p
+               ON p.user_id = ? AND p.owner_id = ? AND p.board_id = b.id
+            WHERE b.user_id = ?
+            ORDER BY pinned DESC, position ASC, b.created_at, b.id`
         )
-        .bind(uid)
+        .bind(uid, uid, uid)
         .all<BoardRow>()
       const boards = results.length
         ? results.map(rowToBoard)
@@ -338,6 +354,23 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
               .bind(uid, b.id, newHandle(), b.name, JSON.stringify(b.tags ?? []), ts, ts)
           )
         }
+
+        // Per-viewer pin/position (board_prefs, §7.2). Only reconcile when the
+        // board carries the fields — a create or a legacy payload that omits
+        // them must not clobber an existing pin. owner_id = uid: in T2 the viewer
+        // only ever writes prefs for boards they own.
+        if (b.pinned !== undefined || b.position !== undefined) {
+          stmts.push(
+            db
+              .prepare(
+                `INSERT INTO board_prefs (user_id, owner_id, board_id, pinned, position)
+                   VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT(user_id, owner_id, board_id)
+                   DO UPDATE SET pinned = excluded.pinned, position = excluded.position`
+              )
+              .bind(uid, uid, b.id, b.pinned ? 1 : 0, b.position ?? 0)
+          )
+        }
       }
       for (const id of existingIds) {
         if (!desiredIds.has(id)) {
@@ -345,6 +378,11 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
             db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(uid, id)
           )
           stmts.push(db.prepare('DELETE FROM boards WHERE user_id = ? AND id = ?').bind(uid, id))
+          // Drop this viewer's pref rows for the removed board (all owners: cheap
+          // and correct — a grantee's pin of a since-deleted board is dead too).
+          stmts.push(
+            db.prepare('DELETE FROM board_prefs WHERE user_id = ? AND board_id = ?').bind(uid, id)
+          )
         }
       }
       if (stmts.length) await db.batch(stmts)

@@ -52,6 +52,12 @@ export interface Board {
   // persistent list of known tags for this board (allows empty tag lists to remain)
   tags: string[]
   stats?: StatsFile
+  // Per-VIEWER board state (board_prefs, §7.2). `pinned` puts the board in the
+  // top bar and the cold-load hydration set; `position` orders the pinned set.
+  // Populated on read; a board with neither is an unpinned board reached via the
+  // picker. Optional so pre-T2 payloads and the KV path stay valid.
+  pinned?: boolean
+  position?: number
 }
 
 export interface BoardsFile {
