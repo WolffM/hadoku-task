@@ -8,17 +8,20 @@ import { Toaster, type ToastState } from '@wolffm/task-ui-components'
 import {
   ClearTagModal,
   CreateBoardModal,
+  EditBoardsModal,
   CreateTagModal,
   EditTagModal,
   BoardContextMenu,
   TagContextMenu
 } from './modals'
 import type { PendingTaskOperation } from '../hooks/useModalState'
+import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 
 interface AppModalsProps {
   // Modal states
   confirmClearTag: { tag: string; count: number } | null
   showNewBoardDialog: boolean
+  showEditBoardsDialog: boolean
   showNewTagDialog: boolean
   editTagModal: { taskId: string; currentTag: string | null } | null
   boardContextMenu: { boardId: string; x: number; y: number } | null
@@ -48,6 +51,10 @@ interface AppModalsProps {
   onBoardInputChange: (value: string) => void
   validateBoardName: (name: string) => string | null
 
+  onCloseEditBoards: () => void
+  onRenameBoard: (boardId: string, name: string) => Promise<void>
+  onSetPinnedBoards: (order: string[]) => Promise<void>
+
   onCloseNewTagDialog: () => void
   onConfirmCreateTag: (tagName: string) => Promise<void>
   onTagInputChange: (value: string) => void
@@ -68,6 +75,7 @@ interface AppModalsProps {
 export function AppModals({
   confirmClearTag,
   showNewBoardDialog,
+  showEditBoardsDialog,
   showNewTagDialog,
   editTagModal,
   boardContextMenu,
@@ -87,6 +95,9 @@ export function AppModals({
   onConfirmCreateBoard,
   onBoardInputChange,
   validateBoardName,
+  onCloseEditBoards,
+  onRenameBoard,
+  onSetPinnedBoards,
   onCloseNewTagDialog,
   onConfirmCreateTag,
   onTagInputChange,
@@ -117,6 +128,19 @@ export function AppModals({
         onClose={onCloseNewBoardDialog}
         onConfirm={onConfirmCreateBoard}
         onInputChange={onBoardInputChange}
+        validateBoardName={validateBoardName}
+      />
+
+      <EditBoardsModal
+        isOpen={showEditBoardsDialog}
+        boards={boards?.boards ?? []}
+        currentBoardId={currentBoardId}
+        slots={TOPBAR_BOARD_SLOTS}
+        onClose={onCloseEditBoards}
+        onCreate={onConfirmCreateBoard}
+        onRename={onRenameBoard}
+        onDelete={onDeleteBoard}
+        onSetPinned={onSetPinnedBoards}
         validateBoardName={validateBoardName}
       />
 

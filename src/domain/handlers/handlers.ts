@@ -58,9 +58,22 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
     })
   )
 
+  // Order pinned boards first, by their position, then leave the rest in storage
+  // order. The D1 backend already sorts this way in SQL; the KV/localStorage
+  // backend returns raw insertion order, so normalise here to keep both paths —
+  // and the top bar / Edit Boards modal — consistent. Array.sort is stable, so
+  // unpinned boards keep their existing relative order.
+  const orderedBoards = [...populatedBoards].sort((a, b) => {
+    const ap = a.pinned ? 0 : 1
+    const bp = b.pinned ? 0 : 1
+    if (ap !== bp) return ap - bp
+    if (a.pinned && b.pinned) return (a.position ?? 0) - (b.position ?? 0)
+    return 0
+  })
+
   return {
     ...boardsFile,
-    boards: populatedBoards
+    boards: orderedBoards
   }
 }
 

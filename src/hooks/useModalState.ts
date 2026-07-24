@@ -19,6 +19,10 @@ export interface UseModalStateReturn {
   showNewBoardDialog: boolean
   setShowNewBoardDialog: (show: boolean) => void
 
+  // Edit Boards Dialog (pin/reorder/rename/delete)
+  showEditBoardsDialog: boolean
+  setShowEditBoardsDialog: (show: boolean) => void
+
   // Create Tag Dialog
   showNewTagDialog: boolean
   setShowNewTagDialog: (show: boolean) => void
@@ -63,6 +67,9 @@ export function useModalState(): UseModalStateReturn {
   // Create Board Dialog
   const [showNewBoardDialog, setShowNewBoardDialog] = useState(false)
 
+  // Edit Boards Dialog
+  const [showEditBoardsDialog, setShowEditBoardsDialog] = useState(false)
+
   // Create Tag Dialog
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
 
@@ -100,6 +107,8 @@ export function useModalState(): UseModalStateReturn {
     setConfirmClearTag,
     showNewBoardDialog,
     setShowNewBoardDialog,
+    showEditBoardsDialog,
+    setShowEditBoardsDialog,
     showNewTagDialog,
     setShowNewTagDialog,
     showSettingsModal,

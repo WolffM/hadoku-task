@@ -324,7 +324,8 @@
   flex: 1;
 }
 
-.board-add-btn {
+.board-add-btn,
+.board-edit-btn {
   /* Match filter add button style */
   padding: var(--hdk-space-sm) var(--hdk-space-md);
   font-size: var(--hdk-text-base);
@@ -343,12 +344,14 @@
   justify-content: center;
 }
 
-.board-add-btn:hover {
+.board-add-btn:hover,
+.board-edit-btn:hover {
   background: var(--color-primary-hover);
   color: var(--color-text);
 }
 
-.board-add-btn:focus {
+.board-add-btn:focus,
+.board-edit-btn:focus {
   outline: none;
   box-shadow: var(--hdk-shadow-focus-sm);
 }

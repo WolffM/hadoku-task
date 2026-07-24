@@ -375,6 +375,16 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     await reload()
   }
 
+  async function renameBoard(boardId: string, name: string) {
+    await api.renameBoard(boardId, name)
+    await reload()
+  }
+
+  async function setPinnedBoards(order: string[]) {
+    await api.setPinnedBoards(order)
+    await reload()
+  }
+
   async function createTagOnBoard(tag: string) {
     await api.createTag(tag, currentBoardId)
     await reload()
@@ -419,6 +429,8 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     // Board operations
     createBoard,
     deleteBoard,
+    renameBoard,
+    setPinnedBoards,
     switchBoard,
     moveTasksToBoard,
     createTagOnBoard,

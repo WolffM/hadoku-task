@@ -23,6 +23,7 @@ export interface BoardsSectionProps {
   onMoveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<void>
   onClearSelection: () => void
   onCreateBoardClick: () => void
+  onEditBoardsClick: () => void
   onPendingOperation: (op: PendingTaskOperation | null) => void
   onInitialLoad: () => Promise<void>
   onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
@@ -39,6 +40,7 @@ export function BoardsSection({
   onMoveTasksToBoard,
   onClearSelection,
   onCreateBoardClick,
+  onEditBoardsClick,
   onPendingOperation,
   onInitialLoad,
   onShowToast
@@ -133,6 +135,15 @@ export function BoardsSection({
             ＋
           </button>
         )}
+
+        <button
+          className="board-edit-btn"
+          onClick={onEditBoardsClick}
+          title="Edit boards"
+          aria-label="Edit boards"
+        >
+          ⚙
+        </button>
 
         {userType !== 'public' && (
           <button

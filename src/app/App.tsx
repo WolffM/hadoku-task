@@ -144,6 +144,8 @@ export default function App(props: TaskAppProps = {}) {
     currentBoardId,
     createBoard,
     deleteBoard,
+    renameBoard,
+    setPinnedBoards,
     switchBoard,
     moveTasksToBoard,
     createTagOnBoard,
@@ -357,6 +359,7 @@ export default function App(props: TaskAppProps = {}) {
             modals.setValidationError(null)
             modals.setShowNewBoardDialog(true)
           }}
+          onEditBoardsClick={() => modals.setShowEditBoardsDialog(true)}
           onPendingOperation={modals.setPendingTaskOperation}
           onInitialLoad={initialLoad}
           onShowToast={showToast}
@@ -458,6 +461,7 @@ export default function App(props: TaskAppProps = {}) {
         <AppModals
           confirmClearTag={modals.confirmClearTag}
           showNewBoardDialog={modals.showNewBoardDialog}
+          showEditBoardsDialog={modals.showEditBoardsDialog}
           showNewTagDialog={modals.showNewTagDialog}
           editTagModal={modals.editTagModal}
           boardContextMenu={modals.boardContextMenu}
@@ -484,6 +488,9 @@ export default function App(props: TaskAppProps = {}) {
             modals.setValidationError(null)
           }}
           validateBoardName={handlers.validateBoardName}
+          onCloseEditBoards={() => modals.setShowEditBoardsDialog(false)}
+          onRenameBoard={renameBoard}
+          onSetPinnedBoards={setPinnedBoards}
           onCloseNewTagDialog={() => {
             modals.setShowNewTagDialog(false)
             modals.setPendingTaskOperation(null)

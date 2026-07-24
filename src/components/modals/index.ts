@@ -5,6 +5,7 @@
 
 export { ClearTagModal } from './ClearTagModal'
 export { CreateBoardModal } from './CreateBoardModal'
+export { EditBoardsModal } from './EditBoardsModal'
 export { CreateTagModal } from './CreateTagModal'
 export { EditTagModal } from './EditTagModal'
 export { BoardContextMenu } from './BoardContextMenu'
@@ -12,6 +13,7 @@ export { TagContextMenu } from './TagContextMenu'
 
 export type { ClearTagModalProps } from './ClearTagModal'
 export type { CreateBoardModalProps } from './CreateBoardModal'
+export type { EditBoardsModalProps } from './EditBoardsModal'
 export type { CreateTagModalProps } from './CreateTagModal'
 export type { EditTagModalProps } from './EditTagModal'
 export type { BoardContextMenuProps } from './BoardContextMenu'

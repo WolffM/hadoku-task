@@ -50,7 +50,12 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
           name: b.name,
           tasks: tasksFile.tasks,
           stats: statsFile,
-          tags: b.tags || []
+          tags: b.tags || [],
+          // Preserve per-viewer pin/position (they live on the board in the KV
+          // blob for the local path). Dropping them here is what made the top
+          // bar and Edit Boards modal ignore pins in offline/public mode.
+          pinned: b.pinned,
+          position: b.position
         })
       }
 
@@ -84,6 +89,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       await storage.deleteBoardData(userType, sessionId, boardId)
 
       // Broadcast update
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
+    },
+
+    async renameBoard(boardId: string, name: string): Promise<void> {
+      await TaskHandlers.updateBoard(storage, authContext, boardId, { name })
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
+    },
+
+    async setPinnedBoards(order: string[]): Promise<void> {
+      await TaskHandlers.setPinnedBoards(storage, authContext, order)
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
     },
 

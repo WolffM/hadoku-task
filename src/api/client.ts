@@ -390,6 +390,38 @@ export function createApi(
       return result
     },
 
+    async renameBoard(boardId: string, name: string) {
+      const result = await localStorage.renameBoard(boardId, name)
+      backgroundSync(
+        `/task/api/boards/${encodeURIComponent(boardId)}`,
+        {
+          method: 'PATCH',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ name })
+        },
+        'renameBoard',
+        { boardId },
+        onSyncError
+      )
+      return result
+    },
+
+    async setPinnedBoards(order: string[]) {
+      const result = await localStorage.setPinnedBoards(order)
+      backgroundSync(
+        '/task/api/boards/pinned',
+        {
+          method: 'PUT',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ order })
+        },
+        'setPinnedBoards',
+        { count: order.length },
+        onSyncError
+      )
+      return result
+    },
+
     // User preferences moved to @wolffm/prefs-client (src/prefs/taskPrefs.ts).
     // The legacy GET/PUT /task/api/preferences path is gone from the client;
     // the worker route is retained for the 30d migration window (Tranche B).
