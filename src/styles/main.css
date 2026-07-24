@@ -324,6 +324,11 @@
   flex: 1;
 }
 
+/* Push edit-boards to the far right of the boards bar, off the + create button. */
+.board-edit-btn {
+  margin-left: auto;
+}
+
 .board-add-btn,
 .board-edit-btn {
   /* Match filter add button style */
