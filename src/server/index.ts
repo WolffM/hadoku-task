@@ -35,7 +35,8 @@ export type {
   BoardsFile,
   StatsFile,
   UserType,
-  ULID
+  ULID,
+  Lane
 } from '../domain/types.js'
 
 // API Input/Output Types
@@ -51,5 +52,12 @@ export {
   DomainError,
   TaskNotFoundError,
   BoardNotFoundError,
-  VersionConflictError
+  VersionConflictError,
+  NotesTooLargeError,
+  MAX_NOTES_BYTES,
+  LaneNotEditableError,
+  LaneInvalidError,
+  BoardSchemaLockedError,
+  ActivationDigestMismatchError,
+  LaneSetInvalidError
 } from '../domain/types.js'

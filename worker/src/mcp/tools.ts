@@ -13,8 +13,10 @@ import type {
   AuthContext,
   Task,
   CreateTaskInput,
-  UpdateTaskInput
+  UpdateTaskInput,
+  Lane
 } from '@wolffm/task/api'
+import { assertHumanLaneWrite } from '../routes/board-automation'
 
 /** A board reference resolved to its owner's data scope + the caller's access (§7). */
 export interface ResolvedBoard {
@@ -23,6 +25,10 @@ export interface ResolvedBoard {
   /** The owner's slug for the board (differs from a shared handle the caller passed). */
   boardId: string
   access: 'owner' | 'contributor' | 'readonly'
+  /** 'standard' | 'automation' — selects lane enforcement (§5.2). */
+  mode: string
+  /** The board's lane set (empty on a standard board). */
+  lanes: Lane[]
 }
 
 export interface ToolCtx {
@@ -166,6 +172,8 @@ export const TOOLS: ToolDef[] = [
       const title = str(args.title)
       if (!title) throw new Error('`title` is required')
       const r = await resolveBoard(args, ctx, { write: true })
+      // Human path (§5.2): a new task on an automation board may only land in a user lane.
+      if (r.mode === 'automation') assertHumanLaneWrite(r.lanes, str(args.tag) ?? null)
       const input: CreateTaskInput = {
         title,
         notes: str(args.notes) ?? null,
@@ -198,6 +206,10 @@ export const TOOLS: ToolDef[] = [
     handler: async (args, ctx) => {
       const id = requireId(args)
       const r = await resolveBoard(args, ctx, { write: true })
+      // Human path (§5.2): only enforce when this update changes the tag.
+      if (args.tag !== undefined && r.mode === 'automation') {
+        assertHumanLaneWrite(r.lanes, str(args.tag) ?? null)
+      }
       const input: UpdateTaskInput = {}
       if (args.title !== undefined) input.title = str(args.title)
       if (args.notes !== undefined) input.notes = str(args.notes) ?? null
@@ -302,7 +314,11 @@ export const TOOLS: ToolDef[] = [
           tags: b.tags,
           handle: b.handle,
           access: b.access ?? 'owner',
-          ownerUserId: b.ownerUserId
+          ownerUserId: b.ownerUserId,
+          // Automation (§5): a runner reads the lane vocabulary here. `mode` is
+          // 'standard' | 'automation'; `lanes` present only when automation.
+          mode: b.mode ?? 'standard',
+          lanes: b.lanes ?? undefined
         }))
       }
     }

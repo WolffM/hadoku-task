@@ -4,9 +4,10 @@
  * Shared helper functions for route handlers
  */
 import type { Context } from 'hono'
-import type { TaskStorage, AuthContext as TaskAuthContext } from '@wolffm/task/api'
+import type { TaskStorage, AuthContext as TaskAuthContext, Lane } from '@wolffm/task/api'
 import { createD1Storage } from './d1-storage'
 import { resolveBoardAccess, type Access } from './board-sharing'
+import { parseLanes, assertHumanLaneWrite } from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext, Env } from '../types'
 
@@ -22,6 +23,10 @@ export interface BoardCtx {
   isOwn: boolean
   ownerId: string
   callerId: string
+  /** 'standard' | 'automation' — selects lane enforcement (§5.2). */
+  mode: string
+  /** The board's lane set (empty on a standard board). */
+  lanes: Lane[]
 }
 
 /**
@@ -57,7 +62,9 @@ export async function resolveBoardCtx(
     access: res.access,
     isOwn,
     ownerId: res.ownerId,
-    callerId
+    callerId,
+    mode: res.mode,
+    lanes: parseLanes(res.lanesJson)
   }
 }
 
@@ -176,6 +183,11 @@ export async function withBoardLock<T>(boardsKey: string, operation: () => Promi
  * Board-aware (§7): the `boardId` is resolved to its owner + the caller's access
  * level. Handlers then run against the OWNER's data scope. `write` gates the
  * operation on access — a readonly grantee is refused, an unshared board 404s.
+ *
+ * `laneTag` opts into automation lane enforcement (§5.2): when the key is
+ * present, the value is the tag this HUMAN-path write would land the task in,
+ * and it's validated against the board's lanes (throws 403/422). Omit the key
+ * for writes that don't touch the tag (complete, delete, schedule).
  */
 export async function handleBoardOperation<T>(
   c: Context<AppContext>,
@@ -184,7 +196,7 @@ export async function handleBoardOperation<T>(
   // for a shared board addressed by handle, that differs from `boardId`, and the
   // handler must scope by the owner's slug, not the handle.
   operation: (storage: TaskStorage, auth: TaskAuthContext, resolvedBoardId: string) => Promise<T>,
-  opts: { write?: boolean } = {}
+  opts: { write?: boolean; laneTag?: string | null } = {}
 ): Promise<Response> {
   const ctx = await getBoardContext(c, boardId)
   if (!ctx) {
@@ -192,6 +204,12 @@ export async function handleBoardOperation<T>(
   }
   if (opts.write && ctx.access === 'readonly') {
     return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+  }
+  // Automation lane enforcement (§5.2): the human path may only land a task in a
+  // `user` lane. Throws LaneInvalidError (422) / LaneNotEditableError (403),
+  // mapped to their status by the app-level onError handler.
+  if ('laneTag' in opts && ctx.mode === 'automation') {
+    assertHumanLaneWrite(ctx.lanes, opts.laneTag)
   }
   const { storage, auth } = ctx
   // Lock on the OWNER's namespace so concurrent writes from owner + grantees to

@@ -19,6 +19,11 @@ export interface BoardResolution {
   ownerId: string
   boardId: string // the owner's slug for the board
   access: Access
+  // Automation config carried through so a route can enforce lane writes (§5.2)
+  // without a second board read. `mode` is 'standard' | 'automation'; `lanes` is
+  // the raw JSON column (parsed lazily by the enforcement helper).
+  mode: string
+  lanesJson: string | null
 }
 
 interface D1Like {
@@ -45,23 +50,33 @@ export async function resolveBoardAccess(
 ): Promise<BoardResolution | null> {
   // 1. Own board (by slug or handle) — the common path, one indexed lookup.
   const own = await db
-    .prepare('SELECT id FROM boards WHERE user_id = ? AND (id = ? OR handle = ?) LIMIT 1')
+    .prepare('SELECT id, mode, lanes FROM boards WHERE user_id = ? AND (id = ? OR handle = ?) LIMIT 1')
     .bind(callerId, ref, ref)
-    .first<{ id: string }>()
-  if (own) return { ownerId: callerId, boardId: own.id, access: 'owner' }
+    .first<{ id: string; mode: string; lanes: string | null }>()
+  if (own) {
+    return { ownerId: callerId, boardId: own.id, access: 'owner', mode: own.mode, lanesJson: own.lanes }
+  }
 
   // 2. A board shared with the caller — addressable ONLY by its handle.
   const shared = await db
     .prepare(
-      `SELECT b.user_id AS owner, b.id AS bid, s.level AS access
+      `SELECT b.user_id AS owner, b.id AS bid, b.mode AS mode, b.lanes AS lanes, s.level AS access
          FROM boards b
          JOIN board_shares s ON s.owner_user_id = b.user_id AND s.board_id = b.id
         WHERE b.handle = ? AND s.grantee_user_id = ?
         LIMIT 1`
     )
     .bind(ref, callerId)
-    .first<{ owner: string; bid: string; access: Access }>()
-  if (shared) return { ownerId: shared.owner, boardId: shared.bid, access: shared.access }
+    .first<{ owner: string; bid: string; mode: string; lanes: string | null; access: Access }>()
+  if (shared) {
+    return {
+      ownerId: shared.owner,
+      boardId: shared.bid,
+      access: shared.access,
+      mode: shared.mode,
+      lanesJson: shared.lanes
+    }
+  }
 
   // 3. If ref is a real handle owned by someone else with no share for the
   //    caller, it's forbidden — do not fall through to the caller's namespace.
@@ -71,8 +86,9 @@ export async function resolveBoardAccess(
     .first<{ x: number }>()
   if (isHandle) return null
 
-  // 4. An unknown slug: the caller's own (not-yet-created) board of that slug.
-  return { ownerId: callerId, boardId: ref, access: 'owner' }
+  // 4. An unknown slug: the caller's own (not-yet-created) board of that slug —
+  //    a standard board by default (automation is opt-in via activation).
+  return { ownerId: callerId, boardId: ref, access: 'owner', mode: 'standard', lanesJson: null }
 }
 
 /** Owner-resolve a board ref to the owner's board, for owner-only share management. */

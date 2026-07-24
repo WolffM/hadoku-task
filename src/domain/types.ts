@@ -47,6 +47,24 @@ export interface TasksFile {
   tasks: Task[]
 }
 
+/**
+ * One lane in an automation board's fixed vocabulary (§5.1). Exactly four fields
+ * are interpreted; any other keys a provider hangs off a lane are preserved
+ * verbatim and handed back untouched (`additionalProperties: true`).
+ */
+export interface Lane {
+  /** The literal tag written on a task in this lane. Unique within the board. */
+  tag: string
+  /** Display name for the section. */
+  label: string
+  /** Fixed render position; never frequency-ranked. */
+  order: number
+  /** Who may move a task into/out of this lane — the guarantee (§5.2). */
+  editableBy: 'user' | 'agent'
+  /** Provider-specific extras, stored + returned verbatim. */
+  [key: string]: unknown
+}
+
 // Board types (multi-board support)
 export interface Board {
   id: string // boardId, e.g. "main", "work"
@@ -65,6 +83,15 @@ export interface Board {
   // (two-track vertical flow). Selects the BoardTypeConfig. Optional/absent ⇒
   // standard.
   mode?: string | null
+  // Automation lane set (§5.1). Present (non-null) only on automation boards;
+  // the provider's ordered lane vocabulary, stored + returned verbatim.
+  lanes?: Lane[] | null
+  // Which repo/checkout this board drives (§5.5). Automation boards only.
+  repo?: string | null
+  // The provider's opaque contract labels (§5.1) — stored verbatim, never keys
+  // into any registry of ours. Present on automation boards.
+  schemaId?: string | null
+  schemaVersion?: number | null
   // Globally-unique opaque board reference (§7.1). Slugs (`id`) collide across
   // users — every user has a `main` — so the API disambiguates shared boards by
   // `handle`. Own boards may still be addressed by slug.
@@ -235,5 +262,70 @@ export class NotesTooLargeError extends DomainError {
       413
     )
     this.name = 'NotesTooLargeError'
+  }
+}
+
+// --- Automation-board (§5) errors ---
+
+/**
+ * A human write (PATCH, batch tag op, MCP update) tried to move a task into an
+ * `editableBy: agent` lane. Only the agent path (a live claim token) may (§5.2).
+ * HTTP status: 403 Forbidden
+ */
+export class LaneNotEditableError extends DomainError {
+  constructor(lane: string) {
+    super(`Lane "${lane}" is agent-owned; the human path can't move tasks into it`, 'LANE_NOT_EDITABLE', 403)
+    this.name = 'LaneNotEditableError'
+  }
+}
+
+/**
+ * A task on an automation board was given a tag that isn't exactly one of the
+ * board's lanes (§5.2) — a free label, multiple tags, or an unknown tag. The
+ * board's tag vocabulary IS the provider's contract, so anything else is drift.
+ * HTTP status: 422 Unprocessable Entity
+ */
+export class LaneInvalidError extends DomainError {
+  constructor(detail: string) {
+    super(`Invalid lane assignment: ${detail}`, 'LANE_INVALID', 422)
+    this.name = 'LaneInvalidError'
+  }
+}
+
+/**
+ * A structural mutation of an automation board's tag vocabulary (createTag /
+ * deleteTag / batchClearTag) was attempted. The lane set is immutable while
+ * `mode = 'automation'`; the provider changes it by re-activating (§5.2).
+ * HTTP status: 409 Conflict
+ */
+export class BoardSchemaLockedError extends DomainError {
+  constructor() {
+    super('Board schema is locked while automation is active; re-activate to change lanes', 'BOARD_SCHEMA_LOCKED', 409)
+    this.name = 'BoardSchemaLockedError'
+  }
+}
+
+/**
+ * A committing `activate-automation` echoed a digest that no longer matches the
+ * board's current state — something changed since the preview, so the commit is
+ * refused rather than silently reshaping a board nobody looked at (§5.4).
+ * HTTP status: 409 Conflict
+ */
+export class ActivationDigestMismatchError extends DomainError {
+  constructor(public readonly currentDigest: string) {
+    super('Activation digest is stale; re-run the dry-run preview and retry', 'DIGEST_MISMATCH', 409)
+    this.name = 'ActivationDigestMismatchError'
+  }
+}
+
+/**
+ * The activation payload failed structural validation (§5.1): duplicate lane
+ * tags, a bad `editableBy`, or a missing `order`.
+ * HTTP status: 422 Unprocessable Entity
+ */
+export class LaneSetInvalidError extends DomainError {
+  constructor(detail: string) {
+    super(`Invalid lane set: ${detail}`, 'LANE_SET_INVALID', 422)
+    this.name = 'LaneSetInvalidError'
   }
 }

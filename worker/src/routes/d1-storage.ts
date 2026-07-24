@@ -74,6 +74,10 @@ interface BoardRow {
   tags: string | null
   mode: string
   repo: string | null
+  // Automation (§5): the provider's lane set + opaque contract labels.
+  lanes: string | null
+  schema_id: string | null
+  schema_version: number | null
   version: number
   tasks_version: number
   handle: string
@@ -115,7 +119,12 @@ function rowToBoard(r: BoardRow): Board {
     mode: r.mode,
     handle: r.handle,
     ownerUserId: r.owner_user_id,
-    access: r.access
+    access: r.access,
+    // Automation (§5): lanes present only on automation boards.
+    lanes: r.lanes ? (JSON.parse(r.lanes) as Board['lanes']) : null,
+    repo: r.repo ?? null,
+    schemaId: r.schema_id ?? null,
+    schemaVersion: r.schema_version ?? null
   }
 }
 
@@ -174,7 +183,8 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // stable across the union.
       const { results } = await db
         .prepare(
-          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version, b.handle,
+          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.lanes, b.schema_id, b.schema_version,
+                  b.version, b.tasks_version, b.handle,
                   b.user_id AS owner_user_id, 'owner' AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
                   COALESCE(p.position, 0) AS position
@@ -183,7 +193,8 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
             WHERE b.user_id = ?
            UNION ALL
-           SELECT b.id, b.name, b.tags, b.mode, b.repo, b.version, b.tasks_version, b.handle,
+           SELECT b.id, b.name, b.tags, b.mode, b.repo, b.lanes, b.schema_id, b.schema_version,
+                  b.version, b.tasks_version, b.handle,
                   b.user_id AS owner_user_id, s.level AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
                   COALESCE(p.position, 0) AS position

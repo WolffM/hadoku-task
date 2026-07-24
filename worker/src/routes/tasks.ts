@@ -127,7 +127,7 @@ export function createTaskRoutes() {
       c,
       boardId,
       (storage, auth, bid) => TaskHandlers.createTask(storage, auth, input, bid, expectedVersion),
-      { write: true }
+      { write: true, laneTag: input.tag ?? null }
     )
   }) as never)
 
@@ -184,6 +184,9 @@ export function createTaskRoutes() {
 
     const { boardId: _, ...input } = body
     const expectedVersion = parseIfMatch(c)
+    // Only enforce lanes when this update actually changes the tag (§5.2); an
+    // edit that leaves `tag` untouched must not be gated by the board's lanes.
+    const laneOpts = 'tag' in input ? { laneTag: (input as { tag?: string }).tag ?? null } : {}
     return handleBoardOperation(
       c,
       boardId,
@@ -196,7 +199,7 @@ export function createTaskRoutes() {
           bid,
           expectedVersion
         ),
-      { write: true }
+      { write: true, ...laneOpts }
     )
   }) as never)
 

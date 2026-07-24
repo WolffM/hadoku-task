@@ -4,11 +4,28 @@
  * Handles tag management and batch operations on tasks
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { TaskHandlers } from '@wolffm/task/api'
+import { TaskHandlers, BoardSchemaLockedError } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { getContext, handleOperation, handleBatchOperation, withBoardLock } from './route-utils'
+import { getBoardConfig } from './board-automation'
+import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext } from '../types'
+
+/**
+ * Guard a structural tag mutation against an automation board (§5.2). The lane
+ * set is immutable while `mode = 'automation'`; createTag/deleteTag/batchClearTag
+ * throw 409 BOARD_SCHEMA_LOCKED. Scoped to the caller's own board (activation is
+ * owner-only, so only an owner ever has an automation board to lock).
+ */
+async function assertBoardNotLocked(c: any, boardId: string): Promise<void> {
+  const auth = c.get('authContext')
+  const ownerId = auth?.sessionId ?? DEFAULT_SESSION_ID
+  const cfg = await getBoardConfig(c.env.DB, ownerId, boardId)
+  if (cfg && cfg.mode === 'automation') {
+    throw new BoardSchemaLockedError()
+  }
+}
 import {
   CreateTagInputSchema,
   CreateTagResponseSchema,
@@ -81,6 +98,7 @@ export function createTagsBatchRoutes() {
       tag: body.tag
     })
 
+    await assertBoardNotLocked(c, body.boardId)
     return handleOperation(c, (storage, auth) => TaskHandlers.createTag(storage, auth, body))
   }) as never)
 
@@ -135,6 +153,7 @@ export function createTagsBatchRoutes() {
       tag: body.tag
     })
 
+    await assertBoardNotLocked(c, body.boardId)
     return handleOperation(c, (storage, auth) => TaskHandlers.deleteTag(storage, auth, body))
   }) as never)
 
@@ -417,10 +436,12 @@ export function createTagsBatchRoutes() {
   })
 
   app.openapi(batchClearTagRoute, (async (c: any) => {
+    const preview = await c.req.json()
     logRequest('POST', '/task/api/batch-clear-tag', {
       userType: c.get('authContext').userType
     })
 
+    if (preview?.boardId) await assertBoardNotLocked(c, preview.boardId)
     return handleBatchOperation(
       c,
       ['boardId', 'tag', 'taskIds'],
