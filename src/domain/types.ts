@@ -61,6 +61,10 @@ export interface Board {
   // picker. Optional so pre-T2 payloads and the KV path stay valid.
   pinned?: boolean
   position?: number
+  // Board type (§5.3): 'standard' (default, today's rendering) | 'automation'
+  // (two-track vertical flow). Selects the BoardTypeConfig. Optional/absent ⇒
+  // standard.
+  mode?: string | null
 }
 
 export interface BoardsFile {

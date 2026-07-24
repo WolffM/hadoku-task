@@ -41,6 +41,7 @@ import { CalendarDayView } from '../components/calendar/CalendarDayView'
 import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
+import { boardTypeConfig } from '../domain/boardType'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
 import type { UserPreferences } from '../domain/types'
@@ -249,7 +250,17 @@ export default function App(props: TaskAppProps = {}) {
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
   const persistedTags: string[] = currentBoard?.tags || []
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
-  const topTags = getTopTags(tasks, isMobile ? 3 : 6)
+
+  // Board-type descriptor (§5.3): the layout/ordering knobs come from here, not
+  // scattered literals. Standard boards reproduce today's behaviour exactly.
+  const boardType = boardTypeConfig(currentBoard?.mode)
+  const laneLimit = isMobile ? boardType.laneLimit.mobile : boardType.laneLimit.desktop
+  const topTags =
+    boardType.laneOrder === 'declared'
+      ? // Automation: lanes are the board's declared tag order (uncapped by default).
+        persistedTags.slice(0, laneLimit ?? undefined)
+      : // Standard: frequency-ranked, capped (isMobile ? 3 : 6) — unchanged.
+        getTopTags(tasks, laneLimit ?? Infinity)
 
   // Handle preference changes from settings modal
   const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
@@ -415,6 +426,7 @@ export default function App(props: TaskAppProps = {}) {
             <TaskLayout
               tasks={tasks}
               topTags={topTags}
+              boardType={boardType}
               isMobile={isMobile}
               filters={Array.from(selectedFilters)}
               selectedIds={dragAndDrop.selectedIds}

@@ -104,3 +104,23 @@
   background: var(--color-primary-bg);
   box-shadow: var(--hdk-shadow-focus-alt);
 }
+
+/* ── Two-track vertical flow (automation boards, §5.3) ─────────────── */
+.task-app__two-track {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-3xl);
+}
+
+/* Inbox renders full-width at the top (it's a .task-app__remaining block). */
+
+.task-app__two-track-lanes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hdk-space-xl);
+  align-items: start;
+}
+
+.task-app__two-track-lanes--stack {
+  grid-template-columns: 1fr;
+}

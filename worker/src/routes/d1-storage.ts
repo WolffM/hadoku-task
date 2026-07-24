@@ -107,7 +107,8 @@ function rowToBoard(r: BoardRow): Board {
     tags: r.tags ? (JSON.parse(r.tags) as string[]) : [],
     tasks: [], // metadata only; the handler fans out getTasks per board (§5.5)
     pinned: r.pinned === 1,
-    position: r.position
+    position: r.position,
+    mode: r.mode
   }
 }
 

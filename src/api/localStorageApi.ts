@@ -55,7 +55,10 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
           // blob for the local path). Dropping them here is what made the top
           // bar and Edit Boards modal ignore pins in offline/public mode.
           pinned: b.pinned,
-          position: b.position
+          position: b.position,
+          // Board type (§5.3) — carried on the board in the KV blob for the
+          // local path; drop it and the two-track layout can't apply offline.
+          mode: b.mode
         })
       }
 

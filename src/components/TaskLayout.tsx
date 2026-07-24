@@ -4,6 +4,8 @@
 
 import React from 'react'
 import type { Task } from '../domain/types'
+import type { BoardTypeConfig } from '../domain/boardType'
+import { STANDARD_BOARD } from '../domain/boardType'
 import type { SortDirection } from '../hooks/useTaskSort'
 import { TaskItem } from './TaskItem'
 import { getLayoutConfig } from '../utils/layout'
@@ -12,6 +14,7 @@ import { splitTags, getTasksByTag, getRemainingTasks } from '../domain/utils/tag
 interface TaskLayoutProps {
   tasks: Task[]
   topTags: string[]
+  boardType?: BoardTypeConfig
   isMobile?: boolean
   filters?: string[]
   selectedIds?: Set<string>
@@ -45,6 +48,7 @@ interface TaskLayoutProps {
 export function TaskLayout({
   tasks,
   topTags,
+  boardType = STANDARD_BOARD,
   isMobile = false,
   filters,
   sortDirections,
@@ -172,8 +176,63 @@ export function TaskLayout({
   // Recalculate layout based on visible columns
   const visibleLayoutConfig = getLayoutConfig(visibleTopTags.length, isMobile)
 
+  // The untagged section — "Other Tasks" at the bottom for standard boards, the
+  // "Inbox" at the top for the two-track flow (§5.3). Same markup, so its drag/
+  // sort key stays 'other'; only the heading and placement differ by board type.
+  const untaggedBlock =
+    remainingTasks.length > 0 ? (
+      <div
+        className={`task-app__remaining ${dragOverTag === 'other' ? 'task-app__tag-column--drag-over' : ''}`}
+        onDragOver={e => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          onDragOver(e as unknown as React.DragEvent, 'other')
+        }}
+        onDragLeave={e => onDragLeave(e as unknown as React.DragEvent)}
+        onDrop={e => onDrop(e as unknown as React.DragEvent, 'other')}
+      >
+        <div className="task-app__tag-header-row">
+          <h3 className="task-app__remaining-header">{boardType.untaggedLabel}</h3>
+          <button
+            className="task-app__sort-btn task-app__sort-btn--active"
+            onClick={() => toggleSort('other')}
+            title={getSortTitle(sortDirections['other'] || 'desc')}
+          >
+            {getSortIcon(sortDirections['other'] || 'desc')}
+          </button>
+        </div>
+        <ul className="task-app__list">
+          {renderTaskItems(remainingTasks, sortDirections['other'] || 'desc')}
+        </ul>
+      </div>
+    ) : null
+
+  // Two-track vertical flow (automation boards, §5.3): Inbox full-width on top,
+  // then the lanes in DECLARED order flowing through a responsive grid — two
+  // columns on desktop, one stack on mobile — uncapped per lane. The YOURS|AGENT
+  // split by editableBy lands in T6 with the lane model.
+  if (boardType.layout === 'two-track-flow') {
+    const perSection = boardType.maxPerSection ?? Infinity
+    return (
+      <div className="task-app__two-track">
+        {boardType.untaggedPosition === 'top' && untaggedBlock}
+        {visibleTopTags.length > 0 && (
+          <div
+            className={`task-app__two-track-lanes ${isMobile ? 'task-app__two-track-lanes--stack' : ''}`}
+          >
+            {visibleTopTags.map(tag => renderTagColumn(tag, getFilteredTagTasks(tag, perSection)))}
+          </div>
+        )}
+        {boardType.untaggedPosition === 'bottom' && untaggedBlock}
+      </div>
+    )
+  }
+
+  // Standard board — the adaptive grid, unchanged. untaggedPosition is 'bottom',
+  // so the untagged block renders after the grid exactly as it always has.
   return (
     <div className="task-app__dynamic-layout">
+      {boardType.untaggedPosition === 'top' && untaggedBlock}
       {visibleLayoutConfig.rows.length > 0 && (
         <>
           {visibleLayoutConfig.rows.map((row, rowIndex) => (
@@ -191,33 +250,7 @@ export function TaskLayout({
           ))}
         </>
       )}
-
-      {remainingTasks.length > 0 && (
-        <div
-          className={`task-app__remaining ${dragOverTag === 'other' ? 'task-app__tag-column--drag-over' : ''}`}
-          onDragOver={e => {
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'move'
-            onDragOver(e as unknown as React.DragEvent, 'other')
-          }}
-          onDragLeave={e => onDragLeave(e as unknown as React.DragEvent)}
-          onDrop={e => onDrop(e as unknown as React.DragEvent, 'other')}
-        >
-          <div className="task-app__tag-header-row">
-            <h3 className="task-app__remaining-header">Other Tasks</h3>
-            <button
-              className="task-app__sort-btn task-app__sort-btn--active"
-              onClick={() => toggleSort('other')}
-              title={getSortTitle(sortDirections['other'] || 'desc')}
-            >
-              {getSortIcon(sortDirections['other'] || 'desc')}
-            </button>
-          </div>
-          <ul className="task-app__list">
-            {renderTaskItems(remainingTasks, sortDirections['other'] || 'desc')}
-          </ul>
-        </div>
-      )}
+      {boardType.untaggedPosition === 'bottom' && untaggedBlock}
     </div>
   )
 }
