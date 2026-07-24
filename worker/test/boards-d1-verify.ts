@@ -375,12 +375,76 @@ async function sectionC_boardCrud() {
   )
 }
 
+async function sectionD_boardOCC() {
+  console.log('\nD. Board-collection optimistic concurrency')
+  const { env } = makeEnv()
+
+  let r = await req(env, 'GET', '/task/api/boards')
+  check('GET /boards → version 1', r.json?.version === 1, `v=${r.json?.version}`)
+  check('GET /boards sets ETag "1"', r.etag === '"1"', `etag=${r.etag}`)
+
+  // Correct If-Match → applies and bumps the collection version.
+  r = await req(env, 'POST', '/task/api/boards', {
+    body: { id: 'a', name: 'A' },
+    headers: { 'If-Match': '1' }
+  })
+  check(
+    'create (If-Match 1) → 200 version 2',
+    r.status === 200 && r.json?.version === 2,
+    `s=${r.status} v=${r.json?.version}`
+  )
+  check('create sets ETag "2"', r.etag === '"2"', `etag=${r.etag}`)
+
+  // Stale If-Match → 409, and the write must NOT apply.
+  r = await req(env, 'POST', '/task/api/boards', {
+    body: { id: 'b', name: 'B' },
+    headers: { 'If-Match': '1' }
+  })
+  check('stale If-Match → 409', r.status === 409, `status=${r.status}`)
+  check('409 → VERSION_CONFLICT', r.json?.code === 'VERSION_CONFLICT', JSON.stringify(r.json))
+  check('409 → currentVersion 2', r.json?.currentVersion === 2, `cv=${r.json?.currentVersion}`)
+
+  r = await req(env, 'GET', '/task/api/boards')
+  const ids = (r.json?.boards ?? []).map(b => b.id)
+  check(
+    'stale create rejected (a present, b absent)',
+    ids.includes('a') && !ids.includes('b'),
+    JSON.stringify(ids)
+  )
+  check('version still 2 after rejected write', r.json?.version === 2, `v=${r.json?.version}`)
+
+  // Correct If-Match "2" → applies.
+  r = await req(env, 'POST', '/task/api/boards', {
+    body: { id: 'b', name: 'B' },
+    headers: { 'If-Match': '2' }
+  })
+  check(
+    'create (If-Match 2) → 200 version 3',
+    r.status === 200 && r.json?.version === 3,
+    `s=${r.status} v=${r.json?.version}`
+  )
+
+  // Delete with correct If-Match → applies and bumps.
+  r = await req(env, 'DELETE', '/task/api/boards/a', { headers: { 'If-Match': '3' } })
+  check(
+    'delete (If-Match 3) → 200 version 4',
+    r.status === 200 && r.json?.version === 4,
+    `s=${r.status} v=${r.json?.version}`
+  )
+
+  // No If-Match → last-write-wins, no 409 (web-client path).
+  r = await req(env, 'POST', '/task/api/boards', { body: { id: 'c', name: 'C' } })
+  check('create (no If-Match) → 200 (last-write-wins)', r.status === 200, `status=${r.status}`)
+  check('no-If-Match write still bumps version to 5', r.json?.version === 5, `v=${r.json?.version}`)
+}
+
 async function main() {
   console.log('T1 D1-storage runtime verification')
   await sectionA_taskOCC()
   await sectionB_migration()
   await sectionB2_legacyNamespace()
   await sectionC_boardCrud()
+  await sectionD_boardOCC()
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

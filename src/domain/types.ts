@@ -55,7 +55,11 @@ export interface Board {
 }
 
 export interface BoardsFile {
-  version: 1
+  // Monotonic optimistic-concurrency version for the board COLLECTION, bumped on
+  // every board create/delete/reorder. Legacy blobs were written as the literal
+  // 1; widened to number (like TasksFile.version) so board writes can increment
+  // it and clients can present it as If-Match.
+  version: number
   updatedAt: string
   boards: Board[]
 }

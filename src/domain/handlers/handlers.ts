@@ -256,32 +256,38 @@ export async function deleteTask(
 export async function createBoard(
   storage: Storage,
   auth: AuthContext,
-  input: { id: string; name: string }
+  input: { id: string; name: string },
+  expectedVersion?: number
 ): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
-  return withBoardOperation(storage, auth, (boards, timestamp) => {
-    // Check if board already exists
-    if (boards.boards.find(b => b.id === input.id)) {
-      throw new Error(`Board ${input.id} already exists`)
-    }
+  return withBoardOperation(
+    storage,
+    auth,
+    (boards, timestamp) => {
+      // Check if board already exists
+      if (boards.boards.find(b => b.id === input.id)) {
+        throw new Error(`Board ${input.id} already exists`)
+      }
 
-    const newBoard = {
-      id: input.id,
-      name: input.name,
-      tasks: [],
-      tags: []
-    }
+      const newBoard = {
+        id: input.id,
+        name: input.name,
+        tasks: [],
+        tags: []
+      }
 
-    const updatedBoards: BoardsFile = {
-      ...boards,
-      updatedAt: timestamp,
-      boards: [...boards.boards, newBoard]
-    }
+      const updatedBoards: BoardsFile = {
+        ...boards,
+        updatedAt: timestamp,
+        boards: [...boards.boards, newBoard]
+      }
 
-    return {
-      updatedBoards,
-      result: { ok: true, board: newBoard }
-    }
-  })
+      return {
+        updatedBoards,
+        result: { ok: true, board: newBoard }
+      }
+    },
+    expectedVersion
+  )
 }
 
 /**
@@ -290,28 +296,34 @@ export async function createBoard(
 export async function deleteBoard(
   storage: Storage,
   auth: AuthContext,
-  boardId: string
+  boardId: string,
+  expectedVersion?: number
 ): Promise<{ ok: boolean; message: string }> {
   // Prevent deleting the main board
   if (boardId === 'main') {
     throw new Error('Cannot delete the main board')
   }
 
-  return withBoardOperation(storage, auth, (boards, timestamp) => {
-    // Validate board exists
-    findBoardOrThrow(boards, boardId)
+  return withBoardOperation(
+    storage,
+    auth,
+    (boards, timestamp) => {
+      // Validate board exists
+      findBoardOrThrow(boards, boardId)
 
-    const updatedBoards: BoardsFile = {
-      ...boards,
-      updatedAt: timestamp,
-      boards: boards.boards.filter(b => b.id !== boardId)
-    }
+      const updatedBoards: BoardsFile = {
+        ...boards,
+        updatedAt: timestamp,
+        boards: boards.boards.filter(b => b.id !== boardId)
+      }
 
-    return {
-      updatedBoards,
-      result: { ok: true, message: `Board ${boardId} deleted` }
-    }
-  })
+      return {
+        updatedBoards,
+        result: { ok: true, message: `Board ${boardId} deleted` }
+      }
+    },
+    expectedVersion
+  )
 }
 
 // --- Tag Operations ---

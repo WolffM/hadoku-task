@@ -295,19 +295,41 @@ export async function withBoardOperation<T>(
   ) => {
     updatedBoards: BoardsFile
     result: T
-  }
+  },
+  // Optimistic-concurrency guard on the board COLLECTION, mirroring
+  // withTaskOperation. When provided (client sent If-Match), the operation only
+  // applies if the stored collection version still matches; otherwise it throws
+  // VersionConflictError (HTTP 409). Absent ⇒ last-write-wins (unchanged).
+  expectedVersion?: number
 ): Promise<T> {
   const timestamp = new Date().toISOString()
 
   // Load current boards
   const boards = await storage.getBoards(auth.userType, auth.sessionId)
 
+  // Optimistic-concurrency check (only when the client opted in via If-Match).
+  // This rejects the sequential stale-read case; the storage layer's conditional
+  // CAS (D1) additionally rejects the concurrent case using the same version.
+  const currentVersion = boards.version ?? 1
+  if (expectedVersion !== undefined && currentVersion !== expectedVersion) {
+    throw new VersionConflictError(currentVersion)
+  }
+
   // Execute operation
   const { updatedBoards, result } = operation(boards, timestamp)
 
-  // Save updated boards
-  await storage.saveBoards(auth.userType, updatedBoards, auth.sessionId)
+  // Bump the collection version on every successful write (matches the version
+  // the storage layer will persist: expectedVersion + 1 when opted in).
+  const nextVersion = currentVersion + 1
+  const versionedBoards: BoardsFile = { ...updatedBoards, version: nextVersion }
 
+  // Save updated boards. Pass expectedVersion through so D1 can do the CAS.
+  await storage.saveBoards(auth.userType, versionedBoards, auth.sessionId, expectedVersion)
+
+  // Surface the new version to callers/HTTP layer (additive; legacy clients ignore it).
+  if (result !== null && typeof result === 'object') {
+    return { ...(result as Record<string, unknown>), version: nextVersion } as T
+  }
   return result
 }
 

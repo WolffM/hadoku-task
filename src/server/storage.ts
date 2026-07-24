@@ -16,6 +16,18 @@ export interface Storage {
     stats: StatsFile
   ): Promise<void>
   getBoards(userType: UserType, sessionId?: string): Promise<BoardsFile>
-  saveBoards(userType: UserType, boards: BoardsFile, sessionId?: string): Promise<void>
+  /**
+   * Persist the board collection. `expectedVersion`, when provided (the caller
+   * opted in via If-Match), makes the write a real compare-and-swap: a backend
+   * that supports it (D1) bumps the collection version only if it still matches,
+   * otherwise throws VersionConflictError. Omitted ⇒ last-write-wins (the legacy
+   * KV blob store ignores it entirely).
+   */
+  saveBoards(
+    userType: UserType,
+    boards: BoardsFile,
+    sessionId?: string,
+    expectedVersion?: number
+  ): Promise<void>
   deleteBoardData(userType: UserType, sessionId: string, boardId: string): Promise<void>
 }

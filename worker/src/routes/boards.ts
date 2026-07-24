@@ -7,7 +7,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { getContext, withBoardLock } from './route-utils'
+import { getContext, withBoardLock, parseIfMatch } from './route-utils'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
 import type { AppContext } from '../types'
@@ -48,6 +48,11 @@ export function createBoardRoutes() {
     const { storage, auth } = getContext(c)
     const boardsData = await TaskHandlers.getBoards(storage, auth)
 
+    // Expose the collection version as an ETag so clients can present it as
+    // If-Match on the next board write (board-collection OCC).
+    if (typeof boardsData.version === 'number') {
+      c.header('ETag', `"${boardsData.version}"`)
+    }
     return c.json(
       {
         ...boardsData,
@@ -109,11 +114,16 @@ export function createBoardRoutes() {
 
     const { storage, auth } = getContext(c)
     const lockKey = boardsKey(auth.sessionId)
+    const expectedVersion = parseIfMatch(c)
 
     const result = await withBoardLock(lockKey, async () => {
-      return TaskHandlers.createBoard(storage, auth, body)
+      return TaskHandlers.createBoard(storage, auth, body, expectedVersion)
     })
 
+    const v = (result as unknown as { version?: number }).version
+    if (typeof v === 'number') {
+      c.header('ETag', `"${v}"`)
+    }
     return c.json(result, 200)
   }) as never)
 
@@ -165,11 +175,16 @@ export function createBoardRoutes() {
 
     const { storage, auth } = getContext(c)
     const lockKey = boardsKey(auth.sessionId)
+    const expectedVersion = parseIfMatch(c)
 
     const result = await withBoardLock(lockKey, async () => {
-      return TaskHandlers.deleteBoard(storage, auth, boardId)
+      return TaskHandlers.deleteBoard(storage, auth, boardId, expectedVersion)
     })
 
+    const v = (result as unknown as { version?: number }).version
+    if (typeof v === 'number') {
+      c.header('ETag', `"${v}"`)
+    }
     return c.json(result, 200)
   }) as never)
 
