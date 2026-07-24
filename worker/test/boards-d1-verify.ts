@@ -1,21 +1,20 @@
 /**
- * T1 D1-storage runtime verification.
+ * D1-storage runtime verification (post-cutover: D1 is the sole boards/tasks store).
  *
- * Boots the REAL worker (createTaskHandler) with TASK_STORAGE=d1, backed by a
- * REAL SQLite database (node:sqlite) loaded from the SAME migration SQL that
- * ships to prod. Proves the three things typecheck/lint/build cannot:
+ * Boots the REAL worker (createTaskHandler) backed by a REAL SQLite database
+ * (node:sqlite) loaded from the SAME migration SQL that ships to prod. Proves the
+ * things typecheck/lint/build cannot:
  *
- *   A. The KV→D1 storage swap preserves task optimistic-concurrency byte-for-byte
- *      (the phase0 contract still holds through D1).
- *   B. Lazy read-repair: a user whose data is in KV is migrated into D1 on first
- *      read, the rows land field-for-field, and the KV entries are deleted.
- *   C. Board create/delete round-trips through D1.
+ *   A. Task optimistic-concurrency through D1 (the phase0 contract holds).
+ *   C. Board create/delete round-trips + cascade.
+ *   D. Board-collection OCC (stale If-Match -> 409).
+ *   E. Atomic cross-board move (one db.batch).
+ *   G. A brand-new user is scaffolded by ensureInitialized (default board, no orphans).
  *
  * Run via: pnpm run test:worker  (or `... boards-d1-verify`).
  */
 import { join } from 'node:path'
 import { createTaskHandler } from '../src/index'
-import { boardsKey, tasksKey } from '../src/kv-keys'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
@@ -56,18 +55,13 @@ const TASK_EVENTS_DDL = `
     timestamp  TEXT NOT NULL DEFAULT (datetime('now'))
   );`
 
-function makeEnv(opts: { prune?: boolean } = { prune: true }) {
+function makeEnv() {
   const { kv, store } = makeKV()
   const d1: FakeD1 = makeSqliteD1(MIGRATION)
   d1.__raw.exec(TASK_EVENTS_DDL)
-  const env: Record<string, unknown> = {
-    TASKS_KV: kv,
-    DB: d1,
-    EDGE_AUTH_SECRET: EDGE_SECRET,
-    TASK_STORAGE: 'd1'
-  }
-  // Default to prune mode so the migration assertions exercise the steady state.
-  if (opts.prune !== false) env.TASK_STORAGE_PRUNE_KV = '1'
+  // TASKS_KV is still bound (prefs/session routes use it) but the boards/tasks
+  // storage no longer reads or writes it — the D1 cutover is complete.
+  const env = { TASKS_KV: kv, DB: d1, EDGE_AUTH_SECRET: EDGE_SECRET }
   return { env, kvStore: store, d1 }
 }
 
@@ -221,124 +215,6 @@ async function sectionA_taskOCC() {
 
   r = await req(env, 'DELETE', '/task/api/t1', { headers: { 'If-Match': '1' } })
   check('delete stale If-Match → 409', r.status === 409, `status=${r.status}`)
-}
-
-async function sectionB_migration() {
-  console.log('\nB. Lazy KV→D1 read-repair')
-  const { env, kvStore, d1 } = makeEnv()
-  const sid = 'sess-test-123'
-
-  // Seed KV as the legacy blob store: two boards, tasks on each.
-  kvStore.set(
-    boardsKey(sid),
-    JSON.stringify({
-      version: 4,
-      updatedAt: '2026-07-01T00:00:00.000Z',
-      boards: [
-        { id: 'main', name: 'main', tags: ['work'], tasks: [] },
-        { id: 'side', name: 'Side Project', tags: [], tasks: [] }
-      ]
-    })
-  )
-  kvStore.set(
-    tasksKey(sid, 'main'),
-    JSON.stringify({
-      version: 3,
-      updatedAt: '2026-07-01T00:00:00.000Z',
-      tasks: [
-        {
-          id: 'm1',
-          title: 'Main task',
-          tag: 'work',
-          state: 'Active',
-          createdAt: '2026-06-01T00:00:00.000Z'
-        }
-      ]
-    })
-  )
-  kvStore.set(
-    tasksKey(sid, 'side'),
-    JSON.stringify({
-      version: 2,
-      updatedAt: '2026-07-01T00:00:00.000Z',
-      tasks: [
-        { id: 's1', title: 'Side task', state: 'Active', createdAt: '2026-06-02T00:00:00.000Z' },
-        { id: 's2', title: 'Side two', state: 'Active', createdAt: '2026-06-03T00:00:00.000Z' }
-      ]
-    })
-  )
-
-  // First read triggers the migration.
-  const r = await req(env, 'GET', '/task/api/boards')
-  check('GET /boards → 200', r.status === 200, `status=${r.status}`)
-  check('migrated both boards', r.json?.boards?.length === 2, `n=${r.json?.boards?.length}`)
-  const main = r.json?.boards?.find(b => b.id === 'main')
-  const side = r.json?.boards?.find(b => b.id === 'side')
-  check('main hydrated with its task', main?.tasks?.length === 1, `n=${main?.tasks?.length}`)
-  check('side hydrated with 2 tasks', side?.tasks?.length === 2, `n=${side?.tasks?.length}`)
-  check('collection version preserved (4)', r.json?.version === 4, `v=${r.json?.version}`)
-
-  // Rows landed in D1, field-for-field.
-  check(
-    'D1 has 2 board rows',
-    rowCount(d1, 'SELECT COUNT(*) n FROM boards WHERE user_id=?', sid) === 2
-  )
-  check(
-    'D1 has 3 task rows',
-    rowCount(d1, 'SELECT COUNT(*) n FROM tasks WHERE user_id=?', sid) === 3
-  )
-  check(
-    "main's tasks_version preserved (3)",
-    rowCount(d1, "SELECT tasks_version n FROM boards WHERE user_id=? AND id='main'", sid) === 3
-  )
-  const m1 = d1.__raw
-    .prepare("SELECT title, tag FROM tasks WHERE user_id=? AND id='m1'")
-    .get(sid) as { title: string; tag: string } | undefined
-  check(
-    'task fields preserved',
-    m1?.title === 'Main task' && m1?.tag === 'work',
-    JSON.stringify(m1)
-  )
-
-  // KV entries deleted after migration.
-  check('KV boards blob deleted', !kvStore.has(boardsKey(sid)), `keys=${[...kvStore.keys()]}`)
-  check('KV main tasks blob deleted', !kvStore.has(tasksKey(sid, 'main')))
-  check('KV side tasks blob deleted', !kvStore.has(tasksKey(sid, 'side')))
-
-  // Second read is D1-authoritative and identical.
-  const r2 = await req(env, 'GET', '/task/api/boards')
-  check(
-    '2nd read identical (2 boards, v4)',
-    r2.json?.boards?.length === 2 && r2.json?.version === 4
-  )
-}
-
-async function sectionB2_legacyNamespace() {
-  console.log('\nB2. Read-repair from the pre-flip raw-credential namespace')
-  const { env, kvStore } = makeEnv()
-  const rawKey = 'raw-cred-xyz'
-  const userId = 'uid-stable-123'
-
-  // Data lives under the RAW credential; the request arrives flipped (X-User-Id
-  // present) so sessionId=userId and legacyId=rawKey.
-  kvStore.set(
-    tasksKey(rawKey, 'main'),
-    JSON.stringify({
-      version: 5,
-      updatedAt: '2026-07-01T00:00:00.000Z',
-      tasks: [
-        { id: 'leg1', title: 'Legacy task', state: 'Active', createdAt: '2026-06-01T00:00:00.000Z' }
-      ]
-    })
-  )
-
-  const r = await req(env, 'GET', '/task/api/tasks', {
-    userKey: rawKey,
-    headers: { 'X-User-Id': userId }
-  })
-  check('legacy task migrated via legacyId', r.json?.tasks?.length === 1, JSON.stringify(r.json))
-  check('legacy tasks_version preserved (5)', r.json?.version === 5, `v=${r.json?.version}`)
-  check('legacy KV blob deleted', !kvStore.has(tasksKey(rawKey, 'main')))
 }
 
 async function sectionC_boardCrud() {
@@ -500,51 +376,45 @@ async function sectionE_atomicMove() {
   )
 }
 
-async function sectionF_soakKeepsKv() {
-  console.log('\nF. Soak mode (no prune): D1 authoritative, KV retained for safe rollback')
-  const { env, kvStore, d1 } = makeEnv({ prune: false })
+async function sectionG_newUser() {
+  console.log('\nG. New user is scaffolded by ensureInitialized (no KV, no orphans)')
+  const { env, d1 } = makeEnv()
   const sid = 'sess-test-123'
 
-  kvStore.set(
-    tasksKey(sid, 'main'),
-    JSON.stringify({
-      version: 2,
-      updatedAt: '2026-07-01T00:00:00.000Z',
-      tasks: [
-        { id: 'k1', title: 'Kept in KV', state: 'Active', createdAt: '2026-06-01T00:00:00.000Z' }
-      ]
-    })
+  // First read of a brand-new user: default board is present, board_meta exists.
+  let r = await req(env, 'GET', '/task/api/boards')
+  const ids = (r.json?.boards ?? []).map(b => b.id)
+  check('new user sees default main board', ids.includes('main'), JSON.stringify(ids))
+  check(
+    'board_meta materialized',
+    rowCount(d1, 'SELECT COUNT(*) n FROM board_meta WHERE user_id=?', sid) === 1
+  )
+  check(
+    'main board row materialized',
+    rowCount(d1, "SELECT COUNT(*) n FROM boards WHERE user_id=? AND id='main'", sid) === 1
   )
 
-  const r = await req(env, 'GET', '/task/api/tasks')
-  check('migrated task is served from D1', r.json?.tasks?.length === 1, JSON.stringify(r.json))
+  // Create a task on the default board — it must not become an orphan (a task
+  // row whose board_id has no boards row), which ensureInitialized prevents.
+  r = await req(env, 'POST', '/task/api', { body: { id: 'n1', title: 'new task' } })
+  check('create task on default board → 200', r.status === 200, `status=${r.status}`)
   check(
-    'D1 has the row',
-    rowCount(d1, "SELECT COUNT(*) n FROM tasks WHERE user_id=? AND id='k1'", sid) === 1
+    'no orphan tasks',
+    rowCount(
+      d1,
+      'SELECT COUNT(*) n FROM tasks t WHERE user_id=? AND NOT EXISTS (SELECT 1 FROM boards b WHERE b.user_id=t.user_id AND b.id=t.board_id)',
+      sid
+    ) === 0
   )
-  // The soak guarantee: the KV blob is NOT deleted, so removing TASK_STORAGE=d1
-  // reverts cleanly without the board going empty.
-  check(
-    'KV blob RETAINED (rollback-safe)',
-    kvStore.has(tasksKey(sid, 'main')),
-    `keys=${[...kvStore.keys()]}`
-  )
-
-  // And D1 stays authoritative on the next read (board_meta marks migrated), so
-  // the retained KV is never re-read as truth.
-  const r2 = await req(env, 'GET', '/task/api/tasks')
-  check('2nd read still D1-authoritative (1 task)', r2.json?.tasks?.length === 1)
 }
 
 async function main() {
-  console.log('T1 D1-storage runtime verification')
+  console.log('D1-storage runtime verification (post-cutover)')
   await sectionA_taskOCC()
-  await sectionB_migration()
-  await sectionB2_legacyNamespace()
   await sectionC_boardCrud()
   await sectionD_boardOCC()
   await sectionE_atomicMove()
-  await sectionF_soakKeepsKv()
+  await sectionG_newUser()
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

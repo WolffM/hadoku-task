@@ -12,7 +12,7 @@
 
 import type { Context } from 'hono'
 import type { AppContext } from '../types'
-import { createKVStorage } from '../routes/route-utils'
+import { createD1Storage } from '../routes/d1-storage'
 import { DEFAULT_BOARD_ID } from '../constants'
 import { TOOLS, callTool, type ToolCtx } from './tools'
 
@@ -36,9 +36,9 @@ const err = (id: string | number | null, code: number, message: string) => ({
 export async function handleMcp(c: Context<AppContext>): Promise<Response> {
   const auth = c.get('authContext')
   const ctx: ToolCtx = {
-    // legacyId enables dual-read + read-repair of the pre-flip raw-key namespace,
-    // so MCP callers see the same migrated data as the HTTP routes.
-    storage: createKVStorage(c.env, auth?.legacyId),
+    // D1 is the sole boards/tasks store; legacyId is threaded only for the stats
+    // path's masked-key dual-read, matching the HTTP routes.
+    storage: createD1Storage(c.env, auth?.legacyId),
     auth,
     defaultBoard: DEFAULT_BOARD_ID
   }

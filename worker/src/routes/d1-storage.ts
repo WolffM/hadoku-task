@@ -1,24 +1,20 @@
 /**
- * D1-backed storage adapter for @wolffm/task.
+ * D1-backed storage adapter for @wolffm/task — the sole boards/tasks store.
  *
- * Implements the SAME whole-file `TaskStorage` interface as createKVStorage, so
- * handlers, routes and MCP are unchanged — the swap is invisible above this
- * seam (agent-boards-design.md §3.5). What D1 buys over the KV blob:
+ * Implements the whole-file `TaskStorage` interface, so handlers, routes and MCP
+ * are unchanged — the storage engine is invisible above this seam
+ * (agent-boards-design.md §3.5). What D1 gives over the old KV blob:
  *   - real per-board board-metadata OCC (a conditional UPDATE, not a read-check),
  *   - a foundation for scoped hydration + a change feed (later tranches),
  *   - atomic multi-row writes via db.batch().
  *
- * Cutover is lazy read-repair (§3.5), gated by ONE signal per user: the
- * board_meta row. Absent ⇒ this user's data still lives in KV ⇒ migrate the
- * whole dataset (boards + every board's tasks) into D1 in one idempotent batch,
- * then delete the KV entries. Present ⇒ D1 is authoritative and KV is never
- * touched again. Every migration INSERT is `OR IGNORE`, so two worker instances
- * racing the first read both converge on the same rows with no duplicates and no
- * lost updates — the loser's inserts are no-ops.
+ * The KV→D1 cutover is complete: there is no KV read-repair here any more. A
+ * brand-new user is scaffolded by ensureInitialized() (board_meta + default
+ * board), and every board/task read and write goes straight to D1.
  *
- * `legacyId` is the pre-userId-flip raw-credential namespace (same meaning as in
- * createKVStorage): when the userId KV namespace has nothing, fall back to the
- * raw-key namespace so a user who never flipped still migrates on first read.
+ * `legacyId` (the pre-userId-flip raw-credential namespace) is still threaded
+ * through for the STATS path only, which dual-reads masked-key D1 event rows —
+ * that is a D1 concern, unrelated to the retired KV boards/tasks store.
  */
 import type {
   TaskStorage,
@@ -31,7 +27,6 @@ import type {
 } from '@wolffm/task/api'
 import { TaskUtils } from '@wolffm/task/api'
 import { VersionConflictError } from '@wolffm/task/api'
-import { boardsKey, tasksKey } from '../kv-keys'
 import { DEFAULT_BOARD_ID, DEFAULT_BOARD_NAME } from '../constants'
 import {
   getBoardStats as getD1BoardStats,
@@ -120,138 +115,39 @@ const newHandle = () => TaskUtils.generateULID()
 export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
   const db = env.DB as unknown as D1Like
 
-  // --- KV read helpers (legacy source during cutover) --------------------
-  async function readKvBlob<T>(sessionId: string | undefined, boardId?: string): Promise<T | null> {
-    const primary = boardId ? tasksKey(sessionId, boardId) : boardsKey(sessionId)
-    const hit = await env.TASKS_KV.get<T>(primary, 'json')
-    if (hit) return hit
-    if (!legacyId || legacyId === sessionId) return null
-    const legacyKey = boardId ? tasksKey(legacyId, boardId) : boardsKey(legacyId)
-    return env.TASKS_KV.get<T>(legacyKey, 'json')
-  }
-
-  async function deleteKvBlob(sessionId: string | undefined, boardId?: string): Promise<void> {
-    const keys = boardId
-      ? [tasksKey(sessionId, boardId), legacyId ? tasksKey(legacyId, boardId) : null]
-      : [boardsKey(sessionId), legacyId ? boardsKey(legacyId) : null]
-    await Promise.all(keys.filter(Boolean).map(k => env.TASKS_KV.delete(k as string)))
-  }
-
-  // --- Migration gate: has this user been migrated to D1 yet? ------------
-  async function isMigrated(sessionId: string | undefined): Promise<boolean> {
-    const row = await db
-      .prepare('SELECT 1 AS ok FROM board_meta WHERE user_id = ?')
-      .bind(sessionId ?? 'public')
-      .first<number>('ok')
-    return row === 1
-  }
-
   /**
-   * Migrate this user's ENTIRE dataset (boards + every board's tasks) from KV
-   * into D1, once, idempotently. Gated by board_meta; safe to call on every
-   * request (fast no-op after the first migration). All INSERTs are OR IGNORE
-   * so concurrent callers converge without duplicates or lost writes.
+   * Ensure a user's D1 scaffolding exists before a read/write. Fast no-op once
+   * board_meta is present. For a brand-new user it creates the collection-version
+   * row and the default `main` board row (so getTasks has a tasks_version home and
+   * getBoards shows the default board) — the same materialisation the KV→D1
+   * migration used to do, minus the KV read now that the cutover is complete.
    */
-  async function ensureMigrated(sessionId: string | undefined): Promise<void> {
-    if (await isMigrated(sessionId)) return
+  async function ensureInitialized(sessionId: string | undefined): Promise<void> {
     const uid = sessionId ?? 'public'
-
-    const boardsBlob = await readKvBlob<BoardsFile>(sessionId)
-    // Always include the implicit default board so a user who only ever used
-    // `main` (and thus has no boards blob) still materialises it.
-    const boardList: Board[] = boardsBlob?.boards?.length
-      ? boardsBlob.boards
-      : [{ id: DEFAULT_BOARD_ID, name: DEFAULT_BOARD_NAME, tags: [], tasks: [] }]
-    const ids = new Set(boardList.map(b => b.id))
-    if (!ids.has(DEFAULT_BOARD_ID)) {
-      boardList.push({ id: DEFAULT_BOARD_ID, name: DEFAULT_BOARD_NAME, tags: [], tasks: [] })
-    }
-    const collectionVersion = boardsBlob?.version ?? 1
-
-    const stmts: Array<{ run(): Promise<unknown> }> = []
+    const exists = await db
+      .prepare('SELECT 1 AS ok FROM board_meta WHERE user_id = ?')
+      .bind(uid)
+      .first<number>('ok')
+    if (exists === 1) return
     const ts = nowIso()
-    const migratedTaskKeys: string[] = []
-
-    for (const board of boardList) {
-      const tasksBlob = await readKvBlob<TasksFile>(sessionId, board.id)
-      const tasksVersion = tasksBlob?.version ?? 1
-      stmts.push(
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO boards
-               (user_id, id, handle, name, tags, mode, version, tasks_version, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, 'standard', 1, ?, ?, ?)`
-          )
-          .bind(
-            uid,
-            board.id,
-            newHandle(),
-            board.name,
-            JSON.stringify(board.tags ?? []),
-            tasksVersion,
-            ts,
-            ts
-          )
-      )
-      for (const task of tasksBlob?.tasks ?? []) {
-        stmts.push(insertTaskStmt(uid, board.id, task))
-      }
-      if (tasksBlob) migratedTaskKeys.push(board.id)
-    }
-
-    stmts.push(
+    await db.batch([
       db
-        .prepare(`INSERT OR IGNORE INTO board_meta (user_id, version, updated_at) VALUES (?, ?, ?)`)
-        .bind(uid, collectionVersion, ts)
-    )
-
-    await db.batch(stmts)
-
-    // KV cleanup AFTER the rows have landed — but ONLY once pruning is enabled.
-    // During the initial flip (soak), we leave the KV blobs in place so a
-    // rollback is safe with the var alone: D1 serves reads, KV stays a lossless
-    // fallback, and removing TASK_STORAGE=d1 reverts cleanly (no board goes empty
-    // because its KV was deleted). Once the flip has soaked, TASK_STORAGE_PRUNE_KV
-    // enables the delete. Idempotent + best-effort either way: a re-migration is
-    // an OR IGNORE no-op, and board_meta already marks this user migrated so the
-    // surviving KV is never re-read as authoritative.
-    if (env.TASK_STORAGE_PRUNE_KV === '1') {
-      await deleteKvBlob(sessionId)
-      await Promise.all(migratedTaskKeys.map(bid => deleteKvBlob(sessionId, bid)))
-    }
-  }
-
-  function insertTaskStmt(uid: string, boardId: string, task: Task) {
-    return db
-      .prepare(
-        `INSERT OR IGNORE INTO tasks
-           (user_id, board_id, id, title, notes, tag, state, date, start_time, end_time,
-            source, source_id, metadata, created_at, updated_at, closed_at)
-         VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        uid,
-        boardId,
-        task.id,
-        task.title,
-        task.tag ?? null,
-        task.state ?? 'Active',
-        task.date ?? null,
-        task.startTime ?? null,
-        task.endTime ?? null,
-        task.source ?? null,
-        task.sourceId ?? null,
-        task.metadata ? JSON.stringify(task.metadata) : null,
-        task.createdAt ?? nowIso(),
-        task.updatedAt ?? null,
-        task.closedAt ?? null
-      )
+        .prepare('INSERT OR IGNORE INTO board_meta (user_id, version, updated_at) VALUES (?, 1, ?)')
+        .bind(uid, ts),
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO boards
+             (user_id, id, handle, name, tags, mode, version, tasks_version, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '[]', 'standard', 1, 1, ?, ?)`
+        )
+        .bind(uid, DEFAULT_BOARD_ID, newHandle(), DEFAULT_BOARD_NAME, ts, ts)
+    ])
   }
 
   return {
     // --- Boards ----------------------------------------------------------
     async getBoards(_userType: UserType, sessionId?: string): Promise<BoardsFile> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       const meta = await db
         .prepare('SELECT version, updated_at FROM board_meta WHERE user_id = ?')
@@ -291,7 +187,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       sessionId?: string,
       expectedVersion?: number
     ): Promise<void> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       const ts = nowIso()
 
@@ -390,7 +286,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
     // --- Tasks (board scoped) -------------------------------------------
     async getTasks(_userType: UserType, sessionId?: string, boardId?: string): Promise<TasksFile> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       if (!boardId) boardId = DEFAULT_BOARD_ID
       const uid = sessionId ?? 'public'
       const tasksVersion = await db
@@ -419,7 +315,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       boardId: string | undefined,
       tasks: TasksFile
     ): Promise<void> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       if (!boardId) boardId = DEFAULT_BOARD_ID
       const uid = sessionId ?? 'public'
       const ts = nowIso()
@@ -462,7 +358,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       sessionId: string | undefined,
       writes: Array<{ boardId: string; tasks: TasksFile }>
     ): Promise<void> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       const ts = nowIso()
 
@@ -553,7 +449,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
     // --- Delete board data ----------------------------------------------
     async deleteBoardData(_userType: UserType, sessionId: string, boardId: string): Promise<void> {
-      await ensureMigrated(sessionId)
+      await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       await db.batch([
         db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
