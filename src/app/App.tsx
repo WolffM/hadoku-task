@@ -140,6 +140,7 @@ export default function App(props: TaskAppProps = {}) {
     updateTaskTags,
     bulkUpdateTaskTags,
     deleteTag,
+    setTaskNotes,
     boards,
     currentBoardId,
     createBoard,
@@ -425,6 +426,7 @@ export default function App(props: TaskAppProps = {}) {
               onComplete={completeTask}
               onDelete={deleteTask}
               onEditTag={handlers.handleEditTag}
+              onSetNotes={setTaskNotes}
               onDragStart={dragAndDrop.onDragStart}
               onDragEnd={dragAndDrop.onDragEnd}
               onDragOver={dragAndDrop.onDragOver}

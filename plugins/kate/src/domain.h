@@ -11,6 +11,7 @@
 struct Task {
     QString id;
     QString title;
+    QString notes;      // markdown body / the plan (§6), may be empty
     QString tag;        // may be empty
     QString state;      // "Active" | "Completed" | "Deleted"
     QString createdAt;

@@ -149,13 +149,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async patchTask(
       id: string,
-      updates: Partial<Pick<Task, 'title' | 'tag' | 'date' | 'startTime' | 'endTime' | 'metadata'>>,
+      updates: Partial<
+        Pick<Task, 'title' | 'notes' | 'tag' | 'date' | 'startTime' | 'endTime' | 'metadata'>
+      >,
       boardId: string = 'main',
       suppressBroadcast: boolean = false
     ): Promise<Task> {
       // Filter out undefined values - handler expects explicit values or null
       const cleanUpdates: {
         title?: string
+        notes?: string | null
         tag?: string
         date?: string | null
         startTime?: string | null
@@ -163,6 +166,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
         metadata?: Record<string, unknown> | null
       } = {}
       if (updates.title !== undefined) cleanUpdates.title = updates.title
+      if (updates.notes !== undefined) cleanUpdates.notes = updates.notes
       if (updates.tag !== undefined && updates.tag !== null) cleanUpdates.tag = updates.tag
       if (updates.date !== undefined) cleanUpdates.date = updates.date
       if (updates.startTime !== undefined) cleanUpdates.startTime = updates.startTime

@@ -119,6 +119,7 @@ export const CreateTaskInputSchema = z
   .object({
     id: z.string().min(1).openapi({ example: '01HXYZ123ABC' }),
     title: z.string().min(1).openapi({ example: 'New task' }),
+    notes: z.string().nullable().optional().openapi({ example: '## Plan\n- step one' }),
     tag: z.string().optional().openapi({ example: 'work' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
     createdAt: z.string().optional().openapi({ example: '2024-01-15T10:30:00.000Z' }),
@@ -146,6 +147,7 @@ export const CreateTaskResponseSchema = z
 export const UpdateTaskInputSchema = z
   .object({
     title: z.string().optional().openapi({ example: 'Updated title' }),
+    notes: z.string().nullable().optional().openapi({ example: '## Plan\n- step one' }),
     tag: z.string().nullable().optional().openapi({ example: 'urgent' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),

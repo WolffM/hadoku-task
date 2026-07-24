@@ -15,9 +15,39 @@ import type {
   UpdateTaskInput,
   ULID
 } from '../types.js'
+import { MAX_NOTES_BYTES, NotesTooLargeError } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
 import { splitTags } from '../utils/tags.js'
 import { utcDayFromISO } from '../utils/calendar.js'
+
+/**
+ * UTF-8 byte length of a string, computed without TextEncoder so this stays in
+ * the environment-agnostic domain layer. Counts a surrogate pair (one astral
+ * codepoint) as its 4 encoded bytes.
+ */
+function utf8ByteLength(s: string): number {
+  let bytes = 0
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i)
+    if (c < 0x80) bytes += 1
+    else if (c < 0x800) bytes += 2
+    else if (c >= 0xd800 && c <= 0xdbff) {
+      bytes += 4
+      i++ // consume the low surrogate
+    } else bytes += 3
+  }
+  return bytes
+}
+
+/**
+ * Reject a `notes` body that exceeds MAX_NOTES_BYTES (§6). Measured on the UTF-8
+ * byte length so multibyte content can't slip past. null/undefined = no notes.
+ */
+function assertNotesWithinLimit(notes: string | null | undefined): void {
+  if (notes == null) return
+  const bytes = utf8ByteLength(notes)
+  if (bytes > MAX_NOTES_BYTES) throw new NotesTooLargeError(bytes)
+}
 import {
   backfillTaskDate,
   findTaskOrThrow,
@@ -114,6 +144,7 @@ export async function createTask(
   boardId: string = 'main',
   expectedVersion?: number
 ): Promise<{ ok: boolean; id: ULID }> {
+  assertNotesWithinLimit(input.notes)
   return withTaskOperation(
     storage,
     auth,
@@ -133,6 +164,7 @@ export async function createTask(
       const newTask: Task = {
         id,
         title: input.title,
+        notes: input.notes ?? null,
         tag: input.tag ?? null,
         state: 'Active',
         createdAt,
@@ -170,6 +202,7 @@ export async function updateTask(
   boardId: string = 'main',
   expectedVersion?: number
 ): Promise<{ ok: boolean; message: string }> {
+  assertNotesWithinLimit(input.notes)
   return withTaskOperation(
     storage,
     auth,

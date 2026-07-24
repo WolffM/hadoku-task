@@ -395,6 +395,11 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     await reload()
   }
 
+  async function setTaskNotes(taskId: string, notes: string) {
+    await api.patchTask(taskId, { notes }, currentBoardId)
+    await reload()
+  }
+
   function switchBoard(boardId: string) {
     selectBoard(boardId)
     const { tasks: boardTasks, foundBoard } = extractBoardTasks(boards, boardId)
@@ -421,6 +426,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     updateTaskTags,
     bulkUpdateTaskTags,
     deleteTag,
+    setTaskNotes,
 
     // Board state
     boards,

@@ -300,6 +300,7 @@ void TaskApiClient::fetchTasks()
             Task t;
             t.id = o.value(QStringLiteral("id")).toString();
             t.title = o.value(QStringLiteral("title")).toString();
+            t.notes = o.value(QStringLiteral("notes")).toString();
             t.tag = o.value(QStringLiteral("tag")).toString();
             t.state = o.value(QStringLiteral("state")).toString();
             t.createdAt = o.value(QStringLiteral("createdAt")).toString();
@@ -368,6 +369,7 @@ QVariantList TaskApiClient::tasksList() const
         QVariantMap m;
         m.insert(QStringLiteral("id"), t.id);
         m.insert(QStringLiteral("title"), t.title);
+        m.insert(QStringLiteral("notes"), t.notes);
         m.insert(QStringLiteral("tag"), t.tag);
         m.insert(QStringLiteral("state"), t.state);
         m.insert(QStringLiteral("createdAt"), t.createdAt);

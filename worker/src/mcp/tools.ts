@@ -114,6 +114,7 @@ export const TOOLS: ToolDef[] = [
       type: 'object',
       properties: {
         title: { type: 'string' },
+        notes: { type: 'string', description: 'Markdown body / plan for the task.' },
         tag: { type: 'string', description: 'Space-separated tags, e.g. "work urgent".' },
         ...scheduleProps,
         metadata: { type: 'object', description: 'Arbitrary provider/detail JSON.' },
@@ -127,6 +128,7 @@ export const TOOLS: ToolDef[] = [
       const board = boardOf(args, ctx)
       const input: CreateTaskInput = {
         title,
+        notes: str(args.notes) ?? null,
         tag: str(args.tag),
         date: str(args.date) ?? null,
         startTime: str(args.startTime) ?? null,
@@ -145,6 +147,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         id: { type: 'string' },
         title: { type: 'string' },
+        notes: { type: 'string', description: 'Markdown body / plan. Pass "" to clear.' },
         tag: { type: 'string' },
         ...scheduleProps,
         metadata: { type: 'object' },
@@ -157,12 +160,34 @@ export const TOOLS: ToolDef[] = [
       const board = boardOf(args, ctx)
       const input: UpdateTaskInput = {}
       if (args.title !== undefined) input.title = str(args.title)
+      if (args.notes !== undefined) input.notes = str(args.notes) ?? null
       if (args.tag !== undefined) input.tag = str(args.tag)
       if (args.date !== undefined) input.date = str(args.date) ?? null
       if (args.startTime !== undefined) input.startTime = str(args.startTime) ?? null
       if (args.endTime !== undefined) input.endTime = str(args.endTime) ?? null
       if (args.metadata !== undefined) input.metadata = obj(args.metadata) ?? null
       await TaskHandlers.updateTask(ctx.storage, ctx.auth, id, input, board)
+      return findTask(ctx, board, id)
+    }
+  },
+  {
+    name: 'set_task_notes',
+    description:
+      "Set (replace) a task's notes — the markdown body / plan. Dedicated tool so a long plan doesn't round-trip the whole task. Pass an empty string to clear.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        notes: { type: 'string', description: 'The full markdown body. Replaces any existing notes.' },
+        ...boardProp
+      },
+      required: ['id', 'notes']
+    },
+    handler: async (args, ctx) => {
+      const id = requireId(args)
+      const board = boardOf(args, ctx)
+      const notes = str(args.notes) ?? ''
+      await TaskHandlers.updateTask(ctx.storage, ctx.auth, id, { notes }, board)
       return findTask(ctx, board, id)
     }
   },

@@ -114,3 +114,70 @@
   gap: 0;
   min-height: 100%;
 }
+
+/* ── Task notes (expandable body, §6) ──────────────────────────────── */
+.task-app__notes-toggle.has-notes {
+  color: var(--color-primary);
+}
+
+.task-app__item-notes {
+  margin-top: var(--hdk-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-sm);
+}
+
+.task-app__notes-body {
+  margin: 0;
+  padding: var(--hdk-space-sm);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--hdk-text-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.task-app__notes-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--hdk-text-sm);
+  resize: vertical;
+}
+
+.task-app__notes-actions {
+  display: flex;
+  gap: var(--hdk-space-sm);
+}
+
+.task-app__notes-btn {
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--hdk-text-sm);
+}
+.task-app__notes-btn:hover {
+  color: var(--color-text);
+}
+.task-app__notes-save {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
+}
+.task-app__notes-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

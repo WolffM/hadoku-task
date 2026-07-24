@@ -53,6 +53,7 @@ interface D1Like {
 interface TaskRow {
   id: string
   title: string
+  notes: string | null
   tag: string | null
   state: string
   date: string | null
@@ -84,6 +85,7 @@ function rowToTask(r: TaskRow): Task {
   return {
     id: r.id,
     title: r.title,
+    notes: r.notes ?? null,
     tag: r.tag ?? null,
     state: r.state as Task['state'],
     createdAt: r.created_at,
@@ -295,7 +297,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         .first<number>('tasks_version')
       const { results } = await db
         .prepare(
-          `SELECT id, title, tag, state, date, start_time, end_time, source, source_id,
+          `SELECT id, title, notes, tag, state, date, start_time, end_time, source, source_id,
                   metadata, created_at, updated_at, closed_at
              FROM tasks WHERE user_id = ? AND board_id = ? AND state = 'Active'
              ORDER BY created_at, id`
@@ -471,10 +473,11 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
       `INSERT INTO tasks
          (user_id, board_id, id, title, notes, tag, state, date, start_time, end_time,
           source, source_id, metadata, created_at, updated_at, closed_at)
-       VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, id) DO UPDATE SET
          board_id = excluded.board_id,
          title = excluded.title,
+         notes = excluded.notes,
          tag = excluded.tag,
          state = excluded.state,
          date = excluded.date,
@@ -491,6 +494,7 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
       boardId,
       task.id,
       task.title,
+      task.notes ?? null,
       task.tag ?? null,
       task.state ?? 'Active',
       task.date ?? null,

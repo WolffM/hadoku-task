@@ -25,6 +25,7 @@ interface TaskLayoutProps {
   onComplete: (taskId: string) => void
   onDelete: (taskId: string) => void
   onEditTag: (taskId: string) => void
+  onSetNotes?: (taskId: string, notes: string) => Promise<void>
   onDragStart: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent, targetTag: string) => void
@@ -52,6 +53,7 @@ export function TaskLayout({
   onComplete,
   onDelete,
   onEditTag,
+  onSetNotes,
   onDragStart,
   onDragEnd,
   selectedIds,
@@ -82,6 +84,7 @@ export function TaskLayout({
         onComplete={onComplete}
         onDelete={onDelete}
         onEditTag={onEditTag}
+        onSetNotes={onSetNotes}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         selected={selectedIds?.has(task.id) ?? false}

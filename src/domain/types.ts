@@ -14,6 +14,9 @@ export type UserType = string
 export interface Task {
   id: ULID
   title: string
+  // Freeform markdown body / the plan (§6). Explicit column, not metadata, so it's
+  // enforceable and editable from the UI and MCP. Size-capped (~64 KB) on write.
+  notes?: string | null
   tag?: string | null
   state: 'Active' | 'Deleted' | 'Completed'
   createdAt: string // ISO 8601
@@ -97,6 +100,7 @@ export interface AuthContext {
 export interface CreateTaskInput {
   id?: string // Client-generated ID (optional, server will generate if not provided)
   title: string
+  notes?: string | null // markdown body / the plan (§6)
   tag?: string
   createdAt?: string // Original creation timestamp (optional, for preserving when moving tasks)
   date?: string | null // local calendar day, "YYYY-MM-DD" (backfilled from startTime when omitted)
@@ -111,6 +115,7 @@ export interface CreateTaskInput {
 
 export interface UpdateTaskInput {
   title?: string
+  notes?: string | null // markdown body / the plan (§6)
   tag?: string
   date?: string | null // local calendar day, "YYYY-MM-DD"
   startTime?: string | null // ISO 8601 - scheduled start time
@@ -184,5 +189,27 @@ export class VersionConflictError extends DomainError {
   constructor(public readonly currentVersion: number) {
     super(`Version conflict: board has moved to version ${currentVersion}`, 'VERSION_CONFLICT', 409)
     this.name = 'VersionConflictError'
+  }
+}
+
+/**
+ * Largest allowed size for a task's `notes` body, in bytes (UTF-8). ~64 KB — a
+ * plan, not a log file (§6). Measured on the encoded string so multibyte content
+ * can't slip past a length check.
+ */
+export const MAX_NOTES_BYTES = 64 * 1024
+
+/**
+ * Error thrown when a task's `notes` exceeds MAX_NOTES_BYTES.
+ * HTTP status: 413 Payload Too Large
+ */
+export class NotesTooLargeError extends DomainError {
+  constructor(public readonly bytes: number) {
+    super(
+      `Notes too large: ${bytes} bytes exceeds the ${MAX_NOTES_BYTES}-byte limit`,
+      'NOTES_TOO_LARGE',
+      413
+    )
+    this.name = 'NotesTooLargeError'
   }
 }
