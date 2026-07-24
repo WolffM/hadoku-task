@@ -495,11 +495,17 @@ export async function batchMoveTasks(
     timestamp
   )
 
-  // Save all changes atomically per board
+  // Move the task rows for BOTH boards in one atomic write. On D1 this is a
+  // single db.batch(): the source can never be emptied without the target being
+  // filled in the same transaction (the §2.5 lost-update gap). Stats are
+  // append-only event logs, written separately (a dropped analytics event is not
+  // data loss, and there is no cross-key transaction for them anyway).
+  await storage.batchSaveTasks(auth.userType, auth.sessionId, [
+    { boardId: input.sourceBoardId, tasks: updatedSourceTasksFile },
+    { boardId: input.targetBoardId, tasks: updatedTargetTasksFile }
+  ])
   await Promise.all([
-    storage.saveTasks(auth.userType, auth.sessionId, input.sourceBoardId, updatedSourceTasksFile),
     storage.saveStats(auth.userType, auth.sessionId, input.sourceBoardId, updatedSourceStats),
-    storage.saveTasks(auth.userType, auth.sessionId, input.targetBoardId, updatedTargetTasksFile),
     storage.saveStats(auth.userType, auth.sessionId, input.targetBoardId, updatedTargetStats)
   ])
 

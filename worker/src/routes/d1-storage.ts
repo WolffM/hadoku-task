@@ -411,6 +411,54 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       await db.batch(stmts)
     },
 
+    // --- Batch task write across boards (atomic) ------------------------
+    async batchSaveTasks(
+      _userType: UserType,
+      sessionId: string | undefined,
+      writes: Array<{ boardId: string; tasks: TasksFile }>
+    ): Promise<void> {
+      await ensureMigrated(sessionId)
+      const uid = sessionId ?? 'public'
+      const ts = nowIso()
+
+      // Split into deletes and upserts, and run ALL deletes before ANY upsert.
+      // The tasks PK is (user_id, id) — global per user, not per board — so a
+      // cross-board move is a DELETE on the source board plus an UPSERT (with the
+      // new board_id) on the target. If the upsert ran first, the source's delete
+      // would then wipe the just-moved row. Deletes-first makes it correct
+      // regardless of the order boards appear in `writes`.
+      const deletes: Array<{ run(): Promise<unknown> }> = []
+      const upserts: Array<{ run(): Promise<unknown> }> = []
+
+      for (const w of writes) {
+        const boardId = w.boardId || DEFAULT_BOARD_ID
+        const existing = await db
+          .prepare('SELECT id FROM tasks WHERE user_id = ? AND board_id = ?')
+          .bind(uid, boardId)
+          .all<{ id: string }>()
+        const existingIds = new Set(existing.results.map(r => r.id))
+        const desiredIds = new Set(w.tasks.tasks.map(t => t.id))
+
+        for (const task of w.tasks.tasks) {
+          upserts.push(upsertTaskStmt(db, uid, boardId, task))
+        }
+        for (const id of existingIds) {
+          if (!desiredIds.has(id)) {
+            deletes.push(db.prepare('DELETE FROM tasks WHERE user_id = ? AND id = ?').bind(uid, id))
+          }
+        }
+        upserts.push(
+          db
+            .prepare(
+              'UPDATE boards SET tasks_version = ?, updated_at = ? WHERE user_id = ? AND id = ?'
+            )
+            .bind(w.tasks.version ?? 1, ts, uid, boardId)
+        )
+      }
+
+      await db.batch([...deletes, ...upserts])
+    },
+
     // --- Stats (D1 events; identical to the KV adapter's stats path) ------
     async getStats(_userType: UserType, sessionId?: string, boardId?: string): Promise<StatsFile> {
       if (!boardId) boardId = DEFAULT_BOARD_ID

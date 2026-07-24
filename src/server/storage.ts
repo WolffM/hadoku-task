@@ -15,6 +15,18 @@ export interface Storage {
     boardId: string | undefined,
     stats: StatsFile
   ): Promise<void>
+  /**
+   * Persist several boards' task files as ONE atomic unit. On D1 this is a single
+   * db.batch() (all-or-nothing), which closes the cross-board-move lost-update
+   * gap: a move that empties the source and fills the target can no longer half-
+   * apply. On the legacy KV blob store there is no cross-key transaction, so it
+   * degrades to concurrent per-board writes — same behaviour as before.
+   */
+  batchSaveTasks(
+    userType: UserType,
+    sessionId: string | undefined,
+    writes: Array<{ boardId: string; tasks: TasksFile }>
+  ): Promise<void>
   getBoards(userType: UserType, sessionId?: string): Promise<BoardsFile>
   /**
    * Persist the board collection. `expectedVersion`, when provided (the caller

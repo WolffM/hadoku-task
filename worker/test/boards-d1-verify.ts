@@ -438,6 +438,61 @@ async function sectionD_boardOCC() {
   check('no-If-Match write still bumps version to 5', r.json?.version === 5, `v=${r.json?.version}`)
 }
 
+async function sectionE_atomicMove() {
+  console.log('\nE. Atomic cross-board move (one db.batch)')
+  const { env, d1 } = makeEnv()
+  const sid = 'sess-test-123'
+
+  await req(env, 'POST', '/task/api/boards', { body: { id: 'target', name: 'Target' } })
+  await req(env, 'POST', '/task/api', { body: { id: 'm1', title: 'Movable', boardId: 'main' } })
+  await req(env, 'POST', '/task/api', { body: { id: 'm2', title: 'Stays', boardId: 'main' } })
+
+  const r = await req(env, 'POST', '/task/api/batch/move-tasks', {
+    body: { sourceBoardId: 'main', targetBoardId: 'target', taskIds: ['m1'] }
+  })
+  check('move → 200', r.status === 200, `status=${r.status}`)
+
+  // Source board keeps only m2; target board now holds m1.
+  const src = await req(env, 'GET', '/task/api/tasks', { headers: {} })
+  const srcIds = (src.json?.tasks ?? []).map(t => t.id)
+  check(
+    'm1 removed from source, m2 remains',
+    !srcIds.includes('m1') && srcIds.includes('m2'),
+    JSON.stringify(srcIds)
+  )
+
+  const tgt = await req(env, 'GET', '/task/api/tasks?boardId=target')
+  const tgtIds = (tgt.json?.tasks ?? []).map(t => t.id)
+  check('m1 present on target', tgtIds.includes('m1'), JSON.stringify(tgtIds))
+
+  // Straight from SQLite: the moved row physically carries the new board_id, and
+  // the task exists on exactly one board (no duplicate, no orphan).
+  const boardOfM1 = d1.__raw
+    .prepare('SELECT board_id FROM tasks WHERE user_id=? AND id=?')
+    .get(sid, 'm1') as { board_id: string } | undefined
+  check('m1 row board_id = target', boardOfM1?.board_id === 'target', JSON.stringify(boardOfM1))
+  check(
+    'exactly one m1 row exists',
+    rowCount(d1, 'SELECT COUNT(*) n FROM tasks WHERE user_id=? AND id=?', sid, 'm1') === 1
+  )
+  // The atomicity property: source ends with exactly its remaining task, target
+  // with exactly the moved one — no half-applied move (source emptied without
+  // target filled, or a duplicated row).
+  check(
+    'source board has exactly 1 row (m2)',
+    rowCount(d1, "SELECT COUNT(*) n FROM tasks WHERE user_id=? AND board_id='main'", sid) === 1
+  )
+  check(
+    'target board has exactly 1 row (m1)',
+    rowCount(d1, "SELECT COUNT(*) n FROM tasks WHERE user_id=? AND board_id='target'", sid) === 1
+  )
+  check(
+    'move response reports moved:1',
+    (r.json as { moved?: number })?.moved === 1,
+    JSON.stringify(r.json)
+  )
+}
+
 async function main() {
   console.log('T1 D1-storage runtime verification')
   await sectionA_taskOCC()
@@ -445,6 +500,7 @@ async function main() {
   await sectionB2_legacyNamespace()
   await sectionC_boardCrud()
   await sectionD_boardOCC()
+  await sectionE_atomicMove()
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

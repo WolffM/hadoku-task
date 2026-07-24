@@ -80,6 +80,19 @@ export class LocalStorageStorage {
     localStorage.setItem(key, JSON.stringify(tasks))
   }
 
+  // localStorage writes are synchronous, so a multi-board write is already
+  // effectively atomic from this single-threaded client's perspective; just
+  // persist each board. Satisfies the Storage.batchSaveTasks contract.
+  async batchSaveTasks(
+    userType: string,
+    sessionId: string | undefined,
+    writes: Array<{ boardId: string; tasks: TasksFile }>
+  ): Promise<void> {
+    for (const w of writes) {
+      await this.saveTasks(userType, sessionId, w.boardId, w.tasks)
+    }
+  }
+
   // --- Stats Operations ---
 
   async getStats(

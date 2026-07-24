@@ -102,6 +102,23 @@ export function createKVStorage(env: Env, legacyId?: string): TaskStorage {
       const kvKey = tasksKey(sessionId, boardId)
       await env.TASKS_KV.put(kvKey, JSON.stringify(tasks))
     },
+    // KV has no cross-key transaction, so this is best-effort concurrent puts —
+    // the same non-atomic behaviour batchMoveTasks had before D1. The D1 adapter
+    // makes it truly atomic; this legacy path is unchanged.
+    async batchSaveTasks(
+      userType: UserType,
+      sessionId: string | undefined,
+      writes: Array<{ boardId: string; tasks: TasksFile }>
+    ) {
+      await Promise.all(
+        writes.map(w =>
+          env.TASKS_KV.put(
+            tasksKey(sessionId, w.boardId || DEFAULT_BOARD_ID),
+            JSON.stringify(w.tasks)
+          )
+        )
+      )
+    },
 
     // --- Stats (board scoped) - NOW USING D1 ---
     async getStats(userType: UserType, sessionId?: string, boardId?: string): Promise<StatsFile> {
