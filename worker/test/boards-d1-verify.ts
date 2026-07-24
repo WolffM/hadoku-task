@@ -56,11 +56,18 @@ const TASK_EVENTS_DDL = `
     timestamp  TEXT NOT NULL DEFAULT (datetime('now'))
   );`
 
-function makeEnv() {
+function makeEnv(opts: { prune?: boolean } = { prune: true }) {
   const { kv, store } = makeKV()
   const d1: FakeD1 = makeSqliteD1(MIGRATION)
   d1.__raw.exec(TASK_EVENTS_DDL)
-  const env = { TASKS_KV: kv, DB: d1, EDGE_AUTH_SECRET: EDGE_SECRET, TASK_STORAGE: 'd1' }
+  const env: Record<string, unknown> = {
+    TASKS_KV: kv,
+    DB: d1,
+    EDGE_AUTH_SECRET: EDGE_SECRET,
+    TASK_STORAGE: 'd1'
+  }
+  // Default to prune mode so the migration assertions exercise the steady state.
+  if (opts.prune !== false) env.TASK_STORAGE_PRUNE_KV = '1'
   return { env, kvStore: store, d1 }
 }
 
@@ -493,6 +500,42 @@ async function sectionE_atomicMove() {
   )
 }
 
+async function sectionF_soakKeepsKv() {
+  console.log('\nF. Soak mode (no prune): D1 authoritative, KV retained for safe rollback')
+  const { env, kvStore, d1 } = makeEnv({ prune: false })
+  const sid = 'sess-test-123'
+
+  kvStore.set(
+    tasksKey(sid, 'main'),
+    JSON.stringify({
+      version: 2,
+      updatedAt: '2026-07-01T00:00:00.000Z',
+      tasks: [
+        { id: 'k1', title: 'Kept in KV', state: 'Active', createdAt: '2026-06-01T00:00:00.000Z' }
+      ]
+    })
+  )
+
+  const r = await req(env, 'GET', '/task/api/tasks')
+  check('migrated task is served from D1', r.json?.tasks?.length === 1, JSON.stringify(r.json))
+  check(
+    'D1 has the row',
+    rowCount(d1, "SELECT COUNT(*) n FROM tasks WHERE user_id=? AND id='k1'", sid) === 1
+  )
+  // The soak guarantee: the KV blob is NOT deleted, so removing TASK_STORAGE=d1
+  // reverts cleanly without the board going empty.
+  check(
+    'KV blob RETAINED (rollback-safe)',
+    kvStore.has(tasksKey(sid, 'main')),
+    `keys=${[...kvStore.keys()]}`
+  )
+
+  // And D1 stays authoritative on the next read (board_meta marks migrated), so
+  // the retained KV is never re-read as truth.
+  const r2 = await req(env, 'GET', '/task/api/tasks')
+  check('2nd read still D1-authoritative (1 task)', r2.json?.tasks?.length === 1)
+}
+
 async function main() {
   console.log('T1 D1-storage runtime verification')
   await sectionA_taskOCC()
@@ -501,6 +544,7 @@ async function main() {
   await sectionC_boardCrud()
   await sectionD_boardOCC()
   await sectionE_atomicMove()
+  await sectionF_soakKeepsKv()
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

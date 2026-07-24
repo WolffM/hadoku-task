@@ -17,6 +17,11 @@ export interface Env {
   // Set as a wrangler [vars] entry so the flip is a deploy, not a code change,
   // and can be rolled back without republishing @wolffm/task.
   TASK_STORAGE?: string
+  // '1' enables pruning the legacy KV blob once a user's data has migrated into
+  // D1. Left unset during the initial flip (soak): D1 serves reads but KV stays
+  // an intact, lossless fallback so a rollback is safe with TASK_STORAGE alone.
+  // Flip this to '1' only after the D1 cutover has soaked.
+  TASK_STORAGE_PRUNE_KV?: string
 }
 
 /**

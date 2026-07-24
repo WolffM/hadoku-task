@@ -202,11 +202,18 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
     await db.batch(stmts)
 
-    // KV cleanup AFTER the rows have landed. Idempotent: a racing migrator
-    // deleting the same keys is harmless. Leaving them would let a later read
-    // re-migrate, which OR IGNORE also makes harmless — so this is best-effort.
-    await deleteKvBlob(sessionId)
-    await Promise.all(migratedTaskKeys.map(bid => deleteKvBlob(sessionId, bid)))
+    // KV cleanup AFTER the rows have landed — but ONLY once pruning is enabled.
+    // During the initial flip (soak), we leave the KV blobs in place so a
+    // rollback is safe with the var alone: D1 serves reads, KV stays a lossless
+    // fallback, and removing TASK_STORAGE=d1 reverts cleanly (no board goes empty
+    // because its KV was deleted). Once the flip has soaked, TASK_STORAGE_PRUNE_KV
+    // enables the delete. Idempotent + best-effort either way: a re-migration is
+    // an OR IGNORE no-op, and board_meta already marks this user migrated so the
+    // surviving KV is never re-read as authoritative.
+    if (env.TASK_STORAGE_PRUNE_KV === '1') {
+      await deleteKvBlob(sessionId)
+      await Promise.all(migratedTaskKeys.map(bid => deleteKvBlob(sessionId, bid)))
+    }
   }
 
   function insertTaskStmt(uid: string, boardId: string, task: Task) {
