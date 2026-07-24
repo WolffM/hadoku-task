@@ -3,15 +3,18 @@
  * Displays tag filter pills and add tag button
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { TagFilterButton } from './TagFilterButton'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
+import { formatError } from '../domain/utils/tags'
+import { logger } from '@wolffm/logger/client'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 
 export interface TagFiltersSectionProps {
   tags: string[]
   selectedFilters: Set<string>
   dragOverFilter: string | null
+  userType: string
   onToggleFilter: (tag: string) => void
   onTagContextMenu: (tag: string, x: number, y: number) => void
   onDragOver: (e: React.DragEvent, filter: string) => void
@@ -19,20 +22,51 @@ export interface TagFiltersSectionProps {
   onDrop: (e: React.DragEvent, filterTag: string) => Promise<void>
   onCreateTagClick: () => void
   onPendingOperation: (op: PendingTaskOperation | null) => void
+  onRefresh: () => Promise<void>
+  onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
 }
 
 export function TagFiltersSection({
   tags,
   selectedFilters,
   dragOverFilter,
+  userType,
   onToggleFilter,
   onTagContextMenu,
   onDragOver,
   onDragLeave,
   onDrop,
   onCreateTagClick,
-  onPendingOperation
+  onPendingOperation,
+  onRefresh,
+  onShowToast
 }: TagFiltersSectionProps) {
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSyncClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isSyncing) return
+
+    logger.info('[TagFiltersSection] Manual refresh triggered')
+    setIsSyncing(true)
+
+    const button = e.currentTarget
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Sync timeout')), 5000)
+    })
+
+    try {
+      await Promise.race([onRefresh(), timeoutPromise])
+      logger.info('[TagFiltersSection] Sync completed successfully')
+      onShowToast?.('Refresh successful', 'success')
+    } catch (error) {
+      logger.error('[TagFiltersSection] Sync failed', { error: formatError(error) })
+      onShowToast?.('Refresh failed', 'error')
+    } finally {
+      setIsSyncing(false)
+      button?.blur()
+    }
+  }
+
   const handleAddTagDrop = (e: React.DragEvent) => {
     e.preventDefault()
     onDragLeave(e)
@@ -73,6 +107,31 @@ export function TagFiltersSection({
       >
         ＋
       </button>
+
+      {userType !== 'public' && (
+        <button
+          className={`sync-btn task-app__filter-sync ${isSyncing ? 'spinning' : ''}`}
+          onClick={handleSyncClick}
+          disabled={isSyncing}
+          title="Sync from server"
+          aria-label="Sync from server"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      )}
     </div>
   )
 }

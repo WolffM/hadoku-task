@@ -471,6 +471,11 @@
   flex-wrap: wrap;
 }
 
+/* Refresh button lives in the filters bar, pushed to the far right. */
+.task-app__filter-sync {
+  margin-left: auto;
+}
+
 /* Filter buttons - use shared .pill-btn from buttons.css */
 /* Only component-specific overrides here */
 

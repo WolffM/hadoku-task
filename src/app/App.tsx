@@ -347,7 +347,6 @@ export default function App(props: TaskAppProps = {}) {
         <BoardsSection
           boards={boards}
           currentBoardId={currentBoardId}
-          userType={userType}
           dragOverFilter={dragAndDrop.dragOverFilter}
           onBoardSwitch={switchBoard}
           onBoardContextMenu={(boardId, x, y) => modals.setBoardContextMenu({ boardId, x, y })}
@@ -361,8 +360,6 @@ export default function App(props: TaskAppProps = {}) {
           }}
           onEditBoardsClick={() => modals.setShowEditBoardsDialog(true)}
           onPendingOperation={modals.setPendingTaskOperation}
-          onInitialLoad={initialLoad}
-          onShowToast={showToast}
         />
 
         <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
@@ -391,6 +388,7 @@ export default function App(props: TaskAppProps = {}) {
               tags={allTags}
               selectedFilters={selectedFilters}
               dragOverFilter={dragAndDrop.dragOverFilter}
+              userType={userType}
               onToggleFilter={tag => {
                 setSelectedFilters(prev => {
                   const copy = new Set(prev)
@@ -408,6 +406,8 @@ export default function App(props: TaskAppProps = {}) {
                 modals.setShowNewTagDialog(true)
               }}
               onPendingOperation={modals.setPendingTaskOperation}
+              onRefresh={initialLoad}
+              onShowToast={showToast}
             />
 
             <TaskLayout
