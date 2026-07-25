@@ -61,7 +61,8 @@ const boardRefParam = z.object({
 
 export const GrantShareInputSchema = z
   .object({
-    key: z.string().optional().openapi({ example: 'friend-…', description: 'Grantee access key (resolved to a userId).' }),
+    name: z.string().optional().openapi({ example: 'tenhands-service', description: 'Grantee display name (PREFERRED — no credential changes hands). Resolved case-insensitively against live registry rows.' }),
+    key: z.string().optional().openapi({ example: 'friend-…', description: 'Grantee access key — a bearer credential; prefer `name`.' }),
     userId: z.string().optional().openapi({ description: 'Grantee userId, if you already have it.' }),
     level: z.enum(['readonly', 'contributor']).openapi({ example: 'contributor' })
   })
@@ -71,8 +72,15 @@ export const GrantShareResponseSchema = z
   .object({
     ok: z.boolean(),
     granteeUserId: z.string(),
-    granteeName: z.string().optional(),
-    level: z.enum(['readonly', 'contributor'])
+    granteeName: z.string().nullable().optional(),
+    level: z.enum(['readonly', 'contributor']),
+    granted: z
+      .object({
+        name: z.string().nullable(),
+        tier: z.string().nullable(),
+        level: z.enum(['readonly', 'contributor'])
+      })
+      .openapi({ description: 'Echo of what was granted, so the owner can confirm the identity + tier.' })
   })
   .openapi('GrantShareResponse')
 

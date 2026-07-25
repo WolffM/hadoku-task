@@ -694,9 +694,17 @@ its opaque **`handle`** (a slug only ever resolves within the caller's own names
 
 ### POST `/boards/:ref/shares`
 
-Owner-only. Grant (or update) a share. Body: `{ key, level }` or `{ userId, level }` where
-`level` is `readonly` | `contributor`. `key` is resolved to a stable userId via the read-only
-key registry and never logged. → `{ ok, granteeUserId, granteeName, level }`.
+Owner-only. Grant (or update) a share. `level` is `readonly` | `contributor`. Identify the
+grantee three ways, **preferred first** — no bearer credential need change hands:
+
+- `{ name, level }` — **display name** (recommended). Resolved case-insensitively against live
+  registry rows (retired rows excluded), the same way name-uniqueness is enforced. → `404
+  NAME_NOT_FOUND` if no live key has that name; `409 NO_USER_ID` if it exists but never signed in.
+- `{ userId, level }` — a stable userId if you already have one.
+- `{ key, level }` — the grantee's raw access key (a bearer credential; prefer `name`).
+
+→ `{ ok, granteeUserId, granteeName, level, granted: { name, tier, level } }`. The `granted`
+echo lets the owner confirm they granted the identity + tier they intended.
 
 ### GET `/boards/:ref/shares`
 

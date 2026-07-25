@@ -48,7 +48,9 @@ function makeKV() {
 }
 
 // Mock the read-only key registry: key:{rawKey} → { userId, name }.
-function makeSessionsKV(entries: Record<string, { userId: string; name?: string }>) {
+function makeSessionsKV(
+  entries: Record<string, { userId: string; name?: string; tier?: string; retiredAt?: number }>
+) {
   const store = new Map<string, string>()
   for (const [rawKey, rec] of Object.entries(entries)) {
     store.set(`key:${rawKey}`, JSON.stringify(rec))
@@ -56,6 +58,9 @@ function makeSessionsKV(entries: Record<string, { userId: string; name?: string 
   return {
     async get(key: string) {
       return store.get(key) ?? null
+    },
+    async list({ prefix }: { prefix: string } = { prefix: '' }) {
+      return { keys: [...store.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })) }
     },
     async put() {},
     async delete() {}
@@ -72,8 +77,11 @@ const env = {
   TASK_STORAGE: 'd1',
   TASK_STORAGE_PRUNE_KV: '1',
   SESSIONS_KV: makeSessionsKV({
-    'contrib-key': { userId: 'contrib-uid', name: 'TenHands' },
-    'reader-key': { userId: 'reader-uid', name: 'Reader' }
+    'contrib-key': { userId: 'contrib-uid', name: 'TenHands', tier: 'service' },
+    'reader-key': { userId: 'reader-uid', name: 'Reader', tier: 'friend' },
+    // A retired row that shares the resolved user but a stale name — must be
+    // skipped by the name scan (retiredAt set), exactly like isNameTaken.
+    'retired-key': { userId: 'contrib-uid', name: 'GhostName', tier: 'service', retiredAt: 123 }
   })
 } as Record<string, unknown>
 
@@ -320,6 +328,27 @@ async function main() {
   check('shared board gone from contributor list', !(await boards(CONTRIB)).some(b => b.handle === handle))
   r = await req(CONTRIB, 'GET', `/task/api/tasks?boardId=${handle}`)
   check('contributor can no longer read the board → 404', r.status === 404, `status=${r.status}`)
+
+  // ---------------------------------------------------------------------
+  section('11. Grant by DISPLAY NAME, not a raw key (TenHands ask)')
+  // ---------------------------------------------------------------------
+  // Owner grants by name — no credential changes hands. Re-adds the contributor
+  // that just left, resolved from the registry by name.
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'TenHands', level: 'contributor' })
+  check('grant by name → 200', r.status === 200, JSON.stringify(r.json))
+  check('name resolved to the right userId', r.json?.granteeUserId === 'contrib-uid', JSON.stringify(r.json))
+  const granted = (r.json as unknown as { granted?: { name?: string; tier?: string; level?: string } }).granted
+  check('response echoes granted name + tier + level', granted?.name === 'TenHands' && granted?.tier === 'service' && granted?.level === 'contributor', JSON.stringify(granted))
+  check('the named grantee can now read the board', (await tasksOn(CONTRIB, handle)).length >= 1)
+  // Case-insensitive, matching isNameTaken.
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'tenhands', level: 'contributor' })
+  check('grant by name is case-insensitive → 200', r.status === 200 && r.json?.granteeUserId === 'contrib-uid', JSON.stringify(r.json))
+  // Unknown name → 404 NAME_NOT_FOUND.
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'nobody-here', level: 'contributor' })
+  check('unknown name → 404 NAME_NOT_FOUND', r.status === 404 && r.json?.code === 'NAME_NOT_FOUND', `status=${r.status} ${JSON.stringify(r.json)}`)
+  // A retired row with that name is skipped (never resolves).
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'GhostName', level: 'contributor' })
+  check('retired row name → 404 (excluded like isNameTaken)', r.status === 404 && r.json?.code === 'NAME_NOT_FOUND', `status=${r.status} ${JSON.stringify(r.json)}`)
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
