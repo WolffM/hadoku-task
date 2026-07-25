@@ -303,12 +303,20 @@
   margin-bottom: var(--hdk-space-lg);
 }
 
-/* Space between board selector row and controls - match filters offset */
+/* Board area: the main row stacked above the (optional) automation row. */
 .task-app__boards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+  align-items: stretch;
+  margin-bottom: var(--hdk-space-lg);
+}
+
+/* Main row: standard boards on the left, create/edit actions filling to the right. */
+.task-app__board-row {
   display: flex;
   gap: var(--hdk-space-md);
   align-items: center;
-  margin-bottom: var(--hdk-space-lg);
 }
 
 .task-app__board-list {

@@ -83,50 +83,54 @@ export function BoardsSection({
 
   return (
     <div className="task-app__boards">
-      <div className="task-app__board-list">{boardsList.map(renderBoard)}</div>
+      {/* Main row: the favorited standard boards + the create/edit actions. */}
+      <div className="task-app__board-row">
+        <div className="task-app__board-list">{boardsList.map(renderBoard)}</div>
 
+        <div className="task-app__board-actions">
+          {canAddMoreBoards && (
+            <button
+              className={`board-add-btn ${dragOverFilter === 'add-board' ? 'board-btn--drag-over' : ''}`}
+              onClick={onCreateBoardClick}
+              onDragOver={e => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                onDragOverFilter('add-board')
+              }}
+              onDragLeave={() => onDragOverFilter(null)}
+              onDrop={e => {
+                e.preventDefault()
+                onDragOverFilter(null)
+
+                const ids = getTaskIdsFromDragEvent(e.dataTransfer)
+                if (ids.length > 0) {
+                  onPendingOperation({ type: 'move-to-board', taskIds: ids })
+                  onCreateBoardClick()
+                }
+              }}
+              aria-label="Create board"
+            >
+              ＋
+            </button>
+          )}
+
+          <button
+            className="board-edit-btn"
+            onClick={onEditBoardsClick}
+            title="Edit boards"
+            aria-label="Edit boards"
+          >
+            ⚙
+          </button>
+        </div>
+      </div>
+
+      {/* Second row, below the main one: automation boards on their own line. */}
       {automationBoards.length > 0 && (
         <div className="task-app__board-list task-app__board-list--automation">
           {automationBoards.map(renderBoard)}
         </div>
       )}
-
-      <div className="task-app__board-actions">
-        {canAddMoreBoards && (
-          <button
-            className={`board-add-btn ${dragOverFilter === 'add-board' ? 'board-btn--drag-over' : ''}`}
-            onClick={onCreateBoardClick}
-            onDragOver={e => {
-              e.preventDefault()
-              e.dataTransfer.dropEffect = 'move'
-              onDragOverFilter('add-board')
-            }}
-            onDragLeave={() => onDragOverFilter(null)}
-            onDrop={e => {
-              e.preventDefault()
-              onDragOverFilter(null)
-
-              const ids = getTaskIdsFromDragEvent(e.dataTransfer)
-              if (ids.length > 0) {
-                onPendingOperation({ type: 'move-to-board', taskIds: ids })
-                onCreateBoardClick()
-              }
-            }}
-            aria-label="Create board"
-          >
-            ＋
-          </button>
-        )}
-
-        <button
-          className="board-edit-btn"
-          onClick={onEditBoardsClick}
-          title="Edit boards"
-          aria-label="Edit boards"
-        >
-          ⚙
-        </button>
-      </div>
     </div>
   )
 }
