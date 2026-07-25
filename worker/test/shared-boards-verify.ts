@@ -93,6 +93,7 @@ interface Board {
   handle?: string
   ownerUserId?: string
   access?: string
+  tasks?: Task[]
 }
 interface Task {
   id: string
@@ -283,6 +284,20 @@ async function main() {
     JSON.stringify(shared)
   )
   check("contributor reads the OWNER's 2 tasks", (await tasksOn(CONTRIB, handle)).length === 2)
+  // The FRONTEND renders a board from the HYDRATED GET /boards payload, never a
+  // follow-up /tasks call. So the shared board's `.tasks` in GET /boards must be
+  // the OWNER's tasks — this is the "board name showed but tasks didn't / we had
+  // separate task data" bug. Hydration must resolve the owner's scope.
+  check(
+    'shared board is hydrated with the OWNER tasks in GET /boards (not empty)',
+    shared?.tasks?.length === 2,
+    `n=${shared?.tasks?.length} ${JSON.stringify(shared?.tasks?.map(t => t.id))}`
+  )
+  check(
+    'a shared board is addressed by its handle, not the owner slug',
+    shared?.id === handle,
+    `id=${shared?.id} handle=${handle}`
+  )
 
   // ---------------------------------------------------------------------
   section("5. Contributor writes land in the OWNER's namespace")

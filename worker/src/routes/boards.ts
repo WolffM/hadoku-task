@@ -7,7 +7,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { getContext, withBoardLock, parseIfMatch } from './route-utils'
+import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
 import type { AppContext } from '../types'
@@ -47,6 +47,27 @@ export function createBoardRoutes() {
 
     const { storage, auth } = getContext(c)
     const boardsData = await TaskHandlers.getBoards(storage, auth)
+
+    // The handler hydrates every board's tasks/stats in the CALLER's own scope
+    // (`auth.sessionId`). That's correct for owned boards but wrong for boards
+    // SHARED with this viewer — their task rows live under the OWNER's id, so
+    // the handler's viewer-scoped read comes back empty. Re-hydrate those from
+    // the owner's scope here at the route edge (where sharing is resolved, §7.1),
+    // in parallel so one slow owner can't stall the rest. A shared board's `id`
+    // is its globally-unique handle, which resolveBoardCtx routes to the owner.
+    await Promise.all(
+      boardsData.boards.map(async board => {
+        if (!board.access || board.access === 'owner') return
+        const ctx = await resolveBoardCtx(c.env, authContext, board.id)
+        if (!ctx) return
+        const [tasksFile, statsFile] = await Promise.all([
+          ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
+          ctx.storage.getStats(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId)
+        ])
+        board.tasks = tasksFile.tasks
+        board.stats = statsFile
+      })
+    )
 
     // Expose the collection version as an ETag so clients can present it as
     // If-Match on the next board write (board-collection OCC).

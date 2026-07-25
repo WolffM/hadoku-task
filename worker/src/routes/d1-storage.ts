@@ -110,7 +110,11 @@ function rowToTask(r: TaskRow): Task {
 
 function rowToBoard(r: BoardRow): Board {
   return {
-    id: r.id,
+    // A shared board is addressed by its globally-unique `handle`, never the
+    // owner's slug: a slug only ever resolves within the CALLER's namespace
+    // (the sharing security invariant), so if the viewer routed task ops by the
+    // owner's slug they'd hit their own empty board. Own boards keep the slug.
+    id: r.access !== 'owner' && r.handle ? r.handle : r.id,
     name: r.name,
     tags: r.tags ? (JSON.parse(r.tags) as string[]) : [],
     tasks: [], // metadata only; the handler fans out getTasks per board (§5.5)
@@ -258,15 +262,22 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // Reconcile board rows to match the file. Existing boards keep their
       // handle/version/tasks_version; removed boards (and their tasks) are
       // deleted; new boards get a fresh handle. One atomic batch.
+      //
+      // A GET /boards response also carries boards SHARED with this viewer
+      // (owned by someone else). Those must never touch this viewer's namespace
+      // — reconciling them would clone a phantom copy on insert and, on the
+      // delete pass, is simply not ours to remove. Filter to the viewer's own
+      // boards (ownerUserId absent ⇒ a fresh/local board, i.e. ours).
+      const ownBoards = boards.boards.filter(b => !b.ownerUserId || b.ownerUserId === uid)
       const existing = await db
         .prepare('SELECT id FROM boards WHERE user_id = ?')
         .bind(uid)
         .all<{ id: string }>()
       const existingIds = new Set(existing.results.map(r => r.id))
-      const desiredIds = new Set(boards.boards.map(b => b.id))
+      const desiredIds = new Set(ownBoards.map(b => b.id))
 
       const stmts: Array<{ run(): Promise<unknown> }> = []
-      for (const b of boards.boards) {
+      for (const b of ownBoards) {
         if (existingIds.has(b.id)) {
           stmts.push(
             db

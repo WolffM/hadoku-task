@@ -132,7 +132,14 @@ export function useSessionInitialization({
         void handshakePromise
           .then(r => handleExpiry(r.serverUserType))
           .catch(err => logger.warn('[App] handshake failed', { error: String(err) }))
-        void boardSync
+
+        // Hold the skeleton until the FRESH board sync (getBoards) resolves, not
+        // just prefs. Painting the shell on cached localStorage first meant a
+        // returning user saw their own boards immediately and then watched
+        // SHARED boards pop in a beat later, once the network sync landed — a
+        // visibly two-stage load. getBoards hydrates every board (own + shared)
+        // in one parallelized call, so awaiting it reveals them all together.
+        await boardSync
       }
 
       // Set the effective sessionId for all hooks to use (only if different)
@@ -140,9 +147,9 @@ export function useSessionInitialization({
         setEffectiveSessionId(finalSessionId)
       }
 
-      // Unblock the shell as soon as preferences are resolved. useTasks's own
-      // user-context effect has already hydrated tasks/boards from localStorage
-      // by this point, so the shell renders with cached data immediately.
+      // Reveal the shell. Authenticated users waited for the fresh board sync
+      // above (unified load, no pop-in); public users fall through immediately
+      // and hydrate from localStorage right after.
       setIsLoaded(true)
 
       if (userType === 'public') {
