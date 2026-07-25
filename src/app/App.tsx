@@ -513,6 +513,7 @@ export default function App(props: TaskAppProps = {}) {
           onRenameBoard={renameBoard}
           onSetPinnedBoards={setPinnedBoards}
           shareApi={shareApi}
+          onReloadBoards={initialLoad}
           showShareDialog={modals.showShareDialog}
           onCloseShareDialog={() => modals.setShowShareDialog(false)}
           onCloseNewTagDialog={() => {

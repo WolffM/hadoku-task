@@ -125,6 +125,22 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     async revokeShare(_boardRef: string, _granteeUserId: string): Promise<boolean> {
       return false
     },
+    async activateAutomation(
+      _boardRef: string,
+      _payload: {
+        lanes: unknown
+        schemaId?: string | null
+        schemaVersion?: number | null
+        repo?: string | null
+        dryRun?: boolean
+        digest?: string
+      }
+    ): Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }> {
+      return { ok: false, error: 'Sign in to configure automation boards.' }
+    },
+    async deactivateAutomation(_boardRef: string): Promise<{ ok: boolean; error?: string }> {
+      return { ok: false, error: 'Sign in to configure automation boards.' }
+    },
 
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
       return storage.getTasks(userType, sessionId, boardId)

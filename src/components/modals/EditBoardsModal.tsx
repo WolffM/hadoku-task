@@ -26,7 +26,21 @@ export interface ShareRow {
   createdAt: string
 }
 
-/** Server-only sharing calls, injected from the api client. */
+/** A preview row from an activation dryRun (tag → where it lands). */
+export interface ActivationMappingRow {
+  tag: string
+  count: number
+  lands: 'lane' | 'inbox'
+}
+export interface ActivationPreview {
+  digest: string
+  lanes: Array<Record<string, unknown>>
+  mapping: ActivationMappingRow[]
+  toInbox: number
+  collisions: string[]
+}
+
+/** Server-only owner board operations (share + automation), injected from the client. */
 export interface ShareApi {
   searchUsers: (q: string) => Promise<Array<{ name: string; tier?: string }>>
   listShares: (boardRef: string) => Promise<ShareRow[]>
@@ -35,6 +49,18 @@ export interface ShareApi {
     input: { name?: string; userId?: string; level: ShareLevel }
   ) => Promise<{ ok: boolean; error?: string; granted?: { name: string | null; tier: string | null; level: string } }>
   revokeShare: (boardRef: string, granteeUserId: string) => Promise<boolean>
+  activateAutomation: (
+    boardRef: string,
+    payload: {
+      lanes: unknown
+      schemaId?: string | null
+      schemaVersion?: number | null
+      repo?: string | null
+      dryRun?: boolean
+      digest?: string
+    }
+  ) => Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }>
+  deactivateAutomation: (boardRef: string) => Promise<{ ok: boolean; error?: string }>
 }
 
 export interface EditBoardsModalProps {
@@ -48,6 +74,8 @@ export interface EditBoardsModalProps {
   onDelete: (boardId: string) => Promise<void>
   onSetPinned: (order: string[]) => Promise<void>
   shareApi: ShareApi
+  /** Reload boards from the server (after activate/deactivate changes a board's mode). */
+  onReloadBoards: () => Promise<void>
   validateBoardName: (name: string) => string | null
 }
 
@@ -66,6 +94,7 @@ export function EditBoardsModal({
   onDelete,
   onSetPinned,
   shareApi,
+  onReloadBoards,
   validateBoardName
 }: EditBoardsModalProps) {
   const [search, setSearch] = useState('')
@@ -74,6 +103,7 @@ export function EditBoardsModal({
   const [editValue, setEditValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [sharingId, setSharingId] = useState<string | null>(null)
+  const [automatingId, setAutomatingId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
@@ -241,13 +271,29 @@ export function EditBoardsModal({
               <>
                 <button
                   className={`edit-boards__share ${sharingId === b.id ? 'is-open' : ''}`}
-                  onClick={() => setSharingId(sharingId === b.id ? null : b.id)}
+                  onClick={() => {
+                    setSharingId(sharingId === b.id ? null : b.id)
+                    setAutomatingId(null)
+                  }}
                   disabled={busy}
                   title="Share this board"
                   aria-label={`Share ${b.name}`}
                   aria-expanded={sharingId === b.id}
                 >
                   <ShareIcon />
+                </button>
+                <button
+                  className={`edit-boards__automate ${automatingId === b.id ? 'is-open' : ''}`}
+                  onClick={() => {
+                    setAutomatingId(automatingId === b.id ? null : b.id)
+                    setSharingId(null)
+                  }}
+                  disabled={busy}
+                  title={b.mode === 'automation' ? 'Automation settings' : 'Convert to an automation board'}
+                  aria-label={`Automation for ${b.name}`}
+                  aria-expanded={automatingId === b.id}
+                >
+                  🤖
                 </button>
                 {!isMain && (
                   <button
@@ -288,6 +334,19 @@ export function EditBoardsModal({
         {sharingId === b.id && owns && (
           <li className="edit-boards__share-row">
             <SharePanel board={b} shareApi={shareApi} />
+          </li>
+        )}
+
+        {automatingId === b.id && owns && (
+          <li className="edit-boards__share-row">
+            <AutomationPanel
+              board={b}
+              shareApi={shareApi}
+              onDone={async () => {
+                setAutomatingId(null)
+                await onReloadBoards()
+              }}
+            />
           </li>
         )}
       </React.Fragment>
@@ -518,6 +577,177 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+/**
+ * Convert a board to (or off) an automation board (§5.4). Activation is a
+ * DESTRUCTIVE migration: paste a provider's activation JSON (the lane contract),
+ * preview the tag→lane mapping via a dryRun, then commit by echoing the digest.
+ * An automation board shows its lanes + a Deactivate action.
+ */
+function AutomationPanel({
+  board,
+  shareApi,
+  onDone
+}: {
+  board: Board
+  shareApi: ShareApi
+  onDone: () => Promise<void>
+}) {
+  const ref = boardRef(board)
+  const isAutomation = board.mode === 'automation'
+  const [raw, setRaw] = useState('')
+  const [preview, setPreview] = useState<ActivationPreview | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  // Parse the pasted JSON into an activation payload (lanes + opaque labels).
+  const parsePayload = (): { lanes: unknown; schemaId?: string; schemaVersion?: number } | null => {
+    try {
+      const obj = JSON.parse(raw) as Record<string, unknown>
+      const lanes = Array.isArray(obj.lanes) ? obj.lanes : Array.isArray(obj) ? obj : null
+      if (!lanes) {
+        setErr('JSON must have a `lanes` array (or be a lane array).')
+        return null
+      }
+      return {
+        lanes,
+        schemaId: typeof obj.schemaId === 'string' ? obj.schemaId : undefined,
+        schemaVersion: typeof obj.schemaVersion === 'number' ? obj.schemaVersion : undefined
+      }
+    } catch {
+      setErr('That is not valid JSON.')
+      return null
+    }
+  }
+
+  const runPreview = () => {
+    setErr(null)
+    setPreview(null)
+    const payload = parsePayload()
+    if (!payload) return
+    setBusy(true)
+    void shareApi
+      .activateAutomation(ref, { ...payload, dryRun: true })
+      .then(res => {
+        if (res.ok) setPreview((res.result as { preview: ActivationPreview }).preview)
+        else setErr(res.error ?? 'Preview failed')
+      })
+      .finally(() => setBusy(false))
+  }
+
+  const commit = () => {
+    const payload = parsePayload()
+    if (!payload || !preview) return
+    setBusy(true)
+    setErr(null)
+    void shareApi
+      .activateAutomation(ref, { ...payload, digest: preview.digest })
+      .then(async res => {
+        if (res.ok) await onDone()
+        else setErr(res.error ?? 'Activation failed')
+      })
+      .finally(() => setBusy(false))
+  }
+
+  const deactivate = () => {
+    if (!window.confirm(`Deactivate automation on "${board.name}"? Tasks keep their tags; the lane lock is removed.`)) return
+    setBusy(true)
+    setErr(null)
+    void shareApi
+      .deactivateAutomation(ref)
+      .then(async res => {
+        if (res.ok) await onDone()
+        else setErr(res.error ?? 'Deactivation failed')
+      })
+      .finally(() => setBusy(false))
+  }
+
+  if (isAutomation) {
+    const lanes = (board.lanes ?? []) as Array<{ tag: string; label?: string; editableBy?: string }>
+    return (
+      <div className="share-panel automation-panel">
+        <p className="automation-panel__status">
+          <strong>Automation active</strong>
+          {board.schemaId ? ` · ${board.schemaId} v${board.schemaVersion ?? '?'}` : ''} · {lanes.length}{' '}
+          lanes
+        </p>
+        <ul className="automation-panel__lanes">
+          {lanes.map(l => (
+            <li key={l.tag} className="automation-panel__lane">
+              <span className="automation-panel__lane-tag">{l.label ?? l.tag}</span>
+              <span className={`automation-panel__lane-by is-${l.editableBy}`}>{l.editableBy}</span>
+            </li>
+          ))}
+        </ul>
+        {err && <p className="share-panel__msg is-err">{err}</p>}
+        <button className="automation-panel__deactivate" onClick={deactivate} disabled={busy}>
+          Deactivate automation
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="share-panel automation-panel">
+      <p className="automation-panel__hint">
+        Convert this to an <strong>automation board</strong>: paste a provider&apos;s activation JSON
+        (its lane contract). This is <strong>destructive</strong> — it replaces the board&apos;s tags
+        with the fixed lanes. Preview first.
+      </p>
+      <textarea
+        className="automation-panel__json"
+        placeholder={'{\n  "schemaId": "autoland",\n  "schemaVersion": 1,\n  "lanes": [ … ]\n}'}
+        value={raw}
+        onChange={e => {
+          setRaw(e.target.value)
+          setPreview(null)
+          setErr(null)
+        }}
+        rows={4}
+        aria-label="Activation JSON"
+      />
+
+      {err && <p className="share-panel__msg is-err">{err}</p>}
+
+      {preview && (
+        <div className="automation-panel__preview">
+          <p className="automation-panel__preview-head">
+            {preview.lanes.length} lanes · {preview.toInbox} task{preview.toInbox === 1 ? '' : 's'} →
+            Inbox
+            {preview.collisions.length > 0 ? ` · collisions: ${preview.collisions.join(', ')}` : ''}
+          </p>
+          {preview.mapping.length > 0 && (
+            <ul className="automation-panel__mapping">
+              {preview.mapping.map(m => (
+                <li key={m.tag}>
+                  <span className="automation-panel__map-tag">{m.tag}</span>
+                  <span className="automation-panel__map-arrow">→</span>
+                  <span className={`automation-panel__map-dest is-${m.lands}`}>
+                    {m.lands === 'lane' ? m.tag : 'Inbox'} ({m.count})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="automation-panel__actions">
+        <button className="automation-panel__preview-btn" onClick={runPreview} disabled={busy || !raw.trim()}>
+          Preview
+        </button>
+        <button
+          className="automation-panel__activate-btn"
+          onClick={commit}
+          disabled={busy || !preview}
+          title={preview ? 'Activate (destructive)' : 'Preview first'}
+        >
+          Activate
+        </button>
+      </div>
     </div>
   )
 }

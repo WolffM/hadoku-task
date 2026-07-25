@@ -490,6 +490,50 @@ export function createApi(
       }
     },
 
+    /**
+     * Activate (or preview) automation on a board (owner only, §5.4). Pass
+     * `dryRun: true` for a preview + digest; echo that digest to commit. Returns
+     * the raw result (preview/applied) or an error.
+     */
+    async activateAutomation(
+      boardRef: string,
+      payload: {
+        lanes: unknown
+        schemaId?: string | null
+        schemaVersion?: number | null
+        repo?: string | null
+        dryRun?: boolean
+        digest?: string
+      }
+    ): Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }> {
+      try {
+        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/activate-automation`, {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify(payload)
+        })
+        const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+        if (!res.ok) return { ok: false, error: data.error ?? `Error ${res.status}`, code: data.code }
+        return { ok: true, result: data }
+      } catch {
+        return { ok: false, error: 'Network error' }
+      }
+    },
+
+    /** Deactivate automation, restoring the standard tag list (owner only). */
+    async deactivateAutomation(boardRef: string): Promise<{ ok: boolean; error?: string }> {
+      try {
+        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/deactivate-automation`, {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId)
+        })
+        if (!res.ok) return { ok: false, error: `Error ${res.status}` }
+        return { ok: true }
+      } catch {
+        return { ok: false, error: 'Network error' }
+      }
+    },
+
     // User preferences moved to @wolffm/prefs-client (src/prefs/taskPrefs.ts).
     // The legacy GET/PUT /task/api/preferences path is gone from the client;
     // the worker route is retained for the 30d migration window (Tranche B).

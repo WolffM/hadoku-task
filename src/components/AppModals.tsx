@@ -57,6 +57,7 @@ interface AppModalsProps {
   onRenameBoard: (boardId: string, name: string) => Promise<void>
   onSetPinnedBoards: (order: string[]) => Promise<void>
   shareApi: ShareApi
+  onReloadBoards: () => Promise<void>
   showShareDialog: boolean
   onCloseShareDialog: () => void
 
@@ -104,6 +105,7 @@ export function AppModals({
   onRenameBoard,
   onSetPinnedBoards,
   shareApi,
+  onReloadBoards,
   showShareDialog,
   onCloseShareDialog,
   onCloseNewTagDialog,
@@ -150,6 +152,7 @@ export function AppModals({
         onDelete={onDeleteBoard}
         onSetPinned={onSetPinnedBoards}
         shareApi={shareApi}
+        onReloadBoards={onReloadBoards}
         validateBoardName={validateBoardName}
       />
 
