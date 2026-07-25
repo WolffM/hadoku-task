@@ -210,6 +210,7 @@ export interface ReleaseResult {
   ok: true
   released: boolean
   lane: string | null
+  completed?: boolean
 }
 
 /**
@@ -224,7 +225,21 @@ export async function releaseClaim(
   boardId: string,
   taskId: string,
   token: string,
-  opts: { lane?: string | null; notes?: string | null; outcome?: string | null; ifCurrentLane?: string; mode: string; lanes: Lane[] }
+  opts: {
+    lane?: string | null
+    notes?: string | null
+    outcome?: string | null
+    ifCurrentLane?: string
+    // Merge into the task's metadata while holding the claim (§6 confirmation 1).
+    // The claim is what authorises the write; a non-holder still can't reach here.
+    metadata?: Record<string, unknown> | null
+    // Archive the task on release (§6 confirmation 3): an agent completing work it
+    // was explicitly asked to do. Still claim-gated + audited. Keeps the `landed`
+    // notification lane from growing unbounded without a human sweep.
+    complete?: boolean
+    mode: string
+    lanes: Lane[]
+  }
 ): Promise<ReleaseResult> {
   const now = nowIso()
   const claim = await liveClaim(db, ownerId, taskId, now)
@@ -250,22 +265,27 @@ export async function releaseClaim(
   const lane = (opts.lane ?? '').trim()
 
   const stmts: Array<{ run(): Promise<unknown> }> = []
-  // Move the task (and write notes if given) in one shot.
+  // Build the task UPDATE from exactly the fields the runner is writing: tag
+  // (the lane), optional notes, optional metadata merge, and completion.
+  const sets: string[] = ['tag = ?', 'updated_at = ?']
+  const binds: unknown[] = [lane === '' ? null : lane, now]
   if (opts.notes !== undefined) {
-    stmts.push(
-      db
-        .prepare(
-          `UPDATE tasks SET tag = ?, notes = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`
-        )
-        .bind(lane === '' ? null : lane, opts.notes, now, ownerId, boardId, taskId)
-    )
-  } else {
-    stmts.push(
-      db
-        .prepare(`UPDATE tasks SET tag = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`)
-        .bind(lane === '' ? null : lane, now, ownerId, boardId, taskId)
-    )
+    sets.push('notes = ?')
+    binds.push(opts.notes)
   }
+  if (opts.metadata !== undefined) {
+    sets.push('metadata = ?')
+    binds.push(opts.metadata === null ? null : JSON.stringify(opts.metadata))
+  }
+  if (opts.complete) {
+    sets.push("state = 'Completed'", 'closed_at = ?')
+    binds.push(now)
+  }
+  stmts.push(
+    db
+      .prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE user_id = ? AND board_id = ? AND id = ?`)
+      .bind(...binds, ownerId, boardId, taskId)
+  )
   // Close the most recent open log row for this task.
   stmts.push(
     db
@@ -281,7 +301,7 @@ export async function releaseClaim(
   stmts.push(db.prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?').bind(ownerId, taskId))
 
   await db.batch(stmts)
-  return { ok: true, released: true, lane: lane === '' ? null : lane }
+  return { ok: true, released: true, lane: lane === '' ? null : lane, completed: opts.complete === true }
 }
 
 /**

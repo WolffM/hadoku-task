@@ -81,7 +81,7 @@ with notes. See [Automation boards & the claim loop](#automation-boards--the-cla
 | `claim_task`        | `taskId`, `board?`, `agentId?`, `lane?`, `leaseSeconds?`                                    | Atomically claim; `CLAIM_HELD` if a live lease exists               |
 | `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                | Extend the lease; `LEASE_LOST` if it was taken                      |
 | `set_lane`          | `taskId`, `token`, `lane`, `board?`                                                         | Move a task while holding the claim (agent path — `agent` lanes ok) |
-| `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `outcome?`, `ifCurrentLane?`, `board?`                | Move + write notes + unclaim; idempotent on token                   |
+| `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `metadata?`, `outcome?`, `ifCurrentLane?`, `complete?`, `board?` | Move + write notes/metadata + unclaim; `complete:true` archives it; idempotent |
 | `cancel_claim`      | `taskId`, `board?`                                                                          | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST` |
 | `get_claim_history` | `taskId`, `board?`                                                                          | Who claimed it when, and how each claim ended                       |
 | `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                   | Change feed — poll instead of full-scanning; returns a `cursor`     |
@@ -156,8 +156,15 @@ Tool failures return `isError: true` with a `structuredContent.code` you can act
 | `DIGEST_MISMATCH`     | 409  | Activation preview is stale. Re-run the dry-run               |
 | `VERSION_CONFLICT`    | 409  | Re-pull and retry                                             |
 | `NOTES_TOO_LARGE`     | 413  | Truncate or link out; don't retry unchanged                   |
+| `RATE_LIMITED`        | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min    |
 | `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404 | Abort; treat as already handled                    |
 | `FORBIDDEN`           | 403  | Readonly access, or an owner-only action. Never retry         |
+
+**Rate limits.** Trusted human tiers (`friend`, `admin`) aren't throttled. The **`service`**
+tier — the credential class an autonomous agent authenticates with — is capped at **600/min**
+(10/sec), far above a normal poll+claim+heartbeat loop; exceeding it returns `429` with
+`code: "RATE_LIMITED"` and a `retryAfter`. `public` is 60/min. Authenticate with a **service-tier
+key** so a burst can't blacklist you like a browser session.
 
 ## Tool results
 

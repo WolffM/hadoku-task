@@ -113,6 +113,8 @@ export function createAgentRoutes() {
       notes?: string | null
       outcome?: string | null
       ifCurrentLane?: string
+      metadata?: Record<string, unknown> | null
+      complete?: boolean
     }
     try {
       body = await c.req.json()
@@ -130,6 +132,8 @@ export function createAgentRoutes() {
       notes: body.notes,
       outcome: body.outcome ?? null,
       ifCurrentLane: body.ifCurrentLane,
+      metadata: body.metadata,
+      complete: body.complete === true,
       mode: ctx.mode,
       lanes: ctx.lanes
     })

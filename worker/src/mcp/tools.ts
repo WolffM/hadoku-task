@@ -472,7 +472,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'release_claim',
     description:
-      'Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan) and an `outcome` label, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you.',
+      'Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan), merge `metadata`, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you. Pass `complete: true` to archive the task on release (still claim-gated) so a notification lane doesn\'t grow unbounded.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -480,8 +480,10 @@ export const TOOLS: ToolDef[] = [
         token: { type: 'string' },
         lane: { type: 'string', description: 'Where the task goes on release (agent lane allowed). Omit / empty ⇒ Inbox.' },
         notes: { type: 'string', description: 'Markdown result/plan to write on the task.' },
+        metadata: { type: 'object', description: 'Arbitrary JSON merged onto the task (you hold the claim, so this is allowed).' },
         outcome: { type: 'string', description: 'Free-text outcome label for the claim history; we don\'t interpret it.' },
         ifCurrentLane: { type: 'string', description: 'Guard: abort (LANE_CHANGED) unless the task is still in this lane.' },
+        complete: { type: 'boolean', description: 'Archive the task on release (removes it from the active list).' },
         ...boardProp
       },
       required: ['taskId', 'token']
@@ -494,8 +496,10 @@ export const TOOLS: ToolDef[] = [
       return releaseClaim(ctx.db, r.ownerId, r.boardId, taskId, token, {
         lane: str(args.lane) ?? null,
         notes: args.notes !== undefined ? (str(args.notes) ?? '') : undefined,
+        metadata: obj(args.metadata) ?? undefined,
         outcome: str(args.outcome) ?? null,
         ifCurrentLane: args.ifCurrentLane !== undefined ? (str(args.ifCurrentLane) ?? '') : undefined,
+        complete: args.complete === true,
         mode: r.mode,
         lanes: r.lanes
       })

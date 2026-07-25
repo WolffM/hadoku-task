@@ -22,6 +22,7 @@ export interface ThrottleState {
 export interface ThrottleLimits {
   admin: ThrottleConfig
   friend: ThrottleConfig
+  service: ThrottleConfig
   public: ThrottleConfig
 }
 
@@ -45,6 +46,14 @@ export const DEFAULT_THROTTLE_LIMITS: ThrottleLimits = {
   friend: {
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 120 // 120 requests per minute (2 req/sec)
+  },
+  // Service tier = automated agents (TenHands etc.). A poll loop + claim +
+  // heartbeat can spike a per-minute average without being abusive, so this
+  // sits well above normal operation: 600/min (10 req/sec) — 5× the ~2/sec a
+  // runner actually does. Distinct from friend so a bot can't share a human's cap.
+  service: {
+    windowMs: 60 * 1000,
+    maxRequests: 600
   },
   public: {
     windowMs: 60 * 1000, // 1 minute
@@ -82,7 +91,7 @@ export const THROTTLE_THRESHOLDS = {
 export async function checkThrottle(
   kv: KVNamespace,
   sessionId: string,
-  userType: 'admin' | 'friend' | 'public',
+  userType: 'admin' | 'friend' | 'service' | 'public',
   limits: ThrottleLimits = DEFAULT_THROTTLE_LIMITS
 ): Promise<{ allowed: boolean; state: ThrottleState; reason?: string }> {
   const now = Date.now()

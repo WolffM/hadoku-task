@@ -326,6 +326,43 @@ async function main() {
   const mgb = await mcp('get_board', { board: 'auto' })
   check('MCP get_board returns hydrated tasks', Array.isArray((mgb.structuredContent as { tasks?: unknown[] } | undefined)?.tasks), JSON.stringify(mgb).slice(0, 120))
 
+  // ---------------------------------------------------------------------
+  section('17. §6 confirmations: metadata-on-release, Inbox-claim, complete-on-release')
+  // ---------------------------------------------------------------------
+  // Confirmation 2: claim an UNTAGGED Inbox task naming a destination lane in the
+  // same write → it lands in that lane (untagged isn't a lane, so this is how a
+  // runner protects it).
+  await req('POST', '/task/api', { id: 'inbox1', title: 'untagged capture', boardId: 'auto' })
+  const claimInbox = await req('POST', '/task/api/agent/claim', { board: 'auto', taskId: 'inbox1', agentId: 'planner', lane: 'working' })
+  check('claim an untagged Inbox task with a lane → 200', claimInbox.status === 200, JSON.stringify(claimInbox.json))
+  check('the Inbox task moved into the named lane on claim', (await tag('inbox1')) === 'working', `tag=${await tag('inbox1')}`)
+  const inboxToken = claimInbox.json?.token
+
+  // Confirmation 1: a claim holder writes metadata on release (agent path, claim-gated).
+  const relMeta = await req('POST', '/task/api/agent/release', { board: 'auto', taskId: 'inbox1', token: inboxToken, lane: 'review', metadata: { pr: 42, sha: 'abc' } })
+  check('release with metadata → 200', relMeta.status === 200, JSON.stringify(relMeta.json))
+  const inboxTask = (await req('GET', '/task/api/tasks?boardId=auto')).json?.tasks?.find(t => t.id === 'inbox1') as { metadata?: { pr?: number } } | undefined
+  check('the metadata was written on release', inboxTask?.metadata?.pr === 42, JSON.stringify(inboxTask?.metadata))
+
+  // Confirmation 3: complete-on-release archives the task (removes from active).
+  await req('POST', '/task/api', { id: 'land1', title: 'ends in landed', boardId: 'auto', tag: 'needs-work' })
+  const claimLand = await req('POST', '/task/api/agent/claim', { board: 'auto', taskId: 'land1', agentId: 'lander' })
+  const relDone = await req('POST', '/task/api/agent/release', { board: 'auto', taskId: 'land1', token: claimLand.json?.token, lane: 'done', complete: true })
+  check('release with complete:true → completed', relDone.status === 200 && (relDone.json as unknown as { completed?: boolean }).completed === true, JSON.stringify(relDone.json))
+  check('the completed task is gone from the active list', !(await req('GET', '/task/api/tasks?boardId=auto')).json?.tasks?.some(t => t.id === 'land1'))
+
+  // ---------------------------------------------------------------------
+  section('18. Service tier is throttled at its own ceiling, not a human cap')
+  // ---------------------------------------------------------------------
+  // A service-tier request goes THROUGH the throttle (unlike friend/admin, which
+  // bypass) but is far under the 600/min ceiling, so normal operation is allowed.
+  const svc = await app.request(
+    'http://localhost/task/api/tasks?boardId=auto',
+    { headers: { 'X-Edge-Auth': EDGE_SECRET, 'X-Hadoku-Tier': 'service', 'X-User-Key': 'svc-key', 'X-User-Id': 'svc-uid' } },
+    env
+  )
+  check('a service-tier request under the ceiling → 200 (not blacklisted like public)', svc.status === 200, `status=${svc.status}`)
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

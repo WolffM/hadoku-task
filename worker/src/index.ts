@@ -141,20 +141,25 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
     // Skip throttling for:
     // - Health check endpoint (monitoring)
-    // - Authenticated users (admin/friend) - trusted and don't need rate limiting
+    // - Trusted HUMAN tiers (admin/friend) — no rate limiting
     // - Validate-key endpoint - needed for initial connection, users don't have session yet
     // - Session handshake - needed for session establishment
     // This significantly reduces KV operations and prevents unnecessary usage
+    //
+    // `service` (automated agents like TenHands) IS throttled, but at its own
+    // generous 600/min ceiling (throttle.ts) — high enough that normal operation
+    // can't approach it, so a runaway bot is still bounded without capping a human.
     const skipThrottlePaths = [
       '/task/api/health',
       '/task/api/validate-key',
       '/task/api/session/handshake'
     ]
-    if (skipThrottlePaths.includes(c.req.path) || userType !== 'public') {
+    const throttledTier = userType === 'public' || userType === 'service'
+    if (skipThrottlePaths.includes(c.req.path) || !throttledTier) {
       return next()
     }
 
-    // Check throttle (only for public users)
+    // Check throttle (public + service tiers)
     // Wrap in try-catch to handle KV rate limit errors gracefully
     try {
       const throttleResult = await checkThrottle(c.env.TASKS_KV, sessionId, userType)
@@ -199,6 +204,8 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
         return c.json(
           {
             error: 'Rate limit exceeded',
+            // Machine-readable code so an agent branches on this, not the string.
+            code: 'RATE_LIMITED',
             message: throttleResult.reason,
             retryAfter: 60 // seconds
           },

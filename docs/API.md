@@ -758,9 +758,11 @@ Body: `{ board, taskId, token, lane }`. Move while holding the claim → `{ ok, 
 
 ### POST `/agent/release`
 
-Body: `{ board, taskId, token, lane?, notes?, outcome?, ifCurrentLane? }`. Moves the task,
-writes `notes`, closes the claim, records history. Idempotent on token. `ifCurrentLane` guards
-against a human retag → `409 LANE_CHANGED`. Never changes task `state`.
+Body: `{ board, taskId, token, lane?, notes?, metadata?, outcome?, ifCurrentLane?, complete? }`.
+Moves the task, writes `notes`, merges `metadata` (claim-gated), closes the claim, records
+history. Idempotent on token. `ifCurrentLane` guards against a human retag → `409 LANE_CHANGED`.
+`complete: true` archives the task (removes it from the active list) — still claim-gated and
+audited; otherwise `state` is never changed.
 
 ### POST `/agent/cancel`
 
@@ -807,7 +809,11 @@ Domain errors carry a machine-readable `code` (and, where useful, extra fields l
 `expiresAt`, `currentVersion`). The full agent-actionable code table is in
 [MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`, `LANE_UNKNOWN`,
 `LANE_INVALID`, `LANE_CHANGED`, `BOARD_SCHEMA_LOCKED`, `DIGEST_MISMATCH`, `VERSION_CONFLICT`,
-`NOTES_TOO_LARGE`, `TASK_NOT_FOUND`, `BOARD_NOT_FOUND`.
+`NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`, `BOARD_NOT_FOUND`.
+
+**Rate limits.** `friend`/`admin` are not throttled; the **`service`** tier is capped at
+**600/min** (10/sec) and `public` at 60/min. A `429` carries `{ error, code: "RATE_LIMITED",
+message, retryAfter }`. Authenticate an autonomous agent with a service-tier key.
 
 **Error Response:**
 
