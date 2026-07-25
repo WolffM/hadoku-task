@@ -814,10 +814,18 @@ All endpoints return errors in this format:
 - `500` - Server error
 
 Domain errors carry a machine-readable `code` (and, where useful, extra fields like `holder`,
-`expiresAt`, `currentVersion`). The full agent-actionable code table is in
-[MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`, `LANE_UNKNOWN`,
-`LANE_INVALID`, `LANE_CHANGED`, `BOARD_SCHEMA_LOCKED`, `DIGEST_MISMATCH`, `VERSION_CONFLICT`,
-`NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`, `BOARD_NOT_FOUND`.
+`expiresAt`, `currentVersion`, `currentLane`, `currentDigest`). **Branch on the `code`, not the
+status** — a 409 is `CLAIM_HELD` (someone else has the task; move on) or `LEASE_LOST` (your claim
+is gone; abort and write nothing), which need opposite behaviour.
+
+The codes are a **closed set**, published in the OpenAPI spec as the `DomainErrorCode` enum, so a
+generated client gets a real enum rather than a bare string. Where a status maps to a single code
+the response schema is narrowed further (`/agent/heartbeat` 409 → `LeaseLostError`, `/agent/claim`
+409 → `ClaimHeldError`), so codegen yields one exception type per outcome. Full set, with what to
+do about each: [MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`,
+`LANE_UNKNOWN`, `LANE_INVALID`, `LANE_CHANGED`, `LANE_SET_INVALID`, `BOARD_SCHEMA_LOCKED`,
+`DIGEST_MISMATCH`, `VERSION_CONFLICT`, `NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`,
+`BOARD_NOT_FOUND`, `NAME_NOT_FOUND`, `NO_USER_ID`, `FORBIDDEN`, `BAD_REQUEST`.
 
 **Rate limits.** `friend`/`admin` are not throttled; the **`service`** tier is capped at
 **600/min** (10/sec) and `public` at 60/min. A `429` carries `{ error, code: "RATE_LIMITED",

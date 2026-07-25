@@ -166,6 +166,17 @@ Tool failures return `isError: true` with a `structuredContent.code` you can act
 | `RATE_LIMITED`                       | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min        |
 | `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404  | Abort; treat as already handled                                   |
 | `FORBIDDEN`                          | 403  | Readonly access, or an owner-only action. Never retry             |
+| `LANE_SET_INVALID`                   | 422  | Activation payload is malformed. Fix the lane set, don't retry    |
+| `NAME_NOT_FOUND`                     | 404  | No registered key with that display name (share grant)            |
+| `NO_USER_ID`                         | 409  | That key never signed in, so there's no id to grant against       |
+| `BAD_REQUEST`                        | 400  | Malformed JSON body. Fix the caller                               |
+
+This table is the same closed set the OpenAPI spec publishes as the `DomainErrorCode` enum
+(`components.schemas.DomainErrorCode` in `/task/api/openapi.json`) — generate your client from
+that and branch on `code`, never on the HTTP status. A 409 alone can't separate `CLAIM_HELD`
+(someone else has it — take the next task) from `LEASE_LOST` (your claim is gone — abort and
+write nothing). `worker/test/openapi-verify.ts` fails the build if a code is emitted by the
+worker but missing from the enum, or listed in the enum but no longer emitted.
 
 **Rate limits.** Trusted human tiers (`friend`, `admin`) aren't throttled. The **`service`**
 tier — the credential class an autonomous agent authenticates with — is capped at **600/min**

@@ -21,7 +21,10 @@ import {
   LeaveShareResponseSchema,
   RevokeShareResponseSchema,
   UserSearchResponseSchema,
-  DomainErrorSchema
+  ForbiddenErrorSchema,
+  BoardNotFoundErrorSchema,
+  ShareGranteeNotFoundErrorSchema,
+  NoUserIdErrorSchema
 } from '../schemas-agent'
 import { ErrorResponseSchema } from '../schemas'
 import type { AppContext, Env } from '../types'
@@ -242,7 +245,11 @@ export async function annotatedSharesByBoard(
 
 const nowIso = () => new Date().toISOString()
 
-const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
+// Narrowed to the codes each (route, status) can actually emit — see agent.ts.
+const forbidden = { 'application/json': { schema: ForbiddenErrorSchema } }
+const boardNotFound = { 'application/json': { schema: BoardNotFoundErrorSchema } }
+const granteeNotFound = { 'application/json': { schema: ShareGranteeNotFoundErrorSchema } }
+const noUserIdErr = { 'application/json': { schema: NoUserIdErrorSchema } }
 const simpleErr = { 'application/json': { schema: ErrorResponseSchema } }
 const refParam = z.object({
   ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
@@ -300,12 +307,12 @@ export function createShareRoutes() {
         content: { 'application/json': { schema: GrantShareResponseSchema } }
       },
       400: { description: 'Invalid grantee', content: simpleErr },
-      403: { description: 'Not the owner', content: jsonErr },
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
       404: {
-        description: 'Board not found, or no key with that name (NAME_NOT_FOUND)',
-        content: jsonErr
+        description: 'Board not found, or no key with that name (BOARD_NOT_FOUND | NAME_NOT_FOUND)',
+        content: granteeNotFound
       },
-      409: { description: 'Named key never signed in (NO_USER_ID)', content: jsonErr }
+      409: { description: 'Named key never signed in (NO_USER_ID)', content: noUserIdErr }
     }
   })
   app.openapi(grantRoute, (async (c: any) => {
@@ -366,8 +373,8 @@ export function createShareRoutes() {
         description: 'The shares',
         content: { 'application/json': { schema: ListSharesResponseSchema } }
       },
-      403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr }
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(listRoute, (async (c: any) => {
@@ -401,7 +408,7 @@ export function createShareRoutes() {
         content: { 'application/json': { schema: LeaveShareResponseSchema } }
       },
       400: { description: 'You own this board', content: simpleErr },
-      404: { description: 'Board not found', content: jsonErr }
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(leaveRoute, (async (c: any) => {
@@ -432,8 +439,8 @@ export function createShareRoutes() {
         description: 'Revoked',
         content: { 'application/json': { schema: RevokeShareResponseSchema } }
       },
-      403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr }
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(revokeRoute, (async (c: any) => {

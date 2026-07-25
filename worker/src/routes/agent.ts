@@ -38,12 +38,27 @@ import {
   ClaimHistoryResponseSchema,
   ChangesResponseSchema,
   HydratedBoardResponseSchema,
-  DomainErrorSchema
+  ForbiddenErrorSchema,
+  BoardNotFoundErrorSchema,
+  TaskOrBoardNotFoundErrorSchema,
+  ClaimHeldErrorSchema,
+  LeaseLostErrorSchema,
+  ReleaseConflictErrorSchema,
+  LaneUnknownErrorSchema
 } from '../schemas-agent'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext } from '../types'
 
-const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
+// Each error response is typed to the codes THAT route+status can actually emit,
+// so a generated client gets one exception class per outcome rather than a single
+// 409 it has to re-parse. Derived from the handlers in board-claims.ts.
+const forbidden = { 'application/json': { schema: ForbiddenErrorSchema } }
+const boardNotFound = { 'application/json': { schema: BoardNotFoundErrorSchema } }
+const taskOrBoardNotFound = { 'application/json': { schema: TaskOrBoardNotFoundErrorSchema } }
+const claimHeld = { 'application/json': { schema: ClaimHeldErrorSchema } }
+const leaseLost = { 'application/json': { schema: LeaseLostErrorSchema } }
+const releaseConflict = { 'application/json': { schema: ReleaseConflictErrorSchema } }
+const laneUnknown = { 'application/json': { schema: LaneUnknownErrorSchema } }
 
 /**
  * Resolve the board for a write on the agent path. Returns the resolved BoardCtx,
@@ -73,10 +88,13 @@ export function createAgentRoutes() {
         description: 'Claimed',
         content: { 'application/json': { schema: ClaimResponseSchema } }
       },
-      403: { description: 'Read-only access', content: jsonErr },
-      404: { description: 'Board or task not found', content: jsonErr },
-      409: { description: 'A live lease is held (CLAIM_HELD)', content: jsonErr },
-      422: { description: 'Unknown destination lane', content: jsonErr }
+      403: { description: 'Read-only access (FORBIDDEN)', content: forbidden },
+      404: {
+        description: 'Board or task not found (BOARD_NOT_FOUND | TASK_NOT_FOUND)',
+        content: taskOrBoardNotFound
+      },
+      409: { description: 'A live lease is held (CLAIM_HELD)', content: claimHeld },
+      422: { description: 'Unknown destination lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
   app.openapi(claimRoute, (async (c: any) => {
@@ -111,9 +129,9 @@ export function createAgentRoutes() {
         description: 'Extended',
         content: { 'application/json': { schema: HeartbeatResponseSchema } }
       },
-      403: { description: 'Read-only access', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr },
-      409: { description: 'Lease was taken (LEASE_LOST)', content: jsonErr }
+      403: { description: 'Read-only access (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound },
+      409: { description: 'Lease was taken (LEASE_LOST)', content: leaseLost }
     }
   })
   app.openapi(heartbeatRoute, (async (c: any) => {
@@ -147,10 +165,10 @@ export function createAgentRoutes() {
         description: 'Moved',
         content: { 'application/json': { schema: SetLaneResponseSchema } }
       },
-      403: { description: 'Read-only access', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr },
-      409: { description: 'Lease was taken (LEASE_LOST)', content: jsonErr },
-      422: { description: 'Unknown lane', content: jsonErr }
+      403: { description: 'Read-only access (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound },
+      409: { description: 'Lease was taken (LEASE_LOST)', content: leaseLost },
+      422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
   app.openapi(setLaneRoute, (async (c: any) => {
@@ -189,13 +207,16 @@ export function createAgentRoutes() {
         description: 'Released',
         content: { 'application/json': { schema: ReleaseResponseSchema } }
       },
-      403: { description: 'Read-only access', content: jsonErr },
-      404: { description: 'Board or task not found', content: jsonErr },
+      403: { description: 'Read-only access (FORBIDDEN)', content: forbidden },
+      404: {
+        description: 'Board or task not found (BOARD_NOT_FOUND | TASK_NOT_FOUND)',
+        content: taskOrBoardNotFound
+      },
       409: {
         description: 'Lease taken (LEASE_LOST) or lane changed (LANE_CHANGED)',
-        content: jsonErr
+        content: releaseConflict
       },
-      422: { description: 'Unknown lane', content: jsonErr }
+      422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
   app.openapi(releaseRoute, (async (c: any) => {
@@ -237,8 +258,8 @@ export function createAgentRoutes() {
         description: 'Dropped (idempotent)',
         content: { 'application/json': { schema: CancelResponseSchema } }
       },
-      403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr }
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(cancelRoute, (async (c: any) => {
@@ -269,7 +290,7 @@ export function createAgentRoutes() {
         description: 'History (newest first)',
         content: { 'application/json': { schema: ClaimHistoryResponseSchema } }
       },
-      404: { description: 'Board not found', content: jsonErr }
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(historyRoute, (async (c: any) => {
@@ -297,7 +318,7 @@ export function createAgentRoutes() {
         description: 'Hydrated board',
         content: { 'application/json': { schema: HydratedBoardResponseSchema } }
       },
-      404: { description: 'Board not found', content: jsonErr }
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(hydratedRoute, (async (c: any) => {

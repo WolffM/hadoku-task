@@ -17,7 +17,10 @@ import {
   ActivateResponseSchema,
   DeactivateResponseSchema,
   RepoValidateResponseSchema,
-  DomainErrorSchema
+  ForbiddenErrorSchema,
+  BoardNotFoundErrorSchema,
+  DigestMismatchErrorSchema,
+  LaneSetInvalidErrorSchema
 } from '../schemas-agent'
 import type { AppContext } from '../types'
 
@@ -94,7 +97,11 @@ async function validateRepo(
   }
 }
 
-const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
+// Narrowed to the codes each (route, status) can actually emit — see agent.ts.
+const forbidden = { 'application/json': { schema: ForbiddenErrorSchema } }
+const boardNotFound = { 'application/json': { schema: BoardNotFoundErrorSchema } }
+const digestMismatch = { 'application/json': { schema: DigestMismatchErrorSchema } }
+const laneSetInvalid = { 'application/json': { schema: LaneSetInvalidErrorSchema } }
 const refParam = z.object({
   ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
 })
@@ -171,10 +178,10 @@ export function createAutomationRoutes() {
         description: 'Preview (dryRun) or applied',
         content: { 'application/json': { schema: ActivateResponseSchema } }
       },
-      403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr },
-      409: { description: 'Stale digest', content: jsonErr },
-      422: { description: 'Invalid lane set', content: jsonErr }
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound },
+      409: { description: 'Stale digest (DIGEST_MISMATCH)', content: digestMismatch },
+      422: { description: 'Invalid lane set (LANE_SET_INVALID)', content: laneSetInvalid }
     }
   })
   app.openapi(activateRoute, (async (c: any) => {
@@ -230,8 +237,8 @@ export function createAutomationRoutes() {
         description: 'Restored to standard',
         content: { 'application/json': { schema: DeactivateResponseSchema } }
       },
-      403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found', content: jsonErr }
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
   app.openapi(deactivateRoute, (async (c: any) => {

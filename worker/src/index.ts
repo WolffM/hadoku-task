@@ -30,6 +30,7 @@ import {
   type IncidentRecord
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
+import { DomainErrorSchema } from './schemas-agent'
 import type { AppContext, TaskAuthExtension } from './types'
 
 // Import route modules
@@ -271,6 +272,12 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // OpenAPI Spec Endpoint
   // ============================================================================
 
+  // Every documented error response is narrowed to the codes ITS route+status can
+  // emit, so nothing references the catch-all any more. Register it explicitly:
+  // a generated client still needs the full `DomainErrorCode` enum and a base type
+  // for statuses no route declares (429 RATE_LIMITED from the throttle, 500).
+  app.openAPIRegistry.register('DomainError', DomainErrorSchema)
+
   app.doc(
     '/task/api/openapi.json',
     createOpenAPIDocConfig({
@@ -328,6 +335,7 @@ This API provides endpoints for:
       holder?: unknown
       expiresAt?: unknown
       currentLane?: unknown
+      currentDigest?: unknown
     }
     if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
       const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
@@ -335,6 +343,7 @@ This API provides endpoints for:
       if (typeof domain.holder === 'string') body.holder = domain.holder
       if (typeof domain.expiresAt === 'string') body.expiresAt = domain.expiresAt
       if (domain.currentLane !== undefined) body.currentLane = domain.currentLane
+      if (typeof domain.currentDigest === 'string') body.currentDigest = domain.currentDigest
       return c.json(body, domain.httpStatus as 400 | 404 | 409 | 500)
     }
     return errorHandler(err, c)
