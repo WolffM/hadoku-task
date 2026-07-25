@@ -146,8 +146,13 @@ export function TaskLayout({
     return filters.some(f => taskTags.includes(f))
   })
 
-  // Multiple tags: dynamic layout
-  const layoutConfig = getLayoutConfig(tagCount, isMobile)
+  // Multiple tags: dynamic layout. A board whose laneLimit is null for this
+  // viewport (automation) declares its lanes explicitly, so the grid must render
+  // ALL of them — capping at the top 6 dropped lanes 7+ off the board and made
+  // the tasks in them unreachable (they're not "remaining" either, so they
+  // surfaced nowhere until you filtered by that lane).
+  const laneCap = isMobile ? boardType.laneLimit.mobile : boardType.laneLimit.desktop
+  const layoutConfig = getLayoutConfig(tagCount, isMobile, laneCap === null)
 
   // Decide which top tags are visible. When a filter is active, only show
   // columns that have tasks matching the selected filters. This allows the
@@ -167,7 +172,13 @@ export function TaskLayout({
   if (visibleTopTags.length === 0) {
     return <ul className="task-app__list">{renderTaskItems(filteredTasks, 'desc')}</ul>
   }
-  const remainingTasks = getRemainingTasks(tasks, topTags, filters).filter(t => {
+  // Compute "remaining" against the tags actually RENDERED, not every candidate
+  // tag. A task whose tag has a column is shown there; a task whose tag was
+  // dropped from the layout would otherwise be excluded here too and vanish from
+  // the board entirely. Identical for standard boards (topTags is already capped
+  // to the lane limit upstream, so the two lists match) — this is the safety net
+  // that keeps a truncated layout from silently swallowing tasks.
+  const remainingTasks = getRemainingTasks(tasks, visibleTopTags, filters).filter(t => {
     if (!hasActiveFilters || !filters) return true
     const taskTags = splitTags(t.tag)
     return filters.some(f => taskTags.includes(f))
