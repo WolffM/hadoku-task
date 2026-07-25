@@ -23,7 +23,6 @@ interface UseSessionInitializationProps {
   setEffectiveSessionId: (sessionId: string) => void
   setPreferences: (prefs: UserPreferences) => void
   setPreferencesLoaded: (loaded: boolean) => void
-  initialLoad: () => Promise<void>
   setIsLoaded: (loaded: boolean) => void
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void
 }
@@ -36,7 +35,6 @@ export function useSessionInitialization({
   setEffectiveSessionId,
   setPreferences,
   setPreferencesLoaded,
-  initialLoad,
   setIsLoaded,
   showToast
 }: UseSessionInitializationProps) {
@@ -96,18 +94,13 @@ export function useSessionInitialization({
         setPreferencesLoaded(true)
       } else {
         // Authenticated: finalSessionId is propsSessionId, known without the
-        // handshake. So prefs and the board sync can both run concurrently with
-        // the in-flight handshake instead of queueing behind it.
+        // handshake, so prefs can run concurrently with the in-flight handshake
+        // instead of queueing behind it. The BOARD load is NOT driven from here:
+        // useTasks owns it (its user-context effect fires on the same sessionId),
+        // doing a cache-first paint then a network revalidate. Kicking a second
+        // sync from here is what created the racing double-load; this hook now
+        // only settles session + prefs.
         finalSessionId = propsSessionId
-
-        // Kick the board sync off now. It's the long pole (the boards fetch is
-        // the slowest call in the load), and it needs nothing from the handshake
-        // or from prefs — useTasks already holds the right sessionId on first
-        // render. Starting it here rather than after both awaits is what gets
-        // tasks on screen sooner.
-        const boardSync = initialLoad().catch(err => {
-          logger.warn('[App] initialLoad failed in background', { error: String(err) })
-        })
 
         const prefs = await loadTaskPreferences(userType, finalSessionId)
         setPreferences(prefs)
@@ -132,14 +125,6 @@ export function useSessionInitialization({
         void handshakePromise
           .then(r => handleExpiry(r.serverUserType))
           .catch(err => logger.warn('[App] handshake failed', { error: String(err) }))
-
-        // Hold the skeleton until the FRESH board sync (getBoards) resolves, not
-        // just prefs. Painting the shell on cached localStorage first meant a
-        // returning user saw their own boards immediately and then watched
-        // SHARED boards pop in a beat later, once the network sync landed — a
-        // visibly two-stage load. getBoards hydrates every board (own + shared)
-        // in one parallelized call, so awaiting it reveals them all together.
-        await boardSync
       }
 
       // Set the effective sessionId for all hooks to use (only if different)
@@ -147,17 +132,12 @@ export function useSessionInitialization({
         setEffectiveSessionId(finalSessionId)
       }
 
-      // Reveal the shell. Authenticated users waited for the fresh board sync
-      // above (unified load, no pop-in); public users fall through immediately
-      // and hydrate from localStorage right after.
+      // Prefs are settled; unblock the theme/prefs half of the reveal gate.
+      // Board content is gated separately by useTasks' `boardsLoaded`, which
+      // flips after its fast cache paint — so the shell still reveals with
+      // content, without this hook waiting on the network.
       setIsLoaded(true)
 
-      if (userType === 'public') {
-        // Public has no syncFromApi; this just re-reads localStorage.
-        void initialLoad().catch(err => {
-          logger.warn('[App] initialLoad failed in background', { error: String(err) })
-        })
-      }
     }
 
     void initializeSession()

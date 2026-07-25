@@ -48,15 +48,20 @@ async function syncBoardsToLocalStorage(
     }
   }
 
-  // Update boards index
+  // Update boards index. Persist the FULL board metadata (handle, ownerUserId,
+  // access, pinned, position, mode, lanes, repo, schema…), stripping only the
+  // bulky per-board tasks/stats — those live under their own keys (above). The
+  // index used to keep just {id,name,tags}, so the cache-first paint rendered a
+  // DEGRADED board set (no pins, no automation lanes, no sharing metadata) until
+  // the network sync repainted — a visible two-stage flicker. Keeping every
+  // field makes the cached paint structurally identical to the server's.
   const boardsKey = `${userType}-${sessionId}-boards`
   const boardsIndex = {
     version: 1,
     updatedAt: apiData.updatedAt || new Date().toISOString(),
-    boards: (apiData.boards || []).map(b => ({
-      id: b.id,
-      name: b.name,
-      tags: b.tags || []
+    boards: (apiData.boards || []).map(({ tasks: _tasks, stats: _stats, ...meta }) => ({
+      ...meta,
+      tags: meta.tags || []
     }))
   }
   window.localStorage.setItem(boardsKey, JSON.stringify(boardsIndex))

@@ -45,20 +45,17 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       for (const b of boardsFile.boards) {
         const tasksFile = await storage.getTasks(userType, sessionId, b.id)
         const statsFile = await storage.getStats(userType, sessionId, b.id)
+        // Spread every stored field (handle, ownerUserId, access, pinned,
+        // position, mode, lanes, repo, schema…) so the offline/cache path is a
+        // faithful mirror of the server board — dropping any of them made the
+        // cached paint render a degraded board (no pins/lanes/sharing) until the
+        // network sync landed. Only tasks/stats are re-attached from their own
+        // per-board keys.
         populated.boards.push({
-          id: b.id,
-          name: b.name,
+          ...b,
           tasks: tasksFile.tasks,
           stats: statsFile,
-          tags: b.tags || [],
-          // Preserve per-viewer pin/position (they live on the board in the KV
-          // blob for the local path). Dropping them here is what made the top
-          // bar and Edit Boards modal ignore pins in offline/public mode.
-          pinned: b.pinned,
-          position: b.position,
-          // Board type (§5.3) — carried on the board in the KV blob for the
-          // local path; drop it and the two-track layout can't apply offline.
-          mode: b.mode
+          tags: b.tags || []
         })
       }
 

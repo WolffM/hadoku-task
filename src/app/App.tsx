@@ -144,6 +144,7 @@ export default function App(props: TaskAppProps = {}) {
     deleteTag,
     setTaskNotes,
     boards,
+    boardsLoaded,
     currentBoardId,
     createBoard,
     deleteBoard,
@@ -206,7 +207,8 @@ export default function App(props: TaskAppProps = {}) {
     setSelectedFilters(new Set())
   }, [currentBoardId])
 
-  // Session initialization (handshake, preferences loading, initial data fetch)
+  // Session initialization (handshake + preferences). Board loading is owned by
+  // useTasks (cache-first paint then revalidate); this hook no longer drives it.
   useSessionInitialization({
     userType,
     propsSessionId,
@@ -215,7 +217,6 @@ export default function App(props: TaskAppProps = {}) {
     setEffectiveSessionId,
     setPreferences,
     setPreferencesLoaded,
-    initialLoad,
     setIsLoaded,
     showToast
   })
@@ -277,9 +278,12 @@ export default function App(props: TaskAppProps = {}) {
     logger.info('[App] Preferences saved successfully')
   }
 
-  // Show loading skeleton only on initial load (not on theme changes)
+  // Show loading skeleton only on initial load (not on theme changes). Reveal
+  // once session/prefs (isLoaded, preferencesLoaded) AND the first board paint
+  // (boardsLoaded, from useTasks' fast cache read) are ready — so the shell
+  // never flashes an empty board area, without waiting on the network sync.
   // Use system preference for theme during initial load, then switch to user preference
-  if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded) {
+  if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded || !boardsLoaded) {
     return (
       <>
         <LoadingSkeleton isDarkTheme={systemPrefersDark} />

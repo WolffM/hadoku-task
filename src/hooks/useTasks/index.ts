@@ -43,13 +43,18 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // Monotonic counter so a slow reload can't clobber the results of a newer one.
   const reloadSeqRef = useRef(0)
 
+  // True once the first board paint (from cache) has landed, so the shell can
+  // reveal with content instead of gating on the slower network round-trip.
+  const [boardsLoaded, setBoardsLoaded] = useState(false)
+
+  // Force a fresh network sync, then repaint. Used by the refresh button and
+  // pull-to-refresh. The mount effect below uses a cache-first variant so the
+  // first paint doesn't wait on the network.
   async function initialLoad() {
     logger.info('[useTasks] initialLoad called')
-    // ✅ Sync from API first (only on initial load, if not public mode)
     if ('syncFromApi' in api) {
       await api.syncFromApi()
     }
-    // Then reload from localStorage
     await reload()
   }
 
@@ -73,17 +78,43 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     setTasks(boardTasks)
   }
 
-  // ✅ FIX: Clear state and reload when user context changes
+  // Single owner of the board-load lifecycle. On a user-context change: clear the
+  // previous user's data, paint from the (now faithful) cache immediately so the
+  // shell reveals with content, THEN revalidate from the network and repaint.
+  //
+  // This used to be split across two hooks — this effect painted the cache while
+  // useSessionInitialization separately kicked its own syncFromApi + reload. The
+  // two raced through reloadSeqRef and, worse, this effect's setBoards(null)
+  // clear could land AFTER the other path had already painted, blanking the
+  // board. Owning the whole clear→paint→revalidate sequence in one place removes
+  // that race (the "shaky" load) and keeps the network off the reveal path.
   useEffect(() => {
-    logger.info('[useTasks] User context changed, clearing state and reloading', {
-      userType,
-      sessionId
-    })
+    logger.info('[useTasks] User context changed: reset + load', { userType, sessionId })
+    setBoardsLoaded(false)
     setTasks([])
     setPendingOperations(new Set())
     setBoards(null)
     selectBoard('main')
-    void reload()
+    void (async () => {
+      // Fast cache paint (localStorage for authed users). Reveal the shell even
+      // if this throws — a corrupt cache must never trap the user on the
+      // skeleton forever; the network revalidate below still runs.
+      try {
+        await reload()
+      } catch (err) {
+        logger.warn('[useTasks] initial cache paint failed', { error: String(err) })
+      } finally {
+        setBoardsLoaded(true) // content on screen → App may reveal the shell
+      }
+      if ('syncFromApi' in api) {
+        try {
+          await api.syncFromApi() // network → refreshes the faithful cache
+          await reload() // seamless repaint with server truth
+        } catch (err) {
+          logger.warn('[useTasks] background board sync failed', { error: String(err) })
+        }
+      }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, sessionId])
 
@@ -447,6 +478,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
     // Board state
     boards,
+    boardsLoaded,
     currentBoardId,
 
     // Board operations
