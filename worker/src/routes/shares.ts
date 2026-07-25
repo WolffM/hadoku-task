@@ -109,46 +109,57 @@ async function resolveGrantee(
 }
 
 /**
- * Search live registry rows by display-name prefix (case-insensitive), for the
- * share UI's autocomplete. Same scan isNameTaken/resolveGrantee use — list the
- * `key:` prefix, get each row, skip retired rows — collecting matches by name.
- * Display names carry no auth bearing, so exposing them is safe; results are
- * deduped by name and capped. Only rows with a userId (signed in) are grantable.
+ * Read all LIVE registry rows (non-retired, with a userId), fetching values in
+ * PARALLEL. KV.list returns only keys, so each row is a separate get — doing them
+ * sequentially made the scan seconds-slow (it timed out on the autocomplete hot
+ * path). Promise.all collapses that to one round-trip's latency.
+ */
+async function readLiveRows(env: Env): Promise<Array<{ userId: string; name: string | null; tier?: string }>> {
+  if (!env.SESSIONS_KV) return []
+  const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
+  const kv = env.SESSIONS_KV
+  const raws = await Promise.all(list.keys.map(entry => kv.get(entry.name)))
+  const rows: Array<{ userId: string; name: string | null; tier?: string }> = []
+  for (const raw of raws) {
+    if (!raw) continue
+    try {
+      const rec = JSON.parse(raw) as KeyRow
+      if (rec.retiredAt || !rec.userId) continue
+      rows.push({ userId: rec.userId, name: rec.name ?? null, tier: rec.tier })
+    } catch {
+      /* skip malformed */
+    }
+  }
+  return rows
+}
+
+/**
+ * Search live registry rows by display-name substring (case-insensitive), for the
+ * share UI's autocomplete. Display names carry no auth bearing, so exposing them
+ * is safe; results are deduped by name, prefix-matches-first, and capped.
  */
 async function searchRegistryNames(
   env: Env,
   query: string,
   limit: number
 ): Promise<Array<{ name: string; tier?: string }>> {
-  if (!env.SESSIONS_KV) return []
   const q = query.trim().toLowerCase()
   if (!q) return []
-  const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
   const seen = new Set<string>()
   const out: Array<{ name: string; tier?: string }> = []
-  for (const entry of list.keys) {
-    if (out.length >= limit) break
-    const raw = await env.SESSIONS_KV.get(entry.name)
-    if (!raw) continue
-    let rec: KeyRow
-    try {
-      rec = JSON.parse(raw) as KeyRow
-    } catch {
-      continue
-    }
-    if (rec.retiredAt || !rec.name || !rec.userId) continue
-    const lower = rec.name.trim().toLowerCase()
+  for (const row of await readLiveRows(env)) {
+    if (!row.name) continue
+    const lower = row.name.trim().toLowerCase()
     if (!lower.includes(q) || seen.has(lower)) continue
     seen.add(lower)
-    out.push({ name: rec.name, tier: rec.tier })
+    out.push({ name: row.name, tier: row.tier })
   }
-  // Prefix matches first, then substring; alphabetical within each.
   out.sort((a, b) => {
     const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1
     const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1
     return ap - bp || a.name.localeCompare(b.name)
   })
-  return out
+  return out.slice(0, limit)
 }
 
 /** One registry scan → userId → { name, tier } for annotating a share list. */

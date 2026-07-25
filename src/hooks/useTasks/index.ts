@@ -412,6 +412,19 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     }
   }
 
+  // Stable identity: `api` is memoized, so this share facade is too. Without the
+  // memo a NEW object every render would re-fire the share UI's autocomplete
+  // effect on every render (a fetch storm), never letting a result settle.
+  const shareApi = useMemo(
+    () => ({
+      searchUsers: api.searchUsers,
+      listShares: api.listShares,
+      grantShare: api.grantShare,
+      revokeShare: api.revokeShare
+    }),
+    [api]
+  )
+
   return {
     // Task state
     tasks,
@@ -443,12 +456,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     deleteTagOnBoard,
 
     // Board sharing (§7) — direct server calls, no localStorage mirror.
-    shareApi: {
-      searchUsers: api.searchUsers,
-      listShares: api.listShares,
-      grantShare: api.grantShare,
-      revokeShare: api.revokeShare
-    },
+    shareApi,
 
     // Lifecycle
     initialLoad,

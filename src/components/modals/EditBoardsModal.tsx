@@ -362,41 +362,57 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchSeq = useRef(0)
 
   const refresh = useCallback(() => {
     void shareApi.listShares(ref).then(setGrantees)
   }, [shareApi, ref])
 
+  // Load the current grantees once per board (shareApi is stable/memoized).
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  // Debounced autocomplete. A pick clears the query text; typing again re-opens.
+  // Debounced autocomplete. A pick sets query to the picked name; typing again
+  // re-opens. A sequence guard drops out-of-order responses (the search scan can
+  // be slow), so a stale slow reply never clobbers the latest results.
   useEffect(() => {
-    if (picked && picked.name === query) return
-    if (debounce.current) clearTimeout(debounce.current)
     const q = query.trim()
+    // Don't re-search the exact text we just picked.
+    if (picked && picked.name === q) return
+    if (debounce.current) clearTimeout(debounce.current)
     if (!q) {
       setResults([])
       return
     }
+    const mySeq = ++searchSeq.current
     debounce.current = setTimeout(() => {
-      void shareApi.searchUsers(q).then(setResults)
-    }, 180)
+      void shareApi.searchUsers(q).then(users => {
+        if (mySeq === searchSeq.current) setResults(users)
+      })
+    }, 250)
     return () => {
       if (debounce.current) clearTimeout(debounce.current)
     }
   }, [query, picked, shareApi])
 
+  // The grantee is a click-picked result, OR an exact (case-insensitive) match
+  // for the typed text — so typing the full name and hitting Share also works,
+  // without needing a precise click on the dropdown.
+  const qLower = query.trim().toLowerCase()
+  const effectivePick =
+    picked ?? results.find(u => u.name.toLowerCase() === qLower) ?? null
+
   const grant = () => {
-    if (!picked || busy) return
+    if (!effectivePick || busy) return
+    const target = effectivePick
     setBusy(true)
     setMsg(null)
     void shareApi
-      .grantShare(ref, { name: picked.name, level })
+      .grantShare(ref, { name: target.name, level })
       .then(res => {
         if (res.ok) {
-          setMsg({ kind: 'ok', text: `Shared with ${res.granted?.name ?? picked.name} (${res.granted?.tier ?? '—'})` })
+          setMsg({ kind: 'ok', text: `Shared with ${res.granted?.name ?? target.name} (${res.granted?.tier ?? '—'})` })
           setQuery('')
           setPicked(null)
           setResults([])
@@ -434,26 +450,6 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
             }}
             aria-label="Grantee display name"
           />
-          {results.length > 0 && !picked && (
-            <ul className="share-panel__results" role="listbox">
-              {results.map(u => (
-                <li key={u.name}>
-                  <button
-                    type="button"
-                    className="share-panel__result"
-                    onClick={() => {
-                      setPicked(u)
-                      setQuery(u.name)
-                      setResults([])
-                    }}
-                  >
-                    <span className="share-panel__result-name">{u.name}</span>
-                    {u.tier && <span className="share-panel__result-tier">{u.tier}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <select
@@ -469,12 +465,33 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
         <button
           className="share-panel__grant-btn"
           onClick={grant}
-          disabled={!picked || busy}
-          title={picked ? `Share with ${picked.name}` : 'Pick a real display name first'}
+          disabled={!effectivePick || busy}
+          title={effectivePick ? `Share with ${effectivePick.name}` : 'Pick a real display name first'}
         >
           Share
         </button>
       </div>
+
+      {results.length > 0 && !picked && (
+        <ul className="share-panel__results" role="listbox">
+          {results.map(u => (
+            <li key={u.name}>
+              <button
+                type="button"
+                className="share-panel__result"
+                onClick={() => {
+                  setPicked(u)
+                  setQuery(u.name)
+                  setResults([])
+                }}
+              >
+                <span className="share-panel__result-name">{u.name}</span>
+                {u.tier && <span className="share-panel__result-tier">{u.tier}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {msg && <p className={`share-panel__msg is-${msg.kind}`}>{msg.text}</p>}
 
