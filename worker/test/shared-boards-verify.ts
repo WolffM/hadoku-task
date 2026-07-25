@@ -94,6 +94,7 @@ interface Board {
   ownerUserId?: string
   access?: string
   tasks?: Task[]
+  shares?: Array<{ granteeUserId: string; level: string; name?: string | null; tier?: string | null }>
 }
 interface Task {
   id: string
@@ -263,6 +264,24 @@ async function main() {
     JSON.stringify(r.json)
   )
 
+  // The Edit Boards / Share UI reads a board's grantees from the HYDRATED
+  // GET /boards payload — fetching them per board when a panel opened made the
+  // list appear late or, when the fetch hiccuped, not at all (the client reports
+  // every failure as an empty list). The owner's board must carry them up front.
+  const ownerBoardsAfterGrant = await boards(OWNER)
+  const workWithShares = ownerBoardsAfterGrant.find(b => b.id === 'work')
+  check(
+    'owner GET /boards hydrates the board with its grantees',
+    workWithShares?.shares?.length === 1,
+    JSON.stringify(workWithShares?.shares)
+  )
+  check(
+    'hydrated grantee carries the display name + level (not a raw userId only)',
+    workWithShares?.shares?.[0]?.name === 'TenHands' &&
+      workWithShares?.shares?.[0]?.level === 'contributor',
+    JSON.stringify(workWithShares?.shares?.[0])
+  )
+
   // ---------------------------------------------------------------------
   section('4. Contributor now sees + reads the shared board')
   // ---------------------------------------------------------------------
@@ -284,6 +303,13 @@ async function main() {
     JSON.stringify(shared)
   )
   check("contributor reads the OWNER's 2 tasks", (await tasksOn(CONTRIB, handle)).length === 2)
+  // Only an OWNER may see who a board is shared with — hydration must not leak
+  // the grantee list to someone who merely has access to the board.
+  check(
+    "shared board does NOT expose the owner's grantee list to a contributor",
+    shared?.shares === undefined,
+    JSON.stringify(shared?.shares)
+  )
   // The FRONTEND renders a board from the HYDRATED GET /boards payload, never a
   // follow-up /tasks call. So the shared board's `.tasks` in GET /boards must be
   // the OWNER's tasks — this is the "board name showed but tasks didn't / we had

@@ -8,6 +8,7 @@ import { TaskHandlers } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
+import { annotatedSharesByBoard } from './shares'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
 import type { AppContext } from '../types'
@@ -68,6 +69,24 @@ export function createBoardRoutes() {
         board.stats = statsFile
       })
     )
+
+    // Attach each OWNED board's grantees (§7.3) so the Edit Boards / Share UI
+    // has them up front instead of fetching per board when a panel opens. One
+    // query + one registry scan for the whole set. Only the owner may see who a
+    // board is shared with, so grantees are never attached to a board this
+    // viewer merely has access to.
+    if (auth.sessionId) {
+      try {
+        const shares = await annotatedSharesByBoard(c.env, auth.sessionId)
+        for (const board of boardsData.boards) {
+          if (board.access && board.access !== 'owner') continue
+          board.shares = shares.get(board.id) ?? []
+        }
+      } catch (err) {
+        // Non-fatal: boards still render, the panel falls back to its own fetch.
+        logError('GET', '/task/api/boards', `share hydration failed: ${String(err)}`)
+      }
+    }
 
     // Expose the collection version as an ETag so clients can present it as
     // If-Match on the next board write (board-collection OCC).

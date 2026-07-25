@@ -450,20 +450,35 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
   const [results, setResults] = useState<Array<{ name: string; tier?: string }>>([])
   const [picked, setPicked] = useState<{ name: string; tier?: string } | null>(null)
   const [level, setLevel] = useState<ShareLevel>('contributor')
-  const [grantees, setGrantees] = useState<ShareRow[]>([])
+  // Seed from the grantees GET /boards already hydrated, so the list is on
+  // screen the instant the panel opens (no fetch-on-open flash / silent empty).
+  const [grantees, setGrantees] = useState<ShareRow[]>(() => board.shares ?? [])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchSeq = useRef(0)
 
+  // Re-read the grantee list from the server (after a grant/revoke). The client's
+  // listShares reports EVERY failure as an empty array, so an empty reply is
+  // ambiguous — never let one blank out a list we already have, or a transient
+  // hiccup reads as "shared with nobody". An add/remove we just made is reflected
+  // by the caller updating state directly.
   const refresh = useCallback(() => {
-    void shareApi.listShares(ref).then(setGrantees)
+    void shareApi.listShares(ref).then(rows => {
+      setGrantees(prev => (rows.length === 0 && prev.length > 0 ? prev : rows))
+    })
   }, [shareApi, ref])
 
-  // Load the current grantees once per board (shareApi is stable/memoized).
+  // Grantees normally arrive hydrated on the board (GET /boards). Only fetch when
+  // they didn't — an older payload, or a board the hydration skipped.
   useEffect(() => {
-    refresh()
-  }, [refresh])
+    if (board.shares === undefined) refresh()
+  }, [refresh, board.shares])
+
+  // Keep in step if a board reload brings a fresh grantee list.
+  useEffect(() => {
+    if (board.shares) setGrantees(board.shares)
+  }, [board.shares])
 
   // Debounced autocomplete. A pick sets query to the picked name; typing again
   // re-opens. A sequence guard drops out-of-order responses (the search scan can
@@ -524,7 +539,12 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
     void shareApi
       .revokeShare(ref, g.granteeUserId)
       .then(ok => {
-        if (ok) refresh()
+        if (!ok) return
+        // Drop the row locally: revoking the LAST grantee legitimately yields an
+        // empty list, which refresh()'s guard would otherwise mistake for a
+        // failed fetch and keep showing the person we just removed.
+        setGrantees(prev => prev.filter(x => x.granteeUserId !== g.granteeUserId))
+        refresh()
       })
       .finally(() => setBusy(false))
   }

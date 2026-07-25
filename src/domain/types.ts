@@ -101,6 +101,20 @@ export interface Board {
   // owner; `access` is THIS caller's level on it.
   ownerUserId?: string
   access?: 'owner' | 'contributor' | 'readonly'
+  // Who this board is shared WITH, annotated with display name + tier. Hydrated
+  // by GET /boards for boards this viewer OWNS (only an owner may see a board's
+  // grantees), so the share UI renders the list immediately instead of fetching
+  // per board when a panel opens. Absent ⇒ not hydrated (the panel then fetches).
+  shares?: BoardShare[]
+}
+
+/** A grantee on a board, as surfaced to the share UI. */
+export interface BoardShare {
+  granteeUserId: string
+  level: string
+  createdAt: string
+  name?: string | null
+  tier?: string | null
 }
 
 export interface BoardsFile {
