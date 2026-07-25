@@ -14,6 +14,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@wolffm/task-ui-components'
 import type { Board } from '../../domain/types'
+import { ShareIcon } from '../ShareIcon'
 
 export type ShareLevel = 'readonly' | 'contributor'
 
@@ -246,7 +247,7 @@ export function EditBoardsModal({
                   aria-label={`Share ${b.name}`}
                   aria-expanded={sharingId === b.id}
                 >
-                  👥
+                  <ShareIcon />
                 </button>
                 {!isMain && (
                   <button

@@ -476,9 +476,15 @@
   flex-wrap: wrap;
 }
 
-/* Refresh button lives in the filters bar, pushed to the far right. */
+/* Refresh + share cluster, pushed to the far right of the filters bar. Only the
+   FIRST button carries the auto-margin — the share button reuses .sync-btn (which
+   also sets margin-left:auto), so without this reset a second auto-margin would
+   split the free space and strand refresh in the middle. */
 .task-app__filter-sync {
   margin-left: auto;
+}
+.task-app__filter-share {
+  margin-left: 0;
 }
 
 /* Filter buttons - use shared .pill-btn from buttons.css */
