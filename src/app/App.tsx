@@ -152,7 +152,8 @@ export default function App(props: TaskAppProps = {}) {
     switchBoard,
     moveTasksToBoard,
     createTagOnBoard,
-    deleteTagOnBoard
+    deleteTagOnBoard,
+    shareApi
   } = useTasks({ userType, sessionId: effectiveSessionId, onSyncError: reportSyncError })
 
   // Drag and drop hook
@@ -506,6 +507,7 @@ export default function App(props: TaskAppProps = {}) {
           onCloseEditBoards={() => modals.setShowEditBoardsDialog(false)}
           onRenameBoard={renameBoard}
           onSetPinnedBoards={setPinnedBoards}
+          shareApi={shareApi}
           onCloseNewTagDialog={() => {
             modals.setShowNewTagDialog(false)
             modals.setPendingTaskOperation(null)

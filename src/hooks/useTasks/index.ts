@@ -442,6 +442,14 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     createTagOnBoard,
     deleteTagOnBoard,
 
+    // Board sharing (§7) — direct server calls, no localStorage mirror.
+    shareApi: {
+      searchUsers: api.searchUsers,
+      listShares: api.listShares,
+      grantShare: api.grantShare,
+      revokeShare: api.revokeShare
+    },
+
     // Lifecycle
     initialLoad,
     reload

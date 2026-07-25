@@ -350,6 +350,20 @@ async function main() {
   r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'GhostName', level: 'contributor' })
   check('retired row name → 404 (excluded like isNameTaken)', r.status === 404 && r.json?.code === 'NAME_NOT_FOUND', `status=${r.status} ${JSON.stringify(r.json)}`)
 
+  // ---------------------------------------------------------------------
+  section('12. Display-name autocomplete search (share UI)')
+  // ---------------------------------------------------------------------
+  interface SearchBody { users?: Array<{ name: string; tier?: string }> }
+  r = await req(OWNER, 'GET', '/task/api/users/search?q=ten')
+  let users = (r.json as unknown as SearchBody).users ?? []
+  check('search "ten" finds TenHands with tier', users.some(u => u.name === 'TenHands' && u.tier === 'service'), JSON.stringify(users))
+  r = await req(OWNER, 'GET', '/task/api/users/search?q=GHOST')
+  users = (r.json as unknown as SearchBody).users ?? []
+  check('search excludes retired names', !users.some(u => u.name === 'GhostName'), JSON.stringify(users))
+  r = await req(OWNER, 'GET', '/task/api/users/search?q=')
+  users = (r.json as unknown as SearchBody).users ?? []
+  check('empty query → no results', users.length === 0)
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

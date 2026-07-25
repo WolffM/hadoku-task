@@ -84,9 +84,22 @@ export const GrantShareResponseSchema = z
   })
   .openapi('GrantShareResponse')
 
+export const UserSearchResponseSchema = z
+  .object({
+    users: z.array(
+      z.object({
+        name: z.string().openapi({ example: 'tenhands-service' }),
+        tier: z.string().optional().openapi({ example: 'service' })
+      })
+    )
+  })
+  .openapi('UserSearchResponse')
+
 export const ShareRowSchema = z
   .object({
     granteeUserId: z.string(),
+    name: z.string().nullable().optional().openapi({ description: 'Grantee display name (resolved from the registry).' }),
+    tier: z.string().nullable().optional(),
     level: z.enum(['readonly', 'contributor']),
     createdAt: z.string()
   })

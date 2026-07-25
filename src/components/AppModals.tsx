@@ -14,6 +14,7 @@ import {
   BoardContextMenu,
   TagContextMenu
 } from './modals'
+import type { ShareApi } from './modals/EditBoardsModal'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 
@@ -54,6 +55,7 @@ interface AppModalsProps {
   onCloseEditBoards: () => void
   onRenameBoard: (boardId: string, name: string) => Promise<void>
   onSetPinnedBoards: (order: string[]) => Promise<void>
+  shareApi: ShareApi
 
   onCloseNewTagDialog: () => void
   onConfirmCreateTag: (tagName: string) => Promise<void>
@@ -98,6 +100,7 @@ export function AppModals({
   onCloseEditBoards,
   onRenameBoard,
   onSetPinnedBoards,
+  shareApi,
   onCloseNewTagDialog,
   onConfirmCreateTag,
   onTagInputChange,
@@ -141,6 +144,7 @@ export function AppModals({
         onRename={onRenameBoard}
         onDelete={onDeleteBoard}
         onSetPinned={onSetPinnedBoards}
+        shareApi={shareApi}
         validateBoardName={validateBoardName}
       />
 

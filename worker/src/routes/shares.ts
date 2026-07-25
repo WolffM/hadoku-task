@@ -20,6 +20,7 @@ import {
   ListSharesResponseSchema,
   LeaveShareResponseSchema,
   RevokeShareResponseSchema,
+  UserSearchResponseSchema,
   DomainErrorSchema
 } from '../schemas-agent'
 import { ErrorResponseSchema } from '../schemas'
@@ -107,6 +108,69 @@ async function resolveGrantee(
   return { userId: rec.userId, name: rec.name, tier: rec.tier }
 }
 
+/**
+ * Search live registry rows by display-name prefix (case-insensitive), for the
+ * share UI's autocomplete. Same scan isNameTaken/resolveGrantee use — list the
+ * `key:` prefix, get each row, skip retired rows — collecting matches by name.
+ * Display names carry no auth bearing, so exposing them is safe; results are
+ * deduped by name and capped. Only rows with a userId (signed in) are grantable.
+ */
+async function searchRegistryNames(
+  env: Env,
+  query: string,
+  limit: number
+): Promise<Array<{ name: string; tier?: string }>> {
+  if (!env.SESSIONS_KV) return []
+  const q = query.trim().toLowerCase()
+  if (!q) return []
+  const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
+  const seen = new Set<string>()
+  const out: Array<{ name: string; tier?: string }> = []
+  for (const entry of list.keys) {
+    if (out.length >= limit) break
+    const raw = await env.SESSIONS_KV.get(entry.name)
+    if (!raw) continue
+    let rec: KeyRow
+    try {
+      rec = JSON.parse(raw) as KeyRow
+    } catch {
+      continue
+    }
+    if (rec.retiredAt || !rec.name || !rec.userId) continue
+    const lower = rec.name.trim().toLowerCase()
+    if (!lower.includes(q) || seen.has(lower)) continue
+    seen.add(lower)
+    out.push({ name: rec.name, tier: rec.tier })
+  }
+  // Prefix matches first, then substring; alphabetical within each.
+  out.sort((a, b) => {
+    const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1
+    const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1
+    return ap - bp || a.name.localeCompare(b.name)
+  })
+  return out
+}
+
+/** One registry scan → userId → { name, tier } for annotating a share list. */
+async function registryNameMap(env: Env): Promise<Map<string, { name: string | null; tier?: string }>> {
+  const map = new Map<string, { name: string | null; tier?: string }>()
+  if (!env.SESSIONS_KV) return map
+  const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
+  for (const entry of list.keys) {
+    const raw = await env.SESSIONS_KV.get(entry.name)
+    if (!raw) continue
+    try {
+      const rec = JSON.parse(raw) as KeyRow
+      if (rec.retiredAt || !rec.userId) continue
+      // A userId can appear on multiple rows (rotation); the live one wins.
+      map.set(rec.userId, { name: rec.name ?? null, tier: rec.tier })
+    } catch {
+      /* skip malformed */
+    }
+  }
+  return map
+}
+
 const nowIso = () => new Date().toISOString()
 
 const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
@@ -115,6 +179,36 @@ const refParam = z.object({ ref: z.string().openapi({ param: { name: 'ref', in: 
 
 export function createShareRoutes() {
   const app = new OpenAPIHono<AppContext>()
+
+  // Autocomplete: search live display names for the share UI. Auth-gated to a
+  // signed-in (non-public) caller — a board owner picking a grantee. Display
+  // names carry no auth bearing, so returning them is safe.
+  const searchRoute = createRoute({
+    method: 'get',
+    path: '/users/search',
+    tags: ['Sharing'],
+    summary: 'Search display names (share autocomplete)',
+    request: {
+      query: z.object({
+        q: z.string().openapi({ example: 'ten', description: 'Name prefix/substring.' }),
+        limit: z.string().optional()
+      })
+    },
+    responses: {
+      200: { description: 'Matching users', content: { 'application/json': { schema: UserSearchResponseSchema } } }
+    }
+  })
+  app.openapi(searchRoute, (async (c: any) => {
+    const auth = c.get('authContext')
+    // Only signed-in users may enumerate names (avoids anonymous scraping).
+    if (!auth || auth.userType === 'public') {
+      return c.json({ users: [] })
+    }
+    const { q, limit } = c.req.valid('query')
+    const n = Math.min(Math.max(1, parseInt(limit ?? '8', 10) || 8), 20)
+    const users = await searchRegistryNames(c.env, q, n)
+    return c.json({ users })
+  }) as never)
 
   // Grant (or update) a share — owner only.
   const grantRoute = createRoute({
@@ -189,7 +283,14 @@ export function createShareRoutes() {
       return c.json({ error: 'Only the board owner can view shares', code: 'FORBIDDEN' }, 403)
     }
     const shares = await listShares(c.env.DB, ctx.ownerId, ctx.boardId)
-    return c.json({ shares })
+    // Annotate each grantee with their display name + tier (one registry scan)
+    // so the share UI shows people, not raw userIds.
+    const names = shares.length ? await registryNameMap(c.env) : new Map()
+    const annotated = shares.map(s => {
+      const who = names.get(s.granteeUserId)
+      return { ...s, name: who?.name ?? null, tier: who?.tier ?? null }
+    })
+    return c.json({ shares: annotated })
   }) as never)
 
   // Leave a shared board — grantee removes their OWN access, no owner involved.

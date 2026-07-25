@@ -105,6 +105,27 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
     },
 
+    // Board sharing (§7) is a server-only, signed-in feature. Public/localStorage
+    // mode can't share, so these are inert — they keep the api shape uniform
+    // across the public vs signed-in branches of createApi.
+    async searchUsers(_q: string): Promise<Array<{ name: string; tier?: string }>> {
+      return []
+    },
+    async listShares(
+      _boardRef: string
+    ): Promise<Array<{ granteeUserId: string; name?: string | null; tier?: string | null; level: string; createdAt: string }>> {
+      return []
+    },
+    async grantShare(
+      _boardRef: string,
+      _input: { name?: string; userId?: string; level: 'readonly' | 'contributor' }
+    ): Promise<{ ok: boolean; error?: string; granted?: { name: string | null; tier: string | null; level: string } }> {
+      return { ok: false, error: 'Sign in to share boards.' }
+    },
+    async revokeShare(_boardRef: string, _granteeUserId: string): Promise<boolean> {
+      return false
+    },
+
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
       return storage.getTasks(userType, sessionId, boardId)
     },
