@@ -102,6 +102,29 @@ const refParam = z.object({
 export function createAutomationRoutes() {
   const app = new OpenAPIHono<AppContext>()
 
+  // Set a board's repo (owner only). Auto-saved by the UI the moment a repo
+  // validates, so there's no separate "save" button.
+  app.post('/boards/:ref/repo', async (c: any) => {
+    const ref = c.req.param('ref')
+    const ctx = await getBoardContext(c, ref)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (ctx.access !== 'owner') {
+      return c.json({ error: 'Only the board owner can set the repo', code: 'FORBIDDEN' }, 403)
+    }
+    let body: { repo?: string | null }
+    try {
+      body = await c.req.json()
+    } catch {
+      return c.json({ error: 'Invalid JSON body', code: 'BAD_REQUEST' }, 400)
+    }
+    const repo = typeof body.repo === 'string' && body.repo.trim() ? body.repo.trim() : null
+    await c.env.DB.prepare('UPDATE boards SET repo = ?, updated_at = ? WHERE user_id = ? AND id = ?')
+      .bind(repo, new Date().toISOString(), ctx.ownerId, ctx.boardId)
+      .run()
+    logRequest('POST', `/task/api/boards/${ref}/repo`, { board: ctx.boardId, repo })
+    return c.json({ ok: true, repo })
+  })
+
   // Validate a board's repo by probing GitHub. Signed-in only.
   const repoValidateRoute = createRoute({
     method: 'get',

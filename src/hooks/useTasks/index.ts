@@ -423,7 +423,8 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       revokeShare: api.revokeShare,
       activateAutomation: api.activateAutomation,
       deactivateAutomation: api.deactivateAutomation,
-      validateRepo: api.validateRepo
+      validateRepo: api.validateRepo,
+      setRepo: api.setRepo
     }),
     [api]
   )

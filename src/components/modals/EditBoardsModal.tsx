@@ -75,6 +75,7 @@ export interface ShareApi {
     defaultBranch?: string
     message?: string
   }>
+  setRepo: (boardRef: string, repo: string) => Promise<{ ok: boolean; repo?: string | null }>
 }
 
 export interface EditBoardsModalProps {
@@ -639,18 +640,24 @@ function AutomationPanel({
   } | null>(null)
   const [repoChecking, setRepoChecking] = useState(false)
 
+  // Validate against GitHub, then AUTO-SAVE on success — no separate button.
+  // Clearing the field (empty on blur) clears the saved repo.
   const checkRepo = () => {
     const r = repo.trim()
     setRepoStatus(null)
-    if (!r) return // repo is optional
+    if (!r) {
+      if ((board.repo as string | undefined) ?? '') void shareApi.setRepo(ref, '')
+      return
+    }
     setRepoChecking(true)
     void shareApi
       .validateRepo(r)
-      .then(res => setRepoStatus(res))
+      .then(res => {
+        setRepoStatus(res)
+        if (res.valid) void shareApi.setRepo(ref, r)
+      })
       .finally(() => setRepoChecking(false))
   }
-  // A non-empty repo must validate before activation; empty is allowed.
-  const repoBlocks = repo.trim() !== '' && !(repoStatus && repoStatus.valid)
 
   // Parse the pasted JSON into an activation payload (lanes + opaque labels + repo).
   const parsePayload = (): {
@@ -670,7 +677,7 @@ function AutomationPanel({
         lanes,
         schemaId: typeof obj.schemaId === 'string' ? obj.schemaId : undefined,
         schemaVersion: typeof obj.schemaVersion === 'number' ? obj.schemaVersion : undefined,
-        repo: repo.trim() || (typeof obj.repo === 'string' ? obj.repo : undefined)
+        repo: typeof obj.repo === 'string' ? obj.repo : undefined
       }
     } catch {
       setErr('That is not valid JSON.')
@@ -725,6 +732,40 @@ function AutomationPanel({
       .finally(() => setBusy(false))
   }
 
+  // The repo field is shared by both views. It validates against GitHub on blur
+  // and AUTO-SAVES on success (repo drives the board → checkout mapping, §5.5).
+  const repoField = (
+    <div className="automation-panel__repo">
+      <input
+        className="automation-panel__repo-input"
+        type="text"
+        placeholder="Repo (owner/name), e.g. WolffM/my-repo"
+        value={repo}
+        onChange={e => {
+          setRepo(e.target.value)
+          setRepoStatus(null)
+        }}
+        onBlur={checkRepo}
+        onKeyDown={e => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        aria-label="Repo"
+      />
+      {repoChecking && <span className="automation-panel__repo-status is-checking">checking…</span>}
+      {!repoChecking && repoStatus?.valid && (
+        <span className="automation-panel__repo-status is-ok">
+          ✓ saved · {repoStatus.private ? 'private' : 'public'}
+          {repoStatus.defaultBranch ? ` · ${repoStatus.defaultBranch}` : ''}
+        </span>
+      )}
+      {!repoChecking && repoStatus && !repoStatus.valid && (
+        <span className="automation-panel__repo-status is-bad" title={repoStatus.message}>
+          ✗ {repoStatus.message ?? 'not found'}
+        </span>
+      )}
+    </div>
+  )
+
   if (isAutomation) {
     const lanes = (board.lanes ?? []) as Array<{ tag: string; label?: string; editableBy?: string }>
     return (
@@ -734,6 +775,9 @@ function AutomationPanel({
           {board.schemaId ? ` · ${board.schemaId} v${board.schemaVersion ?? '?'}` : ''} ·{' '}
           {lanes.length} lanes
         </p>
+
+        {repoField}
+
         <ul className="automation-panel__lanes">
           {lanes.map(l => (
             <li key={l.tag} className="automation-panel__lane">
@@ -757,37 +801,7 @@ function AutomationPanel({
         JSON (its lane contract). This is <strong>destructive</strong> — it replaces the
         board&apos;s tags with the fixed lanes. Preview first.
       </p>
-      <div className="automation-panel__repo">
-        <input
-          className="automation-panel__repo-input"
-          type="text"
-          placeholder="Repo (owner/name), e.g. WolffM/my-repo"
-          value={repo}
-          onChange={e => {
-            setRepo(e.target.value)
-            setRepoStatus(null)
-          }}
-          onBlur={checkRepo}
-          onKeyDown={e => {
-            if (e.key === 'Enter') checkRepo()
-          }}
-          aria-label="Repo"
-        />
-        {repoChecking && (
-          <span className="automation-panel__repo-status is-checking">checking…</span>
-        )}
-        {!repoChecking && repoStatus?.valid && (
-          <span className="automation-panel__repo-status is-ok">
-            ✓ {repoStatus.private ? 'private' : 'public'}
-            {repoStatus.defaultBranch ? ` · ${repoStatus.defaultBranch}` : ''}
-          </span>
-        )}
-        {!repoChecking && repoStatus && !repoStatus.valid && (
-          <span className="automation-panel__repo-status is-bad" title={repoStatus.message}>
-            ✗ {repoStatus.message ?? 'not found'}
-          </span>
-        )}
-      </div>
+      {repoField}
 
       <textarea
         className="automation-panel__json"
@@ -838,14 +852,8 @@ function AutomationPanel({
         <button
           className="automation-panel__activate-btn"
           onClick={commit}
-          disabled={busy || !preview || repoBlocks}
-          title={
-            repoBlocks
-              ? 'Enter a valid repo (or clear it) first'
-              : preview
-                ? 'Activate (destructive)'
-                : 'Preview first'
-          }
+          disabled={busy || !preview}
+          title={preview ? 'Activate (destructive)' : 'Preview first'}
         >
           Activate
         </button>

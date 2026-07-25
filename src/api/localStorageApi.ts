@@ -165,6 +165,9 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     }> {
       return { repo, valid: false, reason: 'token', message: 'Sign in to validate repos.' }
     },
+    async setRepo(_boardRef: string, _repo: string): Promise<{ ok: boolean; repo?: string | null }> {
+      return { ok: false }
+    },
 
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
       return storage.getTasks(userType, sessionId, boardId)

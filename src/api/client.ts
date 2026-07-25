@@ -561,6 +561,21 @@ export function createApi(
       }
     },
 
+    /** Persist a board's repo (owner only). Auto-called on successful validation. */
+    async setRepo(boardRef: string, repo: string): Promise<{ ok: boolean; repo?: string | null }> {
+      try {
+        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/repo`, {
+          method: 'POST',
+          headers: adminHeaders(userType, sessionId),
+          body: JSON.stringify({ repo })
+        })
+        if (!res.ok) return { ok: false }
+        return (await res.json()) as { ok: boolean; repo?: string | null }
+      } catch {
+        return { ok: false }
+      }
+    },
+
     /** Validate a repo (owner/name) by probing GitHub through the worker. */
     async validateRepo(
       repo: string
