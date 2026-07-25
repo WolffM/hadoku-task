@@ -24,6 +24,10 @@ export interface TagFiltersSectionProps {
   onPendingOperation: (op: PendingTaskOperation | null) => void
   onRefresh: () => Promise<void>
   onShowToast?: (message: string, type?: 'success' | 'error' | 'info') => void
+  /** Open the share dialog for the current board. Absent ⇒ not shareable. */
+  onShareBoard?: () => void
+  /** Whether the current board can be shared (owned, signed-in). */
+  canShareBoard?: boolean
 }
 
 export function TagFiltersSection({
@@ -39,7 +43,9 @@ export function TagFiltersSection({
   onCreateTagClick,
   onPendingOperation,
   onRefresh,
-  onShowToast
+  onShowToast,
+  onShareBoard,
+  canShareBoard
 }: TagFiltersSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -129,6 +135,32 @@ export function TagFiltersSection({
             <polyline points="23 4 23 10 17 10"></polyline>
             <polyline points="1 20 1 14 7 14"></polyline>
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      )}
+
+      {userType !== 'public' && canShareBoard && onShareBoard && (
+        <button
+          className="sync-btn task-app__filter-share"
+          onClick={onShareBoard}
+          title="Share this board"
+          aria-label="Share this board"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
           </svg>
         </button>
       )}

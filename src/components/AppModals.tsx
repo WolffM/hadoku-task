@@ -9,6 +9,7 @@ import {
   ClearTagModal,
   CreateBoardModal,
   EditBoardsModal,
+  ShareBoardModal,
   CreateTagModal,
   EditTagModal,
   BoardContextMenu,
@@ -56,6 +57,8 @@ interface AppModalsProps {
   onRenameBoard: (boardId: string, name: string) => Promise<void>
   onSetPinnedBoards: (order: string[]) => Promise<void>
   shareApi: ShareApi
+  showShareDialog: boolean
+  onCloseShareDialog: () => void
 
   onCloseNewTagDialog: () => void
   onConfirmCreateTag: (tagName: string) => Promise<void>
@@ -101,6 +104,8 @@ export function AppModals({
   onRenameBoard,
   onSetPinnedBoards,
   shareApi,
+  showShareDialog,
+  onCloseShareDialog,
   onCloseNewTagDialog,
   onConfirmCreateTag,
   onTagInputChange,
@@ -146,6 +151,13 @@ export function AppModals({
         onSetPinned={onSetPinnedBoards}
         shareApi={shareApi}
         validateBoardName={validateBoardName}
+      />
+
+      <ShareBoardModal
+        isOpen={showShareDialog}
+        board={(boards?.boards ?? []).find(b => b.id === currentBoardId) ?? null}
+        shareApi={shareApi}
+        onClose={onCloseShareDialog}
       />
 
       <CreateTagModal

@@ -6,6 +6,7 @@
 export { ClearTagModal } from './ClearTagModal'
 export { CreateBoardModal } from './CreateBoardModal'
 export { EditBoardsModal } from './EditBoardsModal'
+export { ShareBoardModal } from './ShareBoardModal'
 export { CreateTagModal } from './CreateTagModal'
 export { EditTagModal } from './EditTagModal'
 export { BoardContextMenu } from './BoardContextMenu'

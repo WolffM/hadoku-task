@@ -23,6 +23,10 @@ export interface UseModalStateReturn {
   showEditBoardsDialog: boolean
   setShowEditBoardsDialog: (show: boolean) => void
 
+  // Share Board Dialog (share the current board from the toolbar)
+  showShareDialog: boolean
+  setShowShareDialog: (show: boolean) => void
+
   // Create Tag Dialog
   showNewTagDialog: boolean
   setShowNewTagDialog: (show: boolean) => void
@@ -70,6 +74,8 @@ export function useModalState(): UseModalStateReturn {
   // Edit Boards Dialog
   const [showEditBoardsDialog, setShowEditBoardsDialog] = useState(false)
 
+  const [showShareDialog, setShowShareDialog] = useState(false)
+
   // Create Tag Dialog
   const [showNewTagDialog, setShowNewTagDialog] = useState(false)
 
@@ -109,6 +115,8 @@ export function useModalState(): UseModalStateReturn {
     setShowNewBoardDialog,
     showEditBoardsDialog,
     setShowEditBoardsDialog,
+    showShareDialog,
+    setShowShareDialog,
     showNewTagDialog,
     setShowNewTagDialog,
     showSettingsModal,

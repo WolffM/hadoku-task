@@ -350,8 +350,9 @@ export function EditBoardsModal({
 /**
  * The per-board share panel: autocomplete a display name, pick an access level,
  * grant, and manage existing grantees. Only real, active names can be granted.
+ * Exported so the toolbar's share dialog can reuse it for the current board.
  */
-function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareApi }) {
+export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareApi }) {
   const ref = boardRef(board)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Array<{ name: string; tier?: string }>>([])

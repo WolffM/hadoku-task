@@ -422,6 +422,11 @@ export default function App(props: TaskAppProps = {}) {
               onPendingOperation={modals.setPendingTaskOperation}
               onRefresh={initialLoad}
               onShowToast={showToast}
+              onShareBoard={() => modals.setShowShareDialog(true)}
+              canShareBoard={(() => {
+                const b = boards?.boards?.find(x => x.id === currentBoardId)
+                return !!b && (!b.access || b.access === 'owner')
+              })()}
             />
 
             <TaskLayout
@@ -508,6 +513,8 @@ export default function App(props: TaskAppProps = {}) {
           onRenameBoard={renameBoard}
           onSetPinnedBoards={setPinnedBoards}
           shareApi={shareApi}
+          showShareDialog={modals.showShareDialog}
+          onCloseShareDialog={() => modals.setShowShareDialog(false)}
           onCloseNewTagDialog={() => {
             modals.setShowNewTagDialog(false)
             modals.setPendingTaskOperation(null)
