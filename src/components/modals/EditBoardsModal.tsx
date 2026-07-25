@@ -14,6 +14,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@wolffm/task-ui-components'
 import type { Board } from '../../domain/types'
+import { effectivePinnedIds } from '../../domain/utils/boardPins'
+import { TOPBAR_BOARD_SLOTS } from '../../app/constants'
 import { ShareIcon } from '../ShareIcon'
 
 export type ShareLevel = 'readonly' | 'contributor'
@@ -122,7 +124,12 @@ export function EditBoardsModal({
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
-  const pinnedOrder = useMemo(() => boards.filter(b => b.pinned).map(b => b.id), [boards])
+  // The favorited set the toggle operates on. Defaults to the first N standard
+  // boards when nothing is explicitly favorited yet (effectivePinnedIds), so the
+  // first favorite is additive onto that baseline instead of collapsing the top
+  // bar to a single board. Same set BoardsSection renders — they stay in sync.
+  const pinnedOrder = useMemo(() => effectivePinnedIds(boards, TOPBAR_BOARD_SLOTS), [boards])
+  const pinnedSet = useMemo(() => new Set(pinnedOrder), [pinnedOrder])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -190,7 +197,7 @@ export function EditBoardsModal({
   const createInvalid = !newName.trim() || validateBoardName(newName) !== null
 
   const renderRow = (b: Board) => {
-    const isPinned = !!b.pinned
+    const isPinned = pinnedSet.has(b.id)
     const isMain = b.id === 'main'
     const owns = isOwned(b)
     const draggable = isPinned && !editingId

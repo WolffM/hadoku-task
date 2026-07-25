@@ -9,6 +9,7 @@ import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { TOPBAR_BOARD_SLOTS } from '../app/constants'
+import { effectivePinnedIds } from '../domain/utils/boardPins'
 
 export interface BoardsSectionProps {
   boards: BoardsFile | null
@@ -51,12 +52,13 @@ export function BoardsSection({
   const standardBoards = allBoards.filter(b => b.mode !== 'automation')
   const automationBoards = allBoards.filter(b => b.mode === 'automation')
 
-  // Top bar shows pinned standard boards (server-ordered), capped at the slot
-  // count. Before anyone has pinned, fall back to the first N. The active board
-  // is always surfaced when it's a standard board reached via the picker.
-  const pinned = standardBoards.filter(b => b.pinned)
-  const base = pinned.length > 0 ? pinned : standardBoards
-  const topBar = base.slice(0, TOPBAR_BOARD_SLOTS)
+  // Top bar shows the favorited standard boards (server-ordered), capped at the
+  // slot count. Before anyone has favorited anything, the first N are favorited
+  // by default (effectivePinnedIds) — same set the Edit Boards toggle sees, so
+  // the two never disagree. The active board is always surfaced when it's a
+  // standard board reached via the picker.
+  const pinnedIds = new Set(effectivePinnedIds(allBoards, TOPBAR_BOARD_SLOTS))
+  const topBar = standardBoards.filter(b => pinnedIds.has(b.id)).slice(0, TOPBAR_BOARD_SLOTS)
   const boardsList =
     topBar.some(b => b.id === currentBoardId) || automationBoards.some(b => b.id === currentBoardId)
       ? topBar
