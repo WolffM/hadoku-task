@@ -135,13 +135,15 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'list_tasks',
     description:
-      'List active tasks on a board. Optionally filter to a single calendar day (date, "YYYY-MM-DD") and/or a tag.',
+      'List active tasks on a board. Optionally filter to a single calendar day (date, "YYYY-MM-DD") and/or a tag. Paginated: pass `limit` (default 100, max 500) and `offset` to page a large board; the result carries `total` and `nextOffset` (null when exhausted).',
     inputSchema: {
       type: 'object',
       properties: {
         ...boardProp,
         date: { type: 'string', description: 'Only tasks on this day, "YYYY-MM-DD".' },
-        tag: { type: 'string', description: 'Only tasks carrying this tag.' }
+        tag: { type: 'string', description: 'Only tasks carrying this tag.' },
+        limit: { type: 'number', description: 'Max tasks to return (default 100, max 500).' },
+        offset: { type: 'number', description: 'Skip this many (for paging). Default 0.' }
       }
     },
     handler: async (args, ctx) => {
@@ -151,7 +153,12 @@ export const TOOLS: ToolDef[] = [
       if (date) tasks = tasks.filter(t => dayOf(t) === date)
       const tag = str(args.tag)
       if (tag) tasks = tasks.filter(t => tagsOf(t).includes(tag))
-      return { board: boardOf(args, ctx), count: tasks.length, tasks }
+      const total = tasks.length
+      const limit = Math.min(Math.max(1, typeof args.limit === 'number' ? args.limit : 100), 500)
+      const offset = Math.max(0, typeof args.offset === 'number' ? args.offset : 0)
+      const page = tasks.slice(offset, offset + limit)
+      const nextOffset = offset + page.length < total ? offset + page.length : null
+      return { board: boardOf(args, ctx), count: page.length, total, offset, limit, nextOffset, tasks: page }
     }
   },
   {
@@ -338,6 +345,25 @@ export const TOOLS: ToolDef[] = [
           lanes: b.lanes ?? undefined
         }))
       }
+    }
+  },
+  {
+    name: 'create_board',
+    description:
+      'Create a board (your own). Use for a per-repo automation board before activating it (activation itself is owner-only and done over HTTP / the app). `id` is a slug; a globally-unique handle is minted server-side.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Board slug, e.g. "my-repo".' },
+        name: { type: 'string', description: 'Display name.' }
+      },
+      required: ['id', 'name']
+    },
+    handler: async (args, ctx) => {
+      const id = str(args.id)
+      const name = str(args.name)
+      if (!id || !name) throw new Error('`id` and `name` are required')
+      return TaskHandlers.createBoard(ctx.storage, ctx.auth, { id, name })
     }
   },
   // --- Agent claim protocol (§4) ---

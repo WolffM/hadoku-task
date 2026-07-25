@@ -686,6 +686,94 @@ Get task statistics for a board.
 
 ---
 
+## Shared Boards
+
+A board owner can share a board with another user key (or a service key). Grantees then see
+it in `GET /boards` with `ownerUserId` + `access` (`contributor` | `readonly`), addressed by
+its opaque **`handle`** (a slug only ever resolves within the caller's own namespace).
+
+### POST `/boards/:ref/shares`
+
+Owner-only. Grant (or update) a share. Body: `{ key, level }` or `{ userId, level }` where
+`level` is `readonly` | `contributor`. `key` is resolved to a stable userId via the read-only
+key registry and never logged. → `{ ok, granteeUserId, granteeName, level }`.
+
+### GET `/boards/:ref/shares`
+
+Owner-only. → `{ shares: [{ granteeUserId, level, createdAt }] }`.
+
+### DELETE `/boards/:ref/shares/:granteeUserId`
+
+Owner-only revoke. → `{ ok, removed }`.
+
+### DELETE `/boards/:ref/shares/me`
+
+Grantee leaves a shared board (removes their own access). → `{ ok, left }`.
+
+---
+
+## Automation Boards
+
+Activating a board replaces its freeform tags with a fixed **lane** vocabulary and locks
+the structure (see [MCP.md](MCP.md#automation-boards--the-claim-loop)).
+
+### POST `/boards/:ref/activate-automation`
+
+Owner-only. Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane
+is `{ tag, label, order, editableBy }` (`editableBy` ∈ `user` | `agent`; extra keys preserved
+verbatim). `dryRun: true` returns a preview `{ digest, mapping, toInbox, collisions }` and
+writes nothing; the committing call echoes that `digest` (stale → `409 DIGEST_MISMATCH`).
+Unmapped tags are cleared to the Inbox, preserved in `metadata.preAutomationTags`.
+
+### POST `/boards/:ref/deactivate-automation`
+
+Owner-only. Restores the pre-activation tag list. → `{ ok, mode: "standard", restoredTags }`.
+
+While a board is automation, the human path (`POST /`, `PATCH /:id`, batch tag ops) may write
+only `user` lanes (`403 LANE_NOT_EDITABLE` / `422 LANE_INVALID`), and `createTag` / `deleteTag`
+/ `batchClearTag` → `409 BOARD_SCHEMA_LOCKED`.
+
+---
+
+## Agent Claim Protocol
+
+Safe multi-agent work. All resolve the board through the sharing/automation layer; the write
+endpoints need `contributor`+ access. The agent path may write `agent` lanes.
+
+### POST `/agent/claim`
+
+Body: `{ board, taskId, agentId?, lane?, leaseSeconds? }`. Atomic — exactly one concurrent
+caller wins → `{ token, agentId, expiresAt, lane }`. A live lease → `409 CLAIM_HELD` with
+`{ holder, expiresAt }`. Only an **expired** lease is stealable.
+
+### POST `/agent/heartbeat`
+
+Body: `{ board, taskId, token, leaseSeconds? }`. Extends the lease → `{ ok, expiresAt }`, or
+`409 LEASE_LOST` if the token no longer holds it.
+
+### POST `/agent/set-lane`
+
+Body: `{ board, taskId, token, lane }`. Move while holding the claim → `{ ok, lane }`.
+`422 LANE_UNKNOWN` if the lane isn't on the board; `409 LEASE_LOST` without the claim.
+
+### POST `/agent/release`
+
+Body: `{ board, taskId, token, lane?, notes?, outcome?, ifCurrentLane? }`. Moves the task,
+writes `notes`, closes the claim, records history. Idempotent on token. `ifCurrentLane` guards
+against a human retag → `409 LANE_CHANGED`. Never changes task `state`.
+
+### GET `/agent/history?board=&task=`
+
+→ `{ history: [{ agentId, claimedAt, endedAt, endedBy, outcome }] }` (newest first).
+
+### GET `/changes?since=<updatedAt>,<id>&limit=`
+
+Change feed — the caller's own tasks whose `(updatedAt, id)` sort after the cursor (deletes
+appear as `state: "Deleted"`). → `{ changes: [{ id, boardId, tag, state, updatedAt }], cursor }`.
+Poll with the returned `cursor` as the next `since`.
+
+---
+
 ## Error Responses
 
 All endpoints return errors in this format:
@@ -696,7 +784,16 @@ All endpoints return errors in this format:
 - `400` - Bad request (validation error)
 - `403` - Forbidden (permission denied)
 - `404` - Not found
+- `409` - Conflict (version/claim/lane)
+- `413` - Payload too large (notes)
+- `422` - Unprocessable (lane validation)
 - `500` - Server error
+
+Domain errors carry a machine-readable `code` (and, where useful, extra fields like `holder`,
+`expiresAt`, `currentVersion`). The full agent-actionable code table is in
+[MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`, `LANE_UNKNOWN`,
+`LANE_INVALID`, `LANE_CHANGED`, `BOARD_SCHEMA_LOCKED`, `DIGEST_MISMATCH`, `VERSION_CONFLICT`,
+`NOTES_TOO_LARGE`, `TASK_NOT_FOUND`, `BOARD_NOT_FOUND`.
 
 **Error Response:**
 

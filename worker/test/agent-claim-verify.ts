@@ -68,7 +68,7 @@ interface Body {
   history?: Array<{ agentId: string; endedBy: string | null; outcome: string | null }>
   changes?: Array<{ id: string; state: string; tag: string | null }>
   cursor?: string | null
-  structuredContent?: { token?: string; code?: string; released?: boolean; changes?: unknown[]; cursor?: string | null }
+  structuredContent?: { token?: string; code?: string; released?: boolean; changes?: unknown[]; cursor?: string | null; boards?: Array<{ id: string }>; count?: number; total?: number; nextOffset?: number | null }
   isError?: boolean
   content?: { text: string }[]
 }
@@ -290,6 +290,19 @@ async function main() {
   check('MCP release_claim → released', mcRel.structuredContent?.released === true, JSON.stringify(mcRel))
   const mcChanges = await mcp('list_changes', {})
   check('MCP list_changes returns a cursor', mcChanges.structuredContent?.cursor !== undefined, JSON.stringify(mcChanges))
+
+  // ---------------------------------------------------------------------
+  section('15. T8 hardening: pagination + create_board over MCP')
+  // ---------------------------------------------------------------------
+  const paged = await mcp('list_tasks', { board: 'auto', limit: 1 })
+  const pc = paged.structuredContent as { count?: number; total?: number; nextOffset?: number | null } | undefined
+  check('list_tasks honours limit', pc?.count === 1, JSON.stringify(pc))
+  check('list_tasks reports total ≥ count', (pc?.total ?? 0) >= 1)
+  check('list_tasks paginates (nextOffset set when more remain)', (pc?.total ?? 0) > 1 ? pc?.nextOffset === 1 : pc?.nextOffset === null, JSON.stringify(pc))
+  const cb = await mcp('create_board', { id: 'made-by-mcp', name: 'Made by MCP' })
+  check('MCP create_board → ok', !cb.isError && (cb.structuredContent as { ok?: boolean } | undefined)?.ok === true, JSON.stringify(cb))
+  const boardsAfter = (await mcp('list_boards')).structuredContent?.boards ?? []
+  check('the new board appears in list_boards', boardsAfter.some(b => b.id === 'made-by-mcp'))
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)

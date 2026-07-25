@@ -1,11 +1,12 @@
 # Configurable Boards + Agent-Ready Task Backend — Design Doc
 
-Status: **Ratified 2026-07-21.** T0–T7 backend shipped (T0–T5 prod-verified 2026-07-24;
-T6–T7 verified in-harness, deploy pending); only T8 (agent-facing hardening) remains. The full
-agent runtime is live: shared boards, automation activation + lane enforcement, and the
-claim/heartbeat/set-lane/release protocol + change feed, over both HTTP and MCP. Deferred UI (not
-blocking TenHands): T5's My/Shared picker grouping + shared-board pinning, T6's two-track render +
-Edit-Boards activation affordance, and the 🤖 claimed badge (T7).
+Status: **Ratified 2026-07-21. T0–T8 backend shipped** (T0–T7 prod-verified 2026-07-24;
+T8 verified in-harness, deploy pending). The full agent runtime is live over HTTP + MCP:
+shared boards, automation activation + lane enforcement, the claim/heartbeat/set-lane/release
+protocol + change feed, structured error codes, `list_tasks` pagination, and `create_board`;
+`docs/MCP.md` + `docs/API.md` brought current. Deferred UI (not blocking TenHands): T5's
+My/Shared picker grouping + shared-board pinning, T6's two-track render + Edit-Boards activation
+affordance, and the 🤖 claimed badge (T7).
 Date: 2026-07-21
 Supersedes the "Source of truth" and "Write safety" rows of
 [`local-integration-design.md`](local-integration-design.md) — see §13.
