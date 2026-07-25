@@ -233,8 +233,15 @@ async function main() {
   check('non-grantee GET by handle → 404', r.status === 404, `status=${r.status}`)
   // A stranger passing the owner's SLUG resolves to THEIR OWN empty 'work'.
   const strangerWork = await tasksOn(STRANGER, 'work')
-  check("stranger's 'work' slug is their own empty board (no leak)", strangerWork.length === 0, JSON.stringify(strangerWork))
-  check("contributor's board list excludes the owner's board", !(await boards(CONTRIB)).some(b => b.handle === handle))
+  check(
+    "stranger's 'work' slug is their own empty board (no leak)",
+    strangerWork.length === 0,
+    JSON.stringify(strangerWork)
+  )
+  check(
+    "contributor's board list excludes the owner's board",
+    !(await boards(CONTRIB)).some(b => b.handle === handle)
+  )
 
   // ---------------------------------------------------------------------
   section('3. Owner grants contributor by key (SESSIONS_KV resolution)')
@@ -244,27 +251,58 @@ async function main() {
     level: 'contributor'
   })
   check('grant → 200', r.status === 200, JSON.stringify(r.json))
-  check('grant resolved the key → userId', r.json?.granteeUserId === 'contrib-uid', JSON.stringify(r.json))
-  check('grant returned the display name', r.json?.granteeName === 'TenHands', JSON.stringify(r.json))
+  check(
+    'grant resolved the key → userId',
+    r.json?.granteeUserId === 'contrib-uid',
+    JSON.stringify(r.json)
+  )
+  check(
+    'grant returned the display name',
+    r.json?.granteeName === 'TenHands',
+    JSON.stringify(r.json)
+  )
 
   // ---------------------------------------------------------------------
   section('4. Contributor now sees + reads the shared board')
   // ---------------------------------------------------------------------
   const contribBoards = await boards(CONTRIB)
   const shared = contribBoards.find(b => b.handle === handle)
-  check('shared board appears in contributor GET /boards', !!shared, JSON.stringify(contribBoards.map(b => b.handle)))
-  check('shared board carries ownerUserId', shared?.ownerUserId === 'owner-uid', JSON.stringify(shared))
-  check('shared board access = contributor', shared?.access === 'contributor', JSON.stringify(shared))
-  check('contributor reads the OWNER\'s 2 tasks', (await tasksOn(CONTRIB, handle)).length === 2)
+  check(
+    'shared board appears in contributor GET /boards',
+    !!shared,
+    JSON.stringify(contribBoards.map(b => b.handle))
+  )
+  check(
+    'shared board carries ownerUserId',
+    shared?.ownerUserId === 'owner-uid',
+    JSON.stringify(shared)
+  )
+  check(
+    'shared board access = contributor',
+    shared?.access === 'contributor',
+    JSON.stringify(shared)
+  )
+  check("contributor reads the OWNER's 2 tasks", (await tasksOn(CONTRIB, handle)).length === 2)
 
   // ---------------------------------------------------------------------
   section("5. Contributor writes land in the OWNER's namespace")
   // ---------------------------------------------------------------------
-  r = await req(CONTRIB, 'POST', '/task/api', { id: 'ct1', title: 'Contributor added this', boardId: handle })
+  r = await req(CONTRIB, 'POST', '/task/api', {
+    id: 'ct1',
+    title: 'Contributor added this',
+    boardId: handle
+  })
   check('contributor create → 200', r.status === 200, `status=${r.status}`)
   const ownerTasksNow = await tasksOn(OWNER, 'work')
-  check('owner now sees 3 tasks (the write landed on the owner board)', ownerTasksNow.length === 3, `n=${ownerTasksNow.length}`)
-  check('the added task is on the owner board', ownerTasksNow.some(t => t.id === 'ct1'))
+  check(
+    'owner now sees 3 tasks (the write landed on the owner board)',
+    ownerTasksNow.length === 3,
+    `n=${ownerTasksNow.length}`
+  )
+  check(
+    'the added task is on the owner board',
+    ownerTasksNow.some(t => t.id === 'ct1')
+  )
   // Complete an owner task as the contributor (complete takes boardId as a query param).
   r = await req(CONTRIB, 'POST', `/task/api/ot1/complete?boardId=${encodeURIComponent(handle)}`)
   check('contributor complete → 200', r.status === 200, `status=${r.status}`)
@@ -272,7 +310,10 @@ async function main() {
   // ---------------------------------------------------------------------
   section('6. Contributor cannot manage shares (owner-only)')
   // ---------------------------------------------------------------------
-  r = await req(CONTRIB, 'POST', `/task/api/boards/${handle}/shares`, { userId: 'someone', level: 'readonly' })
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${handle}/shares`, {
+    userId: 'someone',
+    level: 'readonly'
+  })
   check('contributor grant → 403', r.status === 403, `status=${r.status}`)
   r = await req(CONTRIB, 'GET', `/task/api/boards/${handle}/shares`)
   check('contributor list shares → 403', r.status === 403, `status=${r.status}`)
@@ -280,15 +321,25 @@ async function main() {
   // ---------------------------------------------------------------------
   section('7. Readonly grantee reads but cannot write')
   // ---------------------------------------------------------------------
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { key: 'reader-key', level: 'readonly' })
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    key: 'reader-key',
+    level: 'readonly'
+  })
   check('grant readonly → 200', r.status === 200, JSON.stringify(r.json))
   // Active now: ot2 + ct1 (ot1 was completed by the contributor in §5).
   check('reader reads the active tasks', (await tasksOn(READER, handle)).length === 2)
-  r = await req(READER, 'POST', '/task/api', { id: 'rx', title: 'should be refused', boardId: handle })
+  r = await req(READER, 'POST', '/task/api', {
+    id: 'rx',
+    title: 'should be refused',
+    boardId: handle
+  })
   check('reader create → 403', r.status === 403, `status=${r.status}`)
   r = await req(READER, 'POST', `/task/api/ot2/complete?boardId=${encodeURIComponent(handle)}`)
   check('reader complete → 403', r.status === 403, `status=${r.status}`)
-  check('reader write was NOT applied (still no rx task)', !(await tasksOn(OWNER, 'work')).some(t => t.id === 'rx'))
+  check(
+    'reader write was NOT applied (still no rx task)',
+    !(await tasksOn(OWNER, 'work')).some(t => t.id === 'rx')
+  )
 
   // ---------------------------------------------------------------------
   section('8. MCP surface honours shares (TenHands drives MCP, not HTTP)')
@@ -300,32 +351,61 @@ async function main() {
   check('MCP shared board access = contributor', mcpShared?.access === 'contributor')
   // A contributor create over MCP, addressed by HANDLE, lands in the owner board.
   const mcpCreate = await mcp(CONTRIB, 'create_task', { title: 'via MCP', board: handle })
-  check('MCP contributor create_task ok (no error)', !mcpCreate.isError, JSON.stringify(mcpCreate.content))
+  check(
+    'MCP contributor create_task ok (no error)',
+    !mcpCreate.isError,
+    JSON.stringify(mcpCreate.content)
+  )
   const ownerAfterMcp = await tasksOn(OWNER, 'work')
-  check('MCP contributor write landed on the OWNER board', ownerAfterMcp.some(t => t.title === 'via MCP'), `n=${ownerAfterMcp.length}`)
+  check(
+    'MCP contributor write landed on the OWNER board',
+    ownerAfterMcp.some(t => t.title === 'via MCP'),
+    `n=${ownerAfterMcp.length}`
+  )
   // A contributor list_tasks over MCP reads the OWNER's tasks.
   const mcpList = await mcp(CONTRIB, 'list_tasks', { board: handle })
-  check('MCP contributor list_tasks reads owner tasks', (mcpList.structuredContent?.count ?? 0) >= 2, JSON.stringify(mcpList.structuredContent))
+  check(
+    'MCP contributor list_tasks reads owner tasks',
+    (mcpList.structuredContent?.count ?? 0) >= 2,
+    JSON.stringify(mcpList.structuredContent)
+  )
   // A readonly grantee's MCP write is refused.
   const mcpReaderWrite = await mcp(READER, 'create_task', { title: 'nope', board: handle })
-  check('MCP readonly create_task → isError', mcpReaderWrite.isError === true, JSON.stringify(mcpReaderWrite))
-  check('MCP readonly write NOT applied', !(await tasksOn(OWNER, 'work')).some(t => t.title === 'nope'))
+  check(
+    'MCP readonly create_task → isError',
+    mcpReaderWrite.isError === true,
+    JSON.stringify(mcpReaderWrite)
+  )
+  check(
+    'MCP readonly write NOT applied',
+    !(await tasksOn(OWNER, 'work')).some(t => t.title === 'nope')
+  )
   // A non-grantee cannot address the board by handle over MCP.
   const mcpStranger = await mcp(STRANGER, 'list_tasks', { board: handle })
-  check('MCP non-grantee list_tasks by handle → isError', mcpStranger.isError === true, JSON.stringify(mcpStranger))
+  check(
+    'MCP non-grantee list_tasks by handle → isError',
+    mcpStranger.isError === true,
+    JSON.stringify(mcpStranger)
+  )
 
   // ---------------------------------------------------------------------
   section('9. Grant edge cases')
   // ---------------------------------------------------------------------
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { key: 'never-signed-in', level: 'readonly' })
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    key: 'never-signed-in',
+    level: 'readonly'
+  })
   check('grant to unknown key → 400', r.status === 400, JSON.stringify(r.json))
 
   // ---------------------------------------------------------------------
-  section('10. Leave removes the grantee\'s access')
+  section("10. Leave removes the grantee's access")
   // ---------------------------------------------------------------------
   r = await req(CONTRIB, 'DELETE', `/task/api/boards/${handle}/shares/me`)
   check('contributor leave → 200', r.status === 200, JSON.stringify(r.json))
-  check('shared board gone from contributor list', !(await boards(CONTRIB)).some(b => b.handle === handle))
+  check(
+    'shared board gone from contributor list',
+    !(await boards(CONTRIB)).some(b => b.handle === handle)
+  )
   r = await req(CONTRIB, 'GET', `/task/api/tasks?boardId=${handle}`)
   check('contributor can no longer read the board → 404', r.status === 404, `status=${r.status}`)
 
@@ -334,32 +414,76 @@ async function main() {
   // ---------------------------------------------------------------------
   // Owner grants by name — no credential changes hands. Re-adds the contributor
   // that just left, resolved from the registry by name.
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'TenHands', level: 'contributor' })
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    name: 'TenHands',
+    level: 'contributor'
+  })
   check('grant by name → 200', r.status === 200, JSON.stringify(r.json))
-  check('name resolved to the right userId', r.json?.granteeUserId === 'contrib-uid', JSON.stringify(r.json))
-  const granted = (r.json as unknown as { granted?: { name?: string; tier?: string; level?: string } }).granted
-  check('response echoes granted name + tier + level', granted?.name === 'TenHands' && granted?.tier === 'service' && granted?.level === 'contributor', JSON.stringify(granted))
+  check(
+    'name resolved to the right userId',
+    r.json?.granteeUserId === 'contrib-uid',
+    JSON.stringify(r.json)
+  )
+  const granted = (
+    r.json as unknown as { granted?: { name?: string; tier?: string; level?: string } }
+  ).granted
+  check(
+    'response echoes granted name + tier + level',
+    granted?.name === 'TenHands' && granted?.tier === 'service' && granted?.level === 'contributor',
+    JSON.stringify(granted)
+  )
   check('the named grantee can now read the board', (await tasksOn(CONTRIB, handle)).length >= 1)
   // Case-insensitive, matching isNameTaken.
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'tenhands', level: 'contributor' })
-  check('grant by name is case-insensitive → 200', r.status === 200 && r.json?.granteeUserId === 'contrib-uid', JSON.stringify(r.json))
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    name: 'tenhands',
+    level: 'contributor'
+  })
+  check(
+    'grant by name is case-insensitive → 200',
+    r.status === 200 && r.json?.granteeUserId === 'contrib-uid',
+    JSON.stringify(r.json)
+  )
   // Unknown name → 404 NAME_NOT_FOUND.
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'nobody-here', level: 'contributor' })
-  check('unknown name → 404 NAME_NOT_FOUND', r.status === 404 && r.json?.code === 'NAME_NOT_FOUND', `status=${r.status} ${JSON.stringify(r.json)}`)
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    name: 'nobody-here',
+    level: 'contributor'
+  })
+  check(
+    'unknown name → 404 NAME_NOT_FOUND',
+    r.status === 404 && r.json?.code === 'NAME_NOT_FOUND',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
   // A retired row with that name is skipped (never resolves).
-  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, { name: 'GhostName', level: 'contributor' })
-  check('retired row name → 404 (excluded like isNameTaken)', r.status === 404 && r.json?.code === 'NAME_NOT_FOUND', `status=${r.status} ${JSON.stringify(r.json)}`)
+  r = await req(OWNER, 'POST', `/task/api/boards/${handle}/shares`, {
+    name: 'GhostName',
+    level: 'contributor'
+  })
+  check(
+    'retired row name → 404 (excluded like isNameTaken)',
+    r.status === 404 && r.json?.code === 'NAME_NOT_FOUND',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
 
   // ---------------------------------------------------------------------
   section('12. Display-name autocomplete search (share UI)')
   // ---------------------------------------------------------------------
-  interface SearchBody { users?: Array<{ name: string; tier?: string }> }
+  interface SearchBody {
+    users?: Array<{ name: string; tier?: string }>
+  }
   r = await req(OWNER, 'GET', '/task/api/users/search?q=ten')
   let users = (r.json as unknown as SearchBody).users ?? []
-  check('search "ten" finds TenHands with tier', users.some(u => u.name === 'TenHands' && u.tier === 'service'), JSON.stringify(users))
+  check(
+    'search "ten" finds TenHands with tier',
+    users.some(u => u.name === 'TenHands' && u.tier === 'service'),
+    JSON.stringify(users)
+  )
   r = await req(OWNER, 'GET', '/task/api/users/search?q=GHOST')
   users = (r.json as unknown as SearchBody).users ?? []
-  check('search excludes retired names', !users.some(u => u.name === 'GhostName'), JSON.stringify(users))
+  check(
+    'search excludes retired names',
+    !users.some(u => u.name === 'GhostName'),
+    JSON.stringify(users)
+  )
   r = await req(OWNER, 'GET', '/task/api/users/search?q=')
   users = (r.json as unknown as SearchBody).users ?? []
   check('empty query → no results', users.length === 0)

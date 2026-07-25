@@ -90,9 +90,7 @@ export function CalendarAgendaItem({
                   {startDisplay} – {endDisplay}
                 </span>
               )}
-              {task.source && (
-                <span className="calendar-agenda__source">from {task.source}</span>
-              )}
+              {task.source && <span className="calendar-agenda__source">from {task.source}</span>}
               {tags && <span className="calendar-agenda__tags">{tags}</span>}
             </div>
           </div>

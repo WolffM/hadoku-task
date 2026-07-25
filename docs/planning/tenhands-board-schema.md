@@ -15,7 +15,7 @@ queue an autonomous system can drive safely. **TenHands is the first such system
 > ### The pipeline is yours. We hold the board, the lock, and the notes.
 >
 > We store **no** pipeline knowledge — no jobs, no routing, no retry policy, no
-> idea what your states *mean*. You define the states (lanes), you move tasks
+> idea what your states _mean_. You define the states (lanes), you move tasks
 > between them, you decide what's ready. What we give you that you can't easily
 > build yourself:
 >
@@ -27,7 +27,7 @@ queue an autonomous system can drive safely. **TenHands is the first such system
 **Three things are yours to figure out** (§4): how you **read and cache** the
 board, how you **react when new work appears**, and **how many states** your
 pipeline actually needs. That last one you express as a **named configuration**
-(§5) — e.g. a lightweight *"Simple Work"* vs a checkpoint-heavy *"Complex Work"*.
+(§5) — e.g. a lightweight _"Simple Work"_ vs a checkpoint-heavy _"Complex Work"_.
 
 **What we need back from you** is in §9.
 
@@ -38,14 +38,14 @@ pipeline actually needs. That last one you express as a **named configuration**
 This is not a paper design. As of 2026-07-24 the following ships in production
 (`@wolffm/task` ≥ 3.4.106, deployed at `https://hadoku.me/task/api`):
 
-| Capability | State |
-| --- | --- |
-| Board + task storage on **Cloudflare D1** (SQLite), migrated off the old KV blob store | ✅ live |
+| Capability                                                                                     | State   |
+| ---------------------------------------------------------------------------------------------- | ------- |
+| Board + task storage on **Cloudflare D1** (SQLite), migrated off the old KV blob store         | ✅ live |
 | **Optimistic concurrency** on every task and board write (`If-Match` → `409 VERSION_CONFLICT`) | ✅ live |
-| Board CRUD, rename, **pin/reorder**, and an Edit-Boards UI | ✅ live |
-| **Scoped hydration** — cold load fetches only pinned boards, so many boards stay cheap | ✅ live |
-| Per-task **`notes`** (markdown) end to end — API, MCP, web UI | ✅ live |
-| **Per-user-key auth**, HTTP and MCP, same `X-User-Key` credential | ✅ live |
+| Board CRUD, rename, **pin/reorder**, and an Edit-Boards UI                                     | ✅ live |
+| **Scoped hydration** — cold load fetches only pinned boards, so many boards stay cheap         | ✅ live |
+| Per-task **`notes`** (markdown) end to end — API, MCP, web UI                                  | ✅ live |
+| **Per-user-key auth**, HTTP and MCP, same `X-User-Key` credential                              | ✅ live |
 
 Everything below in §6–§8 — **automation activation, lanes, the claim/lease
 runtime, and board sharing** — is designed against this foundation and is the
@@ -59,7 +59,7 @@ before we implement it.
 **One board per target repo.** Board identity is repo identity; the board records
 which repo it drives so you map board → checkout without parsing display names.
 
-A board renders as **three regions** — this part *is* structural, because it's how
+A board renders as **three regions** — this part _is_ structural, because it's how
 we render any lane set. It is **never a horizontal kanban**: at most two columns
 on desktop, collapsing to a single stack on mobile.
 
@@ -95,26 +95,26 @@ You hardcode **no** lane names in us. A lane is exactly:
 { "tag": "planning", "label": "Planning", "order": 1, "editableBy": "agent" }
 ```
 
-| Field | Meaning | Whose concern |
-| --- | --- | --- |
-| `tag` | the literal tag written on the task | yours |
-| `label` | display name for the section | rendering (ours) |
-| `order` | fixed position; never frequency-ranked | rendering (ours) |
+| Field        | Meaning                                       | Whose concern     |
+| ------------ | --------------------------------------------- | ----------------- |
+| `tag`        | the literal tag written on the task           | yours             |
+| `label`      | display name for the section                  | rendering (ours)  |
+| `order`      | fixed position; never frequency-ranked        | rendering (ours)  |
 | `editableBy` | `user` or `agent` — who may move tasks in/out | **the guarantee** |
 
 `editableBy` is the only field that isn't cosmetic:
 
-| Value | Renders | A human can | We guarantee |
-| --- | --- | --- | --- |
-| `editableBy: user` | left | drag in, drag out, edit | you can also move a task here when you release a claim |
-| `editableBy: agent` | right | never drag **in**; drag **out** only if no live claim | only a claim holder writes it, so nobody yanks live work |
+| Value               | Renders | A human can                                           | We guarantee                                             |
+| ------------------- | ------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| `editableBy: user`  | left    | drag in, drag out, edit                               | you can also move a task here when you release a claim   |
+| `editableBy: agent` | right   | never drag **in**; drag **out** only if no live claim | only a claim holder writes it, so nobody yanks live work |
 
 That last cell is why there is **no `onFailure`**. If a worker dies, its lease
 expires, the claim drops, and the task simply **stays where it is** — re-claimable
 on your next poll, and draggable by a human if you're gone for good. No routing
 policy needed, and no way to strand a task in a lane nobody can touch.
 
-**Unknown keys are preserved verbatim.** Those four fields are all we *interpret*.
+**Unknown keys are preserved verbatim.** Those four fields are all we _interpret_.
 Hang `tenhandsStage`, `dispatcher`, whatever off a lane and we store it and hand
 it straight back untouched. Same for per-task data via `Task.metadata` (already an
 arbitrary-JSON field). So there is almost certainly nothing you need that a lane
@@ -166,7 +166,7 @@ The example in [`schemas/tenhands-v1.json`](schemas/tenhands-v1.json) has ten
 lanes inferred from your README and `oss_state.py`. **Treat it as a conversation
 starter, not a spec.** Fewer lanes is fine. More is fine. Sub-stages of "working"
 (SWE draft, static analysis, code review, remediation) can each be their own lane
-if you want them *visible* to the human — or collapsed into one. No change needed
+if you want them _visible_ to the human — or collapsed into one. No change needed
 on our side either way; that's the whole point.
 
 This is where your napkin thoughts become real: **you** convert "I want a planning
@@ -180,7 +180,7 @@ after, lives entirely in TenHands.
 
 A **configuration is a named lane set.** In the activation payload it's just
 `schemaId` + `schemaVersion` + `lanes` (§6). We store the name/version verbatim as
-opaque labels — they let *you* tell which contract a board is running and push an
+opaque labels — they let _you_ tell which contract a board is running and push an
 update. They are **not** keys into any registry of ours.
 
 We expect you'll want **more than one**, matched to how much ceremony a task
@@ -191,13 +191,15 @@ does the thing:
 
 ```jsonc
 {
-  "schemaId": "simple-work", "schemaVersion": 1, "label": "Simple Work",
+  "schemaId": "simple-work",
+  "schemaVersion": 1,
+  "label": "Simple Work",
   "lanes": [
-    { "tag": "todo",     "label": "To Do",     "order": 0, "editableBy": "user"  },
-    { "tag": "working",  "label": "Working",   "order": 1, "editableBy": "agent" },
-    { "tag": "review",   "label": "Review",    "order": 2, "editableBy": "user"  },
-    { "tag": "done",     "label": "Done",      "order": 3, "editableBy": "user"  },
-    { "tag": "stalled",  "label": "Stalled",   "order": 4, "editableBy": "user"  }
+    { "tag": "todo", "label": "To Do", "order": 0, "editableBy": "user" },
+    { "tag": "working", "label": "Working", "order": 1, "editableBy": "agent" },
+    { "tag": "review", "label": "Review", "order": 2, "editableBy": "user" },
+    { "tag": "done", "label": "Done", "order": 3, "editableBy": "user" },
+    { "tag": "stalled", "label": "Stalled", "order": 4, "editableBy": "user" }
   ]
 }
 ```
@@ -207,19 +209,21 @@ adversarial-review agent, human gates between each:
 
 ```jsonc
 {
-  "schemaId": "complex-work", "schemaVersion": 1, "label": "Complex Work",
+  "schemaId": "complex-work",
+  "schemaVersion": 1,
+  "label": "Complex Work",
   "lanes": [
-    { "tag": "triage",       "label": "Triage",         "order": 0,  "editableBy": "user"  },
-    { "tag": "planning",     "label": "Planning",       "order": 1,  "editableBy": "agent" },
-    { "tag": "plan-review",  "label": "Plan Review",    "order": 2,  "editableBy": "user"  },
-    { "tag": "approved",     "label": "Approved",       "order": 3,  "editableBy": "user"  },
-    { "tag": "implementing", "label": "Implementing",   "order": 4,  "editableBy": "agent" },
-    { "tag": "adversarial",  "label": "Adversarial QA", "order": 5,  "editableBy": "agent" },
-    { "tag": "pr-review",    "label": "PR Review",      "order": 6,  "editableBy": "user"  },
-    { "tag": "submit",       "label": "Submit",         "order": 7,  "editableBy": "user"  },
-    { "tag": "submitting",   "label": "Submitting",     "order": 8,  "editableBy": "agent" },
-    { "tag": "submitted",    "label": "Submitted",      "order": 9,  "editableBy": "user"  },
-    { "tag": "stalled",      "label": "Stalled",        "order": 10, "editableBy": "user"  }
+    { "tag": "triage", "label": "Triage", "order": 0, "editableBy": "user" },
+    { "tag": "planning", "label": "Planning", "order": 1, "editableBy": "agent" },
+    { "tag": "plan-review", "label": "Plan Review", "order": 2, "editableBy": "user" },
+    { "tag": "approved", "label": "Approved", "order": 3, "editableBy": "user" },
+    { "tag": "implementing", "label": "Implementing", "order": 4, "editableBy": "agent" },
+    { "tag": "adversarial", "label": "Adversarial QA", "order": 5, "editableBy": "agent" },
+    { "tag": "pr-review", "label": "PR Review", "order": 6, "editableBy": "user" },
+    { "tag": "submit", "label": "Submit", "order": 7, "editableBy": "user" },
+    { "tag": "submitting", "label": "Submitting", "order": 8, "editableBy": "agent" },
+    { "tag": "submitted", "label": "Submitted", "order": 9, "editableBy": "user" },
+    { "tag": "stalled", "label": "Stalled", "order": 10, "editableBy": "user" }
   ]
 }
 ```
@@ -256,7 +260,7 @@ POST /task/api/boards/{boardId}/activate-automation
 - **Updating a config = activating again** with a bumped `schemaVersion`. Same
   endpoint, same preview — so you roll a change across every board on a repo
   programmatically instead of a human redoing them by hand.
-- **Re-activation is allowed while claims are live.** A claim is held on a *task*,
+- **Re-activation is allowed while claims are live.** A claim is held on a _task_,
   not a lane, so it survives; tasks in a removed lane are cleared to the Inbox; a
   `release` naming a lane that no longer exists returns `422 LANE_UNKNOWN` and you
   abort cleanly.
@@ -273,13 +277,13 @@ POST /task/api/boards/{boardId}/activate-automation
 
 Your `StageDispatcher` already has the right shape. The mapping:
 
-| Your dispatcher | hadoku-task call | Notes |
-| --- | --- | --- |
-| _(find work)_ | `GET /task/api/boards/{handle}` | board + lanes + tasks, fully hydrated. **You** decide what's eligible |
-| `dispatch(job, ctx)` | `POST /task/api/agent/claim` `{taskId, lane?}` | **atomic.** `{token}` or `409 CLAIM_HELD`. `lane` moves it in the same write |
-| `check_status(job)` | `POST /task/api/agent/heartbeat` `{token}` | extends the lease. `409 LEASE_LOST` = it was taken; abort |
-| _(progress)_ | `POST /task/api/agent/set-lane` `{token, lane}` | optional: move between your own lanes mid-job |
-| `collect_results(job)` | `POST /task/api/agent/release` `{token, lane, notes?}` | **you name the destination.** Moves the task, drops the claim |
+| Your dispatcher        | hadoku-task call                                       | Notes                                                                        |
+| ---------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| _(find work)_          | `GET /task/api/boards/{handle}`                        | board + lanes + tasks, fully hydrated. **You** decide what's eligible        |
+| `dispatch(job, ctx)`   | `POST /task/api/agent/claim` `{taskId, lane?}`         | **atomic.** `{token}` or `409 CLAIM_HELD`. `lane` moves it in the same write |
+| `check_status(job)`    | `POST /task/api/agent/heartbeat` `{token}`             | extends the lease. `409 LEASE_LOST` = it was taken; abort                    |
+| _(progress)_           | `POST /task/api/agent/set-lane` `{token, lane}`        | optional: move between your own lanes mid-job                                |
+| `collect_results(job)` | `POST /task/api/agent/release` `{token, lane, notes?}` | **you name the destination.** Moves the task, drops the claim                |
 
 - `job_id` maps to the claim **token** — the correlation key.
 - **The claim is a real lock:** one conditional D1 upsert, the database picks the
@@ -292,17 +296,17 @@ Your `StageDispatcher` already has the right shape. The mapping:
 
 ### Errors you must handle distinctly
 
-| Code | HTTP | Do |
-| --- | --- | --- |
-| `CLAIM_HELD` | 409 | another worker has it — move on |
-| `LEASE_LOST` | 409 | your lease was taken — **abort, write nothing** |
-| `LANE_NOT_EDITABLE` | 403 | you wrote a lane through the wrong path (below) |
-| `LANE_UNKNOWN` | 422 | destination isn't a lane on this board |
-| `LANE_INVALID` | 422 | task carried zero or two lane tags — repair, don't retry |
-| `TASK_NOT_FOUND` | 404 | deleted mid-job — treat as handled |
-| `VERSION_CONFLICT` | 409 | your cached version is stale — re-pull and retry |
-| `NOTES_TOO_LARGE` | 413 | truncate or link out; don't retry unchanged |
-| `RATE_LIMITED` | 429 | back off per `retryAfter` |
+| Code                | HTTP | Do                                                       |
+| ------------------- | ---- | -------------------------------------------------------- |
+| `CLAIM_HELD`        | 409  | another worker has it — move on                          |
+| `LEASE_LOST`        | 409  | your lease was taken — **abort, write nothing**          |
+| `LANE_NOT_EDITABLE` | 403  | you wrote a lane through the wrong path (below)          |
+| `LANE_UNKNOWN`      | 422  | destination isn't a lane on this board                   |
+| `LANE_INVALID`      | 422  | task carried zero or two lane tags — repair, don't retry |
+| `TASK_NOT_FOUND`    | 404  | deleted mid-job — treat as handled                       |
+| `VERSION_CONFLICT`  | 409  | your cached version is stale — re-pull and retry         |
+| `NOTES_TOO_LARGE`   | 413  | truncate or link out; don't retry unchanged              |
+| `RATE_LIMITED`      | 429  | back off per `retryAfter`                                |
 
 ### Two things you cannot do (by design)
 
@@ -341,8 +345,8 @@ key**; the owner grants it **`contributor`** on each board you drive. Everything
 available over **HTTP** and **MCP** (`https://hadoku.me/task/api/mcp`), same auth
 either way: `X-User-Key`.
 
-| Level | Can | Cannot |
-| --- | --- | --- |
+| Level               | Can                                                                         | Cannot                                                                |
+| ------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `contributor` (you) | read, create/edit/move tasks, claim/heartbeat/set-lane/release, write notes | delete the board, change settings, activate/deactivate, manage shares |
 
 - **Your `agent_id` is server-derived** from your key, not a string you declare —

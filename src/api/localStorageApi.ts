@@ -113,13 +113,25 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async listShares(
       _boardRef: string
-    ): Promise<Array<{ granteeUserId: string; name?: string | null; tier?: string | null; level: string; createdAt: string }>> {
+    ): Promise<
+      Array<{
+        granteeUserId: string
+        name?: string | null
+        tier?: string | null
+        level: string
+        createdAt: string
+      }>
+    > {
       return []
     },
     async grantShare(
       _boardRef: string,
       _input: { name?: string; userId?: string; level: 'readonly' | 'contributor' }
-    ): Promise<{ ok: boolean; error?: string; granted?: { name: string | null; tier: string | null; level: string } }> {
+    ): Promise<{
+      ok: boolean
+      error?: string
+      granted?: { name: string | null; tier: string | null; level: string }
+    }> {
       return { ok: false, error: 'Sign in to share boards.' }
     },
     async revokeShare(_boardRef: string, _granteeUserId: string): Promise<boolean> {
@@ -143,7 +155,14 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async validateRepo(
       repo: string
-    ): Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }> {
+    ): Promise<{
+      repo: string
+      valid: boolean
+      reason: string
+      private?: boolean
+      defaultBranch?: string
+      message?: string
+    }> {
       return { repo, valid: false, reason: 'token', message: 'Sign in to validate repos.' }
     },
 

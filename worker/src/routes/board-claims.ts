@@ -39,7 +39,10 @@ const nowIso = () => new Date().toISOString()
 const newToken = () => TaskUtils.generateULID()
 
 function expiryFrom(now: string, leaseSeconds: number): string {
-  const secs = Math.min(Math.max(1, Math.floor(leaseSeconds || DEFAULT_LEASE_SECONDS)), MAX_LEASE_SECONDS)
+  const secs = Math.min(
+    Math.max(1, Math.floor(leaseSeconds || DEFAULT_LEASE_SECONDS)),
+    MAX_LEASE_SECONDS
+  )
   return new Date(new Date(now).getTime() + secs * 1000).toISOString()
 }
 
@@ -84,7 +87,9 @@ async function liveClaim(
   now: string
 ): Promise<{ agent_id: string; token: string; expires_at: string; live: boolean } | null> {
   const row = await db
-    .prepare('SELECT agent_id, token, expires_at FROM task_claims WHERE user_id = ? AND task_id = ? LIMIT 1')
+    .prepare(
+      'SELECT agent_id, token, expires_at FROM task_claims WHERE user_id = ? AND task_id = ? LIMIT 1'
+    )
     .bind(ownerId, taskId)
     .first<{ agent_id: string; token: string; expires_at: string }>()
   if (!row) return null
@@ -200,7 +205,9 @@ export async function setLane(
   assertAgentLane(opts.mode, opts.lanes, lane)
   const t = (lane ?? '').trim()
   await db
-    .prepare(`UPDATE tasks SET tag = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`)
+    .prepare(
+      `UPDATE tasks SET tag = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`
+    )
     .bind(t === '' ? null : t, now, ownerId, boardId, taskId)
     .run()
   return { ok: true, lane: t }
@@ -252,7 +259,10 @@ export async function releaseClaim(
   const task = await currentTaskTag(db, ownerId, boardId, taskId)
   if (!task) {
     // The task was deleted under us; clear the orphan claim and report 404.
-    await db.prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?').bind(ownerId, taskId).run()
+    await db
+      .prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?')
+      .bind(ownerId, taskId)
+      .run()
     throw new TaskNotFoundError(taskId)
   }
 
@@ -298,10 +308,17 @@ export async function releaseClaim(
       .bind(now, opts.outcome ?? null, ownerId, taskId)
   )
   // Drop the claim.
-  stmts.push(db.prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?').bind(ownerId, taskId))
+  stmts.push(
+    db.prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?').bind(ownerId, taskId)
+  )
 
   await db.batch(stmts)
-  return { ok: true, released: true, lane: lane === '' ? null : lane, completed: opts.complete === true }
+  return {
+    ok: true,
+    released: true,
+    lane: lane === '' ? null : lane,
+    completed: opts.complete === true
+  }
 }
 
 /**

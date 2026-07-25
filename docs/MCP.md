@@ -52,24 +52,24 @@ slug — a slug only ever resolves within your own tasks (see [Shared boards](#s
 
 ### Tasks
 
-| Tool            | Arguments                                                                                  | Purpose                                                              |
-| --------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| `list_tasks`    | `board?`, `date?` (`YYYY-MM-DD`), `tag?`, `limit?`, `offset?`                              | List active tasks; optional day / tag filter; **paginated**         |
-| `get_task`      | `id`, `board?`                                                                             | Fetch one task                                                      |
-| `create_task`   | `title`, `notes?`, `tag?`, `date?`, `startTime?`, `endTime?`, `metadata?`, `board?`        | Create a task                                                       |
-| `update_task`   | `id`, `title?`, `notes?`, `tag?`, `date?`, `startTime?`, `endTime?`, `metadata?`, `board?` | Update only the fields passed                                       |
-| `set_task_notes`| `id`, `notes`, `board?`                                                                    | Replace a task's markdown body / plan (§6). `""` clears it          |
-| `schedule_task` | `id`, (`startTime`+`endTime`) \| `date` \| `clear:true`, `board?`                          | Put a task on the calendar (timed or all-day), or unschedule it     |
-| `complete_task` | `id`, `board?`                                                                             | Mark complete (removes from active list)                            |
-| `delete_task`   | `id`, `board?`                                                                             | Delete                                                              |
+| Tool             | Arguments                                                                                  | Purpose                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| `list_tasks`     | `board?`, `date?` (`YYYY-MM-DD`), `tag?`, `limit?`, `offset?`                              | List active tasks; optional day / tag filter; **paginated**     |
+| `get_task`       | `id`, `board?`                                                                             | Fetch one task                                                  |
+| `create_task`    | `title`, `notes?`, `tag?`, `date?`, `startTime?`, `endTime?`, `metadata?`, `board?`        | Create a task                                                   |
+| `update_task`    | `id`, `title?`, `notes?`, `tag?`, `date?`, `startTime?`, `endTime?`, `metadata?`, `board?` | Update only the fields passed                                   |
+| `set_task_notes` | `id`, `notes`, `board?`                                                                    | Replace a task's markdown body / plan (§6). `""` clears it      |
+| `schedule_task`  | `id`, (`startTime`+`endTime`) \| `date` \| `clear:true`, `board?`                          | Put a task on the calendar (timed or all-day), or unschedule it |
+| `complete_task`  | `id`, `board?`                                                                             | Mark complete (removes from active list)                        |
+| `delete_task`    | `id`, `board?`                                                                             | Delete                                                          |
 
 ### Boards
 
-| Tool            | Arguments        | Purpose                                                                     |
-| --------------- | ---------------- | --------------------------------------------------------------------------- |
-| `list_boards`   | —                | Your boards + any shared with you; each row carries `handle`, `access`, `mode`, `lanes` |
-| `get_board`     | `board`          | One board fully hydrated: metadata (`repo`, `mode`, `lanes`) + every task, each flagged `claimed` |
-| `create_board`  | `id`, `name`     | Create a board (your own). Slug in, unique `handle` minted server-side      |
+| Tool           | Arguments    | Purpose                                                                                           |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| `list_boards`  | —            | Your boards + any shared with you; each row carries `handle`, `access`, `mode`, `lanes`           |
+| `get_board`    | `board`      | One board fully hydrated: metadata (`repo`, `mode`, `lanes`) + every task, each flagged `claimed` |
+| `create_board` | `id`, `name` | Create a board (your own). Slug in, unique `handle` minted server-side                            |
 
 ### Notes (`list_tasks` pagination)
 
@@ -83,15 +83,15 @@ For **safe multi-agent work** on a board: claim a task (atomic — exactly one w
 heartbeat to hold the lease, move it between lanes, and release it to a destination lane
 with notes. See [Automation boards & the claim loop](#automation-boards--the-claim-loop).
 
-| Tool                | Arguments                                                                                  | Purpose                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| `claim_task`        | `taskId`, `board?`, `agentId?`, `lane?`, `leaseSeconds?`                                    | Atomically claim; `CLAIM_HELD` if a live lease exists               |
-| `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                | Extend the lease; `LEASE_LOST` if it was taken                      |
-| `set_lane`          | `taskId`, `token`, `lane`, `board?`                                                         | Move a task while holding the claim (agent path — `agent` lanes ok) |
+| Tool                | Arguments                                                                                              | Purpose                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `claim_task`        | `taskId`, `board?`, `agentId?`, `lane?`, `leaseSeconds?`                                               | Atomically claim; `CLAIM_HELD` if a live lease exists                          |
+| `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                           | Extend the lease; `LEASE_LOST` if it was taken                                 |
+| `set_lane`          | `taskId`, `token`, `lane`, `board?`                                                                    | Move a task while holding the claim (agent path — `agent` lanes ok)            |
 | `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `metadata?`, `outcome?`, `ifCurrentLane?`, `complete?`, `board?` | Move + write notes/metadata + unclaim; `complete:true` archives it; idempotent |
-| `cancel_claim`      | `taskId`, `board?`                                                                          | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST` |
-| `get_claim_history` | `taskId`, `board?`                                                                          | Who claimed it when, and how each claim ended                       |
-| `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                   | Change feed — poll instead of full-scanning; returns a `cursor`     |
+| `cancel_claim`      | `taskId`, `board?`                                                                                     | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST`    |
+| `get_claim_history` | `taskId`, `board?`                                                                                     | Who claimed it when, and how each claim ended                                  |
+| `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                              | Change feed — poll instead of full-scanning; returns a `cursor`                |
 
 ### Scheduling model
 
@@ -151,21 +151,21 @@ records outcomes. There is no "eligible" query — you decide what's ready from 
 
 Tool failures return `isError: true` with a `structuredContent.code` you can act on:
 
-| Code                  | HTTP | Do                                                             |
-| --------------------- | ---- | ------------------------------------------------------------- |
-| `CLAIM_HELD`          | 409  | Another agent holds a live claim (`holder`, `expiresAt`). Move on |
-| `LEASE_LOST`          | 409  | Your lease was taken. Abort immediately, write nothing        |
-| `LANE_NOT_EDITABLE`   | 403  | Wrong path for this lane (human path → `agent` lane). Never retry |
-| `LANE_UNKNOWN`        | 422  | Destination isn't a lane on this board. Fix the caller        |
-| `LANE_INVALID`        | 422  | Task carried zero or two lane tags. Repair, don't retry       |
-| `LANE_CHANGED`        | 409  | `ifCurrentLane` didn't match — a human retagged it. Re-read   |
-| `BOARD_SCHEMA_LOCKED` | 409  | Lane structure is frozen on an automation board. Never retry  |
-| `DIGEST_MISMATCH`     | 409  | Activation preview is stale. Re-run the dry-run               |
-| `VERSION_CONFLICT`    | 409  | Re-pull and retry                                             |
-| `NOTES_TOO_LARGE`     | 413  | Truncate or link out; don't retry unchanged                   |
-| `RATE_LIMITED`        | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min    |
-| `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404 | Abort; treat as already handled                    |
-| `FORBIDDEN`           | 403  | Readonly access, or an owner-only action. Never retry         |
+| Code                                 | HTTP | Do                                                                |
+| ------------------------------------ | ---- | ----------------------------------------------------------------- |
+| `CLAIM_HELD`                         | 409  | Another agent holds a live claim (`holder`, `expiresAt`). Move on |
+| `LEASE_LOST`                         | 409  | Your lease was taken. Abort immediately, write nothing            |
+| `LANE_NOT_EDITABLE`                  | 403  | Wrong path for this lane (human path → `agent` lane). Never retry |
+| `LANE_UNKNOWN`                       | 422  | Destination isn't a lane on this board. Fix the caller            |
+| `LANE_INVALID`                       | 422  | Task carried zero or two lane tags. Repair, don't retry           |
+| `LANE_CHANGED`                       | 409  | `ifCurrentLane` didn't match — a human retagged it. Re-read       |
+| `BOARD_SCHEMA_LOCKED`                | 409  | Lane structure is frozen on an automation board. Never retry      |
+| `DIGEST_MISMATCH`                    | 409  | Activation preview is stale. Re-run the dry-run                   |
+| `VERSION_CONFLICT`                   | 409  | Re-pull and retry                                                 |
+| `NOTES_TOO_LARGE`                    | 413  | Truncate or link out; don't retry unchanged                       |
+| `RATE_LIMITED`                       | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min        |
+| `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404  | Abort; treat as already handled                                   |
+| `FORBIDDEN`                          | 403  | Readonly access, or an owner-only action. Never retry             |
 
 **Rate limits.** Trusted human tiers (`friend`, `admin`) aren't throttled. The **`service`**
 tier — the credential class an autonomous agent authenticates with — is capped at **600/min**

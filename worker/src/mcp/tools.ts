@@ -160,7 +160,15 @@ export const TOOLS: ToolDef[] = [
       const offset = Math.max(0, typeof args.offset === 'number' ? args.offset : 0)
       const page = tasks.slice(offset, offset + limit)
       const nextOffset = offset + page.length < total ? offset + page.length : null
-      return { board: boardOf(args, ctx), count: page.length, total, offset, limit, nextOffset, tasks: page }
+      return {
+        board: boardOf(args, ctx),
+        count: page.length,
+        total,
+        offset,
+        limit,
+        nextOffset,
+        tasks: page
+      }
     }
   },
   {
@@ -256,7 +264,10 @@ export const TOOLS: ToolDef[] = [
       type: 'object',
       properties: {
         id: { type: 'string' },
-        notes: { type: 'string', description: 'The full markdown body. Replaces any existing notes.' },
+        notes: {
+          type: 'string',
+          description: 'The full markdown body. Replaces any existing notes.'
+        },
         ...boardProp
       },
       required: ['id', 'notes']
@@ -402,13 +413,16 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'claim_task',
     description:
-      'Atomically claim a task for work (§4). Returns { token, expiresAt } on success; fails with CLAIM_HELD if another agent holds a live lease. Optionally move the task into `lane` in the same step (the agent path — you may enter an `agent` lane a human can\'t). Heartbeat before `expiresAt` to keep the lease.',
+      "Atomically claim a task for work (§4). Returns { token, expiresAt } on success; fails with CLAIM_HELD if another agent holds a live lease. Optionally move the task into `lane` in the same step (the agent path — you may enter an `agent` lane a human can't). Heartbeat before `expiresAt` to keep the lease.",
     inputSchema: {
       type: 'object',
       properties: {
         taskId: { type: 'string', description: 'The task to claim.' },
         ...boardProp,
-        agentId: { type: 'string', description: 'A label for you, shown in claim history. Defaults to your id.' },
+        agentId: {
+          type: 'string',
+          description: 'A label for you, shown in claim history. Defaults to your id.'
+        },
         lane: { type: 'string', description: 'Optional: move the task into this lane on claim.' },
         leaseSeconds: { type: 'number', description: 'Lease length (default 1800, max 3600).' }
       },
@@ -428,7 +442,8 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'heartbeat_claim',
-    description: 'Extend your lease on a claimed task (§4). Fails with LEASE_LOST if your lease already expired and was taken — abort and write nothing.',
+    description:
+      'Extend your lease on a claimed task (§4). Fails with LEASE_LOST if your lease already expired and was taken — abort and write nothing.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -444,12 +459,19 @@ export const TOOLS: ToolDef[] = [
       const token = str(args.token)
       if (!taskId || !token) throw new Error('`taskId` and `token` are required')
       const r = await resolveBoard(args, ctx, { write: true })
-      return heartbeatClaim(ctx.db, r.ownerId, taskId, token, typeof args.leaseSeconds === 'number' ? args.leaseSeconds : undefined)
+      return heartbeatClaim(
+        ctx.db,
+        r.ownerId,
+        taskId,
+        token,
+        typeof args.leaseSeconds === 'number' ? args.leaseSeconds : undefined
+      )
     }
   },
   {
     name: 'set_lane',
-    description: 'Move a task into a lane while holding its claim (§4) — the agent path, so `agent` lanes are allowed. LANE_UNKNOWN if the lane isn\'t on the board; LEASE_LOST if you no longer hold the claim.',
+    description:
+      "Move a task into a lane while holding its claim (§4) — the agent path, so `agent` lanes are allowed. LANE_UNKNOWN if the lane isn't on the board; LEASE_LOST if you no longer hold the claim.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -464,26 +486,46 @@ export const TOOLS: ToolDef[] = [
       const taskId = str(args.taskId)
       const token = str(args.token)
       const lane = str(args.lane)
-      if (!taskId || !token || lane === undefined) throw new Error('`taskId`, `token` and `lane` are required')
+      if (!taskId || !token || lane === undefined)
+        throw new Error('`taskId`, `token` and `lane` are required')
       const r = await resolveBoard(args, ctx, { write: true })
-      return setLane(ctx.db, r.ownerId, r.boardId, taskId, token, lane ?? '', { mode: r.mode, lanes: r.lanes })
+      return setLane(ctx.db, r.ownerId, r.boardId, taskId, token, lane ?? '', {
+        mode: r.mode,
+        lanes: r.lanes
+      })
     }
   },
   {
     name: 'release_claim',
     description:
-      'Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan), merge `metadata`, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you. Pass `complete: true` to archive the task on release (still claim-gated) so a notification lane doesn\'t grow unbounded.',
+      "Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan), merge `metadata`, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you. Pass `complete: true` to archive the task on release (still claim-gated) so a notification lane doesn't grow unbounded.",
     inputSchema: {
       type: 'object',
       properties: {
         taskId: { type: 'string' },
         token: { type: 'string' },
-        lane: { type: 'string', description: 'Where the task goes on release (agent lane allowed). Omit / empty ⇒ Inbox.' },
+        lane: {
+          type: 'string',
+          description: 'Where the task goes on release (agent lane allowed). Omit / empty ⇒ Inbox.'
+        },
         notes: { type: 'string', description: 'Markdown result/plan to write on the task.' },
-        metadata: { type: 'object', description: 'Arbitrary JSON merged onto the task (you hold the claim, so this is allowed).' },
-        outcome: { type: 'string', description: 'Free-text outcome label for the claim history; we don\'t interpret it.' },
-        ifCurrentLane: { type: 'string', description: 'Guard: abort (LANE_CHANGED) unless the task is still in this lane.' },
-        complete: { type: 'boolean', description: 'Archive the task on release (removes it from the active list).' },
+        metadata: {
+          type: 'object',
+          description:
+            'Arbitrary JSON merged onto the task (you hold the claim, so this is allowed).'
+        },
+        outcome: {
+          type: 'string',
+          description: "Free-text outcome label for the claim history; we don't interpret it."
+        },
+        ifCurrentLane: {
+          type: 'string',
+          description: 'Guard: abort (LANE_CHANGED) unless the task is still in this lane.'
+        },
+        complete: {
+          type: 'boolean',
+          description: 'Archive the task on release (removes it from the active list).'
+        },
         ...boardProp
       },
       required: ['taskId', 'token']
@@ -498,7 +540,8 @@ export const TOOLS: ToolDef[] = [
         notes: args.notes !== undefined ? (str(args.notes) ?? '') : undefined,
         metadata: obj(args.metadata) ?? undefined,
         outcome: str(args.outcome) ?? null,
-        ifCurrentLane: args.ifCurrentLane !== undefined ? (str(args.ifCurrentLane) ?? '') : undefined,
+        ifCurrentLane:
+          args.ifCurrentLane !== undefined ? (str(args.ifCurrentLane) ?? '') : undefined,
         complete: args.complete === true,
         mode: r.mode,
         lanes: r.lanes
@@ -523,7 +566,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'cancel_claim',
     description:
-      'Owner force-drops the claim on a task (§ cancel path) — reclaim a stuck/held task by hand. The holding agent\'s next heartbeat then sees no live claim and gets LEASE_LOST. Owner-only.',
+      "Owner force-drops the claim on a task (§ cancel path) — reclaim a stuck/held task by hand. The holding agent's next heartbeat then sees no live claim and gets LEASE_LOST. Owner-only.",
     inputSchema: {
       type: 'object',
       properties: { taskId: { type: 'string' }, ...boardProp },
@@ -544,7 +587,10 @@ export const TOOLS: ToolDef[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        since: { type: 'string', description: 'Cursor "<updatedAt>,<id>" from a prior call; omit for a full initial sweep.' },
+        since: {
+          type: 'string',
+          description: 'Cursor "<updatedAt>,<id>" from a prior call; omit for a full initial sweep.'
+        },
         limit: { type: 'number', description: 'Max rows (default 100, max 500).' }
       }
     },
@@ -555,7 +601,12 @@ export const TOOLS: ToolDef[] = [
         const comma = since.lastIndexOf(',')
         if (comma > 0) cursor = { updatedAt: since.slice(0, comma), id: since.slice(comma + 1) }
       }
-      return getChanges(ctx.db, ctx.callerId, cursor, typeof args.limit === 'number' ? args.limit : 100)
+      return getChanges(
+        ctx.db,
+        ctx.callerId,
+        cursor,
+        typeof args.limit === 'number' ? args.limit : 100
+      )
     }
   }
 ]

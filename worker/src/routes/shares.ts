@@ -94,7 +94,8 @@ async function resolveGrantee(
 
   const key = input.key
   if (!key) return { error: 'Provide `name`, `key`, or `userId`.', status: 400 }
-  if (!env.SESSIONS_KV) return { error: 'Key resolution unavailable; pass `userId` instead.', status: 400 }
+  if (!env.SESSIONS_KV)
+    return { error: 'Key resolution unavailable; pass `userId` instead.', status: 400 }
   const raw = await env.SESSIONS_KV.get(`key:${key}`)
   if (!raw) return { error: 'That key is not registered.', status: 400 }
   let rec: KeyRow
@@ -114,7 +115,9 @@ async function resolveGrantee(
  * sequentially made the scan seconds-slow (it timed out on the autocomplete hot
  * path). Promise.all collapses that to one round-trip's latency.
  */
-async function readLiveRows(env: Env): Promise<Array<{ userId: string; name: string | null; tier?: string }>> {
+async function readLiveRows(
+  env: Env
+): Promise<Array<{ userId: string; name: string | null; tier?: string }>> {
   if (!env.SESSIONS_KV) return []
   const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
   const kv = env.SESSIONS_KV
@@ -163,7 +166,9 @@ async function searchRegistryNames(
 }
 
 /** One registry scan → userId → { name, tier } for annotating a share list. */
-async function registryNameMap(env: Env): Promise<Map<string, { name: string | null; tier?: string }>> {
+async function registryNameMap(
+  env: Env
+): Promise<Map<string, { name: string | null; tier?: string }>> {
   const map = new Map<string, { name: string | null; tier?: string }>()
   if (!env.SESSIONS_KV) return map
   const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
@@ -186,7 +191,9 @@ const nowIso = () => new Date().toISOString()
 
 const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
 const simpleErr = { 'application/json': { schema: ErrorResponseSchema } }
-const refParam = z.object({ ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' }) })
+const refParam = z.object({
+  ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
+})
 
 export function createShareRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -206,7 +213,10 @@ export function createShareRoutes() {
       })
     },
     responses: {
-      200: { description: 'Matching users', content: { 'application/json': { schema: UserSearchResponseSchema } } }
+      200: {
+        description: 'Matching users',
+        content: { 'application/json': { schema: UserSearchResponseSchema } }
+      }
     }
   })
   app.openapi(searchRoute, (async (c: any) => {
@@ -227,12 +237,21 @@ export function createShareRoutes() {
     path: '/boards/{ref}/shares',
     tags: ['Sharing'],
     summary: 'Grant a board share (owner only)',
-    request: { params: refParam, body: { content: { 'application/json': { schema: GrantShareInputSchema } } } },
+    request: {
+      params: refParam,
+      body: { content: { 'application/json': { schema: GrantShareInputSchema } } }
+    },
     responses: {
-      200: { description: 'Share granted', content: { 'application/json': { schema: GrantShareResponseSchema } } },
+      200: {
+        description: 'Share granted',
+        content: { 'application/json': { schema: GrantShareResponseSchema } }
+      },
       400: { description: 'Invalid grantee', content: simpleErr },
       403: { description: 'Not the owner', content: jsonErr },
-      404: { description: 'Board not found, or no key with that name (NAME_NOT_FOUND)', content: jsonErr },
+      404: {
+        description: 'Board not found, or no key with that name (NAME_NOT_FOUND)',
+        content: jsonErr
+      },
       409: { description: 'Named key never signed in (NO_USER_ID)', content: jsonErr }
     }
   })
@@ -243,9 +262,18 @@ export function createShareRoutes() {
     if (ctx.access !== 'owner') {
       return c.json({ error: 'Only the board owner can manage shares', code: 'FORBIDDEN' }, 403)
     }
-    const body = c.req.valid('json') as { name?: string; key?: string; userId?: string; level: Level }
+    const body = c.req.valid('json') as {
+      name?: string
+      key?: string
+      userId?: string
+      level: Level
+    }
 
-    const grantee = await resolveGrantee(c.env, { name: body.name, key: body.key, userId: body.userId })
+    const grantee = await resolveGrantee(c.env, {
+      name: body.name,
+      key: body.key,
+      userId: body.userId
+    })
     if ('error' in grantee) {
       const b: Record<string, unknown> = { error: grantee.error }
       if (grantee.code) b.code = grantee.code
@@ -278,10 +306,13 @@ export function createShareRoutes() {
     method: 'get',
     path: '/boards/{ref}/shares',
     tags: ['Sharing'],
-    summary: 'List a board\'s shares (owner only)',
+    summary: "List a board's shares (owner only)",
     request: { params: refParam },
     responses: {
-      200: { description: 'The shares', content: { 'application/json': { schema: ListSharesResponseSchema } } },
+      200: {
+        description: 'The shares',
+        content: { 'application/json': { schema: ListSharesResponseSchema } }
+      },
       403: { description: 'Not the owner', content: jsonErr },
       404: { description: 'Board not found', content: jsonErr }
     }
@@ -312,7 +343,10 @@ export function createShareRoutes() {
     summary: 'Leave a shared board (grantee)',
     request: { params: refParam },
     responses: {
-      200: { description: 'Left the board', content: { 'application/json': { schema: LeaveShareResponseSchema } } },
+      200: {
+        description: 'Left the board',
+        content: { 'application/json': { schema: LeaveShareResponseSchema } }
+      },
       400: { description: 'You own this board', content: simpleErr },
       404: { description: 'Board not found', content: jsonErr }
     }
@@ -334,14 +368,17 @@ export function createShareRoutes() {
     method: 'delete',
     path: '/boards/{ref}/shares/{granteeUserId}',
     tags: ['Sharing'],
-    summary: 'Revoke a grantee\'s access (owner only)',
+    summary: "Revoke a grantee's access (owner only)",
     request: {
       params: refParam.extend({
         granteeUserId: z.string().openapi({ param: { name: 'granteeUserId', in: 'path' } })
       })
     },
     responses: {
-      200: { description: 'Revoked', content: { 'application/json': { schema: RevokeShareResponseSchema } } },
+      200: {
+        description: 'Revoked',
+        content: { 'application/json': { schema: RevokeShareResponseSchema } }
+      },
       403: { description: 'Not the owner', content: jsonErr },
       404: { description: 'Board not found', content: jsonErr }
     }

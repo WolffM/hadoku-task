@@ -69,7 +69,10 @@ export function createAgentRoutes() {
     summary: 'Atomically claim a task',
     request: { body: { content: { 'application/json': { schema: ClaimInputSchema } } } },
     responses: {
-      200: { description: 'Claimed', content: { 'application/json': { schema: ClaimResponseSchema } } },
+      200: {
+        description: 'Claimed',
+        content: { 'application/json': { schema: ClaimResponseSchema } }
+      },
       403: { description: 'Read-only access', content: jsonErr },
       404: { description: 'Board or task not found', content: jsonErr },
       409: { description: 'A live lease is held (CLAIM_HELD)', content: jsonErr },
@@ -77,7 +80,13 @@ export function createAgentRoutes() {
     }
   })
   app.openapi(claimRoute, (async (c: any) => {
-    const body = c.req.valid('json') as { board: string; taskId: string; agentId?: string; lane?: string | null; leaseSeconds?: number }
+    const body = c.req.valid('json') as {
+      board: string
+      taskId: string
+      agentId?: string
+      lane?: string | null
+      leaseSeconds?: number
+    }
     const ctx = await boardForWrite(c, body.board)
     if (ctx instanceof Response) return ctx
     const agentId = body.agentId || ctx.callerId
@@ -98,17 +107,31 @@ export function createAgentRoutes() {
     summary: 'Extend a lease',
     request: { body: { content: { 'application/json': { schema: HeartbeatInputSchema } } } },
     responses: {
-      200: { description: 'Extended', content: { 'application/json': { schema: HeartbeatResponseSchema } } },
+      200: {
+        description: 'Extended',
+        content: { 'application/json': { schema: HeartbeatResponseSchema } }
+      },
       403: { description: 'Read-only access', content: jsonErr },
       404: { description: 'Board not found', content: jsonErr },
       409: { description: 'Lease was taken (LEASE_LOST)', content: jsonErr }
     }
   })
   app.openapi(heartbeatRoute, (async (c: any) => {
-    const body = c.req.valid('json') as { board: string; taskId: string; token: string; leaseSeconds?: number }
+    const body = c.req.valid('json') as {
+      board: string
+      taskId: string
+      token: string
+      leaseSeconds?: number
+    }
     const ctx = await boardForWrite(c, body.board)
     if (ctx instanceof Response) return ctx
-    const result = await heartbeatClaim(c.env.DB, ctx.ownerId, body.taskId, body.token, body.leaseSeconds)
+    const result = await heartbeatClaim(
+      c.env.DB,
+      ctx.ownerId,
+      body.taskId,
+      body.token,
+      body.leaseSeconds
+    )
     return c.json({ ok: true, ...result })
   }) as never)
 
@@ -120,7 +143,10 @@ export function createAgentRoutes() {
     summary: 'Move a task while holding its claim (agent path)',
     request: { body: { content: { 'application/json': { schema: SetLaneInputSchema } } } },
     responses: {
-      200: { description: 'Moved', content: { 'application/json': { schema: SetLaneResponseSchema } } },
+      200: {
+        description: 'Moved',
+        content: { 'application/json': { schema: SetLaneResponseSchema } }
+      },
       403: { description: 'Read-only access', content: jsonErr },
       404: { description: 'Board not found', content: jsonErr },
       409: { description: 'Lease was taken (LEASE_LOST)', content: jsonErr },
@@ -128,13 +154,26 @@ export function createAgentRoutes() {
     }
   })
   app.openapi(setLaneRoute, (async (c: any) => {
-    const body = c.req.valid('json') as { board: string; taskId: string; token: string; lane: string }
+    const body = c.req.valid('json') as {
+      board: string
+      taskId: string
+      token: string
+      lane: string
+    }
     const ctx = await boardForWrite(c, body.board)
     if (ctx instanceof Response) return ctx
-    const result = await setLane(c.env.DB, ctx.ownerId, ctx.boardId, body.taskId, body.token, body.lane, {
-      mode: ctx.mode,
-      lanes: ctx.lanes
-    })
+    const result = await setLane(
+      c.env.DB,
+      ctx.ownerId,
+      ctx.boardId,
+      body.taskId,
+      body.token,
+      body.lane,
+      {
+        mode: ctx.mode,
+        lanes: ctx.lanes
+      }
+    )
     return c.json(result)
   }) as never)
 
@@ -146,10 +185,16 @@ export function createAgentRoutes() {
     summary: 'Release a claim (move + notes + unclaim)',
     request: { body: { content: { 'application/json': { schema: ReleaseInputSchema } } } },
     responses: {
-      200: { description: 'Released', content: { 'application/json': { schema: ReleaseResponseSchema } } },
+      200: {
+        description: 'Released',
+        content: { 'application/json': { schema: ReleaseResponseSchema } }
+      },
       403: { description: 'Read-only access', content: jsonErr },
       404: { description: 'Board or task not found', content: jsonErr },
-      409: { description: 'Lease taken (LEASE_LOST) or lane changed (LANE_CHANGED)', content: jsonErr },
+      409: {
+        description: 'Lease taken (LEASE_LOST) or lane changed (LANE_CHANGED)',
+        content: jsonErr
+      },
       422: { description: 'Unknown lane', content: jsonErr }
     }
   })
@@ -188,7 +233,10 @@ export function createAgentRoutes() {
     summary: 'Force-drop a claim (owner only)',
     request: { body: { content: { 'application/json': { schema: CancelInputSchema } } } },
     responses: {
-      200: { description: 'Dropped (idempotent)', content: { 'application/json': { schema: CancelResponseSchema } } },
+      200: {
+        description: 'Dropped (idempotent)',
+        content: { 'application/json': { schema: CancelResponseSchema } }
+      },
       403: { description: 'Not the owner', content: jsonErr },
       404: { description: 'Board not found', content: jsonErr }
     }
@@ -217,7 +265,10 @@ export function createAgentRoutes() {
       })
     },
     responses: {
-      200: { description: 'History (newest first)', content: { 'application/json': { schema: ClaimHistoryResponseSchema } } },
+      200: {
+        description: 'History (newest first)',
+        content: { 'application/json': { schema: ClaimHistoryResponseSchema } }
+      },
       404: { description: 'Board not found', content: jsonErr }
     }
   })
@@ -236,9 +287,16 @@ export function createAgentRoutes() {
     path: '/boards/{ref}',
     tags: ['Boards'],
     summary: 'One board, fully hydrated (tasks + claim state)',
-    request: { params: z.object({ ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' }) }) },
+    request: {
+      params: z.object({
+        ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
+      })
+    },
     responses: {
-      200: { description: 'Hydrated board', content: { 'application/json': { schema: HydratedBoardResponseSchema } } },
+      200: {
+        description: 'Hydrated board',
+        content: { 'application/json': { schema: HydratedBoardResponseSchema } }
+      },
       404: { description: 'Board not found', content: jsonErr }
     }
   })
@@ -279,12 +337,18 @@ export function createAgentRoutes() {
     summary: 'Change feed (poll instead of full-scanning)',
     request: {
       query: z.object({
-        since: z.string().optional().openapi({ description: '"<updatedAt>,<id>" cursor from a prior call.' }),
+        since: z
+          .string()
+          .optional()
+          .openapi({ description: '"<updatedAt>,<id>" cursor from a prior call.' }),
         limit: z.string().optional().openapi({ description: 'Max rows (default 100, max 500).' })
       })
     },
     responses: {
-      200: { description: 'Changes + next cursor', content: { 'application/json': { schema: ChangesResponseSchema } } }
+      200: {
+        description: 'Changes + next cursor',
+        content: { 'application/json': { schema: ChangesResponseSchema } }
+      }
     }
   })
   app.openapi(changesRoute, (async (c: any) => {

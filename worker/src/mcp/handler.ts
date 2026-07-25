@@ -95,10 +95,16 @@ export async function handleMcp(c: Context<AppContext>): Promise<Response> {
             const e = toolErr as { code?: unknown; httpStatus?: unknown }
             const code = typeof e.code === 'string' ? e.code : undefined
             const structuredContent = code
-              ? { error: message, code, httpStatus: typeof e.httpStatus === 'number' ? e.httpStatus : undefined }
+              ? {
+                  error: message,
+                  code,
+                  httpStatus: typeof e.httpStatus === 'number' ? e.httpStatus : undefined
+                }
               : undefined
             return ok(reqId, {
-              content: [{ type: 'text', text: code ? `Error [${code}]: ${message}` : `Error: ${message}` }],
+              content: [
+                { type: 'text', text: code ? `Error [${code}]: ${message}` : `Error: ${message}` }
+              ],
               isError: true,
               ...(structuredContent ? { structuredContent } : {})
             })

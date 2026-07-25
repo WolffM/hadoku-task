@@ -29,6 +29,10 @@ export interface TagFiltersSectionProps {
   onShareBoard?: () => void
   /** Whether the current board can be shared (owned, signed-in). */
   canShareBoard?: boolean
+  /** The active view — tag pills only show in board view. */
+  currentView: 'board' | 'calendar'
+  /** Toggle between board and calendar (the calendar button in this row). */
+  onToggleCalendar: () => void
 }
 
 export function TagFiltersSection({
@@ -46,7 +50,9 @@ export function TagFiltersSection({
   onRefresh,
   onShowToast,
   onShareBoard,
-  canShareBoard
+  canShareBoard,
+  currentView,
+  onToggleCalendar
 }: TagFiltersSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -87,32 +93,61 @@ export function TagFiltersSection({
 
   return (
     <div className="task-app__filters">
-      {tags.map(tag => (
-        <TagFilterButton
-          key={tag}
-          tag={tag}
-          isActive={selectedFilters.has(tag)}
-          isDragOver={dragOverFilter === tag}
-          onToggle={onToggleFilter}
-          onContextMenu={onTagContextMenu}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-        />
-      ))}
+      {currentView === 'board' && (
+        <>
+          {tags.map(tag => (
+            <TagFilterButton
+              key={tag}
+              tag={tag}
+              isActive={selectedFilters.has(tag)}
+              isDragOver={dragOverFilter === tag}
+              onToggle={onToggleFilter}
+              onContextMenu={onTagContextMenu}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            />
+          ))}
+          <button
+            className={`pill-btn task-app__filter-add ${dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
+            onClick={onCreateTagClick}
+            onDragOver={e => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+              onDragOver(e, 'add-tag')
+            }}
+            onDragLeave={onDragLeave}
+            onDrop={handleAddTagDrop}
+            aria-label="Add tag"
+          >
+            ＋
+          </button>
+        </>
+      )}
+
       <button
-        className={`pill-btn task-app__filter-add ${dragOverFilter === 'add-tag' ? 'task-app__filter-drag-over' : ''}`}
-        onClick={onCreateTagClick}
-        onDragOver={e => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'copy'
-          onDragOver(e, 'add-tag')
-        }}
-        onDragLeave={onDragLeave}
-        onDrop={handleAddTagDrop}
-        aria-label="Add tag"
+        className={`sync-btn task-app__filter-calendar ${currentView === 'calendar' ? 'is-active' : ''}`}
+        onClick={onToggleCalendar}
+        title={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
+        aria-label={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
+        aria-pressed={currentView === 'calendar'}
       >
-        ＋
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
       </button>
 
       {userType !== 'public' && (

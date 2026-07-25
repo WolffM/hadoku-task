@@ -47,7 +47,11 @@ export interface ShareApi {
   grantShare: (
     boardRef: string,
     input: { name?: string; userId?: string; level: ShareLevel }
-  ) => Promise<{ ok: boolean; error?: string; granted?: { name: string | null; tier: string | null; level: string } }>
+  ) => Promise<{
+    ok: boolean
+    error?: string
+    granted?: { name: string | null; tier: string | null; level: string }
+  }>
   revokeShare: (boardRef: string, granteeUserId: string) => Promise<boolean>
   activateAutomation: (
     boardRef: string,
@@ -63,7 +67,14 @@ export interface ShareApi {
   deactivateAutomation: (boardRef: string) => Promise<{ ok: boolean; error?: string }>
   validateRepo: (
     repo: string
-  ) => Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }>
+  ) => Promise<{
+    repo: string
+    valid: boolean
+    reason: string
+    private?: boolean
+    defaultBranch?: string
+    message?: string
+  }>
 }
 
 export interface EditBoardsModalProps {
@@ -134,7 +145,9 @@ export function EditBoardsModal({
 
   const togglePin = (id: string) =>
     run(() =>
-      onSetPinned(pinnedOrder.includes(id) ? pinnedOrder.filter(x => x !== id) : [...pinnedOrder, id])
+      onSetPinned(
+        pinnedOrder.includes(id) ? pinnedOrder.filter(x => x !== id) : [...pinnedOrder, id]
+      )
     )
 
   // Drag-to-reorder within the pinned set. Reorder is computed on drop only (no
@@ -292,7 +305,11 @@ export function EditBoardsModal({
                     setSharingId(null)
                   }}
                   disabled={busy}
-                  title={b.mode === 'automation' ? 'Automation settings' : 'Convert to an automation board'}
+                  title={
+                    b.mode === 'automation'
+                      ? 'Automation settings'
+                      : 'Convert to an automation board'
+                  }
                   aria-label={`Automation for ${b.name}`}
                   aria-expanded={automatingId === b.id}
                 >
@@ -382,7 +399,11 @@ export function EditBoardsModal({
           }}
           aria-label="New board name"
         />
-        <button className="edit-boards__create-btn" onClick={create} disabled={createInvalid || busy}>
+        <button
+          className="edit-boards__create-btn"
+          onClick={create}
+          disabled={createInvalid || busy}
+        >
           Add board
         </button>
       </div>
@@ -463,8 +484,7 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
   // for the typed text — so typing the full name and hitting Share also works,
   // without needing a precise click on the dropdown.
   const qLower = query.trim().toLowerCase()
-  const effectivePick =
-    picked ?? results.find(u => u.name.toLowerCase() === qLower) ?? null
+  const effectivePick = picked ?? results.find(u => u.name.toLowerCase() === qLower) ?? null
 
   const grant = () => {
     if (!effectivePick || busy) return
@@ -475,7 +495,10 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
       .grantShare(ref, { name: target.name, level })
       .then(res => {
         if (res.ok) {
-          setMsg({ kind: 'ok', text: `Shared with ${res.granted?.name ?? target.name} (${res.granted?.tier ?? '—'})` })
+          setMsg({
+            kind: 'ok',
+            text: `Shared with ${res.granted?.name ?? target.name} (${res.granted?.tier ?? '—'})`
+          })
           setQuery('')
           setPicked(null)
           setResults([])
@@ -529,7 +552,9 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
           className="share-panel__grant-btn"
           onClick={grant}
           disabled={!effectivePick || busy}
-          title={effectivePick ? `Share with ${effectivePick.name}` : 'Pick a real display name first'}
+          title={
+            effectivePick ? `Share with ${effectivePick.name}` : 'Pick a real display name first'
+          }
         >
           Share
         </button>
@@ -606,9 +631,12 @@ function AutomationPanel({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [repo, setRepo] = useState((board.repo as string | undefined) ?? '')
-  const [repoStatus, setRepoStatus] = useState<
-    { valid: boolean; private?: boolean; defaultBranch?: string; message?: string } | null
-  >(null)
+  const [repoStatus, setRepoStatus] = useState<{
+    valid: boolean
+    private?: boolean
+    defaultBranch?: string
+    message?: string
+  } | null>(null)
   const [repoChecking, setRepoChecking] = useState(false)
 
   const checkRepo = () => {
@@ -625,7 +653,12 @@ function AutomationPanel({
   const repoBlocks = repo.trim() !== '' && !(repoStatus && repoStatus.valid)
 
   // Parse the pasted JSON into an activation payload (lanes + opaque labels + repo).
-  const parsePayload = (): { lanes: unknown; schemaId?: string; schemaVersion?: number; repo?: string } | null => {
+  const parsePayload = (): {
+    lanes: unknown
+    schemaId?: string
+    schemaVersion?: number
+    repo?: string
+  } | null => {
     try {
       const obj = JSON.parse(raw) as Record<string, unknown>
       const lanes = Array.isArray(obj.lanes) ? obj.lanes : Array.isArray(obj) ? obj : null
@@ -675,7 +708,12 @@ function AutomationPanel({
   }
 
   const deactivate = () => {
-    if (!window.confirm(`Deactivate automation on "${board.name}"? Tasks keep their tags; the lane lock is removed.`)) return
+    if (
+      !window.confirm(
+        `Deactivate automation on "${board.name}"? Tasks keep their tags; the lane lock is removed.`
+      )
+    )
+      return
     setBusy(true)
     setErr(null)
     void shareApi
@@ -693,8 +731,8 @@ function AutomationPanel({
       <div className="share-panel automation-panel">
         <p className="automation-panel__status">
           <strong>Automation active</strong>
-          {board.schemaId ? ` · ${board.schemaId} v${board.schemaVersion ?? '?'}` : ''} · {lanes.length}{' '}
-          lanes
+          {board.schemaId ? ` · ${board.schemaId} v${board.schemaVersion ?? '?'}` : ''} ·{' '}
+          {lanes.length} lanes
         </p>
         <ul className="automation-panel__lanes">
           {lanes.map(l => (
@@ -715,9 +753,9 @@ function AutomationPanel({
   return (
     <div className="share-panel automation-panel">
       <p className="automation-panel__hint">
-        Convert this to an <strong>automation board</strong>: paste a provider&apos;s activation JSON
-        (its lane contract). This is <strong>destructive</strong> — it replaces the board&apos;s tags
-        with the fixed lanes. Preview first.
+        Convert this to an <strong>automation board</strong>: paste a provider&apos;s activation
+        JSON (its lane contract). This is <strong>destructive</strong> — it replaces the
+        board&apos;s tags with the fixed lanes. Preview first.
       </p>
       <div className="automation-panel__repo">
         <input
@@ -735,7 +773,9 @@ function AutomationPanel({
           }}
           aria-label="Repo"
         />
-        {repoChecking && <span className="automation-panel__repo-status is-checking">checking…</span>}
+        {repoChecking && (
+          <span className="automation-panel__repo-status is-checking">checking…</span>
+        )}
         {!repoChecking && repoStatus?.valid && (
           <span className="automation-panel__repo-status is-ok">
             ✓ {repoStatus.private ? 'private' : 'public'}
@@ -767,8 +807,8 @@ function AutomationPanel({
       {preview && (
         <div className="automation-panel__preview">
           <p className="automation-panel__preview-head">
-            {preview.lanes.length} lanes · {preview.toInbox} task{preview.toInbox === 1 ? '' : 's'} →
-            Inbox
+            {preview.lanes.length} lanes · {preview.toInbox} task{preview.toInbox === 1 ? '' : 's'}{' '}
+            → Inbox
             {preview.collisions.length > 0 ? ` · collisions: ${preview.collisions.join(', ')}` : ''}
           </p>
           {preview.mapping.length > 0 && (
@@ -788,7 +828,11 @@ function AutomationPanel({
       )}
 
       <div className="automation-panel__actions">
-        <button className="automation-panel__preview-btn" onClick={runPreview} disabled={busy || !raw.trim()}>
+        <button
+          className="automation-panel__preview-btn"
+          onClick={runPreview}
+          disabled={busy || !raw.trim()}
+        >
           Preview
         </button>
         <button

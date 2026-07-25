@@ -194,7 +194,8 @@ export function createBoardRoutes() {
     path: '/boards/{boardId}',
     tags: ['Boards'],
     summary: 'Update a board',
-    description: 'Renames a board. Send If-Match with the board-collection version for a safe write.',
+    description:
+      'Renames a board. Send If-Match with the board-collection version for a safe write.',
     request: {
       params: z.object({ boardId: z.string().openapi({ example: 'work-board' }) }),
       body: {
@@ -210,7 +211,10 @@ export function createBoardRoutes() {
         description: 'Board updated',
         content: { 'application/json': { schema: z.object({ ok: z.boolean() }).passthrough() } }
       },
-      400: { description: 'Invalid request', content: { 'application/json': { schema: ErrorResponseSchema } } }
+      400: {
+        description: 'Invalid request',
+        content: { 'application/json': { schema: ErrorResponseSchema } }
+      }
     }
   })
 
@@ -264,7 +268,10 @@ export function createBoardRoutes() {
         description: 'Pinned set updated',
         content: { 'application/json': { schema: z.object({ ok: z.boolean() }).passthrough() } }
       },
-      400: { description: 'Invalid request', content: { 'application/json': { schema: ErrorResponseSchema } } }
+      400: {
+        description: 'Invalid request',
+        content: { 'application/json': { schema: ErrorResponseSchema } }
+      }
     }
   })
 

@@ -45,33 +45,49 @@ export function BoardsSection({
     boards && boards.boards && boards.boards.length
       ? boards.boards
       : [{ id: 'main', name: 'main', tasks: [], tags: [] }]
-  const pinned = allBoards.filter(b => b.pinned)
-  const base = pinned.length > 0 ? pinned : allBoards
+
+  // Automation boards live on their own row below the standard boards, so an
+  // agent board is distinguishable at a glance without a badge/emoji.
+  const standardBoards = allBoards.filter(b => b.mode !== 'automation')
+  const automationBoards = allBoards.filter(b => b.mode === 'automation')
+
+  // Top bar shows pinned standard boards (server-ordered), capped at the slot
+  // count. Before anyone has pinned, fall back to the first N. The active board
+  // is always surfaced when it's a standard board reached via the picker.
+  const pinned = standardBoards.filter(b => b.pinned)
+  const base = pinned.length > 0 ? pinned : standardBoards
   const topBar = base.slice(0, TOPBAR_BOARD_SLOTS)
-  const boardsList = topBar.some(b => b.id === currentBoardId)
-    ? topBar
-    : [...topBar, ...allBoards.filter(b => b.id === currentBoardId)]
+  const boardsList =
+    topBar.some(b => b.id === currentBoardId) || automationBoards.some(b => b.id === currentBoardId)
+      ? topBar
+      : [...topBar, ...standardBoards.filter(b => b.id === currentBoardId)]
 
   // The server never capped board count; creation is always available now.
   const canAddMoreBoards = true
 
+  const renderBoard = (b: (typeof allBoards)[number]) => (
+    <BoardButton
+      key={b.id}
+      board={b}
+      isActive={currentBoardId === b.id}
+      isDragOver={dragOverFilter === `board:${b.id}`}
+      onSwitch={onBoardSwitch}
+      onContextMenu={onBoardContextMenu}
+      onDragOverFilter={onDragOverFilter}
+      onMoveTasksToBoard={onMoveTasksToBoard}
+      onClearSelection={onClearSelection}
+    />
+  )
+
   return (
     <div className="task-app__boards">
-      <div className="task-app__board-list">
-        {boardsList.map(b => (
-          <BoardButton
-            key={b.id}
-            board={b}
-            isActive={currentBoardId === b.id}
-            isDragOver={dragOverFilter === `board:${b.id}`}
-            onSwitch={onBoardSwitch}
-            onContextMenu={onBoardContextMenu}
-            onDragOverFilter={onDragOverFilter}
-            onMoveTasksToBoard={onMoveTasksToBoard}
-            onClearSelection={onClearSelection}
-          />
-        ))}
-      </div>
+      <div className="task-app__board-list">{boardsList.map(renderBoard)}</div>
+
+      {automationBoards.length > 0 && (
+        <div className="task-app__board-list task-app__board-list--automation">
+          {automationBoards.map(renderBoard)}
+        </div>
+      )}
 
       <div className="task-app__board-actions">
         {canAddMoreBoards && (

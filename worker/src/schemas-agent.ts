@@ -61,9 +61,25 @@ const boardRefParam = z.object({
 
 export const GrantShareInputSchema = z
   .object({
-    name: z.string().optional().openapi({ example: 'tenhands-service', description: 'Grantee display name (PREFERRED — no credential changes hands). Resolved case-insensitively against live registry rows.' }),
-    key: z.string().optional().openapi({ example: 'friend-…', description: 'Grantee access key — a bearer credential; prefer `name`.' }),
-    userId: z.string().optional().openapi({ description: 'Grantee userId, if you already have it.' }),
+    name: z
+      .string()
+      .optional()
+      .openapi({
+        example: 'tenhands-service',
+        description:
+          'Grantee display name (PREFERRED — no credential changes hands). Resolved case-insensitively against live registry rows.'
+      }),
+    key: z
+      .string()
+      .optional()
+      .openapi({
+        example: 'friend-…',
+        description: 'Grantee access key — a bearer credential; prefer `name`.'
+      }),
+    userId: z
+      .string()
+      .optional()
+      .openapi({ description: 'Grantee userId, if you already have it.' }),
     level: z.enum(['readonly', 'contributor']).openapi({ example: 'contributor' })
   })
   .openapi('GrantShareInput')
@@ -80,7 +96,9 @@ export const GrantShareResponseSchema = z
         tier: z.string().nullable(),
         level: z.enum(['readonly', 'contributor'])
       })
-      .openapi({ description: 'Echo of what was granted, so the owner can confirm the identity + tier.' })
+      .openapi({
+        description: 'Echo of what was granted, so the owner can confirm the identity + tier.'
+      })
   })
   .openapi('GrantShareResponse')
 
@@ -98,7 +116,11 @@ export const UserSearchResponseSchema = z
 export const ShareRowSchema = z
   .object({
     granteeUserId: z.string(),
-    name: z.string().nullable().optional().openapi({ description: 'Grantee display name (resolved from the registry).' }),
+    name: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ description: 'Grantee display name (resolved from the registry).' }),
     tier: z.string().nullable().optional(),
     level: z.enum(['readonly', 'contributor']),
     createdAt: z.string()
@@ -129,8 +151,16 @@ export const ActivateInputSchema = z
     schemaId: z.string().nullable().optional(),
     schemaVersion: z.number().nullable().optional(),
     repo: z.string().nullable().optional(),
-    dryRun: z.boolean().optional().openapi({ description: 'Preview + digest only; writes nothing.' }),
-    digest: z.string().optional().openapi({ description: 'The dryRun digest, echoed on commit (stale ⇒ 409 DIGEST_MISMATCH).' })
+    dryRun: z
+      .boolean()
+      .optional()
+      .openapi({ description: 'Preview + digest only; writes nothing.' }),
+    digest: z
+      .string()
+      .optional()
+      .openapi({
+        description: 'The dryRun digest, echoed on commit (stale ⇒ 409 DIGEST_MISMATCH).'
+      })
   })
   .openapi('ActivateAutomationInput')
 
@@ -180,7 +210,9 @@ export const RepoValidateResponseSchema = z
     repo: z.string().openapi({ example: 'WolffM/hadoku-task' }),
     valid: z.boolean(),
     /** GitHub can't distinguish "doesn't exist" from "private + no access" — both 404. */
-    reason: z.enum(['ok', 'not_found_or_no_access', 'bad_format', 'token', 'error']).openapi({ example: 'ok' }),
+    reason: z
+      .enum(['ok', 'not_found_or_no_access', 'bad_format', 'token', 'error'])
+      .openapi({ example: 'ok' }),
     private: z.boolean().optional(),
     defaultBranch: z.string().optional(),
     message: z.string().optional()
@@ -245,8 +277,16 @@ export const ReleaseInputSchema = z
     notes: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
     outcome: z.string().nullable().optional(),
-    ifCurrentLane: z.string().optional().openapi({ description: 'Abort with 409 LANE_CHANGED unless the task is still in this lane.' }),
-    complete: z.boolean().optional().openapi({ description: 'Archive the task on release (claim-gated).' })
+    ifCurrentLane: z
+      .string()
+      .optional()
+      .openapi({
+        description: 'Abort with 409 LANE_CHANGED unless the task is still in this lane.'
+      }),
+    complete: z
+      .boolean()
+      .optional()
+      .openapi({ description: 'Archive the task on release (claim-gated).' })
   })
   .openapi('ReleaseInput')
 
@@ -294,7 +334,10 @@ export const ChangeRowSchema = z
 export const ChangesResponseSchema = z
   .object({
     changes: z.array(ChangeRowSchema),
-    cursor: z.string().nullable().openapi({ description: 'Pass as the next `since`. Null when the feed had no rows.' })
+    cursor: z
+      .string()
+      .nullable()
+      .openapi({ description: 'Pass as the next `since`. Null when the feed had no rows.' })
   })
   .openapi('ChangesResponse')
 

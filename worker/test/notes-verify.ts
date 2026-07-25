@@ -126,7 +126,11 @@ async function main() {
   })
   check('create with notes → 200', r.status === 200, `status=${r.status}`)
   let t = await getTask(env, 'task-1')
-  check('notes returned on read', t?.notes === '## Plan\n- step one\n- step two', JSON.stringify(t?.notes))
+  check(
+    'notes returned on read',
+    t?.notes === '## Plan\n- step one\n- step two',
+    JSON.stringify(t?.notes)
+  )
 
   // ---------------------------------------------------------------------
   section('2. PATCH updates notes; empty string clears')
@@ -163,7 +167,11 @@ async function main() {
   r = await req(env, 'PATCH', '/task/api/task-1', { notes: huge })
   check('update oversized notes → 413', r.status === 413, `status=${r.status}`)
   t = await getTask(env, 'task-1')
-  check('the oversized update was NOT applied (notes still "keep me")', t?.notes === 'keep me', JSON.stringify(t?.notes))
+  check(
+    'the oversized update was NOT applied (notes still "keep me")',
+    t?.notes === 'keep me',
+    JSON.stringify(t?.notes)
+  )
 
   // ---------------------------------------------------------------------
   section('5. Exactly at the cap is allowed')

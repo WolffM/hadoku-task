@@ -50,11 +50,19 @@ export async function resolveBoardAccess(
 ): Promise<BoardResolution | null> {
   // 1. Own board (by slug or handle) — the common path, one indexed lookup.
   const own = await db
-    .prepare('SELECT id, mode, lanes FROM boards WHERE user_id = ? AND (id = ? OR handle = ?) LIMIT 1')
+    .prepare(
+      'SELECT id, mode, lanes FROM boards WHERE user_id = ? AND (id = ? OR handle = ?) LIMIT 1'
+    )
     .bind(callerId, ref, ref)
     .first<{ id: string; mode: string; lanes: string | null }>()
   if (own) {
-    return { ownerId: callerId, boardId: own.id, access: 'owner', mode: own.mode, lanesJson: own.lanes }
+    return {
+      ownerId: callerId,
+      boardId: own.id,
+      access: 'owner',
+      mode: own.mode,
+      lanesJson: own.lanes
+    }
   }
 
   // 2. A board shared with the caller — addressable ONLY by its handle.

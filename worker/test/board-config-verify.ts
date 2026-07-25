@@ -157,7 +157,11 @@ async function main() {
   }
   let boards = await getBoards(env)
   check('8 boards exist (>5, server never capped)', boards.length === 8, `n=${boards.length}`)
-  check('all default to unpinned', boards.every(b => !b.pinned), JSON.stringify(boards.map(b => b.pinned)))
+  check(
+    'all default to unpinned',
+    boards.every(b => !b.pinned),
+    JSON.stringify(boards.map(b => b.pinned))
+  )
 
   // ---------------------------------------------------------------------
   section('2. PUT /boards/pinned sets the pinned set AND its order')
@@ -180,7 +184,10 @@ async function main() {
     boards[0].position === 0 && boards[1].position === 1 && boards[2].position === 2,
     JSON.stringify(boards.slice(0, 3).map(b => b.position))
   )
-  check('unpinned boards keep pinned=false', boards.slice(3).every(b => !b.pinned))
+  check(
+    'unpinned boards keep pinned=false',
+    boards.slice(3).every(b => !b.pinned)
+  )
 
   // ---------------------------------------------------------------------
   section('3. Pin order + state survive a re-read (board_prefs persisted)')
@@ -199,8 +206,15 @@ async function main() {
   check('re-pin → 200', r.status === 200, `status=${r.status}`)
   boards = await getBoards(env)
   const nowPinned = boards.filter(b => b.pinned).map(b => b.id)
-  check('exactly board-1, board-2 pinned now', JSON.stringify(nowPinned) === JSON.stringify(['board-1', 'board-2']), JSON.stringify(nowPinned))
-  check('board-3 + main are unpinned again', !boards.find(b => b.id === 'board-3')?.pinned && !boards.find(b => b.id === 'main')?.pinned)
+  check(
+    'exactly board-1, board-2 pinned now',
+    JSON.stringify(nowPinned) === JSON.stringify(['board-1', 'board-2']),
+    JSON.stringify(nowPinned)
+  )
+  check(
+    'board-3 + main are unpinned again',
+    !boards.find(b => b.id === 'board-3')?.pinned && !boards.find(b => b.id === 'main')?.pinned
+  )
 
   // ---------------------------------------------------------------------
   section('5. PATCH renames a board')
@@ -208,7 +222,11 @@ async function main() {
   r = await req(env, 'PATCH', '/task/api/boards/board-1', { body: { name: 'Renamed One' } })
   check('PATCH rename → 200', r.status === 200, `status=${r.status}`)
   boards = await getBoards(env)
-  check('board-1 name updated', boards.find(b => b.id === 'board-1')?.name === 'Renamed One', JSON.stringify(boards.find(b => b.id === 'board-1')))
+  check(
+    'board-1 name updated',
+    boards.find(b => b.id === 'board-1')?.name === 'Renamed One',
+    JSON.stringify(boards.find(b => b.id === 'board-1'))
+  )
 
   // ---------------------------------------------------------------------
   section('6. Reorder goes through board-collection OCC (stale If-Match → 409)')

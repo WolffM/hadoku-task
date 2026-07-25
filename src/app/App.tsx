@@ -31,7 +31,7 @@ import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
 import { getThemeIcon } from './themeConfig'
 import type { ThemeName } from './types'
 import { BoardsSection } from '../components/BoardsSection'
-import { ViewSwitcher, type ViewType } from '../components/ViewSwitcher'
+import type { ViewType } from '../components/ViewSwitcher'
 import { TagFiltersSection } from '../components/TagFiltersSection'
 import { TaskLayout } from '../components/TaskLayout'
 // Eager import: lazy() pointed at a dynamic chunk that broke when index.js
@@ -376,92 +376,92 @@ export default function App(props: TaskAppProps = {}) {
           onPendingOperation={modals.setPendingTaskOperation}
         />
 
-        <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
+        {currentView === 'board' && (
+          <div className="task-app__controls">
+            <input
+              ref={inputRef}
+              className="task-app__input"
+              placeholder={placeholder}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handlers.handleAddTask((e.target as HTMLInputElement).value)
+                }
+                if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault()
+                  inputRef.current?.focus()
+                }
+              }}
+            />
+          </div>
+        )}
+
+        <TagFiltersSection
+          tags={allTags}
+          selectedFilters={selectedFilters}
+          dragOverFilter={dragAndDrop.dragOverFilter}
+          userType={userType}
+          onToggleFilter={tag => {
+            setSelectedFilters(prev => {
+              const copy = new Set(prev)
+              if (copy.has(tag)) copy.delete(tag)
+              else copy.add(tag)
+              return copy
+            })
+          }}
+          onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
+          onDragOver={dragAndDrop.onFilterDragOver}
+          onDragLeave={dragAndDrop.onFilterDragLeave}
+          onDrop={dragAndDrop.onFilterDrop}
+          onCreateTagClick={() => {
+            modals.setInputValue('')
+            modals.setShowNewTagDialog(true)
+          }}
+          onPendingOperation={modals.setPendingTaskOperation}
+          onRefresh={initialLoad}
+          onShowToast={showToast}
+          onShareBoard={() => modals.setShowShareDialog(true)}
+          canShareBoard={(() => {
+            const b = boards?.boards?.find(x => x.id === currentBoardId)
+            return !!b && (!b.access || b.access === 'owner')
+          })()}
+          currentView={currentView}
+          onToggleCalendar={() => setCurrentView(v => (v === 'board' ? 'calendar' : 'board'))}
+        />
 
         {currentView === 'board' ? (
-          <>
-            <div className="task-app__controls">
-              <input
-                ref={inputRef}
-                className="task-app__input"
-                placeholder={placeholder}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handlers.handleAddTask((e.target as HTMLInputElement).value)
-                  }
-                  if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault()
-                    inputRef.current?.focus()
-                  }
-                }}
-              />
-            </div>
-
-            <TagFiltersSection
-              tags={allTags}
-              selectedFilters={selectedFilters}
-              dragOverFilter={dragAndDrop.dragOverFilter}
-              userType={userType}
-              onToggleFilter={tag => {
-                setSelectedFilters(prev => {
-                  const copy = new Set(prev)
-                  if (copy.has(tag)) copy.delete(tag)
-                  else copy.add(tag)
-                  return copy
-                })
-              }}
-              onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
-              onDragOver={dragAndDrop.onFilterDragOver}
-              onDragLeave={dragAndDrop.onFilterDragLeave}
-              onDrop={dragAndDrop.onFilterDrop}
-              onCreateTagClick={() => {
-                modals.setInputValue('')
-                modals.setShowNewTagDialog(true)
-              }}
-              onPendingOperation={modals.setPendingTaskOperation}
-              onRefresh={initialLoad}
-              onShowToast={showToast}
-              onShareBoard={() => modals.setShowShareDialog(true)}
-              canShareBoard={(() => {
-                const b = boards?.boards?.find(x => x.id === currentBoardId)
-                return !!b && (!b.access || b.access === 'owner')
-              })()}
-            />
-
-            <TaskLayout
-              tasks={tasks}
-              topTags={topTags}
-              boardType={boardType}
-              isMobile={isMobile}
-              filters={Array.from(selectedFilters)}
-              selectedIds={dragAndDrop.selectedIds}
-              onSelectionStart={dragAndDrop.selectionStartHandler}
-              onSelectionMove={dragAndDrop.selectionMoveHandler}
-              onSelectionEnd={dragAndDrop.selectionEndHandler}
-              sortDirections={sortHook.sortDirections}
-              dragOverTag={dragAndDrop.dragOverTag}
-              pendingOperations={pendingOperations}
-              onComplete={completeTask}
-              onDelete={deleteTask}
-              onEditTag={handlers.handleEditTag}
-              onSetNotes={setTaskNotes}
-              onDragStart={dragAndDrop.onDragStart}
-              onDragEnd={dragAndDrop.onDragEnd}
-              onDragOver={dragAndDrop.onDragOver}
-              onDragLeave={dragAndDrop.onDragLeave}
-              onDrop={dragAndDrop.onDrop}
-              toggleSort={sortHook.toggleSort}
-              sortTasksByAge={sortHook.sortTasksByAge}
-              getSortIcon={sortHook.getSortIcon}
-              getSortTitle={sortHook.getSortTitle}
-              deleteTag={handlers.handleDeleteTag}
-              onDeletePersistedTag={deleteTagOnBoard}
-              showCompleteButton={showCompleteButton}
-              showDeleteButton={showDeleteButton}
-              showTagButton={showTagButton}
-            />
-          </>
+          <TaskLayout
+            tasks={tasks}
+            topTags={topTags}
+            boardType={boardType}
+            isMobile={isMobile}
+            filters={Array.from(selectedFilters)}
+            selectedIds={dragAndDrop.selectedIds}
+            onSelectionStart={dragAndDrop.selectionStartHandler}
+            onSelectionMove={dragAndDrop.selectionMoveHandler}
+            onSelectionEnd={dragAndDrop.selectionEndHandler}
+            sortDirections={sortHook.sortDirections}
+            dragOverTag={dragAndDrop.dragOverTag}
+            pendingOperations={pendingOperations}
+            onComplete={completeTask}
+            onDelete={deleteTask}
+            onEditTag={handlers.handleEditTag}
+            onSetNotes={setTaskNotes}
+            onDragStart={dragAndDrop.onDragStart}
+            onDragEnd={dragAndDrop.onDragEnd}
+            onDragOver={dragAndDrop.onDragOver}
+            onDragLeave={dragAndDrop.onDragLeave}
+            onDrop={dragAndDrop.onDrop}
+            toggleSort={sortHook.toggleSort}
+            sortTasksByAge={sortHook.sortTasksByAge}
+            getSortIcon={sortHook.getSortIcon}
+            getSortTitle={sortHook.getSortTitle}
+            deleteTag={handlers.handleDeleteTag}
+            onDeletePersistedTag={deleteTagOnBoard}
+            showCompleteButton={showCompleteButton}
+            showDeleteButton={showDeleteButton}
+            showTagButton={showTagButton}
+          />
         ) : (
           <CalendarDayView
             tasks={tasks}

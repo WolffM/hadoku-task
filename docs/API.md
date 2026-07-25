@@ -699,7 +699,7 @@ grantee three ways, **preferred first** — no bearer credential need change han
 
 - `{ name, level }` — **display name** (recommended). Resolved case-insensitively against live
   registry rows (retired rows excluded), the same way name-uniqueness is enforced. → `404
-  NAME_NOT_FOUND` if no live key has that name; `409 NO_USER_ID` if it exists but never signed in.
+NAME_NOT_FOUND` if no live key has that name; `409 NO_USER_ID` if it exists but never signed in.
 - `{ userId, level }` — a stable userId if you already have one.
 - `{ key, level }` — the grantee's raw access key (a bearer credential; prefer `name`).
 

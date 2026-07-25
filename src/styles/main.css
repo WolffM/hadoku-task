@@ -476,15 +476,29 @@
   flex-wrap: wrap;
 }
 
-/* Refresh + share cluster, pushed to the far right of the filters bar. Only the
-   FIRST button carries the auto-margin — the share button reuses .sync-btn (which
-   also sets margin-left:auto), so without this reset a second auto-margin would
-   split the free space and strand refresh in the middle. */
-.task-app__filter-sync {
+/* Calendar + refresh + share cluster, pushed to the far right of the filters bar.
+   Only the FIRST (calendar) carries the auto-margin — all three reuse .sync-btn
+   (which sets margin-left:auto), so the others must reset it, else multiple
+   auto-margins split the free space and strand buttons in the middle. */
+.task-app__filter-calendar {
   margin-left: auto;
 }
+.task-app__filter-sync,
 .task-app__filter-share {
   margin-left: 0;
+}
+.task-app__filter-calendar.is-active {
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+  border-radius: var(--hdk-radius-sm);
+}
+
+/* Automation boards get their own row below the standard boards (visual split,
+   no badge). A subtle top divider separates the two rows. */
+.task-app__board-list--automation {
+  margin-top: var(--hdk-space-xs);
+  padding-top: var(--hdk-space-xs);
+  border-top: 1px dashed var(--color-border);
 }
 
 /* Filter buttons - use shared .pill-btn from buttons.css */

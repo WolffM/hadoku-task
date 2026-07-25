@@ -11,8 +11,5 @@
     "moduleResolution": "node",
     "incremental": false
   },
-  "include": [
-    "src/server/**/*.ts",
-    "src/domain/**/*.ts"
-  ]
+  "include": ["src/server/**/*.ts", "src/domain/**/*.ts"]
 }

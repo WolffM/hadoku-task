@@ -442,13 +442,29 @@ export function createApi(
     /** List a board's grantees (owner only), annotated with display name + tier. */
     async listShares(
       boardRef: string
-    ): Promise<Array<{ granteeUserId: string; name?: string | null; tier?: string | null; level: string; createdAt: string }>> {
+    ): Promise<
+      Array<{
+        granteeUserId: string
+        name?: string | null
+        tier?: string | null
+        level: string
+        createdAt: string
+      }>
+    > {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/shares`, {
           headers: adminHeaders(userType, sessionId)
         })
         if (!res.ok) return []
-        const data = (await res.json()) as { shares?: Array<{ granteeUserId: string; name?: string | null; tier?: string | null; level: string; createdAt: string }> }
+        const data = (await res.json()) as {
+          shares?: Array<{
+            granteeUserId: string
+            name?: string | null
+            tier?: string | null
+            level: string
+            createdAt: string
+          }>
+        }
         return data.shares ?? []
       } catch {
         return []
@@ -459,7 +475,11 @@ export function createApi(
     async grantShare(
       boardRef: string,
       input: { name?: string; userId?: string; level: 'readonly' | 'contributor' }
-    ): Promise<{ ok: boolean; error?: string; granted?: { name: string | null; tier: string | null; level: string } }> {
+    ): Promise<{
+      ok: boolean
+      error?: string
+      granted?: { name: string | null; tier: string | null; level: string }
+    }> {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/shares`, {
           method: 'POST',
@@ -507,13 +527,17 @@ export function createApi(
       }
     ): Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }> {
       try {
-        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/activate-automation`, {
-          method: 'POST',
-          headers: adminHeaders(userType, sessionId),
-          body: JSON.stringify(payload)
-        })
+        const res = await fetch(
+          `/task/api/boards/${encodeURIComponent(boardRef)}/activate-automation`,
+          {
+            method: 'POST',
+            headers: adminHeaders(userType, sessionId),
+            body: JSON.stringify(payload)
+          }
+        )
         const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
-        if (!res.ok) return { ok: false, error: data.error ?? `Error ${res.status}`, code: data.code }
+        if (!res.ok)
+          return { ok: false, error: data.error ?? `Error ${res.status}`, code: data.code }
         return { ok: true, result: data }
       } catch {
         return { ok: false, error: 'Network error' }
@@ -523,10 +547,13 @@ export function createApi(
     /** Deactivate automation, restoring the standard tag list (owner only). */
     async deactivateAutomation(boardRef: string): Promise<{ ok: boolean; error?: string }> {
       try {
-        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/deactivate-automation`, {
-          method: 'POST',
-          headers: adminHeaders(userType, sessionId)
-        })
+        const res = await fetch(
+          `/task/api/boards/${encodeURIComponent(boardRef)}/deactivate-automation`,
+          {
+            method: 'POST',
+            headers: adminHeaders(userType, sessionId)
+          }
+        )
         if (!res.ok) return { ok: false, error: `Error ${res.status}` }
         return { ok: true }
       } catch {
@@ -537,7 +564,14 @@ export function createApi(
     /** Validate a repo (owner/name) by probing GitHub through the worker. */
     async validateRepo(
       repo: string
-    ): Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }> {
+    ): Promise<{
+      repo: string
+      valid: boolean
+      reason: string
+      private?: boolean
+      defaultBranch?: string
+      message?: string
+    }> {
       try {
         const res = await fetch(`/task/api/repos/validate?repo=${encodeURIComponent(repo)}`, {
           headers: adminHeaders(userType, sessionId)

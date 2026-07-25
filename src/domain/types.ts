@@ -274,7 +274,11 @@ export class NotesTooLargeError extends DomainError {
  */
 export class LaneNotEditableError extends DomainError {
   constructor(lane: string) {
-    super(`Lane "${lane}" is agent-owned; the human path can't move tasks into it`, 'LANE_NOT_EDITABLE', 403)
+    super(
+      `Lane "${lane}" is agent-owned; the human path can't move tasks into it`,
+      'LANE_NOT_EDITABLE',
+      403
+    )
     this.name = 'LaneNotEditableError'
   }
 }
@@ -300,7 +304,11 @@ export class LaneInvalidError extends DomainError {
  */
 export class BoardSchemaLockedError extends DomainError {
   constructor() {
-    super('Board schema is locked while automation is active; re-activate to change lanes', 'BOARD_SCHEMA_LOCKED', 409)
+    super(
+      'Board schema is locked while automation is active; re-activate to change lanes',
+      'BOARD_SCHEMA_LOCKED',
+      409
+    )
     this.name = 'BoardSchemaLockedError'
   }
 }
@@ -313,7 +321,11 @@ export class BoardSchemaLockedError extends DomainError {
  */
 export class ActivationDigestMismatchError extends DomainError {
   constructor(public readonly currentDigest: string) {
-    super('Activation digest is stale; re-run the dry-run preview and retry', 'DIGEST_MISMATCH', 409)
+    super(
+      'Activation digest is stale; re-run the dry-run preview and retry',
+      'DIGEST_MISMATCH',
+      409
+    )
     this.name = 'ActivationDigestMismatchError'
   }
 }
@@ -378,10 +390,12 @@ export class LaneUnknownError extends DomainError {
  * HTTP status: 409 Conflict
  */
 export class LaneChangedError extends DomainError {
-  constructor(
-    public readonly currentLane: string | null
-  ) {
-    super(`Task's lane changed since claim; it is now "${currentLane ?? '(inbox)'}"`, 'LANE_CHANGED', 409)
+  constructor(public readonly currentLane: string | null) {
+    super(
+      `Task's lane changed since claim; it is now "${currentLane ?? '(inbox)'}"`,
+      'LANE_CHANGED',
+      409
+    )
     this.name = 'LaneChangedError'
   }
 }
