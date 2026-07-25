@@ -71,6 +71,15 @@ export function TaskItem({
     }
   }
 
+  // A draggable element swallows mousedown-drag to start an HTML5 drag, so text
+  // inside it can't be selected. Pressing inside a text region turns the row's
+  // draggable OFF for that gesture, which hands the drag back to the browser as a
+  // normal text selection; it flips back on mouseup so dragging the card
+  // elsewhere is unaffected.
+  const [textDragSuppressed, setTextDragSuppressed] = useState(false)
+  const suppressDragForText = () => setTextDragSuppressed(true)
+  const restoreDrag = () => setTextDragSuppressed(false)
+
   // Inline title editing: click the title to edit it in place.
   const [editingTitle, setEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
@@ -103,8 +112,23 @@ export function TaskItem({
     <li
       className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''}`}
       data-task-id={task.id}
-      draggable={isDraggable && !editingTitle}
-      onDragStart={onDragStart ? e => onDragStart(e, task.id) : undefined}
+      draggable={isDraggable && !editingTitle && !textDragSuppressed}
+      onMouseUp={restoreDrag}
+      onMouseLeave={restoreDrag}
+      onDragStart={
+        onDragStart
+          ? e => {
+              // Never start a drag out from under an active text selection inside
+              // this card — the user is selecting, not moving.
+              const sel = window.getSelection()
+              if (sel && !sel.isCollapsed && e.currentTarget.contains(sel.anchorNode)) {
+                e.preventDefault()
+                return
+              }
+              onDragStart(e, task.id)
+            }
+          : undefined
+      }
       onDragEnd={e => {
         // Remove dragging class if present
         const el = e.currentTarget as HTMLElement
@@ -167,7 +191,7 @@ export function TaskItem({
           </div>
         )}
 
-        <div className="task-app__item-meta-row">
+        <div className="task-app__item-meta-row" onMouseDown={suppressDragForText}>
           {task.tag ? (
             <div className="task-app__item-tag">{formatTagsForDisplay(task.tag)}</div>
           ) : (
@@ -177,7 +201,7 @@ export function TaskItem({
         </div>
 
         {notesOpen && (
-          <div className="task-app__item-notes">
+          <div className="task-app__item-notes" onMouseDown={suppressDragForText}>
             {editingNotes ? (
               <>
                 <textarea

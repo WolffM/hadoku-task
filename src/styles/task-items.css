@@ -80,6 +80,21 @@
   white-space: normal;
 }
 
+/* Text regions on a card stay selectable even though the row is draggable.
+   TaskItem drops the row's `draggable` for the duration of a press that starts
+   here, which is what actually lets the browser select instead of drag; these
+   rules give the matching affordance (I-beam) and keep selection enabled. */
+.task-app__item-notes,
+.task-app__notes-body,
+.task-app__item-meta-row {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.task-app__notes-body {
+  cursor: text;
+}
+
 /* Click-to-rename affordance: only hint at it when a rename handler exists. */
 .task-app__item-title.is-editable {
   cursor: text;
