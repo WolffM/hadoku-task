@@ -534,6 +534,28 @@ export function createApi(
       }
     },
 
+    /** Validate a repo (owner/name) by probing GitHub through the worker. */
+    async validateRepo(
+      repo: string
+    ): Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }> {
+      try {
+        const res = await fetch(`/task/api/repos/validate?repo=${encodeURIComponent(repo)}`, {
+          headers: adminHeaders(userType, sessionId)
+        })
+        if (!res.ok) return { repo, valid: false, reason: 'error', message: `Error ${res.status}` }
+        return (await res.json()) as {
+          repo: string
+          valid: boolean
+          reason: string
+          private?: boolean
+          defaultBranch?: string
+          message?: string
+        }
+      } catch {
+        return { repo, valid: false, reason: 'error', message: 'Network error' }
+      }
+    },
+
     // User preferences moved to @wolffm/prefs-client (src/prefs/taskPrefs.ts).
     // The legacy GET/PUT /task/api/preferences path is gone from the client;
     // the worker route is retained for the 30d migration window (Tranche B).

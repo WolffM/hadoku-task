@@ -18,6 +18,11 @@ export interface Env {
   // prefs-api. Optional so local/dev without the binding still boots (grant-by-key
   // then returns a clear error; grant-by-userId still works).
   SESSIONS_KV?: KVNamespace
+  // GitHub PAT (read scope) for validating a board's `repo` against the GitHub
+  // API. Private WolffM repos 404 unauthenticated, so a token is needed for a
+  // real check. Resolved from the HADOKU_SITE_TOKEN vault key. Optional: without
+  // it, validation falls back to an unauthenticated probe (public repos only).
+  GITHUB_READ_TOKEN?: string
 }
 
 /**

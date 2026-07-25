@@ -141,6 +141,11 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     async deactivateAutomation(_boardRef: string): Promise<{ ok: boolean; error?: string }> {
       return { ok: false, error: 'Sign in to configure automation boards.' }
     },
+    async validateRepo(
+      repo: string
+    ): Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }> {
+      return { repo, valid: false, reason: 'token', message: 'Sign in to validate repos.' }
+    },
 
     async getTasks(boardId: string = 'main'): Promise<TasksFile> {
       return storage.getTasks(userType, sessionId, boardId)

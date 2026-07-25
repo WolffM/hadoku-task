@@ -61,6 +61,9 @@ export interface ShareApi {
     }
   ) => Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }>
   deactivateAutomation: (boardRef: string) => Promise<{ ok: boolean; error?: string }>
+  validateRepo: (
+    repo: string
+  ) => Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }>
 }
 
 export interface EditBoardsModalProps {
@@ -602,9 +605,27 @@ function AutomationPanel({
   const [preview, setPreview] = useState<ActivationPreview | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [repo, setRepo] = useState((board.repo as string | undefined) ?? '')
+  const [repoStatus, setRepoStatus] = useState<
+    { valid: boolean; private?: boolean; defaultBranch?: string; message?: string } | null
+  >(null)
+  const [repoChecking, setRepoChecking] = useState(false)
 
-  // Parse the pasted JSON into an activation payload (lanes + opaque labels).
-  const parsePayload = (): { lanes: unknown; schemaId?: string; schemaVersion?: number } | null => {
+  const checkRepo = () => {
+    const r = repo.trim()
+    setRepoStatus(null)
+    if (!r) return // repo is optional
+    setRepoChecking(true)
+    void shareApi
+      .validateRepo(r)
+      .then(res => setRepoStatus(res))
+      .finally(() => setRepoChecking(false))
+  }
+  // A non-empty repo must validate before activation; empty is allowed.
+  const repoBlocks = repo.trim() !== '' && !(repoStatus && repoStatus.valid)
+
+  // Parse the pasted JSON into an activation payload (lanes + opaque labels + repo).
+  const parsePayload = (): { lanes: unknown; schemaId?: string; schemaVersion?: number; repo?: string } | null => {
     try {
       const obj = JSON.parse(raw) as Record<string, unknown>
       const lanes = Array.isArray(obj.lanes) ? obj.lanes : Array.isArray(obj) ? obj : null
@@ -615,7 +636,8 @@ function AutomationPanel({
       return {
         lanes,
         schemaId: typeof obj.schemaId === 'string' ? obj.schemaId : undefined,
-        schemaVersion: typeof obj.schemaVersion === 'number' ? obj.schemaVersion : undefined
+        schemaVersion: typeof obj.schemaVersion === 'number' ? obj.schemaVersion : undefined,
+        repo: repo.trim() || (typeof obj.repo === 'string' ? obj.repo : undefined)
       }
     } catch {
       setErr('That is not valid JSON.')
@@ -697,6 +719,36 @@ function AutomationPanel({
         (its lane contract). This is <strong>destructive</strong> — it replaces the board&apos;s tags
         with the fixed lanes. Preview first.
       </p>
+      <div className="automation-panel__repo">
+        <input
+          className="automation-panel__repo-input"
+          type="text"
+          placeholder="Repo (owner/name), e.g. WolffM/my-repo"
+          value={repo}
+          onChange={e => {
+            setRepo(e.target.value)
+            setRepoStatus(null)
+          }}
+          onBlur={checkRepo}
+          onKeyDown={e => {
+            if (e.key === 'Enter') checkRepo()
+          }}
+          aria-label="Repo"
+        />
+        {repoChecking && <span className="automation-panel__repo-status is-checking">checking…</span>}
+        {!repoChecking && repoStatus?.valid && (
+          <span className="automation-panel__repo-status is-ok">
+            ✓ {repoStatus.private ? 'private' : 'public'}
+            {repoStatus.defaultBranch ? ` · ${repoStatus.defaultBranch}` : ''}
+          </span>
+        )}
+        {!repoChecking && repoStatus && !repoStatus.valid && (
+          <span className="automation-panel__repo-status is-bad" title={repoStatus.message}>
+            ✗ {repoStatus.message ?? 'not found'}
+          </span>
+        )}
+      </div>
+
       <textarea
         className="automation-panel__json"
         placeholder={'{\n  "schemaId": "autoland",\n  "schemaVersion": 1,\n  "lanes": [ … ]\n}'}
@@ -742,8 +794,14 @@ function AutomationPanel({
         <button
           className="automation-panel__activate-btn"
           onClick={commit}
-          disabled={busy || !preview}
-          title={preview ? 'Activate (destructive)' : 'Preview first'}
+          disabled={busy || !preview || repoBlocks}
+          title={
+            repoBlocks
+              ? 'Enter a valid repo (or clear it) first'
+              : preview
+                ? 'Activate (destructive)'
+                : 'Preview first'
+          }
         >
           Activate
         </button>

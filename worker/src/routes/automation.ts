@@ -16,15 +16,84 @@ import {
   ActivateInputSchema,
   ActivateResponseSchema,
   DeactivateResponseSchema,
+  RepoValidateResponseSchema,
   DomainErrorSchema
 } from '../schemas-agent'
 import type { AppContext } from '../types'
+
+/** Probe GitHub to validate a board's `repo` (owner/name). 404 is ambiguous —
+ * GitHub returns it for both "no such repo" and "private repo the token can't
+ * see" (it won't leak private-repo existence), so the caller phrases it as both. */
+async function validateRepo(
+  repo: string,
+  token: string | undefined
+): Promise<{ repo: string; valid: boolean; reason: string; private?: boolean; defaultBranch?: string; message?: string }> {
+  const trimmed = repo.trim()
+  if (!/^[\w.-]+\/[\w.-]+$/.test(trimmed)) {
+    return { repo: trimmed, valid: false, reason: 'bad_format', message: 'Use the "owner/repo" form.' }
+  }
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'hadoku-task'
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+  try {
+    const res = await fetch(`https://api.github.com/repos/${trimmed}`, { headers })
+    if (res.status === 200) {
+      const data = (await res.json()) as { private?: boolean; default_branch?: string; full_name?: string }
+      return {
+        repo: data.full_name ?? trimmed,
+        valid: true,
+        reason: 'ok',
+        private: data.private,
+        defaultBranch: data.default_branch
+      }
+    }
+    if (res.status === 404) {
+      return {
+        repo: trimmed,
+        valid: false,
+        reason: 'not_found_or_no_access',
+        message: token
+          ? 'No such repo, or it is private and our GitHub token lacks access — grant the WolffM token access to it, then re-check.'
+          : 'No such public repo (private-repo validation needs the GitHub token binding).'
+      }
+    }
+    if (res.status === 401 || res.status === 403) {
+      return { repo: trimmed, valid: false, reason: 'token', message: 'GitHub rejected our token (scope/rate limit).' }
+    }
+    return { repo: trimmed, valid: false, reason: 'error', message: `GitHub returned ${res.status}.` }
+  } catch {
+    return { repo: trimmed, valid: false, reason: 'error', message: 'Could not reach GitHub.' }
+  }
+}
 
 const jsonErr = { 'application/json': { schema: DomainErrorSchema } }
 const refParam = z.object({ ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' }) })
 
 export function createAutomationRoutes() {
   const app = new OpenAPIHono<AppContext>()
+
+  // Validate a board's repo by probing GitHub. Signed-in only.
+  const repoValidateRoute = createRoute({
+    method: 'get',
+    path: '/repos/validate',
+    tags: ['Automation'],
+    summary: 'Validate a repo against GitHub',
+    request: { query: z.object({ repo: z.string().openapi({ example: 'WolffM/hadoku-task' }) }) },
+    responses: {
+      200: { description: 'Validation result', content: { 'application/json': { schema: RepoValidateResponseSchema } } }
+    }
+  })
+  app.openapi(repoValidateRoute, (async (c: any) => {
+    const auth = c.get('authContext')
+    if (!auth || auth.userType === 'public') {
+      return c.json({ repo: '', valid: false, reason: 'token', message: 'Sign in to validate repos.' })
+    }
+    const { repo } = c.req.valid('query')
+    const result = await validateRepo(repo, c.env.GITHUB_READ_TOKEN)
+    return c.json(result)
+  }) as never)
 
   // Activate (or re-activate) automation — owner only, preview-then-commit.
   const activateRoute = createRoute({

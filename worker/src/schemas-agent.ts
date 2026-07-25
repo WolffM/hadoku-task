@@ -175,6 +175,18 @@ export const DeactivateResponseSchema = z
   })
   .openapi('DeactivateAutomationResponse')
 
+export const RepoValidateResponseSchema = z
+  .object({
+    repo: z.string().openapi({ example: 'WolffM/hadoku-task' }),
+    valid: z.boolean(),
+    /** GitHub can't distinguish "doesn't exist" from "private + no access" — both 404. */
+    reason: z.enum(['ok', 'not_found_or_no_access', 'bad_format', 'token', 'error']).openapi({ example: 'ok' }),
+    private: z.boolean().optional(),
+    defaultBranch: z.string().optional(),
+    message: z.string().optional()
+  })
+  .openapi('RepoValidateResponse')
+
 // ============================================================================
 // Agent claim protocol (§4)
 // ============================================================================

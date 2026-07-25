@@ -577,6 +577,40 @@
   font-size: var(--hdk-text-sm);
   color: var(--color-text-secondary);
 }
+.automation-panel__repo {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-sm);
+  flex-wrap: wrap;
+}
+.automation-panel__repo-input {
+  flex: 1;
+  min-width: 12rem;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__repo-status {
+  font-size: var(--hdk-text-xs);
+}
+.automation-panel__repo-status.is-checking {
+  color: var(--color-text-muted);
+}
+.automation-panel__repo-status.is-ok {
+  color: var(--color-on-success-bg);
+  background: var(--color-success-bg);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+}
+.automation-panel__repo-status.is-bad {
+  color: var(--color-on-danger-bg);
+  background: var(--color-danger-bg);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+}
 .automation-panel__json {
   width: 100%;
   box-sizing: border-box;
