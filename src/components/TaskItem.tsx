@@ -16,6 +16,8 @@ interface TaskItemProps {
   onDelete: (taskId: string) => void
   onEditTag: (taskId: string) => void
   onSetNotes?: (taskId: string, notes: string) => Promise<void>
+  /** Rename the task. Absent ⇒ the title is plain text, not click-to-edit. */
+  onRenameTask?: (taskId: string, title: string) => Promise<void>
   onDragStart?: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   selected?: boolean
@@ -32,6 +34,7 @@ export function TaskItem({
   onDelete,
   onEditTag,
   onSetNotes,
+  onRenameTask,
   onDragStart,
   onDragEnd,
   selected = false,
@@ -68,11 +71,39 @@ export function TaskItem({
     }
   }
 
+  // Inline title editing: click the title to edit it in place.
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState('')
+  const [savingTitle, setSavingTitle] = useState(false)
+
+  const startEditTitle = () => {
+    if (!onRenameTask || isCompleting || isDeleting) return
+    setDraftTitle(task.title)
+    setEditingTitle(true)
+  }
+  const saveTitle = async () => {
+    if (!onRenameTask || savingTitle) return
+    const next = draftTitle.trim()
+    // Nothing to do for an unchanged or emptied title — just close the editor,
+    // so a stray click-and-blur can never blank a task's name.
+    if (!next || next === task.title) {
+      setEditingTitle(false)
+      return
+    }
+    setSavingTitle(true)
+    try {
+      await onRenameTask(task.id, next)
+      setEditingTitle(false)
+    } finally {
+      setSavingTitle(false)
+    }
+  }
+
   return (
     <li
       className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''}`}
       data-task-id={task.id}
-      draggable={isDraggable}
+      draggable={isDraggable && !editingTitle}
       onDragStart={onDragStart ? e => onDragStart(e, task.id) : undefined}
       onDragEnd={e => {
         // Remove dragging class if present
@@ -89,9 +120,52 @@ export function TaskItem({
       }}
     >
       <div className="task-app__item-content">
-        <div className="task-app__item-title" title={task.title}>
-          {task.title}
-        </div>
+        {editingTitle ? (
+          <input
+            className="task-app__title-input"
+            value={draftTitle}
+            autoFocus
+            disabled={savingTitle}
+            onChange={e => setDraftTitle(e.target.value)}
+            // Committing on blur means clicking away saves, which is what a
+            // click-to-edit field is expected to do.
+            onBlur={() => void saveTitle()}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void saveTitle()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setEditingTitle(false)
+              }
+            }}
+            // The row is draggable; without this a text selection inside the
+            // input starts a drag instead of selecting.
+            onDragStart={e => e.preventDefault()}
+            aria-label="Task title"
+          />
+        ) : (
+          <div
+            className={`task-app__item-title ${onRenameTask ? 'is-editable' : ''}`}
+            title={onRenameTask ? 'Click to rename' : task.title}
+            role={onRenameTask ? 'button' : undefined}
+            tabIndex={onRenameTask ? 0 : undefined}
+            onClick={startEditTitle}
+            onKeyDown={
+              onRenameTask
+                ? e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      startEditTitle()
+                    }
+                  }
+                : undefined
+            }
+          >
+            {task.title}
+          </div>
+        )}
 
         <div className="task-app__item-meta-row">
           {task.tag ? (

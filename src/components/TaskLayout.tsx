@@ -29,6 +29,8 @@ interface TaskLayoutProps {
   onDelete: (taskId: string) => void
   onEditTag: (taskId: string) => void
   onSetNotes?: (taskId: string, notes: string) => Promise<void>
+  /** Rename a task from its title, edited inline on the card. */
+  onRenameTask?: (taskId: string, title: string) => Promise<void>
   onDragStart: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent, targetTag: string) => void
@@ -58,6 +60,7 @@ export function TaskLayout({
   onDelete,
   onEditTag,
   onSetNotes,
+  onRenameTask,
   onDragStart,
   onDragEnd,
   selectedIds,
@@ -77,6 +80,25 @@ export function TaskLayout({
   showDeleteButton = true,
   showTagButton = false
 }: TaskLayoutProps) {
+  // Is a task drag in flight? Tracked here rather than in the drag hook because
+  // only the layout needs it: hidden empty lanes must reappear during a drag so
+  // they stay droppable. Wrapping the handlers we already thread to TaskItem
+  // keeps this self-contained.
+  const [isDragging, setIsDragging] = React.useState(false)
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setIsDragging(true)
+    onDragStart(e, taskId)
+  }
+  const handleDragEnd = (e: React.DragEvent) => {
+    setIsDragging(false)
+    onDragEnd?.(e)
+  }
+
+  // Notes are an agent-flow affordance (write a plan → review → work), so the
+  // button only exists on boards that declare notes. Withholding the handler is
+  // what hides it — TaskItem renders the control only when it can save.
+  const notesHandler = boardType.notesEnabled ? onSetNotes : undefined
+
   // Helper to render TaskItems with consistent props
   const renderTaskItems = (taskList: Task[], direction: SortDirection) =>
     sortTasksByAge(taskList, direction).map(task => (
@@ -88,9 +110,10 @@ export function TaskLayout({
         onComplete={onComplete}
         onDelete={onDelete}
         onEditTag={onEditTag}
-        onSetNotes={onSetNotes}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
+        onSetNotes={notesHandler}
+        onRenameTask={onRenameTask}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         selected={selectedIds?.has(task.id) ?? false}
         showCompleteButton={showCompleteButton}
         showDeleteButton={showDeleteButton}
@@ -157,6 +180,7 @@ export function TaskLayout({
   // Decide which top tags are visible. When a filter is active, only show
   // columns that have tasks matching the selected filters. This allows the
   // layout to collapse to a single column when filters reduce visible tags.
+  const laneCandidates = topTags.slice(0, layoutConfig.useTags)
   const visibleTopTags =
     hasActiveFilters && filters
       ? topTags.filter(tag => {
@@ -166,7 +190,14 @@ export function TaskLayout({
             return filters.some(f => taskTags.includes(f))
           })
         })
-      : topTags.slice(0, layoutConfig.useTags)
+      : // Drop empty lanes where the board asks for it (automation declares its
+        // whole lane vocabulary, so most lanes sit empty and the board becomes a
+        // wall of empty columns). Not while a drag is in flight: an empty lane is
+        // still a drop target, and on an automation board dragging is how a task
+        // advances — hiding `approved` while it's empty would make it unreachable.
+        boardType.hideEmptyLanes && !isDragging
+        ? laneCandidates.filter(tag => getTasksByTag(tasks, tag).length > 0)
+        : laneCandidates
 
   // No tags: simple list (use visibleTopTags length so filters can collapse layout)
   if (visibleTopTags.length === 0) {

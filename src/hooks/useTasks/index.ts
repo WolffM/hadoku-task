@@ -431,6 +431,12 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     await reload()
   }
 
+  /** Rename a task (inline title edit on the card). */
+  async function renameTask(taskId: string, title: string) {
+    await api.patchTask(taskId, { title }, currentBoardId)
+    await reload()
+  }
+
   function switchBoard(boardId: string) {
     selectBoard(boardId)
     const { tasks: boardTasks, foundBoard } = extractBoardTasks(boards, boardId)
@@ -475,6 +481,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     bulkUpdateTaskTags,
     deleteTag,
     setTaskNotes,
+    renameTask,
 
     // Board state
     boards,
