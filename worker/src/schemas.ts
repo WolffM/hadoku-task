@@ -25,6 +25,7 @@ export const TaskSchema = z
   .object({
     id: z.string().openapi({ example: '01HXYZ123ABC' }),
     title: z.string().openapi({ example: 'Complete project documentation' }),
+    notes: z.string().nullable().optional().openapi({ example: '## Plan\n1. …', description: 'Markdown body / the plan (§6).' }),
     tag: z.string().nullable().optional().openapi({ example: 'work' }),
     state: z.enum(['Active', 'Deleted', 'Completed']).openapi({ example: 'Active' }),
     createdAt: z.string().openapi({ example: '2024-01-15T10:30:00.000Z' }),

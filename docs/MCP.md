@@ -13,6 +13,13 @@ agents can manage tasks and the calendar across workstreams.
 `GET` on the endpoint returns `405` (this stateless server offers no server→client SSE
 stream); compliant clients fall back to `POST` request/response.
 
+> **HTTP + OpenAPI.** Everything below is also a plain HTTP endpoint (see [API.md](API.md)).
+> The full surface — tasks, boards, sharing, automation, and the agent claim protocol —
+> is described by a **zod-generated OpenAPI spec at `GET /task/api/openapi.json`**, so a
+> non-TS consumer (e.g. Python) can codegen a client and catch drift at build time. The
+> spec is generated from the same schemas that validate requests, so it can't fall out of
+> sync with the server.
+
 ## Auth & routing
 
 The endpoint sits behind edge-router at `/task/api/*`, so it uses the **same auth as the
