@@ -59,5 +59,9 @@ export {
   LaneInvalidError,
   BoardSchemaLockedError,
   ActivationDigestMismatchError,
-  LaneSetInvalidError
+  LaneSetInvalidError,
+  ClaimHeldError,
+  LeaseLostError,
+  LaneUnknownError,
+  LaneChangedError
 } from '../domain/types.js'

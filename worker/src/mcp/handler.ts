@@ -14,7 +14,7 @@ import type { Context } from 'hono'
 import type { AppContext } from '../types'
 import { createD1Storage } from '../routes/d1-storage'
 import { resolveBoardCtx } from '../routes/route-utils'
-import { DEFAULT_BOARD_ID } from '../constants'
+import { DEFAULT_BOARD_ID, DEFAULT_SESSION_ID } from '../constants'
 import { TOOLS, callTool, type ToolCtx } from './tools'
 
 const DEFAULT_PROTOCOL = '2024-11-05'
@@ -41,6 +41,8 @@ export async function handleMcp(c: Context<AppContext>): Promise<Response> {
     // path's masked-key dual-read, matching the HTTP routes.
     storage: createD1Storage(c.env, auth?.legacyId),
     auth,
+    callerId: auth?.sessionId ?? DEFAULT_SESSION_ID,
+    db: c.env.DB as ToolCtx['db'],
     defaultBoard: DEFAULT_BOARD_ID,
     // Share-aware board resolution — identical to the HTTP routes, so a shared
     // handle reaches the owner's data and a readonly grantee's writes are refused.
@@ -86,11 +88,19 @@ export async function handleMcp(c: Context<AppContext>): Promise<Response> {
             })
           } catch (toolErr) {
             // Tool execution errors are returned as a result with isError (per MCP),
-            // so the model sees them rather than the connection failing.
+            // so the model sees them rather than the connection failing. Forward the
+            // structured DomainError `code` (§4.3) so an agent can act on it —
+            // CLAIM_HELD → move on, LEASE_LOST → abort, etc. — instead of parsing a string.
             const message = toolErr instanceof Error ? toolErr.message : String(toolErr)
+            const e = toolErr as { code?: unknown; httpStatus?: unknown }
+            const code = typeof e.code === 'string' ? e.code : undefined
+            const structuredContent = code
+              ? { error: message, code, httpStatus: typeof e.httpStatus === 'number' ? e.httpStatus : undefined }
+              : undefined
             return ok(reqId, {
-              content: [{ type: 'text', text: `Error: ${message}` }],
-              isError: true
+              content: [{ type: 'text', text: code ? `Error [${code}]: ${message}` : `Error: ${message}` }],
+              isError: true,
+              ...(structuredContent ? { structuredContent } : {})
             })
           }
         }

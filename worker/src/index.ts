@@ -38,6 +38,7 @@ import { createPreferencesRoutes } from './routes/preferences'
 import { createBoardRoutes } from './routes/boards'
 import { createShareRoutes } from './routes/shares'
 import { createAutomationRoutes } from './routes/automation'
+import { createAgentRoutes } from './routes/agent'
 import { createTaskRoutes } from './routes/tasks'
 import { handleMcp } from './mcp/handler'
 import { createTagsBatchRoutes } from './routes/tags-batch'
@@ -245,6 +246,11 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // Automation activation (§5.4): owner-only activate / deactivate.
   app.route('/task/api', createAutomationRoutes())
 
+  // Agent claim protocol (§4): claim / heartbeat / set-lane / release / history
+  // / change feed. MUST come before the generic task routes (its /agent/* and
+  // /changes paths are specific, but registering early keeps intent clear).
+  app.route('/task/api', createAgentRoutes())
+
   // Tags and batch operations - MUST come before tasks to avoid /batch-tag matching /:id
   app.route('/task/api', createTagsBatchRoutes())
 
@@ -310,10 +316,18 @@ This API provides endpoints for:
       code?: unknown
       message?: string
       currentVersion?: unknown
+      // Extra actionable fields carried by specific DomainErrors (§4.3): the
+      // claim holder + expiry on CLAIM_HELD, the current lane on LANE_CHANGED.
+      holder?: unknown
+      expiresAt?: unknown
+      currentLane?: unknown
     }
     if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
       const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
       if (typeof domain.currentVersion === 'number') body.currentVersion = domain.currentVersion
+      if (typeof domain.holder === 'string') body.holder = domain.holder
+      if (typeof domain.expiresAt === 'string') body.expiresAt = domain.expiresAt
+      if (domain.currentLane !== undefined) body.currentLane = domain.currentLane
       return c.json(body, domain.httpStatus as 400 | 404 | 409 | 500)
     }
     return errorHandler(err, c)

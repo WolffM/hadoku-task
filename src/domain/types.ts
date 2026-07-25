@@ -329,3 +329,59 @@ export class LaneSetInvalidError extends DomainError {
     this.name = 'LaneSetInvalidError'
   }
 }
+
+// --- Claim-protocol (§4) errors ---
+
+/**
+ * A claim was attempted on a task whose lease is still live — held by another
+ * agent (§4.1). The body carries the current holder + expiry so the caller can
+ * move on. An expired lease is stealable and never raises this.
+ * HTTP status: 409 Conflict
+ */
+export class ClaimHeldError extends DomainError {
+  constructor(
+    public readonly holder: string,
+    public readonly expiresAt: string
+  ) {
+    super(`Task is claimed by ${holder} until ${expiresAt}`, 'CLAIM_HELD', 409)
+    this.name = 'ClaimHeldError'
+  }
+}
+
+/**
+ * A heartbeat/set-lane/release presented a token that no longer holds the claim —
+ * the lease expired and was taken by another agent (§4.2). Abort, write nothing.
+ * HTTP status: 409 Conflict
+ */
+export class LeaseLostError extends DomainError {
+  constructor() {
+    super('Your lease was taken; abort without writing', 'LEASE_LOST', 409)
+    this.name = 'LeaseLostError'
+  }
+}
+
+/**
+ * A claim/set-lane/release named a destination lane that isn't a lane on this
+ * (automation) board — e.g. after a re-activation removed it (§5.4).
+ * HTTP status: 422 Unprocessable Entity
+ */
+export class LaneUnknownError extends DomainError {
+  constructor(lane: string) {
+    super(`"${lane}" is not a lane on this board`, 'LANE_UNKNOWN', 422)
+    this.name = 'LaneUnknownError'
+  }
+}
+
+/**
+ * A release's optional `ifCurrentLane` guard didn't match the task's current lane —
+ * a human retagged it mid-claim (§8). The release wrote nothing; the runner aborts.
+ * HTTP status: 409 Conflict
+ */
+export class LaneChangedError extends DomainError {
+  constructor(
+    public readonly currentLane: string | null
+  ) {
+    super(`Task's lane changed since claim; it is now "${currentLane ?? '(inbox)'}"`, 'LANE_CHANGED', 409)
+    this.name = 'LaneChangedError'
+  }
+}

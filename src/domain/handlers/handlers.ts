@@ -168,6 +168,9 @@ export async function createTask(
         tag: input.tag ?? null,
         state: 'Active',
         createdAt,
+        // Creation IS the first mutation: stamp updatedAt so the change feed (§4.4),
+        // which keys on updated_at, surfaces new tasks — not just later edits.
+        updatedAt: timestamp,
         date,
         startTime: input.startTime ?? null,
         endTime: input.endTime ?? null,

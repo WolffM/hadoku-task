@@ -17,6 +17,14 @@ import type {
   Lane
 } from '@wolffm/task/api'
 import { assertHumanLaneWrite } from '../routes/board-automation'
+import {
+  claimTask,
+  heartbeatClaim,
+  setLane,
+  releaseClaim,
+  getClaimHistory,
+  getChanges
+} from '../routes/board-claims'
 
 /** A board reference resolved to its owner's data scope + the caller's access (§7). */
 export interface ResolvedBoard {
@@ -24,6 +32,8 @@ export interface ResolvedBoard {
   auth: AuthContext
   /** The owner's slug for the board (differs from a shared handle the caller passed). */
   boardId: string
+  /** The board owner's userId — the data scope for D1-direct claim writes (§4). */
+  ownerId: string
   access: 'owner' | 'contributor' | 'readonly'
   /** 'standard' | 'automation' — selects lane enforcement (§5.2). */
   mode: string
@@ -31,11 +41,18 @@ export interface ResolvedBoard {
   lanes: Lane[]
 }
 
+/** The D1 database, structurally typed (matches board-claims' D1Like). */
+export type ToolDb = Parameters<typeof claimTask>[0]
+
 export interface ToolCtx {
   /** Caller-scoped storage, for non-board-scoped tools (list_boards). */
   storage: TaskStorage
   /** Caller-scoped auth. */
   auth: AuthContext
+  /** The caller's own userId — the scope for the change feed (§4.4). */
+  callerId: string
+  /** D1, for the D1-direct claim protocol (§4). */
+  db: ToolDb
   defaultBoard: string
   /**
    * Resolve a board ref to the owner's scope + caller's access. Own boards
@@ -321,6 +338,145 @@ export const TOOLS: ToolDef[] = [
           lanes: b.lanes ?? undefined
         }))
       }
+    }
+  },
+  // --- Agent claim protocol (§4) ---
+  {
+    name: 'claim_task',
+    description:
+      'Atomically claim a task for work (§4). Returns { token, expiresAt } on success; fails with CLAIM_HELD if another agent holds a live lease. Optionally move the task into `lane` in the same step (the agent path — you may enter an `agent` lane a human can\'t). Heartbeat before `expiresAt` to keep the lease.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: 'The task to claim.' },
+        ...boardProp,
+        agentId: { type: 'string', description: 'A label for you, shown in claim history. Defaults to your id.' },
+        lane: { type: 'string', description: 'Optional: move the task into this lane on claim.' },
+        leaseSeconds: { type: 'number', description: 'Lease length (default 1800, max 3600).' }
+      },
+      required: ['taskId']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      if (!taskId) throw new Error('`taskId` is required')
+      const r = await resolveBoard(args, ctx, { write: true })
+      return claimTask(ctx.db, r.ownerId, r.boardId, taskId, str(args.agentId) ?? ctx.callerId, {
+        lane: str(args.lane) ?? null,
+        leaseSeconds: typeof args.leaseSeconds === 'number' ? args.leaseSeconds : undefined,
+        mode: r.mode,
+        lanes: r.lanes
+      })
+    }
+  },
+  {
+    name: 'heartbeat_claim',
+    description: 'Extend your lease on a claimed task (§4). Fails with LEASE_LOST if your lease already expired and was taken — abort and write nothing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        token: { type: 'string', description: 'The token from claim_task.' },
+        ...boardProp,
+        leaseSeconds: { type: 'number' }
+      },
+      required: ['taskId', 'token']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      const token = str(args.token)
+      if (!taskId || !token) throw new Error('`taskId` and `token` are required')
+      const r = await resolveBoard(args, ctx, { write: true })
+      return heartbeatClaim(ctx.db, r.ownerId, taskId, token, typeof args.leaseSeconds === 'number' ? args.leaseSeconds : undefined)
+    }
+  },
+  {
+    name: 'set_lane',
+    description: 'Move a task into a lane while holding its claim (§4) — the agent path, so `agent` lanes are allowed. LANE_UNKNOWN if the lane isn\'t on the board; LEASE_LOST if you no longer hold the claim.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        token: { type: 'string' },
+        lane: { type: 'string', description: 'Destination lane tag.' },
+        ...boardProp
+      },
+      required: ['taskId', 'token', 'lane']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      const token = str(args.token)
+      const lane = str(args.lane)
+      if (!taskId || !token || lane === undefined) throw new Error('`taskId`, `token` and `lane` are required')
+      const r = await resolveBoard(args, ctx, { write: true })
+      return setLane(ctx.db, r.ownerId, r.boardId, taskId, token, lane ?? '', { mode: r.mode, lanes: r.lanes })
+    }
+  },
+  {
+    name: 'release_claim',
+    description:
+      'Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan) and an `outcome` label, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        token: { type: 'string' },
+        lane: { type: 'string', description: 'Where the task goes on release (agent lane allowed). Omit / empty ⇒ Inbox.' },
+        notes: { type: 'string', description: 'Markdown result/plan to write on the task.' },
+        outcome: { type: 'string', description: 'Free-text outcome label for the claim history; we don\'t interpret it.' },
+        ifCurrentLane: { type: 'string', description: 'Guard: abort (LANE_CHANGED) unless the task is still in this lane.' },
+        ...boardProp
+      },
+      required: ['taskId', 'token']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      const token = str(args.token)
+      if (!taskId || !token) throw new Error('`taskId` and `token` are required')
+      const r = await resolveBoard(args, ctx, { write: true })
+      return releaseClaim(ctx.db, r.ownerId, r.boardId, taskId, token, {
+        lane: str(args.lane) ?? null,
+        notes: args.notes !== undefined ? (str(args.notes) ?? '') : undefined,
+        outcome: str(args.outcome) ?? null,
+        ifCurrentLane: args.ifCurrentLane !== undefined ? (str(args.ifCurrentLane) ?? '') : undefined,
+        mode: r.mode,
+        lanes: r.lanes
+      })
+    }
+  },
+  {
+    name: 'get_claim_history',
+    description: 'Claim history for a task (§5.7) — who claimed it when, and how each claim ended.',
+    inputSchema: {
+      type: 'object',
+      properties: { taskId: { type: 'string' }, ...boardProp },
+      required: ['taskId']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      if (!taskId) throw new Error('`taskId` is required')
+      const r = await resolveBoard(args, ctx)
+      return { history: await getClaimHistory(ctx.db, r.ownerId, taskId) }
+    }
+  },
+  {
+    name: 'list_changes',
+    description:
+      'Poll the change feed (§4.4): your tasks whose (updatedAt, id) sort after `since`, so a runner stops full-scanning. Deletes appear as rows with state "Deleted". Returns a `cursor` to pass as the next `since`.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        since: { type: 'string', description: 'Cursor "<updatedAt>,<id>" from a prior call; omit for a full initial sweep.' },
+        limit: { type: 'number', description: 'Max rows (default 100, max 500).' }
+      }
+    },
+    handler: async (args, ctx) => {
+      const since = str(args.since)
+      let cursor: { updatedAt: string; id: string } | null = null
+      if (since) {
+        const comma = since.lastIndexOf(',')
+        if (comma > 0) cursor = { updatedAt: since.slice(0, comma), id: since.slice(comma + 1) }
+      }
+      return getChanges(ctx.db, ctx.callerId, cursor, typeof args.limit === 'number' ? args.limit : 100)
     }
   }
 ]
