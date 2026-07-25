@@ -16,14 +16,16 @@ import type {
   UpdateTaskInput,
   Lane
 } from '@wolffm/task/api'
-import { assertHumanLaneWrite } from '../routes/board-automation'
+import { assertHumanLaneWrite, getBoardConfig } from '../routes/board-automation'
 import {
   claimTask,
   heartbeatClaim,
   setLane,
   releaseClaim,
+  cancelClaim,
   getClaimHistory,
-  getChanges
+  getChanges,
+  liveClaimedTaskIds
 } from '../routes/board-claims'
 
 /** A board reference resolved to its owner's data scope + the caller's access (§7). */
@@ -366,6 +368,36 @@ export const TOOLS: ToolDef[] = [
       return TaskHandlers.createBoard(ctx.storage, ctx.auth, { id, name })
     }
   },
+  {
+    name: 'get_board',
+    description:
+      'One board, fully hydrated (§5.5): its metadata (repo, mode, lanes) plus every active task, each flagged `claimed` if a live lease holds it. How a runner sees all its work in one call. Address a shared board by its handle.',
+    inputSchema: {
+      type: 'object',
+      properties: { board: { type: 'string', description: 'Board handle or your own slug.' } },
+      required: ['board']
+    },
+    handler: async (args, ctx) => {
+      const r = await resolveBoard(args, ctx)
+      const cfg = await getBoardConfig(ctx.db, r.ownerId, r.boardId)
+      if (!cfg) throw new Error(`Board ${boardOf(args, ctx)} not found`)
+      const tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
+      const claimed = await liveClaimedTaskIds(ctx.db, r.ownerId, r.boardId)
+      return {
+        board: {
+          id: r.boardId,
+          name: cfg.name,
+          handle: cfg.handle,
+          repo: cfg.repo,
+          mode: cfg.mode,
+          lanes: cfg.lanes,
+          access: r.access,
+          ownerUserId: r.ownerId
+        },
+        tasks: tasks.map(t => ({ ...t, claimed: claimed.has(t.id) }))
+      }
+    }
+  },
   // --- Agent claim protocol (§4) ---
   {
     name: 'claim_task',
@@ -482,6 +514,23 @@ export const TOOLS: ToolDef[] = [
       if (!taskId) throw new Error('`taskId` is required')
       const r = await resolveBoard(args, ctx)
       return { history: await getClaimHistory(ctx.db, r.ownerId, taskId) }
+    }
+  },
+  {
+    name: 'cancel_claim',
+    description:
+      'Owner force-drops the claim on a task (§ cancel path) — reclaim a stuck/held task by hand. The holding agent\'s next heartbeat then sees no live claim and gets LEASE_LOST. Owner-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { taskId: { type: 'string' }, ...boardProp },
+      required: ['taskId']
+    },
+    handler: async (args, ctx) => {
+      const taskId = str(args.taskId)
+      if (!taskId) throw new Error('`taskId` is required')
+      const r = await resolveBoard(args, ctx, { write: true })
+      if (r.access !== 'owner') throw new Error('Only the board owner can cancel a claim')
+      return cancelClaim(ctx.db, r.ownerId, taskId)
     }
   },
   {

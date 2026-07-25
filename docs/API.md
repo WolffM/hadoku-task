@@ -762,9 +762,23 @@ Body: `{ board, taskId, token, lane?, notes?, outcome?, ifCurrentLane? }`. Moves
 writes `notes`, closes the claim, records history. Idempotent on token. `ifCurrentLane` guards
 against a human retag → `409 LANE_CHANGED`. Never changes task `state`.
 
+### POST `/agent/cancel`
+
+Owner-only. Force-drop the claim on a task (reclaim a stuck/held task by hand). Body:
+`{ board, taskId }`. → `{ ok, dropped }`. The holding agent's next `heartbeat`/`set-lane`
+then sees no live claim → `409 LEASE_LOST`. Idempotent (`dropped: false` when nothing was held).
+
 ### GET `/agent/history?board=&task=`
 
 → `{ history: [{ agentId, claimedAt, endedAt, endedBy, outcome }] }` (newest first).
+
+### GET `/boards/:ref`
+
+One board, fully hydrated (§5.5) — resolves through sharing, so a grantee reads the owner's
+board. → `{ board: { id, name, handle, repo, mode, lanes, schemaId, schemaVersion, access,
+ownerUserId }, tasks: [{ …task, claimed }], version }`. Each task carries a `claimed` boolean
+(a live lease holds it). How a runner sees all its work — metadata + tasks + claim state — in
+one request.
 
 ### GET `/changes?since=<updatedAt>,<id>&limit=`
 

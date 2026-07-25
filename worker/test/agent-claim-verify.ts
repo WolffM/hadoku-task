@@ -304,6 +304,28 @@ async function main() {
   const boardsAfter = (await mcp('list_boards')).structuredContent?.boards ?? []
   check('the new board appears in list_boards', boardsAfter.some(b => b.id === 'made-by-mcp'))
 
+  // ---------------------------------------------------------------------
+  section('16. TenHands blockers: hydrated GET /boards/:ref + cancel path')
+  // ---------------------------------------------------------------------
+  // Set repo on the board so the hydrated view returns it (via re-activation).
+  await req('POST', '/task/api', { id: 'h1', title: 'to hydrate', boardId: 'auto', tag: 'needs-work' })
+  const claimH = await req('POST', '/task/api/agent/claim', { board: 'auto', taskId: 'h1', agentId: 'hydrater' })
+  const hToken = claimH.json?.token
+  const full = await req('GET', '/task/api/boards/auto')
+  const fb = full.json as unknown as { board?: { mode?: string; lanes?: unknown[]; repo?: string | null }; tasks?: Array<{ id: string; claimed?: boolean }> }
+  check('GET /boards/:ref → hydrated board with mode + lanes', fb.board?.mode === 'automation' && (fb.board?.lanes?.length ?? 0) === 4, JSON.stringify(fb.board))
+  check('hydrated tasks carry a `claimed` flag', fb.tasks?.find(t => t.id === 'h1')?.claimed === true, JSON.stringify(fb.tasks?.find(t => t.id === 'h1')))
+  check('an unclaimed task shows claimed:false', fb.tasks?.some(t => t.claimed === false) === true)
+  // Owner cancels the claim → the holder's heartbeat then → LEASE_LOST.
+  const cancel = await req('POST', '/task/api/agent/cancel', { board: 'auto', taskId: 'h1' })
+  check('owner cancel → dropped', cancel.status === 200 && (cancel.json as unknown as { dropped?: boolean }).dropped === true, JSON.stringify(cancel.json))
+  const hbAfter = await req('POST', '/task/api/agent/heartbeat', { board: 'auto', taskId: 'h1', token: hToken })
+  check('the cancelled agent heartbeat → 409 LEASE_LOST', hbAfter.status === 409 && hbAfter.json?.code === 'LEASE_LOST', `status=${hbAfter.status}`)
+  check('cancel is idempotent (second cancel drops nothing)', (await req('POST', '/task/api/agent/cancel', { board: 'auto', taskId: 'h1' })).json !== null)
+  // MCP parity: get_board + cancel_claim.
+  const mgb = await mcp('get_board', { board: 'auto' })
+  check('MCP get_board returns hydrated tasks', Array.isArray((mgb.structuredContent as { tasks?: unknown[] } | undefined)?.tasks), JSON.stringify(mgb).slice(0, 120))
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

@@ -61,6 +61,7 @@ slug — a slug only ever resolves within your own tasks (see [Shared boards](#s
 | Tool            | Arguments        | Purpose                                                                     |
 | --------------- | ---------------- | --------------------------------------------------------------------------- |
 | `list_boards`   | —                | Your boards + any shared with you; each row carries `handle`, `access`, `mode`, `lanes` |
+| `get_board`     | `board`          | One board fully hydrated: metadata (`repo`, `mode`, `lanes`) + every task, each flagged `claimed` |
 | `create_board`  | `id`, `name`     | Create a board (your own). Slug in, unique `handle` minted server-side      |
 
 ### Notes (`list_tasks` pagination)
@@ -81,6 +82,7 @@ with notes. See [Automation boards & the claim loop](#automation-boards--the-cla
 | `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                | Extend the lease; `LEASE_LOST` if it was taken                      |
 | `set_lane`          | `taskId`, `token`, `lane`, `board?`                                                         | Move a task while holding the claim (agent path — `agent` lanes ok) |
 | `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `outcome?`, `ifCurrentLane?`, `board?`                | Move + write notes + unclaim; idempotent on token                   |
+| `cancel_claim`      | `taskId`, `board?`                                                                          | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST` |
 | `get_claim_history` | `taskId`, `board?`                                                                          | Who claimed it when, and how each claim ended                       |
 | `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                   | Change feed — poll instead of full-scanning; returns a `cursor`     |
 

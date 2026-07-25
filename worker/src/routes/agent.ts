@@ -18,9 +18,12 @@ import {
   heartbeatClaim,
   setLane,
   releaseClaim,
+  cancelClaim,
   getClaimHistory,
-  getChanges
+  getChanges,
+  liveClaimedTaskIds
 } from './board-claims'
+import { getBoardConfig } from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext } from '../types'
 
@@ -133,6 +136,26 @@ export function createAgentRoutes() {
     return c.json(result)
   })
 
+  // Cancel a claim — the board OWNER force-drops a stuck/held claim by hand.
+  // The holding agent's next heartbeat then sees no live claim → LEASE_LOST.
+  app.post('/agent/cancel', async (c: any) => {
+    let body: { board?: string; taskId?: string }
+    try {
+      body = await c.req.json()
+    } catch {
+      return badRequest(c, 'Invalid JSON body')
+    }
+    if (!body.board || !body.taskId) return badRequest(c, '`board` and `taskId` are required')
+    const ctx = await getBoardContext(c, body.board)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (ctx.access !== 'owner') {
+      return c.json({ error: 'Only the board owner can cancel a claim', code: 'FORBIDDEN' }, 403)
+    }
+    logRequest('POST', '/task/api/agent/cancel', { board: ctx.boardId, task: body.taskId })
+    const result = await cancelClaim(c.env.DB, ctx.ownerId, body.taskId)
+    return c.json(result)
+  })
+
   // Claim history for a task (read; any access to the board).
   app.get('/agent/history', async (c: any) => {
     const ref = c.req.query('board')
@@ -142,6 +165,38 @@ export function createAgentRoutes() {
     if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
     const history = await getClaimHistory(c.env.DB, ctx.ownerId, taskId)
     return c.json({ history })
+  })
+
+  // One board, fully hydrated (§5.5): metadata (repo, mode, lanes) + its tasks,
+  // each flagged `claimed` if a live lease holds it. How a runner sees its work
+  // in one request. Resolves through sharing, so a grantee reads the owner's board.
+  // `:ref` is a handle or the caller's own slug — same addressing as everywhere.
+  app.get('/boards/:ref', async (c: any) => {
+    const ref = c.req.param('ref')
+    const ctx = await getBoardContext(c, ref)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    const cfg = await getBoardConfig(c.env.DB, ctx.ownerId, ctx.boardId)
+    if (!cfg) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    const [file, claimed] = await Promise.all([
+      ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
+      liveClaimedTaskIds(c.env.DB, ctx.ownerId, ctx.boardId)
+    ])
+    return c.json({
+      board: {
+        id: ctx.boardId,
+        name: cfg.name,
+        handle: cfg.handle,
+        repo: cfg.repo,
+        mode: cfg.mode,
+        lanes: cfg.lanes,
+        schemaId: cfg.schemaId,
+        schemaVersion: cfg.schemaVersion,
+        access: ctx.access,
+        ownerUserId: ctx.ownerId
+      },
+      tasks: file.tasks.map(t => ({ ...t, claimed: claimed.has(t.id) })),
+      version: file.version ?? 1
+    })
   })
 
   // Change feed (§4.4): the caller's own tasks since a cursor. `since` is

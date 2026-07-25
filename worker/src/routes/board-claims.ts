@@ -284,6 +284,53 @@ export async function releaseClaim(
   return { ok: true, released: true, lane: lane === '' ? null : lane }
 }
 
+/**
+ * Force-drop the claim on a task (§ cancel path). The board owner reclaims a
+ * stuck/held task by hand: the claim row is deleted and its log row closed with
+ * ended_by='cancel'. The holding agent's next heartbeat/set-lane then sees no
+ * live claim → LEASE_LOST, and aborts. Returns whether a claim was actually
+ * dropped (idempotent: no live claim ⇒ dropped:false).
+ */
+export async function cancelClaim(
+  db: D1Like,
+  ownerId: string,
+  taskId: string
+): Promise<{ ok: true; dropped: boolean }> {
+  const now = nowIso()
+  const res = await db
+    .prepare('DELETE FROM task_claims WHERE user_id = ? AND task_id = ?')
+    .bind(ownerId, taskId)
+    .run()
+  if (res.meta.changes > 0) {
+    await db
+      .prepare(
+        `UPDATE task_claim_log SET ended_at = ?, ended_by = 'cancel'
+           WHERE id = (SELECT id FROM task_claim_log
+                        WHERE user_id = ? AND task_id = ? AND ended_at IS NULL
+                        ORDER BY id DESC LIMIT 1)`
+      )
+      .bind(now, ownerId, taskId)
+      .run()
+  }
+  return { ok: true, dropped: res.meta.changes > 0 }
+}
+
+/** The set of task ids on a board that currently hold a LIVE claim. */
+export async function liveClaimedTaskIds(
+  db: D1Like,
+  ownerId: string,
+  boardId: string
+): Promise<Set<string>> {
+  const now = nowIso()
+  const { results } = await db
+    .prepare(
+      `SELECT task_id FROM task_claims WHERE user_id = ? AND board_id = ? AND expires_at > ?`
+    )
+    .bind(ownerId, boardId, now)
+    .all<{ task_id: string }>()
+  return new Set(results.map(r => r.task_id))
+}
+
 export interface ClaimLogRow {
   agentId: string
   claimedAt: string

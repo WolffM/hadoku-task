@@ -117,6 +117,8 @@ function fnv1a(s: string): string {
 /** The board's automation-relevant state, read in one row. */
 export interface BoardConfig {
   name: string
+  handle: string
+  repo: string | null
   mode: string
   tags: string[]
   lanes: Lane[]
@@ -135,12 +137,14 @@ export async function getBoardConfig(
 ): Promise<BoardConfig | null> {
   const row = await db
     .prepare(
-      `SELECT name, mode, tags, lanes, schema_id, schema_version, previous_config, version, tasks_version
+      `SELECT name, handle, repo, mode, tags, lanes, schema_id, schema_version, previous_config, version, tasks_version
          FROM boards WHERE user_id = ? AND id = ? LIMIT 1`
     )
     .bind(ownerId, boardId)
     .first<{
       name: string
+      handle: string
+      repo: string | null
       mode: string
       tags: string | null
       lanes: string | null
@@ -153,6 +157,8 @@ export async function getBoardConfig(
   if (!row) return null
   return {
     name: row.name,
+    handle: row.handle,
+    repo: row.repo,
     mode: row.mode,
     tags: row.tags ? (JSON.parse(row.tags) as string[]) : [],
     lanes: parseLanes(row.lanes),
