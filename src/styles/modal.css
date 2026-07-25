@@ -611,6 +611,58 @@
   padding: 0 var(--hdk-space-xs);
   border-radius: var(--hdk-radius-sm);
 }
+/* Provider preset picker — sits above the paste box; choosing one fills it. */
+.automation-panel__presets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+}
+.automation-panel__preset {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.automation-panel__preset:hover {
+  background: var(--color-neutral-hover);
+}
+.automation-panel__preset.is-chosen {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__preset-label {
+  font-size: var(--hdk-text-sm);
+  font-weight: 600;
+}
+.automation-panel__preset-meta {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-secondary);
+}
+.automation-panel__preset.is-chosen .automation-panel__preset-meta {
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__presets-msg {
+  margin: 0;
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-muted);
+}
+.automation-panel__presets-msg.is-warn {
+  color: var(--color-on-warning-bg);
+  background: var(--color-warning-bg);
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border-radius: var(--hdk-radius-sm);
+}
 .automation-panel__json {
   width: 100%;
   box-sizing: border-box;

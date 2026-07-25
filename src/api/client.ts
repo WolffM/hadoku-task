@@ -1,4 +1,11 @@
-import type { TasksFile, BoardsFile, Task, CreateTaskInput } from '../domain/types'
+import type {
+  TasksFile,
+  BoardsFile,
+  Task,
+  CreateTaskInput,
+  AutomationPreset,
+  PresetSourceStatus
+} from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/logger/client'
@@ -512,6 +519,26 @@ export function createApi(
         return res.ok
       } catch {
         return false
+      }
+    },
+
+    /**
+     * The lane contracts our providers publish (§5.4). The worker fetches them
+     * from the provider and validates them, so this is a plain read: the picker
+     * offers a live schema instead of asking a human to paste one.
+     */
+    async listAutomationPresets(): Promise<{
+      presets: AutomationPreset[]
+      sources: PresetSourceStatus[]
+    }> {
+      try {
+        const res = await fetch('/task/api/automation/presets', {
+          headers: adminHeaders(userType, sessionId)
+        })
+        if (!res.ok) return { presets: [], sources: [] }
+        return (await res.json()) as { presets: AutomationPreset[]; sources: PresetSourceStatus[] }
+      } catch {
+        return { presets: [], sources: [] }
       }
     },
 

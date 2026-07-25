@@ -185,6 +185,49 @@ export const LaneSchema = z
   .passthrough()
   .openapi('Lane')
 
+/** A lane contract a provider publishes, fetched live rather than pasted (§5.4).
+ * Shaped so the UI can hand it straight to activate-automation. */
+export const AutomationPresetSchema = z
+  .object({
+    providerId: z.string().openapi({ example: 'tenhands' }),
+    providerLabel: z.string().openapi({ example: 'TenHands' }),
+    schemaId: z.string().openapi({ example: 'tenhands' }),
+    schemaVersion: z.number().nullable().openapi({ example: 1 }),
+    label: z.string().openapi({ example: 'TenHands OSS Contribution' }),
+    description: z.string().nullable(),
+    lanes: z.array(LaneSchema)
+  })
+  .openapi('AutomationPreset')
+
+/** Per-provider fetch outcome, so the picker can distinguish "no presets exist"
+ * from "the provider is down and these are the lanes we last saw". */
+export const PresetSourceResultSchema = z
+  .object({
+    id: z.string().openapi({ example: 'tenhands' }),
+    label: z.string().openapi({ example: 'TenHands' }),
+    url: z.string(),
+    ok: z.boolean(),
+    count: z.number(),
+    cached: z.boolean().optional().openapi({ description: 'Served from memory, no network.' }),
+    notModified: z
+      .boolean()
+      .optional()
+      .openapi({ description: 'Revalidated; provider answered 304 (unchanged).' }),
+    stale: z
+      .boolean()
+      .optional()
+      .openapi({ description: 'Provider unreachable; this is the last good copy.' }),
+    error: z.string().optional()
+  })
+  .openapi('PresetSourceResult')
+
+export const ListPresetsResponseSchema = z
+  .object({
+    presets: z.array(AutomationPresetSchema),
+    sources: z.array(PresetSourceResultSchema)
+  })
+  .openapi('ListPresetsResponse')
+
 /** Lane shape for the activation REQUEST body: deliberately permissive so the
  * server's structural validator (validateLaneSet) stays the single authority —
  * it returns a specific 422 LANE_SET_INVALID rather than a generic zod 400. */

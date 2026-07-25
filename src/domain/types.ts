@@ -65,6 +65,35 @@ export interface Lane {
   [key: string]: unknown
 }
 
+/**
+ * A lane contract a provider publishes, fetched live by the worker (§5.4) so the
+ * activation UI offers the provider's CURRENT schema instead of a JSON blob a
+ * human pasted at some point. Hands straight to `activateAutomation`.
+ */
+export interface AutomationPreset {
+  providerId: string
+  providerLabel: string
+  schemaId: string
+  schemaVersion: number | null
+  label: string
+  description: string | null
+  lanes: Lane[]
+}
+
+/** Per-provider fetch outcome, so the picker can tell "no presets exist" apart
+ * from "the provider is down and these are the lanes we last saw". */
+export interface PresetSourceStatus {
+  id: string
+  label: string
+  url: string
+  ok: boolean
+  count: number
+  cached?: boolean
+  notModified?: boolean
+  stale?: boolean
+  error?: string
+}
+
 // Board types (multi-board support)
 export interface Board {
   id: string // boardId, e.g. "main", "work"

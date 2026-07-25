@@ -10,7 +10,9 @@ import type {
   BoardsFile,
   Board,
   AuthContext,
-  CreateTaskInput
+  CreateTaskInput,
+  AutomationPreset,
+  PresetSourceStatus
 } from '../domain/types'
 import { TaskNotFoundError } from '../domain/types'
 import { SESSION_ID } from './session'
@@ -133,6 +135,14 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
     async revokeShare(_boardRef: string, _granteeUserId: string): Promise<boolean> {
       return false
+    },
+    async listAutomationPresets(): Promise<{
+      presets: AutomationPreset[]
+      sources: PresetSourceStatus[]
+    }> {
+      // Presets come from a provider the worker talks to; there's no offline copy,
+      // and a signed-out user can't activate a board anyway.
+      return { presets: [], sources: [] }
     },
     async activateAutomation(
       _boardRef: string,

@@ -58,6 +58,10 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 
 ## Dev Server
 
+- `pnpm run dev:api` runs the REAL worker on :3001 (what vite proxies `/task/api` to) behind an
+  edge-router shim, plus a stub automation-preset provider on :3002. Needed by any e2e spec that
+  exercises the server path — those specs skip themselves when it isn't up.
+
 - Serve from correct root so relative paths resolve.
 - Use cache-busting query params when debugging.
 - For JS-rendered content, verify final DOM output programmatically.

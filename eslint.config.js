@@ -158,12 +158,34 @@ export default [
         ExecutionContext: 'readonly',
         Response: 'readonly',
         Request: 'readonly',
-        fetch: 'readonly'
+        fetch: 'readonly',
+        // Also part of the workerd runtime — needed by outbound fetches (preset
+        // sources) and the harnesses that stub them.
+        Headers: 'readonly',
+        HeadersInit: 'readonly',
+        RequestInit: 'readonly',
+        RequestInfo: 'readonly',
+        AbortSignal: 'readonly'
       }
     },
     rules: {
       'react-hooks/rules-of-hooks': 'off',
       'react-hooks/exhaustive-deps': 'off'
+    }
+  },
+
+  // The local dev stack is a NODE program that happens to live under worker/ —
+  // it bundles the worker and serves it over node:http, so it gets node globals
+  // on top of the workerd ones above.
+  {
+    files: ['worker/test/dev-server.ts'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        BodyInit: 'readonly',
+        process: 'readonly',
+        console: 'readonly'
+      }
     }
   },
 

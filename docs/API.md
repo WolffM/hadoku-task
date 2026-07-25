@@ -725,6 +725,40 @@ Grantee leaves a shared board (removes their own access). → `{ ok, left }`.
 Activating a board replaces its freeform tags with a fixed **lane** vocabulary and locks
 the structure (see [MCP.md](MCP.md#automation-boards--the-claim-loop)).
 
+### GET `/automation/presets`
+
+Signed-in only. The lane contracts our configured providers publish, fetched **server-side** so
+the activation UI offers a provider's current schema instead of a JSON blob someone pasted months
+ago. → `{ presets[], sources[] }`, where a preset is
+`{ providerId, providerLabel, schemaId, schemaVersion, label, description, lanes[] }` — hand
+`{ schemaId, schemaVersion, lanes }` straight to `activate-automation`.
+
+Every preset is run through the same lane-set validator activation uses, so a provider can't
+offer a lane set that would 422 on commit; an invalid one is dropped rather than blanking the
+provider's good ones. `sources[]` reports each provider separately
+(`{ id, label, url, ok, count, cached?, notModified?, stale?, error? }`) — an empty `presets`
+with a failing source means "provider down", not "none exist", and a provider that breaks after a
+good fetch keeps serving its last good copy (`stale: true`).
+
+**Caching.** Inside a 5-minute TTL we serve from memory with no network at all; past it we
+revalidate with `If-None-Match`, so an unchanged contract costs a 304 and keeps the lanes we
+already parsed.
+
+**Configuring providers.** `AUTOMATION_PRESET_SOURCES`, a JSON array of `{ id, label, url }`:
+
+```json
+[{ "id": "tenhands", "label": "TenHands", "url": "https://…/automation/presets" }]
+```
+
+`https` only (loopback excepted, for local dev) — a preset drives a destructive board migration,
+so the contract can't arrive over a channel someone can rewrite in transit. Unset ⇒ no picker,
+and paste-JSON still works.
+
+**What a provider serves** (no auth — a lane vocabulary is public): a GET returning
+`{ "presets": [ <payload>, … ] }`, a bare array, or a single `<payload>`, where `<payload>` is
+exactly what `activate-automation` accepts. Serving a strong `ETag` is what makes the
+revalidation above free.
+
 ### POST `/boards/:ref/activate-automation`
 
 Owner-only. Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane

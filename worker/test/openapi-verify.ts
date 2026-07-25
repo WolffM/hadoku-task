@@ -38,6 +38,7 @@ const REQUIRED_PATHS = [
   '/task/api/boards/{ref}/shares',
   '/task/api/boards/{ref}/shares/me',
   '/task/api/boards/{ref}/shares/{granteeUserId}',
+  '/task/api/automation/presets',
   '/task/api/boards/{ref}/activate-automation',
   '/task/api/boards/{ref}/deactivate-automation'
 ]
@@ -54,6 +55,8 @@ const REQUIRED_SCHEMAS = [
   'ChangesResponse',
   'HydratedBoardResponse',
   'ActivateAutomationInput',
+  'AutomationPreset',
+  'ListPresetsResponse',
   'ActivationPreview',
   'DeactivateAutomationResponse',
   'GrantShareInput',

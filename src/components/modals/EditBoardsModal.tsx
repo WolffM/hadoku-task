@@ -13,7 +13,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@wolffm/task-ui-components'
-import type { Board } from '../../domain/types'
+import type { Board, AutomationPreset, PresetSourceStatus } from '../../domain/types'
 import { effectivePinnedIds } from '../../domain/utils/boardPins'
 import { TOPBAR_BOARD_SLOTS } from '../../app/constants'
 import { ShareIcon } from '../ShareIcon'
@@ -55,6 +55,10 @@ export interface ShareApi {
     granted?: { name: string | null; tier: string | null; level: string }
   }>
   revokeShare: (boardRef: string, granteeUserId: string) => Promise<boolean>
+  listAutomationPresets: () => Promise<{
+    presets: AutomationPreset[]
+    sources: PresetSourceStatus[]
+  }>
   activateAutomation: (
     boardRef: string,
     payload: {
@@ -639,7 +643,7 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
 
 /**
  * Convert a board to (or off) an automation board (§5.4). Activation is a
- * DESTRUCTIVE migration: paste a provider's activation JSON (the lane contract),
+ * DESTRUCTIVE migration: pick a provider's published lane contract (or paste one),
  * preview the tag→lane mapping via a dryRun, then commit by echoing the digest.
  * An automation board shows its lanes + a Deactivate action.
  */
@@ -658,6 +662,45 @@ function AutomationPanel({
   const [preview, setPreview] = useState<ActivationPreview | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [presets, setPresets] = useState<AutomationPreset[] | null>(null)
+  const [presetSources, setPresetSources] = useState<PresetSourceStatus[]>([])
+  const [chosen, setChosen] = useState<string | null>(null)
+
+  // Load the providers' live lane contracts once, when the convert view opens.
+  // shareApi is memoized upstream, so this doesn't re-fire per render.
+  useEffect(() => {
+    if (isAutomation) return
+    let cancelled = false
+    void shareApi.listAutomationPresets().then(res => {
+      if (cancelled) return
+      setPresets(res.presets)
+      setPresetSources(res.sources)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isAutomation, shareApi])
+
+  /** Selecting a preset fills the JSON box rather than hiding it: activation is
+   * destructive, so the human sees the exact payload they're about to commit —
+   * and can still tweak it. One code path to preview/commit, no hidden state. */
+  const choosePreset = (p: AutomationPreset) => {
+    const key = `${p.providerId}:${p.schemaId}:${p.schemaVersion ?? '-'}`
+    setChosen(key)
+    setPreview(null)
+    setErr(null)
+    setRaw(
+      JSON.stringify(
+        {
+          schemaId: p.schemaId,
+          ...(p.schemaVersion !== null ? { schemaVersion: p.schemaVersion } : {}),
+          lanes: p.lanes
+        },
+        null,
+        2
+      )
+    )
+  }
   const [repo, setRepo] = useState((board.repo as string | undefined) ?? '')
   const [repoStatus, setRepoStatus] = useState<{
     valid: boolean
@@ -824,11 +867,55 @@ function AutomationPanel({
   return (
     <div className="share-panel automation-panel">
       <p className="automation-panel__hint">
-        Convert this to an <strong>automation board</strong>: paste a provider&apos;s activation
-        JSON (its lane contract). This is <strong>destructive</strong> — it replaces the
-        board&apos;s tags with the fixed lanes. Preview first.
+        Convert this to an <strong>automation board</strong>: pick a provider&apos;s lane contract
+        below, or paste one. This is <strong>destructive</strong> — it replaces the board&apos;s
+        tags with the fixed lanes. Preview first.
       </p>
       {repoField}
+
+      {presets === null && <p className="automation-panel__presets-msg">Loading presets…</p>}
+
+      {presets !== null && presets.length > 0 && (
+        <ul className="automation-panel__presets">
+          {presets.map(p => {
+            const key = `${p.providerId}:${p.schemaId}:${p.schemaVersion ?? '-'}`
+            const agentLanes = p.lanes.filter(l => l.editableBy === 'agent').length
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  className={`automation-panel__preset${chosen === key ? ' is-chosen' : ''}`}
+                  onClick={() => choosePreset(p)}
+                  title={p.description ?? undefined}
+                  aria-pressed={chosen === key}
+                >
+                  <span className="automation-panel__preset-label">{p.label}</span>
+                  <span className="automation-panel__preset-meta">
+                    {p.providerLabel} · {p.schemaId}
+                    {p.schemaVersion !== null ? ` v${p.schemaVersion}` : ''} · {p.lanes.length} lanes
+                    {agentLanes > 0 ? ` (${agentLanes} agent)` : ''}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {/* An empty picker reads as "no presets exist", so say which provider failed. */}
+      {presetSources
+        .filter(s => s.error)
+        .map(s => (
+          <p key={s.id} className="automation-panel__presets-msg is-warn">
+            {s.label}: {s.error}
+          </p>
+        ))}
+
+      {presets !== null && presets.length === 0 && presetSources.length === 0 && (
+        <p className="automation-panel__presets-msg">
+          No preset providers configured — paste a lane contract below.
+        </p>
+      )}
 
       <textarea
         className="automation-panel__json"

@@ -23,6 +23,11 @@ export interface Env {
   // real check. Resolved from the HADOKU_SITE_TOKEN vault key. Optional: without
   // it, validation falls back to an unauthenticated probe (public repos only).
   GITHUB_READ_TOKEN?: string
+  // Automation preset providers (§5.4): a JSON array of {id,label,url}, e.g.
+  // [{"id":"tenhands","label":"TenHands","url":"https://…/automation/presets"}].
+  // Each URL is fetched server-side for the lane contracts the activation UI
+  // offers. https only. Absent ⇒ no preset picker, paste-JSON still works.
+  AUTOMATION_PRESET_SOURCES?: string
 }
 
 /**

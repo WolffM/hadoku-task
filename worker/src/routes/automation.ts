@@ -12,11 +12,13 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation } from './board-automation'
+import { listPresets } from './board-presets'
 import {
   ActivateInputSchema,
   ActivateResponseSchema,
   DeactivateResponseSchema,
   RepoValidateResponseSchema,
+  ListPresetsResponseSchema,
   ForbiddenErrorSchema,
   BoardNotFoundErrorSchema,
   DigestMismatchErrorSchema,
@@ -108,6 +110,31 @@ const refParam = z.object({
 
 export function createAutomationRoutes() {
   const app = new OpenAPIHono<AppContext>()
+
+  // The lane contracts our configured providers publish, fetched live so a board
+  // is activated from the provider's current schema rather than a JSON blob some
+  // human pasted months ago. Signed-in only (a public visitor can't activate
+  // anything, so there's nothing for them to pick).
+  const presetsRoute = createRoute({
+    method: 'get',
+    path: '/automation/presets',
+    tags: ['Automation'],
+    summary: 'Lane contracts published by configured providers',
+    description:
+      'Fetched server-side from each provider in AUTOMATION_PRESET_SOURCES and validated with the same lane-set validator activation uses. Revalidated with If-None-Match, so an unchanged contract costs a 304. `sources` reports each provider individually — an empty `presets` with a failing source means "provider down", not "none exist".',
+    responses: {
+      200: {
+        description: 'Presets + per-source status',
+        content: { 'application/json': { schema: ListPresetsResponseSchema } }
+      }
+    }
+  })
+  app.openapi(presetsRoute, (async (c: any) => {
+    const auth = c.get('authContext')
+    if (!auth || auth.userType === 'public') return c.json({ presets: [], sources: [] })
+    const result = await listPresets(c.env.AUTOMATION_PRESET_SOURCES)
+    return c.json(result)
+  }) as never)
 
   // Set a board's repo (owner only). Auto-saved by the UI the moment a repo
   // validates, so there's no separate "save" button.

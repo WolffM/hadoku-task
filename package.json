@@ -48,6 +48,7 @@
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "husky",
     "test:worker": "node scripts/run-worker-verify.mjs",
+    "dev:api": "node scripts/dev-api.mjs",
     "test:e2e": "pw-isolated playwright test",
     "test:e2e:ui": "pw-isolated playwright test --ui",
     "test:e2e:debug": "pw-isolated playwright test --debug",
