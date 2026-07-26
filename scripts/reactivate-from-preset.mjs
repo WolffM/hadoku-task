@@ -100,9 +100,15 @@ console.log('\ncommitted:', JSON.stringify(commit.json.applied))
 
 const after = await call(`/boards/${boardId}`)
 const board = after.json.board ?? after.json
+// Report the HANDLE, not just `id`. `id` is the SLUG for an owner and the handle
+// for everyone else, and a slug only resolves inside one owner's namespace — so
+// two different boards can both print as "tenhands". The handle is the globally
+// unique one, and it's the only field that tells you which board you just wrote to.
 console.log(
-  `\nboard ${board.id}: mode=${board.mode} schema=${board.schemaId} v${board.schemaVersion}`
+  `\nboard ${board.id} (handle ${board.handle}, owner ${board.ownerUserId}, access ${board.access})`
 )
+console.log(`  mode=${board.mode} schema=${board.schemaId} v${board.schemaVersion}`)
 for (const l of board.lanes ?? []) {
   console.log(`   ${String(l.order).padStart(2)}  ${l.tag.padEnd(14)} ${l.editableBy}`)
 }
+console.log(`  tasks: ${(after.json.tasks ?? []).length}`)
