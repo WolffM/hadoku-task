@@ -48,6 +48,34 @@ async function mockWhoami(page: Page, identity: { userType: string; name: string
   })
 }
 
+/**
+ * Answer the session handshake as a server that AGREES with the session being
+ * presented, by echoing back the client's `X-User-Type`.
+ *
+ * The handshake is authoritative over the local mirror: on a mismatch the app
+ * calls `storeUserType(server's answer)` (`src/api/session.ts`) — correctly, it
+ * is how an expired session gets downgraded. So a test that swaps into an admin
+ * session and then lets the REAL dev worker answer (always `friend`) watches the
+ * app faithfully overwrite the very value it is asserting on. Unmocked, this
+ * test also passes or fails depending on whether the dev API stack happens to be
+ * running, which is worse than either outcome.
+ */
+async function mockHandshake(page: Page) {
+  await page.route('**/task/api/session/handshake', async route => {
+    const req = route.request()
+    const body = JSON.parse(req.postData() ?? '{}') as { newSessionId?: string }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sessionId: body.newSessionId ?? null,
+        userType: req.headers()['x-user-type'] ?? 'public',
+        preferences: null
+      })
+    })
+  })
+}
+
 test.describe('Key Validation Flow', () => {
   // Note: We don't use addInitScript to clear localStorage because it runs
   // on every navigation including reloads, which would clear the session
@@ -200,6 +228,7 @@ test.describe('Key Validation Flow', () => {
     // (hadoku_session_id + hadoku_user_type) and reloads. This asserts the swap
     // overwrites an existing session with the new account's identity.
     await mockWhoami(page, { userType: 'friend', name: null })
+    await mockHandshake(page)
 
     await page.route('**/session/create', async route => {
       await route.fulfill({

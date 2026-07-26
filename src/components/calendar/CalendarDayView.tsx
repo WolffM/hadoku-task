@@ -43,18 +43,26 @@ export interface CalendarDayViewProps {
   pendingOperations: Set<string>
 }
 
+/** One hour, in ms — the length of a default create slot. */
+const DEFAULT_SLOT_MS = 60 * 60 * 1000
+
 /**
- * Pick a sensible default slot for a brand-new timed task: the next full hour
- * (capped so it never spills past the end of the day), one hour long.
+ * Pick a sensible default slot for a brand-new timed task: the next full hour,
+ * one hour long.
+ *
+ * The end is derived from the start rather than clamped to 23:59. A 23:00 start
+ * used to produce a 59-MINUTE task — the only slot of the day that wasn't an
+ * hour — because clamping tried to keep the end inside the same calendar day.
+ * It doesn't need to: `date` tracks the START, so a 23:00–00:00 task belongs to
+ * the day it starts on, exactly as every calendar renders it.
  */
 function defaultCreateSlot(selectedDate: Date): CalendarSchedule {
   const now = new Date()
   const base = isSameDay(selectedDate, now) ? now.getHours() + 1 : 9
-  const startHour = Math.min(base, 23)
-  const endHour = Math.min(startHour + 1, 24)
+  const startTime = createTimeOnDay(selectedDate, Math.min(base, 23), 0)
   return {
-    startTime: createTimeOnDay(selectedDate, startHour, 0),
-    endTime: createTimeOnDay(selectedDate, endHour === 24 ? 23 : endHour, endHour === 24 ? 59 : 0)
+    startTime,
+    endTime: new Date(new Date(startTime).getTime() + DEFAULT_SLOT_MS).toISOString()
   }
 }
 

@@ -100,12 +100,22 @@ async function setupRoutes(page: Page) {
   })
 }
 
+/**
+ * Seed a public session whose legacy prefs blob the app will actually find.
+ *
+ * A public user's sessionId comes from `task_anon_session_id`, NOT
+ * `hadoku_session_id` — the host page's mf-loader owns the latter and wipes it
+ * on every boot for a public user (see `src/api/session.ts`). Seeding the wrong
+ * key doesn't fail loudly: the app just mints a fresh anon id, so the legacy
+ * prefs key never matches, no preference is read, and every assertion here
+ * silently tests the DEFAULT theme instead of the one under test.
+ */
 async function seedPublicSession(page: Page, prefs: Record<string, unknown> | null): Promise<void> {
   const prefsJson = prefs ? JSON.stringify(prefs) : null
   await page.addInitScript(
     ({ userType, sessionId, prefsKey, prefsJson }) => {
-      window.localStorage.setItem('currentUserType', userType)
-      window.localStorage.setItem('currentSessionId', sessionId)
+      window.localStorage.setItem('hadoku_user_type', userType)
+      window.localStorage.setItem('task_anon_session_id', sessionId)
       if (prefsJson !== null) {
         window.localStorage.setItem(prefsKey, prefsJson)
       }

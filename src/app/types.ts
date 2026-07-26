@@ -39,3 +39,10 @@ export type ThemeName =
   | 'pink-dark'
   | 'izakaya-light'
   | 'izakaya-dark'
+
+/**
+ * Which view the task app is showing. The Board/Calendar switch is a toggle
+ * button in the tag-filters toolbar (`TagFiltersSection`) — there is no longer
+ * a separate switcher row.
+ */
+export type ViewType = 'board' | 'calendar'

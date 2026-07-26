@@ -2,13 +2,6 @@
  * Calendar day view styles — agenda list layout
  */
 
-/* View Switcher - uses shared .pill-btn from buttons.css */
-.view-switcher {
-  display: flex;
-  gap: var(--hdk-space-sm);
-  margin-bottom: var(--hdk-space-lg);
-}
-
 /* Calendar Day View */
 .calendar-day-view {
   display: flex;

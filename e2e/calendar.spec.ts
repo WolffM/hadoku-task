@@ -47,7 +47,7 @@ test.describe('Calendar day view', () => {
     // Start from a clean slate so assertions are deterministic.
     await page.evaluate(() => localStorage.clear())
     await page.reload()
-    await page.getByRole('button', { name: 'Calendar', exact: true }).click()
+    await page.getByRole('button', { name: 'Calendar view', exact: true }).click()
     await expect(page.locator('.calendar-day-view')).toBeVisible()
   })
 
@@ -147,7 +147,7 @@ test.describe('Calendar day view', () => {
       localStorage.setItem(key, JSON.stringify(blob))
     })
     await page.reload()
-    await page.getByRole('button', { name: 'Calendar', exact: true }).click()
+    await page.getByRole('button', { name: 'Calendar view', exact: true }).click()
 
     const card = page.locator('.calendar-agenda__card', { hasText: 'Synced Meeting' })
     await expect(card).toBeVisible()
