@@ -759,6 +759,13 @@ and paste-JSON still works.
 exactly what `activate-automation` accepts. Serving a strong `ETag` is what makes the
 revalidation above free.
 
+TenHands, the reference provider, describes its half of this in an OpenAPI 3.1 document at
+<https://dispatch.hadoku.me/tenhands/automation/openapi.json> — public, same strong-ETag/304
+revalidation as the presets route, covering both routes plus the `AutomationPreset` and `Lane`
+schemas. Generate a client from it rather than transcribing the shapes above. It describes only
+that public automation surface; the rest of the TenHands API is authenticated and deliberately
+absent.
+
 ### POST `/boards/:ref/activate-automation`
 
 Owner-only. Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane
