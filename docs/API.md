@@ -725,6 +725,18 @@ Grantee leaves a shared board (removes their own access). → `{ ok, left }`.
 Activating a board replaces its freeform tags with a fixed **lane** vocabulary and locks
 the structure (see [MCP.md](MCP.md#automation-boards--the-claim-loop)).
 
+### POST `/boards/:ref/repo`
+
+Owner-only. Body: `{ repo }` — `"owner/name"`. The board → checkout mapping (§5.5): a runner reads
+`repo` off the hydrated board instead of parsing a display name. Empty string, `null`, or an
+omitted `repo` **clears** it. Stored verbatim (trimmed); probe it with `GET /repos/validate` first
+if you want it checked against GitHub. → `{ ok, repo }`.
+
+`404 BOARD_NOT_FOUND` when no board of that ref exists. Worth knowing why that isn't redundant: an
+unknown slug resolves to "your own not-yet-created board", so this is answered from whether the
+write actually touched a row — otherwise a typo'd ref would return `{ ok: true }` having stored
+nothing.
+
 ### GET `/automation/presets`
 
 Signed-in only. The lane contracts our configured providers publish, fetched **server-side** so
@@ -870,7 +882,7 @@ the response schema is narrowed further (`/agent/heartbeat` 409 → `LeaseLostEr
 do about each: [MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`,
 `LANE_UNKNOWN`, `LANE_INVALID`, `LANE_CHANGED`, `LANE_SET_INVALID`, `BOARD_SCHEMA_LOCKED`,
 `DIGEST_MISMATCH`, `VERSION_CONFLICT`, `NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`,
-`BOARD_NOT_FOUND`, `NAME_NOT_FOUND`, `NO_USER_ID`, `FORBIDDEN`, `BAD_REQUEST`.
+`BOARD_NOT_FOUND`, `NAME_NOT_FOUND`, `NO_USER_ID`, `FORBIDDEN`.
 
 **Rate limits.** `friend`/`admin` are not throttled; the **`service`** tier is capped at
 **600/min** (10/sec) and `public` at 60/min. A `429` carries `{ error, code: "RATE_LIMITED",

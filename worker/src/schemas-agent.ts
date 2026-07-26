@@ -25,7 +25,9 @@ import { TaskSchema } from './schemas'
  */
 export const DOMAIN_ERROR_CODES = [
   // Access / transport
-  'BAD_REQUEST', // 400 — malformed body
+  // (No BAD_REQUEST: every route now validates its body with zod, so a malformed
+  // one is a 400 ZodError from the shared hook, not a coded DomainError. The last
+  // hand-rolled emitter went when POST /boards/{ref}/repo became a createRoute.)
   'FORBIDDEN', // 403 — readonly grantee, or not the board owner
   'RATE_LIMITED', // 429 — throttled (carries `retryAfter`)
   // Lookup
@@ -234,6 +236,26 @@ export const ListPresetsResponseSchema = z
     sources: z.array(PresetSourceResultSchema)
   })
   .openapi('ListPresetsResponse')
+
+/** Set (or clear) the repo a board drives. Empty string / null / omitted all
+ * clear it — the UI clears by blurring an emptied field, not by a DELETE. */
+export const SetRepoInputSchema = z
+  .object({
+    repo: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({
+        example: 'WolffM/hadoku-task',
+        description:
+          '"owner/name". Empty, null, or omitted clears the mapping. Stored as given — probe it against GitHub with GET /repos/validate first if you want it checked.'
+      })
+  })
+  .openapi('SetRepoInput')
+
+export const SetRepoResponseSchema = z
+  .object({ ok: z.boolean(), repo: z.string().nullable() })
+  .openapi('SetRepoResponse')
 
 /** Lane shape for the activation REQUEST body: deliberately permissive so the
  * server's structural validator (validateLaneSet) stays the single authority —

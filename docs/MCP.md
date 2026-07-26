@@ -169,7 +169,6 @@ Tool failures return `isError: true` with a `structuredContent.code` you can act
 | `LANE_SET_INVALID`                   | 422  | Activation payload is malformed. Fix the lane set, don't retry    |
 | `NAME_NOT_FOUND`                     | 404  | No registered key with that display name (share grant)            |
 | `NO_USER_ID`                         | 409  | That key never signed in, so there's no id to grant against       |
-| `BAD_REQUEST`                        | 400  | Malformed JSON body. Fix the caller                               |
 
 This table is the same closed set the OpenAPI spec publishes as the `DomainErrorCode` enum
 (`components.schemas.DomainErrorCode` in `/task/api/openapi.json`) — generate your client from

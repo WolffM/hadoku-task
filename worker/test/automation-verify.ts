@@ -478,6 +478,52 @@ async function main() {
     `status=${r.status} ${JSON.stringify(r.json)}`
   )
 
+  // ---------------------------------------------------------------------
+  section('11. POST /boards/{ref}/repo — the board → checkout mapping (§5.5)')
+  // ---------------------------------------------------------------------
+  // This route was a plain app.post (absent from the OpenAPI spec) with no test
+  // at all until it was converted to createRoute. These lock in the behaviour
+  // the conversion had to preserve.
+  const repoOf = async (id: string) =>
+    (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(b => b.id === id)?.repo
+
+  r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: 'WolffM/hadoku-task' })
+  check('owner sets repo → 200', r.status === 200, `status=${r.status} ${JSON.stringify(r.json)}`)
+  check('response echoes the repo', r.json?.repo === 'WolffM/hadoku-task', JSON.stringify(r.json))
+  check('repo persisted on the board', (await repoOf('flow')) === 'WolffM/hadoku-task')
+
+  // Surrounding whitespace is trimmed, not stored.
+  r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: '  WolffM/other  ' })
+  check('repo is trimmed', (await repoOf('flow')) === 'WolffM/other', String(await repoOf('flow')))
+
+  // Blank clears it — that's how the UI clears, by emptying the field on blur.
+  r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: '' })
+  check('empty string → 200', r.status === 200, `status=${r.status}`)
+  check('empty string CLEARS the repo (null, not "")', (await repoOf('flow')) === null,
+    JSON.stringify(await repoOf('flow')))
+
+  // Explicit null clears too.
+  await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: 'WolffM/hadoku-task' })
+  r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: null })
+  check('null → 200 and clears', r.status === 200 && (await repoOf('flow')) === null,
+    `status=${r.status} repo=${JSON.stringify(await repoOf('flow'))}`)
+
+  // Owner-only: a contributor drives work through a board, it can't remap one.
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/repo`, { repo: 'evil/repo' })
+  check(
+    'contributor setting repo → 403 FORBIDDEN',
+    r.status === 403 && r.json?.code === 'FORBIDDEN',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check('the refused write changed nothing', (await repoOf('flow')) === null)
+
+  r = await req(OWNER, 'POST', '/task/api/boards/no-such-board/repo', { repo: 'a/b' })
+  check(
+    'unknown board → 404 BOARD_NOT_FOUND',
+    r.status === 404 && r.json?.code === 'BOARD_NOT_FOUND',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

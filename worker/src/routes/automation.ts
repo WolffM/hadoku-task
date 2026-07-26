@@ -20,6 +20,8 @@ import {
   DeactivateResponseSchema,
   RepoValidateResponseSchema,
   ListPresetsResponseSchema,
+  SetRepoInputSchema,
+  SetRepoResponseSchema,
   ForbiddenErrorSchema,
   BoardNotFoundErrorSchema,
   DigestMismatchErrorSchema,
@@ -139,28 +141,51 @@ export function createAutomationRoutes() {
 
   // Set a board's repo (owner only). Auto-saved by the UI the moment a repo
   // validates, so there's no separate "save" button.
-  app.post('/boards/:ref/repo', async (c: any) => {
-    const ref = c.req.param('ref')
+  const setRepoRoute = createRoute({
+    method: 'post',
+    path: '/boards/{ref}/repo',
+    tags: ['Automation'],
+    summary: "Set or clear a board's repo (owner only)",
+    description:
+      'The board → checkout mapping (§5.5): a runner reads `repo` off the hydrated board rather than parsing a display name. Stored verbatim; probe it with GET /repos/validate first if you want it checked against GitHub.',
+    request: {
+      params: refParam,
+      body: { content: { 'application/json': { schema: SetRepoInputSchema } } }
+    },
+    responses: {
+      200: {
+        description: 'Repo saved (or cleared)',
+        content: { 'application/json': { schema: SetRepoResponseSchema } }
+      },
+      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
+    }
+  })
+  app.openapi(setRepoRoute, (async (c: any) => {
+    const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
     if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
     if (ctx.access !== 'owner') {
       return c.json({ error: 'Only the board owner can set the repo', code: 'FORBIDDEN' }, 403)
     }
-    let body: { repo?: string | null }
-    try {
-      body = await c.req.json()
-    } catch {
-      return c.json({ error: 'Invalid JSON body', code: 'BAD_REQUEST' }, 400)
-    }
+    const body = c.req.valid('json') as { repo?: string | null }
+    // Blank is a clear, not a value — the UI clears by emptying the field.
     const repo = typeof body.repo === 'string' && body.repo.trim() ? body.repo.trim() : null
-    await c.env.DB.prepare(
+    const res = await c.env.DB.prepare(
       'UPDATE boards SET repo = ?, updated_at = ? WHERE user_id = ? AND id = ?'
     )
       .bind(repo, new Date().toISOString(), ctx.ownerId, ctx.boardId)
       .run()
+    // An unknown slug resolves to "your own not-yet-created board" (branch 4 of
+    // resolveBoardAccess), so ctx alone can't tell a real board from a typo. Report
+    // what the write actually did: 0 rows means there was no board to map, and
+    // answering {ok:true} there hands a runner a checkout mapping that isn't stored.
+    if (res.meta.changes === 0) {
+      return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    }
     logRequest('POST', `/task/api/boards/${ref}/repo`, { board: ctx.boardId, repo })
     return c.json({ ok: true, repo })
-  })
+  }) as never)
 
   // Validate a board's repo by probing GitHub. Signed-in only.
   const repoValidateRoute = createRoute({
