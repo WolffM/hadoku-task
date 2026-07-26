@@ -780,11 +780,26 @@ absent.
 
 ### POST `/boards/:ref/activate-automation`
 
-Owner-only. Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane
+Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane
 is `{ tag, label, order, editableBy }` (`editableBy` ∈ `user` | `agent`; extra keys preserved
 verbatim). `dryRun: true` returns a preview `{ digest, mapping, toInbox, collisions }` and
 writes nothing; the committing call echoes that `digest` (stale → `409 DIGEST_MISMATCH`).
 Unmapped tags are cleared to the Inbox, preserved in `metadata.preAutomationTags`.
+
+**Who may activate.** A `dryRun` writes nothing, so any caller with write access may run one — a
+contributor needs it to discover whether its commit will be allowed. For a commit:
+
+| Caller          | May commit                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **owner**       | anything — first conversion, and migrations that displace tasks                                                             |
+| **contributor** | only an **upgrade**: the board is already `mode: automation` AND the new lane set strands nothing (`preview.toInbox === 0`) |
+| **readonly**    | never                                                                                                                       |
+
+This is what lets a provider ship its own schema versions — re-orders, relabels, added lanes,
+version bumps — without a human in the loop, while a lane set that would strand tasks still needs
+the board owner. The line is `toInbox`, not "same `schemaId`", because `toInbox` is the only thing
+that measures actual harm: it counts tasks whose current lane would vanish. A refused contributor
+commit is `403 FORBIDDEN` and writes nothing.
 
 ### POST `/boards/:ref/deactivate-automation`
 

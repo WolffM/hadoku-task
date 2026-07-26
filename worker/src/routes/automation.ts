@@ -233,7 +233,11 @@ export function createAutomationRoutes() {
         description: 'Preview (dryRun) or applied',
         content: { 'application/json': { schema: ActivateResponseSchema } }
       },
-      403: { description: 'Not the owner (FORBIDDEN)', content: forbidden },
+      403: {
+        description:
+          'Read-only access, or a contributor attempting an owner-only activation — the first conversion of a standard board, or a lane set that would strand tasks (FORBIDDEN)',
+        content: forbidden
+      },
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound },
       409: { description: 'Stale digest (DIGEST_MISMATCH)', content: digestMismatch },
       422: { description: 'Invalid lane set (LANE_SET_INVALID)', content: laneSetInvalid }
@@ -243,11 +247,11 @@ export function createAutomationRoutes() {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
     if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
-    if (ctx.access !== 'owner') {
-      return c.json(
-        { error: 'Only the board owner can activate automation', code: 'FORBIDDEN' },
-        403
-      )
+    // Readonly never writes. Owner vs contributor is decided INSIDE
+    // activateAutomation, which is where the preview exists: a contributor may
+    // upgrade an already-automated board when the new lane set strands nothing.
+    if (ctx.access === 'readonly') {
+      return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
     }
     const body = c.req.valid('json') as {
       schemaId?: string | null
@@ -275,7 +279,7 @@ export function createAutomationRoutes() {
         lanes: body.lanes,
         repo: body.repo ?? null
       },
-      { dryRun, expectedDigest: dryRun ? undefined : body.digest }
+      { dryRun, expectedDigest: dryRun ? undefined : body.digest, access: ctx.access }
     )
     return c.json(result)
   }) as never)

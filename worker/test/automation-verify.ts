@@ -404,8 +404,10 @@ async function main() {
     r.status === 422 && r.json?.code === 'LANE_SET_INVALID',
     `status=${r.status}`
   )
-  // A contributor cannot activate (owner-only). Share the board, then the
-  // grantee addresses it by handle and is still refused.
+  // A CONTRIBUTOR may upgrade the schema of an already-automated board, but only
+  // when the new lane set strands nothing. That's what lets a provider ship a
+  // version bump without a human; anything that would displace tasks still needs
+  // the owner. Share the board, then drive it as the grantee (by handle).
   await req(OWNER, 'POST', '/task/api/boards/flow/shares', {
     key: 'contrib-key',
     level: 'contributor'
@@ -413,15 +415,82 @@ async function main() {
   const flowHandle = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
     b => b.id === 'flow'
   )?.handle
+
+  // A dry run writes nothing, so a contributor may always run one — it is how
+  // they discover whether the commit will be allowed.
   r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
     lanes: LANES,
     dryRun: true
   })
   check(
-    'contributor cannot activate → 403',
-    r.status === 403,
+    'contributor CAN dry-run (writes nothing)',
+    r.status === 200,
     `status=${r.status} ${JSON.stringify(r.json)}`
   )
+  check('dry run reports it strands nothing', r.json?.preview?.toInbox === 0)
+
+  // The upgrade case: same lanes, re-ordered + relabelled + a version bump.
+  const UPGRADED: Lane[] = [
+    { tag: 'needs-plan', label: 'Needs Plan v2', order: 0, editableBy: 'user' },
+    { tag: 'working', label: 'Working v2', order: 1, editableBy: 'agent', tenhandsStage: 4 },
+    { tag: 'review', label: 'Review v2', order: 2, editableBy: 'user' }
+  ]
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
+    lanes: UPGRADED,
+    schemaId: 'flow-schema',
+    schemaVersion: 2,
+    dryRun: true
+  })
+  const upgradeDigest = r.json?.preview?.digest
+  check('contributor upgrade previews cleanly', r.status === 200 && r.json?.preview?.toInbox === 0)
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
+    lanes: UPGRADED,
+    schemaId: 'flow-schema',
+    schemaVersion: 2,
+    digest: upgradeDigest
+  })
+  check(
+    'contributor CAN commit an upgrade that strands nothing → 200',
+    r.status === 200,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  const upgraded = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
+    b => b.id === 'flow'
+  )
+  check('the upgrade applied (schemaVersion bumped)', upgraded?.schemaVersion === 2,
+    JSON.stringify(upgraded?.schemaVersion))
+  check('lanes were relabelled', upgraded?.lanes?.[0]?.label === 'Needs Plan v2')
+
+  // The destructive case stays owner-only: drop a lane that holds tasks.
+  const DESTRUCTIVE: Lane[] = [
+    { tag: 'needs-plan', label: 'Needs Plan', order: 0, editableBy: 'user' }
+  ]
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
+    lanes: DESTRUCTIVE,
+    dryRun: true
+  })
+  const destructiveStrands = r.json?.preview?.toInbox
+  check('the destructive preview shows tasks would be stranded', destructiveStrands > 0,
+    `toInbox=${destructiveStrands}`)
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
+    lanes: DESTRUCTIVE,
+    digest: r.json?.preview?.digest
+  })
+  check(
+    'contributor CANNOT commit a lane set that strands tasks → 403',
+    r.status === 403 && r.json?.code === 'FORBIDDEN',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check(
+    'the refusal explains it needs the owner',
+    /strand/i.test(String(r.json?.error)),
+    JSON.stringify(r.json?.error)
+  )
+  const afterRefusal = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
+    b => b.id === 'flow'
+  )
+  check('the refused activation wrote nothing', afterRefusal?.lanes?.length === 3,
+    JSON.stringify(afterRefusal?.lanes?.length))
 
   // ---------------------------------------------------------------------
   section('9. Re-activation clears tasks in removed lanes to the Inbox')
