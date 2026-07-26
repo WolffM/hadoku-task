@@ -247,6 +247,27 @@ function buildPreview(cfg: BoardConfig, tasks: TaskTagRow[], lanes: Lane[]): Act
   return { digest: fnv1a(canonical), lanes, mapping, toInbox, collisions }
 }
 
+/**
+ * How many active tasks a proposed lane set would strand in the Inbox — the same
+ * rule `buildPreview` applies, reduced to the one number, and reading task tags
+ * a caller already has rather than re-querying.
+ *
+ * This is the whole of "is this migration safe": zero means every task's current
+ * tag survives into the new lane set, so applying it relabels columns and moves
+ * no work. Anything above zero is a real migration and belongs in front of a
+ * human who can see which tasks are about to be cleared.
+ */
+export function countStranded(lanes: Lane[], tags: Array<string | null | undefined>): number {
+  const laneTags = new Set(lanes.map(l => l.tag))
+  let n = 0
+  for (const raw of tags) {
+    const tag = (raw ?? '').trim()
+    if (tag === '' || laneTags.has(tag)) continue // blank is already the Inbox
+    n++
+  }
+  return n
+}
+
 export interface ActivatePayload {
   schemaId?: string | null
   schemaVersion?: number | null

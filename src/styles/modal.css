@@ -577,6 +577,59 @@
   font-size: var(--hdk-text-sm);
   color: var(--color-text-secondary);
 }
+/* "Your provider moved on" banner. Primary tint when applying moves nothing;
+   warning when it would strand tasks — the two cases need different urgency. */
+.automation-panel__update {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hdk-space-sm);
+  flex-wrap: wrap;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__update.is-unsafe {
+  background: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+}
+.automation-panel__update-text {
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__update-btn {
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: none;
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--hdk-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.automation-panel__update-btn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+.automation-panel__update-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.automation-panel__update.is-unsafe .automation-panel__update-btn {
+  background: var(--color-warning);
+  color: var(--color-on-warning);
+}
+.automation-panel__update-cancel {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-xs);
+  cursor: pointer;
+}
+.automation-panel__update-cancel:hover {
+  color: var(--color-text);
+}
 .automation-panel__repo {
   display: flex;
   align-items: center;

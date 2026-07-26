@@ -843,9 +843,37 @@ then sees no live claim → `409 LEASE_LOST`. Idempotent (`dropped: false` when 
 
 One board, fully hydrated (§5.5) — resolves through sharing, so a grantee reads the owner's
 board. → `{ board: { id, name, handle, repo, mode, lanes, schemaId, schemaVersion, access,
-ownerUserId }, tasks: [{ …task, claimed }], version }`. Each task carries a `claimed` boolean
-(a live lease holds it). How a runner sees all its work — metadata + tasks + claim state — in
-one request.
+ownerUserId, presetUpdate? }, tasks: [{ …task, claimed }], version }`. Each task carries a
+`claimed` boolean (a live lease holds it). How a runner sees all its work — metadata + tasks +
+claim state — in one request.
+
+**`presetUpdate`** — present only when the board's lane set is behind the provider contract it
+was activated from:
+
+```jsonc
+"presetUpdate": {
+  "providerId": "tenhands",
+  "providerLabel": "TenHands",
+  "schemaId": "autoland",
+  "schemaVersion": 2,      // what the provider publishes NOW
+  "label": "Autoland",
+  "description": "…",
+  "safe": true,            // applying it strands no task
+  "toInbox": 0             // active tasks that would be cleared to the Inbox
+}
+```
+
+Absent when the board is current, isn't an automation board, carries a `schemaId` no configured
+provider serves, or is read by anyone but the owner — nobody else can activate, so nobody else
+is told. Advisory only: **no privilege changes**, and applying it is still the owner driving
+the ordinary `activate-automation` handshake. `safe` is `toInbox === 0`, meaning every active
+task's tag survives into the new lane set, so applying relabels columns and moves no work;
+`safe: false` is a real migration and belongs in front of a human who can see what lands where.
+
+Computed from the worker's **cached** copy of the provider contract — this read never fetches,
+so a board load can't inherit a provider's latency. A cold cache therefore reports nothing and
+refreshes in the background, which resolves on the next read. Do not treat absence as proof the
+board is current; it is a hint, and `activate-automation` remains the source of truth.
 
 ### GET `/changes?since=<updatedAt>,<id>&limit=`
 

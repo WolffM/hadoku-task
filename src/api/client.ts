@@ -4,7 +4,8 @@ import type {
   Task,
   CreateTaskInput,
   AutomationPreset,
-  PresetSourceStatus
+  PresetSourceStatus,
+  PresetUpdate
 } from '../domain/types'
 import { createLocalStorageApi } from './localStorageApi'
 import { formatError } from '../domain/utils/tags'
@@ -452,9 +453,7 @@ export function createApi(
     },
 
     /** List a board's grantees (owner only), annotated with display name + tier. */
-    async listShares(
-      boardRef: string
-    ): Promise<
+    async listShares(boardRef: string): Promise<
       Array<{
         granteeUserId: string
         name?: string | null
@@ -543,6 +542,26 @@ export function createApi(
     },
 
     /**
+     * Whether this board's lane set is behind the contract it was activated from
+     * (§5.5). The worker computes it from its cached copy of the provider's
+     * contract, so this is a plain read of the hydrated board. Null when the
+     * board is current — or when the worker's preset cache is cold, which
+     * resolves itself on the next read.
+     */
+    async getPresetUpdate(boardRef: string): Promise<PresetUpdate | null> {
+      try {
+        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}`, {
+          headers: adminHeaders(userType, sessionId)
+        })
+        if (!res.ok) return null
+        const data = (await res.json()) as { board?: { presetUpdate?: PresetUpdate } }
+        return data.board?.presetUpdate ?? null
+      } catch {
+        return null
+      }
+    },
+
+    /**
      * Activate (or preview) automation on a board (owner only, §5.4). Pass
      * `dryRun: true` for a preview + digest; echo that digest to commit. Returns
      * the raw result (preview/applied) or an error.
@@ -609,9 +628,7 @@ export function createApi(
     },
 
     /** Validate a repo (owner/name) by probing GitHub through the worker. */
-    async validateRepo(
-      repo: string
-    ): Promise<{
+    async validateRepo(repo: string): Promise<{
       repo: string
       valid: boolean
       reason: string

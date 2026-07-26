@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 5199 // Use a different port to avoid conflicts
+/**
+ * Override with E2E_PORT when another worktree is already serving this one.
+ * `reuseExistingServer` only checks that SOMETHING answers on the port — it
+ * cannot tell whose source that is, so a sibling worktree's vite gets silently
+ * reused and the browser tests code you did not write. Symptom: API-level specs
+ * pass while UI specs fail on elements that plainly exist in your source.
+ */
+const PORT = Number(process.env.E2E_PORT ?? 5199)
 
 export default defineConfig({
   testDir: './e2e',

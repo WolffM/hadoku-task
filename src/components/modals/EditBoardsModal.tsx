@@ -13,7 +13,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@wolffm/task-ui-components'
-import type { Board, AutomationPreset, PresetSourceStatus } from '../../domain/types'
+import type { Board, AutomationPreset, PresetSourceStatus, PresetUpdate } from '../../domain/types'
 import { effectivePinnedIds } from '../../domain/utils/boardPins'
 import { TOPBAR_BOARD_SLOTS } from '../../app/constants'
 import { ShareIcon } from '../ShareIcon'
@@ -59,6 +59,7 @@ export interface ShareApi {
     presets: AutomationPreset[]
     sources: PresetSourceStatus[]
   }>
+  getPresetUpdate: (boardRef: string) => Promise<PresetUpdate | null>
   activateAutomation: (
     boardRef: string,
     payload: {
@@ -71,9 +72,7 @@ export interface ShareApi {
     }
   ) => Promise<{ ok: boolean; error?: string; code?: string; result?: unknown }>
   deactivateAutomation: (boardRef: string) => Promise<{ ok: boolean; error?: string }>
-  validateRepo: (
-    repo: string
-  ) => Promise<{
+  validateRepo: (repo: string) => Promise<{
     repo: string
     valid: boolean
     reason: string
@@ -665,11 +664,19 @@ function AutomationPanel({
   const [presets, setPresets] = useState<AutomationPreset[] | null>(null)
   const [presetSources, setPresetSources] = useState<PresetSourceStatus[]>([])
   const [chosen, setChosen] = useState<string | null>(null)
+  const [presetUpdate, setPresetUpdate] = useState<PresetUpdate | null>(null)
+
+  /** An already-automated board being moved to a NEWER contract. It reuses the
+   * convert view wholesale — same JSON box, same mandatory preview, same commit
+   * — because re-activation is exactly as destructive as the first activation
+   * and deserves the same confirmation, not a one-click shortcut. */
+  const [reactivating, setReactivating] = useState(false)
+  const showConvert = !isAutomation || reactivating
 
   // Load the providers' live lane contracts once, when the convert view opens.
   // shareApi is memoized upstream, so this doesn't re-fire per render.
   useEffect(() => {
-    if (isAutomation) return
+    if (!showConvert) return
     let cancelled = false
     void shareApi.listAutomationPresets().then(res => {
       if (cancelled) return
@@ -679,7 +686,42 @@ function AutomationPanel({
     return () => {
       cancelled = true
     }
-  }, [isAutomation, shareApi])
+  }, [showConvert, shareApi])
+
+  // Has the provider published past what this board was activated from? The
+  // worker answers from its own cached copy of the contract, so this is a cheap
+  // read — and a null answer (including a cold cache) simply shows nothing.
+  useEffect(() => {
+    if (!isAutomation) return
+    let cancelled = false
+    void shareApi.getPresetUpdate(ref).then(u => {
+      if (!cancelled) setPresetUpdate(u)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isAutomation, ref, shareApi])
+
+  /** Load the newer contract into the convert view, ready to preview + commit. */
+  const startReactivate = () => {
+    if (!presetUpdate) return
+    setErr(null)
+    setBusy(true)
+    void shareApi
+      .listAutomationPresets()
+      .then(res => {
+        const p = res.presets.find(x => x.schemaId === presetUpdate.schemaId)
+        if (!p) {
+          setErr('That contract is no longer being served by the provider.')
+          return
+        }
+        setPresets(res.presets)
+        setPresetSources(res.sources)
+        choosePreset(p)
+        setReactivating(true)
+      })
+      .finally(() => setBusy(false))
+  }
 
   /** Selecting a preset fills the JSON box rather than hiding it: activation is
    * destructive, so the human sees the exact payload they're about to commit —
@@ -836,7 +878,7 @@ function AutomationPanel({
     </div>
   )
 
-  if (isAutomation) {
+  if (!showConvert) {
     const lanes = (board.lanes ?? []) as Array<{ tag: string; label?: string; editableBy?: string }>
     return (
       <div className="share-panel automation-panel">
@@ -845,6 +887,31 @@ function AutomationPanel({
           {board.schemaId ? ` · ${board.schemaId} v${board.schemaVersion ?? '?'}` : ''} ·{' '}
           {lanes.length} lanes
         </p>
+
+        {presetUpdate && (
+          <div
+            className={`automation-panel__update${presetUpdate.safe ? '' : ' is-unsafe'}`}
+            role="status"
+          >
+            <span className="automation-panel__update-text">
+              <strong>
+                {presetUpdate.providerLabel} published v{presetUpdate.schemaVersion}
+              </strong>
+              {' · '}
+              {presetUpdate.safe
+                ? 'no task moves'
+                : `${presetUpdate.toInbox} task${presetUpdate.toInbox === 1 ? '' : 's'} would move to the Inbox`}
+            </span>
+            <button
+              type="button"
+              className="automation-panel__update-btn"
+              onClick={startReactivate}
+              disabled={busy}
+            >
+              Review update
+            </button>
+          </div>
+        )}
 
         {repoField}
 
@@ -867,10 +934,36 @@ function AutomationPanel({
   return (
     <div className="share-panel automation-panel">
       <p className="automation-panel__hint">
-        Convert this to an <strong>automation board</strong>: pick a provider&apos;s lane contract
-        below, or paste one. This is <strong>destructive</strong> — it replaces the board&apos;s
-        tags with the fixed lanes. Preview first.
+        {reactivating ? (
+          <>
+            Move this board to <strong>{presetUpdate?.providerLabel}</strong> v
+            {presetUpdate?.schemaVersion}. This is <strong>destructive</strong> — it replaces the
+            board&apos;s lanes, and any task whose lane the new contract drops is cleared to the
+            Inbox. Preview first.
+          </>
+        ) : (
+          <>
+            Convert this to an <strong>automation board</strong>: pick a provider&apos;s lane
+            contract below, or paste one. This is <strong>destructive</strong> — it replaces the
+            board&apos;s tags with the fixed lanes. Preview first.
+          </>
+        )}
       </p>
+      {reactivating && (
+        <button
+          type="button"
+          className="automation-panel__update-cancel"
+          onClick={() => {
+            setReactivating(false)
+            setPreview(null)
+            setRaw('')
+            setChosen(null)
+            setErr(null)
+          }}
+        >
+          ← Back
+        </button>
+      )}
       {repoField}
 
       {presets === null && <p className="automation-panel__presets-msg">Loading presets…</p>}
@@ -892,7 +985,8 @@ function AutomationPanel({
                   <span className="automation-panel__preset-label">{p.label}</span>
                   <span className="automation-panel__preset-meta">
                     {p.providerLabel} · {p.schemaId}
-                    {p.schemaVersion !== null ? ` v${p.schemaVersion}` : ''} · {p.lanes.length} lanes
+                    {p.schemaVersion !== null ? ` v${p.schemaVersion}` : ''} · {p.lanes.length}{' '}
+                    lanes
                     {agentLanes > 0 ? ` (${agentLanes} agent)` : ''}
                   </span>
                 </button>

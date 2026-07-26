@@ -12,7 +12,8 @@ import type {
   AuthContext,
   CreateTaskInput,
   AutomationPreset,
-  PresetSourceStatus
+  PresetSourceStatus,
+  PresetUpdate
 } from '../domain/types'
 import { TaskNotFoundError } from '../domain/types'
 import { SESSION_ID } from './session'
@@ -110,9 +111,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     async searchUsers(_q: string): Promise<Array<{ name: string; tier?: string }>> {
       return []
     },
-    async listShares(
-      _boardRef: string
-    ): Promise<
+    async listShares(_boardRef: string): Promise<
       Array<{
         granteeUserId: string
         name?: string | null
@@ -144,6 +143,10 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       // and a signed-out user can't activate a board anyway.
       return { presets: [], sources: [] }
     },
+    async getPresetUpdate(_boardRef: string): Promise<PresetUpdate | null> {
+      // Same reason: no provider contract offline, and nothing to activate up to.
+      return null
+    },
     async activateAutomation(
       _boardRef: string,
       _payload: {
@@ -160,9 +163,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     async deactivateAutomation(_boardRef: string): Promise<{ ok: boolean; error?: string }> {
       return { ok: false, error: 'Sign in to configure automation boards.' }
     },
-    async validateRepo(
-      repo: string
-    ): Promise<{
+    async validateRepo(repo: string): Promise<{
       repo: string
       valid: boolean
       reason: string
@@ -172,7 +173,10 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     }> {
       return { repo, valid: false, reason: 'token', message: 'Sign in to validate repos.' }
     },
-    async setRepo(_boardRef: string, _repo: string): Promise<{ ok: boolean; repo?: string | null }> {
+    async setRepo(
+      _boardRef: string,
+      _repo: string
+    ): Promise<{ ok: boolean; repo?: string | null }> {
       return { ok: false }
     },
 

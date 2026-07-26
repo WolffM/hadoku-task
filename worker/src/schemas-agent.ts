@@ -208,6 +208,30 @@ export const AutomationPresetSchema = z
   })
   .openapi('AutomationPreset')
 
+/** Advertised on a hydrated board whose lane set is behind the contract it was
+ * activated from (§5.5). Advisory only — the owner still drives the activation
+ * handshake; this just says there is something worth offering. Absent when the
+ * board is current, isn't an automation board, matches no configured provider,
+ * or is being read by someone who couldn't activate it anyway. */
+export const PresetUpdateSchema = z
+  .object({
+    providerId: z.string().openapi({ example: 'tenhands' }),
+    providerLabel: z.string().openapi({ example: 'TenHands' }),
+    schemaId: z.string().openapi({ example: 'autoland' }),
+    schemaVersion: z
+      .number()
+      .openapi({ example: 2, description: 'What the provider publishes now' }),
+    label: z.string().openapi({ example: 'Autoland' }),
+    description: z.string().nullable(),
+    safe: z
+      .boolean()
+      .openapi({ description: 'Applying this would move no task (toInbox === 0)', example: true }),
+    toInbox: z
+      .number()
+      .openapi({ description: 'Active tasks that would be cleared to the Inbox', example: 0 })
+  })
+  .openapi('PresetUpdate')
+
 /** Per-provider fetch outcome, so the picker can distinguish "no presets exist"
  * from "the provider is down and these are the lanes we last saw". */
 export const PresetSourceResultSchema = z
@@ -280,21 +304,15 @@ const boardRefParam = z.object({
 
 export const GrantShareInputSchema = z
   .object({
-    name: z
-      .string()
-      .optional()
-      .openapi({
-        example: 'tenhands-service',
-        description:
-          'Grantee display name (PREFERRED — no credential changes hands). Resolved case-insensitively against live registry rows.'
-      }),
-    key: z
-      .string()
-      .optional()
-      .openapi({
-        example: 'friend-…',
-        description: 'Grantee access key — a bearer credential; prefer `name`.'
-      }),
+    name: z.string().optional().openapi({
+      example: 'tenhands-service',
+      description:
+        'Grantee display name (PREFERRED — no credential changes hands). Resolved case-insensitively against live registry rows.'
+    }),
+    key: z.string().optional().openapi({
+      example: 'friend-…',
+      description: 'Grantee access key — a bearer credential; prefer `name`.'
+    }),
     userId: z
       .string()
       .optional()
@@ -374,12 +392,9 @@ export const ActivateInputSchema = z
       .boolean()
       .optional()
       .openapi({ description: 'Preview + digest only; writes nothing.' }),
-    digest: z
-      .string()
-      .optional()
-      .openapi({
-        description: 'The dryRun digest, echoed on commit (stale ⇒ 409 DIGEST_MISMATCH).'
-      })
+    digest: z.string().optional().openapi({
+      description: 'The dryRun digest, echoed on commit (stale ⇒ 409 DIGEST_MISMATCH).'
+    })
   })
   .openapi('ActivateAutomationInput')
 
@@ -496,12 +511,9 @@ export const ReleaseInputSchema = z
     notes: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
     outcome: z.string().nullable().optional(),
-    ifCurrentLane: z
-      .string()
-      .optional()
-      .openapi({
-        description: 'Abort with 409 LANE_CHANGED unless the task is still in this lane.'
-      }),
+    ifCurrentLane: z.string().optional().openapi({
+      description: 'Abort with 409 LANE_CHANGED unless the task is still in this lane.'
+    }),
     complete: z
       .boolean()
       .optional()
@@ -578,7 +590,8 @@ export const HydratedBoardResponseSchema = z
       schemaId: z.string().nullable(),
       schemaVersion: z.number().nullable(),
       access: z.enum(['owner', 'contributor', 'readonly']),
-      ownerUserId: z.string()
+      ownerUserId: z.string(),
+      presetUpdate: PresetUpdateSchema.optional()
     }),
     tasks: z.array(HydratedTaskSchema),
     version: z.number()

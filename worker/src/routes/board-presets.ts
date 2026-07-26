@@ -258,3 +258,37 @@ export async function listPresets(
   }
   return { presets, sources: results }
 }
+
+/**
+ * Whatever this isolate already holds, with NO network call — not even a
+ * revalidation. For read paths that want the provider's contract but must not
+ * inherit its latency: `listPresets` can spend up to FETCH_TIMEOUT_MS per source
+ * when the TTL has lapsed, which is fine on the picker (the user asked for it)
+ * and not fine on a board load (they didn't).
+ *
+ * A cold isolate returns [] here. That's the intended trade: the caller treats an
+ * empty result as "nothing to say yet" rather than "nothing exists", warms the
+ * cache out-of-band, and has the answer on the next request.
+ */
+export function peekPresets(rawBinding: string | undefined): AutomationPreset[] {
+  const presets: AutomationPreset[] = []
+  for (const source of parsePresetSources(rawBinding)) {
+    const hit = cache.get(source.url)
+    if (hit) presets.push(...hit.presets)
+  }
+  return presets
+}
+
+/**
+ * Would a `listPresets` call actually go to the network? Lets a caller skip
+ * scheduling a background warm when every source is already fresh, so a busy
+ * board doesn't queue one redundant refresh per request.
+ */
+export function presetsNeedRefresh(rawBinding: string | undefined): boolean {
+  const sources = parsePresetSources(rawBinding)
+  if (sources.length === 0) return false
+  return sources.some(s => {
+    const hit = cache.get(s.url)
+    return !hit || Date.now() - hit.at >= CACHE_TTL_MS
+  })
+}

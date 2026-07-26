@@ -80,6 +80,26 @@ export interface AutomationPreset {
   lanes: Lane[]
 }
 
+/**
+ * The provider has published a newer contract than this board was activated from
+ * (§5.5). Advisory: the owner still drives the activation handshake, this only
+ * says there is something worth offering. Absent when the board is current, isn't
+ * an automation board, or is being read by someone who couldn't activate it.
+ */
+export interface PresetUpdate {
+  providerId: string
+  providerLabel: string
+  schemaId: string
+  /** What the provider publishes now — the version to activate up to. */
+  schemaVersion: number
+  label: string
+  description: string | null
+  /** Applying it would move no task. False ⇒ a real migration, show the preview. */
+  safe: boolean
+  /** Active tasks that would be cleared to the Inbox (0 when `safe`). */
+  toInbox: number
+}
+
 /** Per-provider fetch outcome, so the picker can tell "no presets exist" apart
  * from "the provider is down and these are the lanes we last saw". */
 export interface PresetSourceStatus {

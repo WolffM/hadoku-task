@@ -119,7 +119,9 @@ createServer((req, res) => {
     res.writeHead(404).end()
     return
   }
-  console.log(`[provider] ${req.method} ${req.url} if-none-match=${req.headers['if-none-match'] ?? '-'}`)
+  console.log(
+    `[provider] ${req.method} ${req.url} if-none-match=${req.headers['if-none-match'] ?? '-'}`
+  )
   if (req.headers['if-none-match'] === PRESETS_ETAG) {
     res.writeHead(304, { ETag: PRESETS_ETAG }).end()
     return
@@ -139,15 +141,34 @@ createServer(async (req, res) => {
       if (typeof v === 'string') headers.set(k, v)
     }
     // What edge-router stamps in production, from the session cookie.
+    // `X-Dev-As: <id>` impersonates a second identity, which is the only way to
+    // exercise anything access-scoped (sharing, contributor vs owner) against a
+    // shim that otherwise pins every request to one user. Dev stack only — in
+    // production these headers come from a signed session and this file is not
+    // deployed.
+    const as = typeof req.headers['x-dev-as'] === 'string' ? req.headers['x-dev-as'] : null
     headers.set('X-Edge-Auth', EDGE_SECRET)
     headers.set('X-Hadoku-Tier', USER.tier)
-    headers.set('X-User-Key', USER.key)
-    headers.set('X-User-Id', USER.id)
+    headers.set('X-User-Key', as ?? USER.key)
+    headers.set('X-User-Id', as ?? USER.id)
+
+    // Workers supply an ExecutionContext; without one every `waitUntil` in the
+    // codebase either no-ops or throws, so dev silently diverges from prod on
+    // any background work. Track the promises so a stray rejection surfaces here
+    // instead of vanishing.
+    const pending: Array<Promise<unknown>> = []
+    const executionCtx = {
+      waitUntil: (p: Promise<unknown>) => {
+        pending.push(Promise.resolve(p).catch(e => console.error('[waitUntil]', e)))
+      },
+      passThroughOnException: () => {}
+    }
 
     const response = await app.request(
       `http://localhost${req.url}`,
       { method: req.method, headers, body: body as unknown as BodyInit },
-      env
+      env,
+      executionCtx as unknown as ExecutionContext
     )
     const out = Buffer.from(await response.arrayBuffer())
     const outHeaders: Record<string, string> = {}
@@ -156,8 +177,8 @@ createServer(async (req, res) => {
   } catch (e) {
     // One bad request must not take the dev stack down mid-test-run.
     console.error(`[worker] ${req.method} ${req.url} →`, e)
-    res.writeHead(500, { 'Content-Type': 'application/json' }).end(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e) })
-    )
+    res
+      .writeHead(500, { 'Content-Type': 'application/json' })
+      .end(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }))
   }
 }).listen(API_PORT, () => console.log(`[worker]   :${API_PORT} (user=${USER.key}/${USER.tier})`))

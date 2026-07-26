@@ -24,6 +24,7 @@ import {
   liveClaimedTaskIds
 } from './board-claims'
 import { getBoardConfig } from './board-automation'
+import { detectPresetUpdate, warmPresets } from './preset-update'
 import {
   ClaimInputSchema,
   ClaimResponseSchema,
@@ -337,6 +338,23 @@ export function createAgentRoutes() {
       ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
       liveClaimedTaskIds(c.env.DB, ctx.ownerId, ctx.boardId)
     ])
+
+    // Is the board behind the contract it was activated from? Computed off the
+    // task tags already loaded above and the preset cache as it stands — this
+    // read must not inherit a provider's latency, so it never fetches. The warm
+    // happens after the response is sent.
+    const binding = c.env.AUTOMATION_PRESET_SOURCES
+    const presetUpdate = detectPresetUpdate(binding, {
+      access: ctx.access,
+      mode: cfg.mode,
+      schemaId: cfg.schemaId,
+      schemaVersion: cfg.schemaVersion,
+      taskTags: file.tasks.map(t => t.tag)
+    })
+    if (ctx.access === 'owner' && cfg.mode === 'automation') {
+      warmPresets(binding, c)
+    }
+
     return c.json({
       board: {
         id: ctx.boardId,
@@ -348,7 +366,8 @@ export function createAgentRoutes() {
         schemaId: cfg.schemaId,
         schemaVersion: cfg.schemaVersion,
         access: ctx.access,
-        ownerUserId: ctx.ownerId
+        ownerUserId: ctx.ownerId,
+        ...(presetUpdate ? { presetUpdate } : {})
       },
       tasks: file.tasks.map(t => ({ ...t, claimed: claimed.has(t.id) })),
       version: file.version ?? 1
