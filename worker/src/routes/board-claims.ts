@@ -19,7 +19,8 @@ import {
   LeaseLostError,
   LaneUnknownError,
   LaneChangedError,
-  TaskNotFoundError
+  TaskNotFoundError,
+  assertNotesWithinLimit
 } from '@wolffm/task/api'
 
 interface D1Like {
@@ -248,6 +249,14 @@ export async function releaseClaim(
     lanes: Lane[]
   }
 ): Promise<ReleaseResult> {
+  // Reject an oversized plan BEFORE anything is read or written. This is the
+  // path that actually receives machine-generated text, so leaving it exempt
+  // made the cap decorative — the human path enforced a limit the agent could
+  // walk straight past. Checked ahead of the claim lookup because payload
+  // validity doesn't depend on claim state, and the agent should get a clean
+  // 413 to retry against while it still holds the lease.
+  assertNotesWithinLimit(opts.notes)
+
   const now = nowIso()
   const claim = await liveClaim(db, ownerId, taskId, now)
 

@@ -80,6 +80,7 @@ const NARROWED_ERROR_SCHEMAS: Record<string, string[]> = {
   LeaseLostError: ['LEASE_LOST'],
   ReleaseConflictError: ['LEASE_LOST', 'LANE_CHANGED'],
   LaneUnknownError: ['LANE_UNKNOWN'],
+  NotesTooLargeError: ['NOTES_TOO_LARGE'],
   DigestMismatchError: ['DIGEST_MISMATCH'],
   LaneSetInvalidError: ['LANE_SET_INVALID'],
   ShareGranteeNotFoundError: ['BOARD_NOT_FOUND', 'NAME_NOT_FOUND'],
@@ -93,6 +94,7 @@ const RESPONSE_SCHEMA_REFS: Array<[string, string, string, string]> = [
   ['/task/api/agent/heartbeat', 'post', '409', 'LeaseLostError'],
   ['/task/api/agent/set-lane', 'post', '409', 'LeaseLostError'],
   ['/task/api/agent/release', 'post', '409', 'ReleaseConflictError'],
+  ['/task/api/agent/release', 'post', '413', 'NotesTooLargeError'],
   ['/task/api/boards/{ref}/activate-automation', 'post', '409', 'DigestMismatchError'],
   ['/task/api/boards/{ref}/shares', 'post', '409', 'NoUserIdError']
 ]

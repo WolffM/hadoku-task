@@ -55,6 +55,7 @@ export {
   VersionConflictError,
   NotesTooLargeError,
   MAX_NOTES_BYTES,
+  assertNotesWithinLimit,
   LaneNotEditableError,
   LaneInvalidError,
   BoardSchemaLockedError,

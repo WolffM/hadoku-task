@@ -162,7 +162,7 @@ Tool failures return `isError: true` with a `structuredContent.code` you can act
 | `BOARD_SCHEMA_LOCKED`                | 409  | Lane structure is frozen on an automation board. Never retry      |
 | `DIGEST_MISMATCH`                    | 409  | Activation preview is stale. Re-run the dry-run                   |
 | `VERSION_CONFLICT`                   | 409  | Re-pull and retry                                                 |
-| `NOTES_TOO_LARGE`                    | 413  | Truncate or link out; don't retry unchanged                       |
+| `NOTES_TOO_LARGE`                    | 413  | 64 KB UTF-8 cap. Nothing written, claim kept — truncate + retry   |
 | `RATE_LIMITED`                       | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min        |
 | `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404  | Abort; treat as already handled                                   |
 | `FORBIDDEN`                          | 403  | Readonly access, or an owner-only action. Never retry             |

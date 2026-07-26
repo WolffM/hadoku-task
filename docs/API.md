@@ -813,6 +813,10 @@ history. Idempotent on token. `ifCurrentLane` guards against a human retag → `
 `complete: true` archives the task (removes it from the active list) — still claim-gated and
 audited; otherwise `state` is never changed.
 
+`notes` is capped at **64 KB of UTF-8** (not characters — multibyte content is measured on its
+encoded length). Over it → `413 NOTES_TOO_LARGE`, and **nothing is written and your claim is not
+dropped**, so truncate or link out and retry on the same token. Don't retry unchanged.
+
 ### POST `/agent/cancel`
 
 Owner-only. Force-drop the claim on a task (reclaim a stuck/held task by hand). Body:

@@ -643,6 +643,74 @@ async function main() {
     `status=${svc.status}`
   )
 
+  // ---------------------------------------------------------------------
+  section('19. The 64 KB notes cap binds the AGENT path too (§6)')
+  // ---------------------------------------------------------------------
+  // The human path always enforced this; release did not — and release is the
+  // path that receives machine-generated plans, so the exemption made the cap
+  // decorative. A rejected release must write NOTHING and keep the lease, so the
+  // runner can truncate and retry instead of losing its claim.
+  // Untagged: on an automation board the human path may only write a `user`
+  // lane, so an arbitrary tag here would be refused as LANE_INVALID.
+  await req('POST', '/task/api', { id: 'cap1', title: 'cap probe', boardId: 'auto' })
+  const capClaim = await req('POST', '/task/api/agent/claim', {
+    board: 'auto',
+    taskId: 'cap1',
+    agentId: 'planner',
+    lane: 'working'
+  })
+  const capToken = capClaim.json?.token
+  check('claimed the cap probe', capClaim.status === 200, JSON.stringify(capClaim.json))
+
+  const over = 'x'.repeat(64 * 1024 + 1)
+  r = await req('POST', '/task/api/agent/release', {
+    board: 'auto',
+    taskId: 'cap1',
+    token: capToken,
+    lane: 'review',
+    notes: over
+  })
+  check(
+    'release with oversized notes → 413 NOTES_TOO_LARGE',
+    r.status === 413 && r.json?.code === 'NOTES_TOO_LARGE',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check('the rejected release moved nothing — still in working', (await tag('cap1')) === 'working')
+  const capTask = () =>
+    req('GET', '/task/api/tasks?boardId=auto').then(x => x.json?.tasks?.find(t => t.id === 'cap1'))
+  check('the rejected release wrote no notes', !(await capTask())?.notes)
+
+  // Byte-counted, not length-counted: 4-byte astral chars go over the cap at a
+  // quarter of the string length. A .length check would have let this through.
+  r = await req('POST', '/task/api/agent/release', {
+    board: 'auto',
+    taskId: 'cap1',
+    token: capToken,
+    lane: 'review',
+    notes: '𝄞'.repeat(17 * 1024) // 17k chars ≈ 68 KB encoded
+  })
+  check(
+    'multibyte notes under the CHARACTER count but over the BYTE cap → 413',
+    r.status === 413 && r.json?.code === 'NOTES_TOO_LARGE',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // The lease survived both rejections — that's what makes 413 retryable.
+  r = await req('POST', '/task/api/agent/release', {
+    board: 'auto',
+    taskId: 'cap1',
+    token: capToken,
+    lane: 'review',
+    notes: 'z'.repeat(64 * 1024) // exactly at the cap
+  })
+  check(
+    'the SAME token still works after a 413 → the claim was never dropped',
+    r.status === 200 && r.json?.released === true,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check('notes exactly at the cap are accepted', (await capTask())?.notes?.length === 64 * 1024)
+  check('and the retry landed the task in its lane', (await tag('cap1')) === 'review')
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

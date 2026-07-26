@@ -145,6 +145,13 @@ export const LaneUnknownErrorSchema = narrowError(
   'The destination lane is not on this board (e.g. a re-activation removed it).'
 )
 
+/** 413 on /agent/release — always NOTES_TOO_LARGE. */
+export const NotesTooLargeErrorSchema = narrowError(
+  'NotesTooLargeError',
+  ['NOTES_TOO_LARGE'],
+  'The `notes` body exceeds the 64 KB limit. Nothing was written and you still hold the claim — truncate or link out and retry; do not retry unchanged.'
+)
+
 /** 409 on the committing activate-automation call — always DIGEST_MISMATCH. */
 export const DigestMismatchErrorSchema = narrowError(
   'DigestMismatchError',

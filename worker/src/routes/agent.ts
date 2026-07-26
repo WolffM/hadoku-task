@@ -44,7 +44,8 @@ import {
   ClaimHeldErrorSchema,
   LeaseLostErrorSchema,
   ReleaseConflictErrorSchema,
-  LaneUnknownErrorSchema
+  LaneUnknownErrorSchema,
+  NotesTooLargeErrorSchema
 } from '../schemas-agent'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext } from '../types'
@@ -59,6 +60,7 @@ const claimHeld = { 'application/json': { schema: ClaimHeldErrorSchema } }
 const leaseLost = { 'application/json': { schema: LeaseLostErrorSchema } }
 const releaseConflict = { 'application/json': { schema: ReleaseConflictErrorSchema } }
 const laneUnknown = { 'application/json': { schema: LaneUnknownErrorSchema } }
+const notesTooLarge = { 'application/json': { schema: NotesTooLargeErrorSchema } }
 
 /**
  * Resolve the board for a write on the agent path. Returns the resolved BoardCtx,
@@ -215,6 +217,10 @@ export function createAgentRoutes() {
       409: {
         description: 'Lease taken (LEASE_LOST) or lane changed (LANE_CHANGED)',
         content: releaseConflict
+      },
+      413: {
+        description: '`notes` exceeds the 64 KB limit (NOTES_TOO_LARGE) — nothing written',
+        content: notesTooLarge
       },
       422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
     }
