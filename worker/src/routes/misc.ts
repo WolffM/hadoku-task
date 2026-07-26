@@ -4,7 +4,7 @@
  * Handles utility endpoints: health check, key validation
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { healthCheck } from '@wolffm/worker-utils'
+import { healthCheck, tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import type { AppContext } from '../types'
 import { HealthResponseSchema, ValidateKeyResponseSchema } from '../schemas'
@@ -55,7 +55,7 @@ export function createMiscRoutes() {
   app.openapi(validateKeyRoute, c => {
     const authContext = c.get('authContext')
     const userType = authContext.userType
-    const valid = userType !== 'public'
+    const valid = tierAtLeast(authContext, 'friend')
     // Edge-injected stable identity (see TaskAuthExtension.userId). Surfacing it
     // lets a caller discover the id its data is keyed under, and is the signal
     // that confirms edge-router's X-User-Id injection is reaching this worker.

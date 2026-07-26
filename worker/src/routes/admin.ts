@@ -4,7 +4,7 @@
  * Handles administrative endpoints for monitoring and management
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { maskKey, maskSessionId, tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import {
   getThrottleState,
@@ -15,7 +15,6 @@ import {
   checkSuspiciousPatterns
 } from '../throttle'
 import { getSessionMapping } from '../session'
-import { USER_TYPES } from '../constants'
 import type { AppContext } from '../types'
 import {
   GetThrottleStatusResponseSchema,
@@ -70,7 +69,7 @@ export function createAdminRoutes() {
 
   app.openapi(getThrottleStatusRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    if (auth.userType !== USER_TYPES.ADMIN) {
+    if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
     }
 
@@ -135,7 +134,7 @@ export function createAdminRoutes() {
 
   app.openapi(getSessionsRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    if (auth.userType !== USER_TYPES.ADMIN) {
+    if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
     }
 
@@ -209,7 +208,7 @@ export function createAdminRoutes() {
 
   app.openapi(unblacklistRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    if (auth.userType !== USER_TYPES.ADMIN) {
+    if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
     }
 

@@ -10,7 +10,7 @@
  * generated OpenAPI spec (schemas-agent.ts).
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { badRequest } from '@wolffm/worker-utils'
+import { badRequest, tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { listShares, upsertShare, removeShare, resolveOwnBoard } from './board-sharing'
@@ -282,7 +282,7 @@ export function createShareRoutes() {
   app.openapi(searchRoute, (async (c: any) => {
     const auth = c.get('authContext')
     // Only signed-in users may enumerate names (avoids anonymous scraping).
-    if (!auth || auth.userType === 'public') {
+    if (!tierAtLeast(auth, 'friend')) {
       return c.json({ users: [] })
     }
     const { q, limit } = c.req.valid('query')

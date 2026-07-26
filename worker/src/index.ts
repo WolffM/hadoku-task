@@ -33,6 +33,12 @@ import { DEFAULT_SESSION_ID } from './constants'
 import { DomainErrorSchema } from './schemas-agent'
 import type { AppContext, TaskAuthExtension } from './types'
 
+/**
+ * Tiers subject to rate limiting. See the throttle middleware below for why
+ * this is a set rather than a minimum tier — it is not monotonic in rank.
+ */
+const THROTTLED_TIERS: ReadonlySet<string> = new Set(['public', 'service'])
+
 // Import route modules
 import { createSessionRoutes } from './routes/session'
 import { createPreferencesRoutes } from './routes/preferences'
@@ -150,12 +156,17 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     // `service` (automated agents like TenHands) IS throttled, but at its own
     // generous 600/min ceiling (throttle.ts) — high enough that normal operation
     // can't approach it, so a runaway bot is still bounded without capping a human.
+    //
+    // THROTTLED_TIERS is deliberately a SET, not a rank check: it is a policy
+    // ("throttle anonymous and machine callers, exempt humans"), not an access
+    // gate. It is not monotonic in tier — `service` outranks `friend` yet is the
+    // throttled one — so tierAtLeast would be the wrong tool here.
     const skipThrottlePaths = [
       '/task/api/health',
       '/task/api/validate-key',
       '/task/api/session/handshake'
     ]
-    const throttledTier = userType === 'public' || userType === 'service'
+    const throttledTier = THROTTLED_TIERS.has(userType)
     if (skipThrottlePaths.includes(c.req.path) || !throttledTier) {
       return next()
     }

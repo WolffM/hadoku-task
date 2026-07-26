@@ -13,6 +13,7 @@ import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation } from './board-automation'
 import { listPresets } from './board-presets'
+import { tierAtLeast } from '@wolffm/worker-utils'
 import {
   ActivateInputSchema,
   ActivateResponseSchema,
@@ -131,7 +132,7 @@ export function createAutomationRoutes() {
   })
   app.openapi(presetsRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    if (!auth || auth.userType === 'public') return c.json({ presets: [], sources: [] })
+    if (!tierAtLeast(auth, 'friend')) return c.json({ presets: [], sources: [] })
     const result = await listPresets(c.env.AUTOMATION_PRESET_SOURCES)
     return c.json(result)
   }) as never)
@@ -152,7 +153,9 @@ export function createAutomationRoutes() {
       return c.json({ error: 'Invalid JSON body', code: 'BAD_REQUEST' }, 400)
     }
     const repo = typeof body.repo === 'string' && body.repo.trim() ? body.repo.trim() : null
-    await c.env.DB.prepare('UPDATE boards SET repo = ?, updated_at = ? WHERE user_id = ? AND id = ?')
+    await c.env.DB.prepare(
+      'UPDATE boards SET repo = ?, updated_at = ? WHERE user_id = ? AND id = ?'
+    )
       .bind(repo, new Date().toISOString(), ctx.ownerId, ctx.boardId)
       .run()
     logRequest('POST', `/task/api/boards/${ref}/repo`, { board: ctx.boardId, repo })
@@ -175,7 +178,7 @@ export function createAutomationRoutes() {
   })
   app.openapi(repoValidateRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    if (!auth || auth.userType === 'public') {
+    if (!tierAtLeast(auth, 'friend')) {
       return c.json({
         repo: '',
         valid: false,

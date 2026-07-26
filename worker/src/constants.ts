@@ -4,17 +4,12 @@
  * Centralized location for all magic strings, default values, and configuration constants.
  */
 
-// ============================================================================
-// User Types
-// ============================================================================
-
-export const USER_TYPES = {
-  ADMIN: 'admin',
-  FRIEND: 'friend',
-  PUBLIC: 'public'
-} as const
-
-export type UserType = (typeof USER_TYPES)[keyof typeof USER_TYPES]
+// The USER_TYPES map that used to live here was removed with the 2026-07-25
+// tier-hierarchy unification. It predated the `service` tier and so couldn't
+// name it, and comparing `auth.userType` against its members was an exact match
+// that locked higher tiers out of lower-tier routes. Gate with
+// `tierAtLeast(auth, 'admin')` from @wolffm/worker-utils instead — it ranks
+// public < friend < service < admin.
 
 // ============================================================================
 // Session & Board Defaults
