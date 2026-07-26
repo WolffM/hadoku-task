@@ -99,9 +99,18 @@ const env = {
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',
-  AUTOMATION_PRESET_SOURCES: JSON.stringify([
-    { id: 'tenhands', label: 'TenHands', url: `http://localhost:${PROVIDER_PORT}/automation/presets` }
-  ])
+  // Defaults to the local stub so the e2e specs are hermetic. Point it at a real
+  // provider to smoke-test the live contract:
+  //   DEV_PRESET_SOURCES='[{"id":"tenhands","label":"TenHands","url":"https://…"}]'
+  AUTOMATION_PRESET_SOURCES:
+    process.env.DEV_PRESET_SOURCES ??
+    JSON.stringify([
+      {
+        id: 'tenhands',
+        label: 'TenHands',
+        url: `http://localhost:${PROVIDER_PORT}/automation/presets`
+      }
+    ])
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────
