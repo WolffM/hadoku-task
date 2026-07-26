@@ -21,7 +21,10 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
-    "./worker": "./dist/worker/index.js",
+    "./worker": {
+      "types": "./dist/worker/index.d.ts",
+      "default": "./dist/worker/index.js"
+    },
     "./frontend": {
       "types": "./dist/app/entry.d.ts",
       "default": "./dist/index.js"
