@@ -7,6 +7,14 @@
  * carrying a publishable version, so publish.yml never has to write a follow-up
  * "auto-bump" commit on main.
  *
+ * REQUIRES A BOOTSTRAPPED WORKTREE. The hook that runs this is installed by
+ * husky at `.husky/_`, which is generated during `pnpm install` and self-ignored,
+ * so a plain `git worktree add` produces a checkout where no hook runs at all —
+ * this script never fires and CI's backstop does every bump. Since work here
+ * happens in worktrees, that is the normal case, not an edge one. Create them
+ * with `node scripts/new-worktree.mjs <name>`, which installs and then verifies
+ * the hook is live.
+ *
  * publish.yml keeps its own registry-aware bump as a BACKSTOP, for the cases
  * this can't cover: a bot commit, a `--no-verify`, or a version that turns out
  * to be taken on the registry (this script can't check that offline). The two
@@ -97,8 +105,21 @@ function main() {
     const json = JSON.parse(readFileSync(file, 'utf8'))
     const head = versionAtHead(pkg.path)
 
-    // Already moved in this staged set — an --amend, or a hand-written bump. Bump
-    // once per commit, not once per attempt at it.
+    // Already moved relative to HEAD — a hand-written bump, or a retry after a
+    // commit that the gates aborted (the tree kept the bump, HEAD never got it).
+    //
+    // This does NOT cover `--amend`, despite an earlier claim that it did. During
+    // an amend HEAD is still the commit being amended, whose package.json already
+    // carries the bump, so it equals the working tree and this never fires: an
+    // amend that stages a publishable path bumps again (3.4.155 -> 3.4.156).
+    // A bare `--amend --no-edit` is safe only incidentally — nothing is staged, so
+    // no package matches and we exit before reaching here.
+    // There is no fix at this point in the lifecycle —
+    // hooks run pre-commit → prepare-commit-msg → commit-msg, and only
+    // prepare-commit-msg is told it's an amend (via its third argument), by which
+    // time the index for the commit is already fixed and a bump can't be staged.
+    // Left as-is deliberately: a skipped patch number costs nothing, and
+    // publish.yml's registry-aware backstop rolls forward to a free version.
     if (head && head !== json.version) {
       console.log(`📦 ${pkg.name}: already ${head} → ${json.version}, leaving it`)
       continue
