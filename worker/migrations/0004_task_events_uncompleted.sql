@@ -45,8 +45,20 @@ INSERT INTO task_events_new (id, user_key, board_id, task_id, event_type, timest
 ALTER TABLE task_events RENAME TO task_events_backup_0004;
 ALTER TABLE task_events_new RENAME TO task_events;
 
--- Indexes go with the dropped table, so recreate all four verbatim.
-CREATE INDEX IF NOT EXISTS idx_user_board ON task_events(user_key, board_id, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_user       ON task_events(user_key, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_timestamp  ON task_events(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_task       ON task_events(task_id, timestamp DESC);
+-- Recreate all four indexes on the LIVE table.
+--
+-- The DROPs are load-bearing, not tidiness. In SQLite an index follows its table
+-- through a rename, so after the rename above all four names are still taken by
+-- the backup's copies — `CREATE INDEX IF NOT EXISTS` would match those, skip
+-- silently, and leave the new task_events with no indexes at all while reporting
+-- success. Drop them off the backup (a frozen copy nobody queries; an index is
+-- derived data) and build them fresh here.
+DROP INDEX IF EXISTS idx_user_board;
+DROP INDEX IF EXISTS idx_user;
+DROP INDEX IF EXISTS idx_timestamp;
+DROP INDEX IF EXISTS idx_task;
+
+CREATE INDEX idx_user_board ON task_events(user_key, board_id, timestamp DESC);
+CREATE INDEX idx_user       ON task_events(user_key, timestamp DESC);
+CREATE INDEX idx_timestamp  ON task_events(timestamp DESC);
+CREATE INDEX idx_task       ON task_events(task_id, timestamp DESC);

@@ -266,6 +266,39 @@ async function main() {
   check('unrelated active task still Active', live?.state === 'Active', `state=${live?.state}`)
   check('…and has no closedAt', !live?.closedAt, `closedAt=${live?.closedAt}`)
 
+  // ---------------------------------------------------------------------
+  section('9. the migrations left task_events usable, not merely present')
+  // ---------------------------------------------------------------------
+  // 0004 rebuilds task_events, and its first version silently dropped every
+  // index: renaming a table carries its indexes along, so the names were still
+  // taken and `CREATE INDEX IF NOT EXISTS` matched the backup's copies and
+  // skipped. The migration reported success while leaving the live table
+  // unindexed, and nothing here noticed — the whole suite passed. Assert the
+  // shape, not just that queries return rows.
+  const idxRows = d1.__raw
+    .prepare(
+      `SELECT name FROM sqlite_master
+        WHERE type='index' AND tbl_name='task_events' AND name NOT LIKE 'sqlite_%'`
+    )
+    .all() as Array<{ name: string }>
+  const idx = new Set(idxRows.map(r => r.name))
+  for (const want of ['idx_user_board', 'idx_user', 'idx_timestamp', 'idx_task']) {
+    check(`index ${want} is on the LIVE table`, idx.has(want), `have=${[...idx].join(',')}`)
+  }
+
+  const ddl = (
+    d1.__raw.prepare(`SELECT sql FROM sqlite_master WHERE name='task_events'`).get() as {
+      sql: string
+    }
+  ).sql
+  check('CHECK admits uncompleted', ddl.includes("'uncompleted'"), ddl)
+
+  // The backup 0004 leaves behind must still hold the history it copied from.
+  const backup = d1.__raw
+    .prepare(`SELECT COUNT(*) AS n FROM sqlite_master WHERE name='task_events_backup_0004'`)
+    .get() as { n: number }
+  check('0004 kept a backup rather than dropping the original', backup.n === 1)
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }
