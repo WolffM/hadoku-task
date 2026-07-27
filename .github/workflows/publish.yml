@@ -208,7 +208,7 @@ jobs:
           if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
             echo "📦 task-ui-components changed, checking version..."
             if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
-              echo "::warning::task-ui-components version was not bumped! Will auto-bump."
+              echo "::notice::task-ui-components: version is already published — CI will assign the next free one."
               version_issues=1
               needs_ui_bump=true
             fi
@@ -219,7 +219,7 @@ jobs:
           if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
             echo "📦 themes changed, checking version..."
             if ! check_version_published "@wolffm/themes" "./themes"; then
-              echo "::warning::themes version was not bumped! Will auto-bump."
+              echo "::notice::themes: version is already published — CI will assign the next free one."
               version_issues=1
               needs_themes_bump=true
             fi
@@ -230,7 +230,7 @@ jobs:
           if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
             echo "📦 task changed, checking version..."
             if ! check_version_published "@wolffm/task" "."; then
-              echo "::warning::task version was not bumped! Will auto-bump."
+              echo "::notice::task: version is already published — CI will assign the next free one."
               version_issues=1
               needs_task_bump=true
             fi
@@ -246,17 +246,20 @@ jobs:
 
           if [ $version_issues -eq 1 ]; then
             echo ""
-            echo "⚠️  VERSION BUMP MISSING - Will auto-bump in next step"
+            echo "🔢 A changed package is sitting on a version that is already on the"
+            echo "   registry — assigning the next free one in the next step."
             echo ""
-            echo "The pre-commit hook should have auto-bumped the version but didn't."
-            echo "Possible causes:"
-            echo "  1. Husky hooks not installed (run 'pnpm prepare')"
-            echo "  2. Git hooks bypassed with --no-verify"
-            echo "  3. Commit made by automation (Copilot, bot, etc.)"
+            echo "   Normally .husky/pre-commit (scripts/version-bump.mjs) has already"
+            echo "   bumped it and this step is a no-op. CI takes over for the cases a"
+            echo "   local hook can't cover:"
+            echo "     1. a commit made by automation (bot, Copilot) — no hook runs"
+            echo "     2. a commit made with --no-verify, or with hooks not installed"
+            echo "        (run 'pnpm prepare')"
+            echo "     3. the bumped version was taken since — e.g. a prior CI run"
+            echo "        burned it, or two branches bumped to the same number"
             echo ""
-            echo "✨ CI will auto-bump versions and continue..."
           else
-            echo "✅ All changed packages have new versions (or no source changes requiring bump)"
+            echo "✅ All changed packages carry an unpublished version — nothing to bump."
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
@@ -265,7 +268,7 @@ jobs:
       - name: Auto-bump versions
         if: steps.version_check.outputs.version_issues == '1'
         run: |
-          echo "🤖 Auto-bumping versions that were missed by pre-commit hook..."
+          echo "🔢 Assigning the next free version for packages CI had to bump..."
 
           # Function to compute the next version (handles .20 rollover to next minor)
           next_version() {
@@ -282,7 +285,7 @@ jobs:
 
           # Function to bump version for a package.
           # Loops until it finds an unpublished version: a single-step bump is
-          # insufficient because if the pre-commit hook was skipped AND a prior
+          # insufficient because if the pre-commit bump didn't run AND a prior
           # CI run already burned current+1, we'd write a duplicate version and
           # pnpm publish silently no-ops ("no new packages") in pnpm 9+.
           bump_package_version() {
@@ -360,11 +363,18 @@ jobs:
           # record. Without it the push re-triggers this workflow, which then sees
           # its own bump commit as "task changed", bumps again, and churns the
           # patch number on every run.
+          # Name what actually moved, so `git log` on main reads as a release
+          # record instead of an accusation about a hook.
+          BUMPED=""
+          [ "$needs_ui_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task-ui-components@$(node -p "require('./task-ui-components/package.json').version")"
+          [ "$needs_themes_bump" = "true" ] && BUMPED="$BUMPED @wolffm/themes@$(node -p "require('./themes/package.json').version")"
+          [ "$needs_task_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task@$(node -p "require('./package.json').version")"
+
           git add -A
-          git commit -m "chore: auto-bump versions (pre-commit hook was bypassed) [skip ci]"
+          git commit -m "chore(release):${BUMPED} [skip ci]"
           git push
 
-          echo "✅ Versions auto-bumped and pushed successfully!"
+          echo "✅ Versions assigned and pushed:${BUMPED}"
           echo ""
           echo "🔄 Rebuilding with new versions..."
 

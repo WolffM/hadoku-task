@@ -3,11 +3,18 @@
 # shebang. All conditionals must be POSIX-compatible (use `[ ]`, not `[[ ]]`)
 # or they silently noop on Debian-likes where /bin/sh is dash.
 #
-# Pure quality gates. Version bumping + publishing is owned by CI
-# (.github/workflows/publish.yml): it checks the registry, auto-bumps to a
-# free version, verifies the publish landed, and only publishes packages whose
-# files actually changed. Bumping here too was redundant and churned lockfiles
-# on every commit (incl. dev-only edits), so it's gone.
+# Quality gates, then a version bump for whatever publishable package this
+# commit actually touches (scripts/version-bump.mjs).
+#
+# The bump is here so a push to main ALREADY carries a publishable version and
+# publish.yml never writes a follow-up "auto-bump" commit on main. CI keeps its
+# registry-aware bump as a backstop for what a local hook can't cover: bot
+# commits, --no-verify, and a version that turns out to be taken.
+#
+# The two objections that got bumping removed from here once are both handled:
+# dev-only edits (docs/, e2e/, scripts/, plugins/) don't match any package, so
+# they burn no version; and the lockfile records workspace deps as `link:`, so
+# a bump never touches it.
 #
 # CI / automated commits must NOT run these interactive dev gates. publish.yml's
 # auto-bump step does a `git commit`, which fires this hook inside the runner —
@@ -53,6 +60,15 @@ echo "✅ Linting and formatting complete!"
 echo "🎨 Running stylelint + theme token validation..."
 if ! pnpm run lint:css; then
   echo "❌ CSS/theme gate failed — check the var name or class against @wolffm/themes."
+  exit 1
+fi
+
+# Version bump LAST, once the gates have passed — a commit that's about to be
+# rejected must not leave a bumped package.json behind. Bumps only the packages
+# whose files are staged (plus their dependents) and re-stages the package.json.
+echo "🔢 Bumping versions for changed packages..."
+if ! node scripts/version-bump.mjs; then
+  echo "❌ Version bump failed."
   exit 1
 fi
 
