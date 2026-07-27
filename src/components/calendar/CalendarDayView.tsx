@@ -170,7 +170,7 @@ export function CalendarDayView({
           </span>
           {!isToday && (
             <button className="calendar-today-btn" onClick={handleToday}>
-              Today
+              ⟲ Today
             </button>
           )}
         </div>
