@@ -10,6 +10,7 @@ import type {
   TasksFile,
   StatsFile,
   Board,
+  BoardCalendar,
   BoardsFile,
   CreateTaskInput,
   UpdateTaskInput,
@@ -18,7 +19,7 @@ import type {
 import { assertNotesWithinLimit } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
 import { splitTags } from '../utils/tags.js'
-import { utcDayFromISO } from '../utils/calendar.js'
+import { utcDayFromISO, calendarTasks, type CalendarQuery } from '../utils/calendar.js'
 import { isVisible } from '../utils/lifecycle.js'
 
 import {
@@ -38,6 +39,60 @@ import {
 // --- Read Operations ---
 
 /**
+ * Describe a board's calendar (§9) from its already-loaded visible tasks.
+ *
+ * The calendar is not a separate collection — it IS the board's dated tasks — so
+ * this never reads storage. Callers that re-hydrate `tasks` after the fact (the
+ * worker does, for boards shared with the viewer, because task rows live in the
+ * OWNER's scope) must re-run this so `scheduled` describes the tasks actually
+ * returned.
+ */
+export function boardCalendar(board: Board): BoardCalendar {
+  return {
+    // `board.id` is already the reference this caller must address the board by:
+    // its own slug, or — for a board shared with them — the globally-unique
+    // handle. That is exactly what a calendar write has to be pointed at.
+    ref: board.id,
+    name: board.name,
+    canWrite: (board.access ?? 'owner') !== 'readonly',
+    scheduled: calendarTasks(board.tasks ?? []).length
+  }
+}
+
+/**
+ * One board's calendar: its dated tasks, narrowed to a day window and/or a
+ * provider `source`, ordered by day then start time.
+ *
+ * The board-scoped read an integrator needs to reconcile what it mirrored —
+ * "what is already on this calendar between these days, from me?" — without
+ * pulling the whole board and filtering client-side. Access is resolved by the
+ * caller (the route), so a grantee reads the owner's calendar here exactly as
+ * the owner does.
+ */
+export async function getBoardCalendar(
+  storage: Storage,
+  auth: AuthContext,
+  boardId: string,
+  query: CalendarQuery = {}
+): Promise<{
+  board: string
+  from: string | null
+  to: string | null
+  /** Everything on the calendar, ignoring the query — the window's denominator. */
+  scheduled: number
+  tasks: Task[]
+}> {
+  const tasks = await getBoardTasks(storage, auth, boardId)
+  return {
+    board: boardId,
+    from: query.from ?? null,
+    to: query.to ?? null,
+    scheduled: calendarTasks(tasks).length,
+    tasks: calendarTasks(tasks, query)
+  }
+}
+
+/**
  * Get all boards for a user
  * Supports multi-board structure with tasks organized by board
  * Public users get in-memory boards (for testing/development)
@@ -54,7 +109,7 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
       // Fetch stats for this board
       const statsFile = await storage.getStats(auth.userType, auth.sessionId, board.id)
 
-      return {
+      const populated = {
         ...board,
         // isVisible drops Deleted rows and Completed ones past their window. The
         // D1 adapter has already filtered in SQL so this is a no-op there; the
@@ -65,6 +120,9 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
         tasks: tasksFile.tasks.filter(t => isVisible(t)).map(backfillTaskDate),
         stats: statsFile
       }
+      // The board's calendar travels WITH the board (§9), so a client never has
+      // to infer which calendar it is looking at.
+      return { ...populated, calendar: boardCalendar(populated) }
     })
   )
 

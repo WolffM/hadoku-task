@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📅 Calendars are a property of a board
+
+- **`board.calendar`** on every board read (`GET /boards`, MCP `list_boards` /
+  `get_board`): `{ ref, name, canWrite, scheduled }`. `ref` is the reference that
+  addresses that board **for this caller** — its slug for your own board, its handle
+  for one shared with you — so a client never has to work out which to send.
+- **`GET /boards/:ref/calendar`** (MCP: `get_calendar`) — the board's scheduled tasks,
+  ordered by day then start time, windowed with `from`/`to` and filterable by `source`
+  so an integration can reconcile what it mirrored. Read-only by design: a task with
+  `date`/`startTime` already IS a calendar entry, so there is no second write path.
+- A contributor grantee reads and writes a shared board's calendar through the same
+  ref, and the owner sees those entries (and their deletion) in their own calendar.
+
+### 🔗 One way to address a board
+
+- Every task route now accepts the board as `board` (or the older `boardId`) **both**
+  as a query parameter and — where there is a body — in the body. Create was
+  body-only and delete query-only, so an integrator hitting both had to encode one
+  board two ways. Existing spellings keep working.
+
+### 🐛 Board lock no longer keyed on the caller's tier
+
+- `handleBoardOperation` locked on `userType:sessionId:boardId` while the scope had
+  already been swapped to the board's owner — leaving `userType` as the CALLER's tier.
+  An admin owner and a service-tier grantee therefore took **different locks for the
+  same board** and did not serialise; `saveTasks` reconciles the whole visible set, so
+  concurrent writes silently deleted each other's tasks. The lock is now
+  `board:{ownerId}:{boardId}`, matching the storage key. Batch/tag routes use the same
+  key so they serialise against single-task writes.
+
 ### 🎨 @wolffm/themes 3.0.0 — symmetric token set + full Tailwind color package
 
 **BREAKING: six tokens removed with no back-compat aliases.**

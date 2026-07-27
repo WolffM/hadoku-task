@@ -80,15 +80,51 @@ export const StatsSchema = z
   })
   .openapi('Stats')
 
+/**
+ * A board's calendar, as a property of the board (§9). Not a separate
+ * collection: it is the board's tasks that carry a `date`. `ref` is what to pass
+ * as `board` on a task write, so a caller reading a board list never has to work
+ * out which reference addresses the calendar it just found.
+ */
+export const BoardCalendarSchema = z
+  .object({
+    ref: z.string().openapi({
+      example: 'main',
+      description: 'Board reference to address this calendar by — pass as `board`.'
+    }),
+    name: z.string().openapi({ example: 'Main Board' }),
+    canWrite: z.boolean().openapi({
+      example: true,
+      description: 'False for a readonly grantee: reads work, writes are refused.'
+    }),
+    scheduled: z
+      .number()
+      .openapi({ example: 3, description: "Visible tasks currently on this board's calendar." })
+  })
+  .openapi('BoardCalendar')
+
 export const BoardSchema = z
   .object({
     id: z.string().openapi({ example: 'main' }),
     name: z.string().openapi({ example: 'Main Board' }),
     tasks: z.array(TaskSchema),
     tags: z.array(z.string()).openapi({ example: ['work', 'personal', 'urgent'] }),
-    stats: StatsSchema.optional()
+    stats: StatsSchema.optional(),
+    calendar: BoardCalendarSchema.optional()
   })
   .openapi('Board')
+
+// GET /boards/{ref}/calendar
+export const GetBoardCalendarResponseSchema = z
+  .object({
+    board: z.string().openapi({ example: 'main', description: 'The resolved board reference.' }),
+    calendar: BoardCalendarSchema,
+    from: z.string().nullable().openapi({ example: '2026-08-01' }),
+    to: z.string().nullable().openapi({ example: '2026-08-31' }),
+    count: z.number().openapi({ example: 2 }),
+    tasks: z.array(TaskSchema)
+  })
+  .openapi('GetBoardCalendarResponse')
 
 export const UserPreferencesSchema = z
   .object({
@@ -126,6 +162,10 @@ export const CreateTaskInputSchema = z
     title: z.string().min(1).openapi({ example: 'New task' }),
     notes: z.string().nullable().optional().openapi({ example: '## Plan\n- step one' }),
     tag: z.string().optional().openapi({ example: 'work' }),
+    // The board this task lands on. `board` is the name every route uses; `boardId`
+    // is its older spelling, kept working. Either may also be sent as a query
+    // parameter — see the route's `board` parameter.
+    board: z.string().optional().openapi({ example: 'main' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
     createdAt: z.string().optional().openapi({ example: '2024-01-15T10:30:00.000Z' }),
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
@@ -154,6 +194,8 @@ export const UpdateTaskInputSchema = z
     title: z.string().optional().openapi({ example: 'Updated title' }),
     notes: z.string().nullable().optional().openapi({ example: '## Plan\n- step one' }),
     tag: z.string().nullable().optional().openapi({ example: 'urgent' }),
+    // Board reference; `boardId` is the older spelling. Query parameter works too.
+    board: z.string().optional().openapi({ example: 'main' }),
     boardId: z.string().optional().openapi({ example: 'main' }),
     date: z.string().nullable().optional().openapi({ example: '2024-01-15' }),
     startTime: z.string().nullable().optional().openapi({ example: '2024-01-15T09:00:00.000Z' }),

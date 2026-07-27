@@ -64,6 +64,54 @@ export function getCalendarTasks(tasks: Task[], date: Date): Task[] {
 }
 
 /**
+ * A task's calendar day as STORED — `date` (the canonical membership key), or
+ * the UTC day of `startTime` for a task that predates the backfill.
+ *
+ * Distinct from {@link taskDay}, which resolves the *viewer's local* day and is
+ * therefore browser-only: it would silently answer in the runtime's timezone
+ * (UTC) on a server. Anything that filters or reports a calendar server-side
+ * must use this one, so the same task lands in the same window everywhere.
+ */
+export function storedTaskDay(task: Task): string | null {
+  return task.date ?? utcDayFromISO(task.startTime)
+}
+
+/** A window (and provider filter) over a board's calendar. Days are "YYYY-MM-DD". */
+export interface CalendarQuery {
+  /** Inclusive first day. Omit for "no lower bound". */
+  from?: string | null
+  /** Inclusive last day. Omit for "no upper bound". */
+  to?: string | null
+  /** Only tasks mirrored from this provider (`Task.source`). */
+  source?: string | null
+}
+
+/**
+ * The calendar members of a task list: everything carrying a calendar day,
+ * narrowed by the query and ordered by day, then start time, then id.
+ *
+ * Tasks WITHOUT a day are not calendar members at all — they live only in board
+ * view (see Task.date in ../types). That is the whole membership rule; there is
+ * no separate calendar-item concept to keep in sync.
+ */
+export function calendarTasks(tasks: Task[], query: CalendarQuery = {}): Task[] {
+  const { from, to, source } = query
+  const dated = tasks
+    .map(task => ({ task, day: storedTaskDay(task) }))
+    .filter((e): e is { task: Task; day: string } => e.day !== null)
+    .filter(e => (from ? e.day >= from : true))
+    .filter(e => (to ? e.day <= to : true))
+    .filter(e => (source ? e.task.source === source : true))
+  dated.sort(
+    (a, b) =>
+      a.day.localeCompare(b.day) ||
+      (a.task.startTime ?? '').localeCompare(b.task.startTime ?? '') ||
+      a.task.id.localeCompare(b.task.id)
+  )
+  return dated.map(e => e.task)
+}
+
+/**
  * Get minutes since midnight for an ISO timestamp
  */
 export function getMinutesSinceMidnight(isoString: string | null | undefined): number {

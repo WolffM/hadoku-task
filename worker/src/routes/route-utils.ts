@@ -8,7 +8,7 @@ import type { TaskStorage, AuthContext as TaskAuthContext, Lane } from '@wolffm/
 import { createD1Storage } from './d1-storage'
 import { resolveBoardAccess, type Access } from './board-sharing'
 import { parseLanes, assertHumanLaneWrite } from './board-automation'
-import { DEFAULT_SESSION_ID } from '../constants'
+import { DEFAULT_SESSION_ID, DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext, Env } from '../types'
 
 /**
@@ -92,6 +92,62 @@ export const getContext = (c: Context<AppContext>) => {
  */
 export function getBoardContext(c: Context<AppContext>, ref: string): Promise<BoardCtx | null> {
   return resolveBoardCtx(c.env, c.get('authContext'), ref)
+}
+
+/**
+ * The board a task operation targets — ONE rule for every task route.
+ *
+ * The reference may arrive in the request BODY (`board`, or its older name
+ * `boardId`) or as a QUERY parameter of either name; body wins, then query, then
+ * the default board. Create used to read the body only and delete the query
+ * only, so the same integrator had to encode the same board two different ways
+ * depending on which verb it was calling. Both forms now work on both.
+ *
+ * The value is a board REFERENCE, resolved by resolveBoardCtx: the caller's own
+ * slug, or the globally-unique `handle` of a board shared with them.
+ */
+export function boardRefFrom(
+  c: Context<AppContext>,
+  body?: Record<string, unknown> | null
+): string {
+  const fromBody = [body?.board, body?.boardId].find(v => typeof v === 'string' && v !== '')
+  return (
+    (fromBody as string | undefined) ??
+    c.req.query('board') ??
+    c.req.query('boardId') ??
+    DEFAULT_BOARD_ID
+  )
+}
+
+/** Body keys that carry the board reference, stripped before a task is built from it. */
+export const BOARD_REF_KEYS = ['board', 'boardId'] as const
+
+/**
+ * Drop the board-reference keys from a request body, leaving the task fields.
+ * Both names are accepted on the wire (see {@link boardRefFrom}), so both have
+ * to come off before the rest is treated as task input. Both are optional in
+ * every input schema, so the result still satisfies the body's own type.
+ */
+export function withoutBoardRef<T extends object>(body: T): T {
+  const rest = { ...body } as Record<string, unknown>
+  for (const key of BOARD_REF_KEYS) delete rest[key]
+  return rest as T
+}
+
+/**
+ * The key concurrent writes to one board serialise on.
+ *
+ * Scoped to the board's OWNER + slug — exactly the storage key (D1 rows are
+ * keyed on user_id + board_id) and nothing else. It deliberately does NOT fold
+ * in the caller's tier: resolveBoardCtx points `auth.sessionId` at the owner but
+ * leaves `auth.userType` as the CALLER's tier, so a key built from both gave an
+ * admin owner and a service-tier grantee two different locks for the same board.
+ * They didn't serialise, and saveTasks' read-modify-write then dropped one of
+ * the two writes outright. userType isn't part of the storage key, so it isn't
+ * part of the lock key.
+ */
+export function boardLockKey(ownerId: string | undefined, boardId: string): string {
+  return `board:${ownerId ?? DEFAULT_SESSION_ID}:${boardId}`
 }
 
 /**
@@ -213,8 +269,8 @@ export async function handleBoardOperation<T>(
   }
   const { storage, auth } = ctx
   // Lock on the OWNER's namespace so concurrent writes from owner + grantees to
-  // the same shared board still serialise on the same key.
-  const boardsKey = `${auth.userType}:${auth.sessionId}:${ctx.boardId}`
+  // the same shared board serialise on the same key, whatever tier each caller is.
+  const boardsKey = boardLockKey(ctx.ownerId, ctx.boardId)
 
   const result = await withBoardLock(boardsKey, async () => {
     return operation(storage, auth as TaskAuthContext, ctx.boardId)
@@ -235,7 +291,10 @@ export async function handleBatchOperation<T>(
     auth: TaskAuthContext,
     body: Record<string, unknown>
   ) => Promise<T>,
-  getBoardKeys?: (body: Record<string, unknown>, userType: string, sessionId: string) => string[]
+  // Batch ops are caller-scoped (no share resolution), so the caller IS the
+  // owner here — but the key must still be built with boardLockKey so a batch
+  // write serialises against the single-task writes on the same board.
+  getBoardKeys?: (body: Record<string, unknown>, sessionId: string) => string[]
 ): Promise<Response> {
   const { storage, auth } = getContext(c)
   const body = await c.req.json()
@@ -254,7 +313,7 @@ export async function handleBatchOperation<T>(
   }
 
   // Get board keys and apply locks
-  const boardsKeys = getBoardKeys(body, auth.userType, auth.sessionId || 'public')
+  const boardsKeys = getBoardKeys(body, auth.sessionId || DEFAULT_SESSION_ID)
 
   // Single board lock
   if (boardsKeys.length === 1) {

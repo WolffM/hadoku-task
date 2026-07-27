@@ -44,6 +44,7 @@ import { createSessionRoutes } from './routes/session'
 import { createPreferencesRoutes } from './routes/preferences'
 import { createBoardRoutes } from './routes/boards'
 import { createShareRoutes } from './routes/shares'
+import { createCalendarRoutes } from './routes/calendar'
 import { createAutomationRoutes } from './routes/automation'
 import { createAgentRoutes } from './routes/agent'
 import { createTaskRoutes } from './routes/tasks'
@@ -261,6 +262,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
   // Board share management (§7): grant / list / revoke / leave.
   app.route('/task/api', createShareRoutes())
+
+  // A board's calendar (§9) — its dated tasks, as a sub-resource of the board.
+  app.route('/task/api', createCalendarRoutes())
 
   // Automation activation (§5.4): owner-only activate / deactivate.
   app.route('/task/api', createAutomationRoutes())

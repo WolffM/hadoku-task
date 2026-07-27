@@ -343,12 +343,62 @@ export const TOOLS: ToolDef[] = [
     }
   },
   {
+    name: 'get_calendar',
+    description:
+      "A board's calendar (§9): its scheduled tasks — everything carrying a calendar day — " +
+      'ordered by day then start time. Narrow with `from`/`to` (inclusive "YYYY-MM-DD") and/or ' +
+      '`source` to see only what one provider mirrored. The calendar belongs to the board, so a ' +
+      "board shared with you exposes the OWNER's calendar here; to add to it, create_task on the " +
+      'same board with date or startTime/endTime.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ...boardProp,
+        from: { type: 'string', description: 'Inclusive first day, "YYYY-MM-DD".' },
+        to: { type: 'string', description: 'Inclusive last day, "YYYY-MM-DD".' },
+        source: {
+          type: 'string',
+          description: 'Only tasks mirrored from this provider, e.g. "contact".'
+        }
+      }
+    },
+    handler: async (args, ctx) => {
+      const r = await resolveBoard(args, ctx)
+      const result = await TaskHandlers.getBoardCalendar(r.storage, r.auth, r.boardId, {
+        from: str(args.from) ?? null,
+        to: str(args.to) ?? null,
+        source: str(args.source) ?? null
+      })
+      return {
+        board: boardOf(args, ctx),
+        canWrite: r.access !== 'readonly',
+        from: result.from,
+        to: result.to,
+        scheduled: result.scheduled,
+        count: result.tasks.length,
+        tasks: result.tasks
+      }
+    }
+  },
+  {
     name: 'list_boards',
     description:
-      'List the available boards — your own plus any shared with you. For a SHARED board (access "contributor"/"readonly"), address task tools by its `handle`, not its `id`; your own board `id` only ever resolves within your own tasks.',
+      'List the available boards — your own plus any shared with you — each with its `calendar` (§9). For a SHARED board (access "contributor"/"readonly"), address task tools by its `handle`, not its `id`; your own board `id` only ever resolves within your own tasks. `calendar.ref` is always the reference that works for you.',
     inputSchema: { type: 'object', properties: {} },
     handler: async (_args, ctx) => {
       const boards = await TaskHandlers.getBoards(ctx.storage, ctx.auth)
+      // getBoards hydrates tasks in the CALLER's scope, which is empty for a board
+      // shared with them (the rows are the OWNER's) — so the calendar count it
+      // derived would read 0. Recompute those from the owner's scope, in parallel.
+      await Promise.all(
+        boards.boards.map(async b => {
+          if (!b.access || b.access === 'owner') return
+          const r = await ctx.resolve(b.id)
+          if (!r) return
+          b.tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
+          b.calendar = TaskHandlers.boardCalendar(b)
+        })
+      )
       return {
         boards: boards.boards.map(b => ({
           id: b.id,
@@ -357,6 +407,9 @@ export const TOOLS: ToolDef[] = [
           handle: b.handle,
           access: b.access ?? 'owner',
           ownerUserId: b.ownerUserId,
+          // The board's calendar travels with the board (§9): `calendar.ref` is
+          // what to address it by, so a caller never infers which calendar it has.
+          calendar: b.calendar,
           // Automation (§5): a runner reads the lane vocabulary here. `mode` is
           // 'standard' | 'automation'; `lanes` present only when automation.
           mode: b.mode ?? 'standard',
@@ -399,6 +452,7 @@ export const TOOLS: ToolDef[] = [
       if (!cfg) throw new Error(`Board ${boardOf(args, ctx)} not found`)
       const tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
       const claimed = await liveClaimedTaskIds(ctx.db, r.ownerId, r.boardId)
+      const ref = boardOf(args, ctx)
       return {
         board: {
           id: r.boardId,
@@ -408,7 +462,16 @@ export const TOOLS: ToolDef[] = [
           mode: cfg.mode,
           lanes: cfg.lanes,
           access: r.access,
-          ownerUserId: r.ownerId
+          ownerUserId: r.ownerId,
+          // §9: the calendar is a property of the board. `ref` echoes the
+          // reference THIS caller used, since that's the one that resolves.
+          calendar: TaskHandlers.boardCalendar({
+            id: ref,
+            name: cfg.name,
+            tags: [],
+            tasks,
+            access: r.access
+          })
         },
         tasks: tasks.map(t => ({ ...t, claimed: claimed.has(t.id) }))
       }

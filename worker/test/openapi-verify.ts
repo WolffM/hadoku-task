@@ -41,7 +41,9 @@ const REQUIRED_PATHS = [
   '/task/api/automation/presets',
   '/task/api/boards/{ref}/repo',
   '/task/api/boards/{ref}/activate-automation',
-  '/task/api/boards/{ref}/deactivate-automation'
+  '/task/api/boards/{ref}/deactivate-automation',
+  // A board's calendar (§9) — the sub-resource an integration reads to reconcile.
+  '/task/api/boards/{ref}/calendar'
 ]
 
 const REQUIRED_SCHEMAS = [
@@ -63,6 +65,8 @@ const REQUIRED_SCHEMAS = [
   'DeactivateAutomationResponse',
   'GrantShareInput',
   'ListSharesResponse',
+  'BoardCalendar',
+  'GetBoardCalendarResponse',
   'Lane',
   'DomainError',
   'DomainErrorCode'
@@ -98,7 +102,8 @@ const RESPONSE_SCHEMA_REFS: Array<[string, string, string, string]> = [
   ['/task/api/agent/release', 'post', '409', 'ReleaseConflictError'],
   ['/task/api/agent/release', 'post', '413', 'NotesTooLargeError'],
   ['/task/api/boards/{ref}/activate-automation', 'post', '409', 'DigestMismatchError'],
-  ['/task/api/boards/{ref}/shares', 'post', '409', 'NoUserIdError']
+  ['/task/api/boards/{ref}/shares', 'post', '409', 'NoUserIdError'],
+  ['/task/api/boards/{ref}/calendar', 'get', '404', 'BoardNotFoundError']
 ]
 
 /** Every .ts under a directory, recursively. */

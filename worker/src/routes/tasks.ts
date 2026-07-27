@@ -5,10 +5,15 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { badRequest, requireFields, extractField } from '@wolffm/worker-utils'
+import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { handleBoardOperation, parseIfMatch, getBoardContext } from './route-utils'
-import { DEFAULT_BOARD_ID } from '../constants'
+import {
+  handleBoardOperation,
+  parseIfMatch,
+  getBoardContext,
+  boardRefFrom,
+  withoutBoardRef
+} from './route-utils'
 import type { AppContext } from '../types'
 import {
   GetTasksResponseSchema,
@@ -22,6 +27,26 @@ import {
   ErrorResponseSchema
 } from '../schemas'
 
+/**
+ * Every task route takes the board reference the SAME way (§7.1): `board` (or
+ * its older name `boardId`) as a query parameter, and — on the routes that carry
+ * a body — in the body as well, which wins. Create used to be body-only and
+ * delete query-only, so an integrator driving both had to encode one board two
+ * ways.
+ */
+const BOARD_REF_DESC =
+  'Board reference: your own board id, or the `handle` of a board shared with you. ' +
+  'Accepted as a query parameter on every task route, and in the body on routes that have one ' +
+  '(body wins). Defaults to "main".'
+
+const boardQuery = z.object({
+  board: z.string().optional().openapi({ example: 'main', description: BOARD_REF_DESC }),
+  boardId: z
+    .string()
+    .optional()
+    .openapi({ example: 'main', description: 'Older name for `board`; identical behaviour.' })
+})
+
 export function createTaskRoutes() {
   const app = new OpenAPIHono<AppContext>()
 
@@ -33,9 +58,7 @@ export function createTaskRoutes() {
     summary: 'Get tasks for a board',
     description: 'Returns all tasks for the specified board (defaults to main)',
     request: {
-      query: z.object({
-        boardId: z.string().optional().openapi({ example: 'main' })
-      })
+      query: boardQuery
     },
     responses: {
       200: {
@@ -50,7 +73,7 @@ export function createTaskRoutes() {
   })
 
   app.openapi(getTasksRoute, (async (c: any) => {
-    const { boardId = 'main' } = c.req.valid('query')
+    const boardId = boardRefFrom(c)
 
     logRequest('GET', '/task/api/tasks', {
       userType: c.get('authContext').userType,
@@ -75,8 +98,11 @@ export function createTaskRoutes() {
     path: '/',
     tags: ['Tasks'],
     summary: 'Create a new task',
-    description: 'Creates a new task on the specified board',
+    description:
+      'Creates a new task on the specified board. Give it `date` (or `startTime`/`endTime`) ' +
+      "and it is on that board's calendar; omit them and it lives in board view only.",
     request: {
+      query: boardQuery,
       body: {
         content: {
           'application/json': {
@@ -107,7 +133,8 @@ export function createTaskRoutes() {
 
   app.openapi(createTaskRoute, (async (c: any) => {
     const body = c.req.valid('json')
-    const { boardId = DEFAULT_BOARD_ID, ...input } = body
+    const boardId = boardRefFrom(c, body)
+    const input = withoutBoardRef(body)
 
     // Validate required fields
     const error = requireFields(input, ['id', 'title'])
@@ -142,6 +169,7 @@ export function createTaskRoutes() {
       params: z.object({
         id: z.string().openapi({ example: '01HXYZ123ABC' })
       }),
+      query: boardQuery,
       body: {
         content: {
           'application/json': {
@@ -173,8 +201,7 @@ export function createTaskRoutes() {
   app.openapi(updateTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
     const body = c.req.valid('json')
-    const boardId: string =
-      body.boardId || extractField(c, ['query:boardId'], DEFAULT_BOARD_ID) || DEFAULT_BOARD_ID
+    const boardId = boardRefFrom(c, body)
 
     logRequest('PATCH', '/task/api/:id', {
       userType: c.get('authContext').userType,
@@ -182,7 +209,7 @@ export function createTaskRoutes() {
       boardId
     })
 
-    const { boardId: _, ...input } = body
+    const input = withoutBoardRef(body)
     const expectedVersion = parseIfMatch(c)
     // Only enforce lanes when this update actually changes the tag (§5.2); an
     // edit that leaves `tag` untouched must not be gated by the board's lanes.
@@ -218,9 +245,7 @@ export function createTaskRoutes() {
       params: z.object({
         id: z.string().openapi({ example: '01HXYZ123ABC' })
       }),
-      query: z.object({
-        boardId: z.string().optional().openapi({ example: 'main' })
-      })
+      query: boardQuery
     },
     responses: {
       200: {
@@ -244,7 +269,7 @@ export function createTaskRoutes() {
 
   app.openapi(completeTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
-    const { boardId = DEFAULT_BOARD_ID } = c.req.valid('query')
+    const boardId = boardRefFrom(c)
 
     logRequest('POST', '/task/api/:id/complete', {
       userType: c.get('authContext').userType,
@@ -272,9 +297,7 @@ export function createTaskRoutes() {
       params: z.object({
         id: z.string().openapi({ example: '01HXYZ123ABC' })
       }),
-      query: z.object({
-        boardId: z.string().optional().openapi({ example: 'main' })
-      })
+      query: boardQuery
     },
     responses: {
       200: {
@@ -298,7 +321,7 @@ export function createTaskRoutes() {
 
   app.openapi(deleteTaskRoute, (async (c: any) => {
     const { id } = c.req.valid('param')
-    const { boardId = DEFAULT_BOARD_ID } = c.req.valid('query')
+    const boardId = boardRefFrom(c)
 
     logRequest('DELETE', '/task/api/:id', {
       userType: c.get('authContext').userType,
@@ -323,9 +346,7 @@ export function createTaskRoutes() {
     summary: 'Get board statistics',
     description: 'Returns statistics for the specified board',
     request: {
-      query: z.object({
-        boardId: z.string().optional().openapi({ example: 'main' })
-      })
+      query: boardQuery
     },
     responses: {
       200: {
@@ -340,7 +361,7 @@ export function createTaskRoutes() {
   })
 
   app.openapi(getStatsRoute, (async (c: any) => {
-    const { boardId = 'main' } = c.req.valid('query')
+    const boardId = boardRefFrom(c)
 
     logRequest('GET', '/task/api/stats', {
       userType: c.get('authContext').userType,

@@ -63,13 +63,29 @@ slug — a slug only ever resolves within your own tasks (see [Shared boards](#s
 | `complete_task`  | `id`, `board?`                                                                             | Mark complete (removes from active list)                        |
 | `delete_task`    | `id`, `board?`                                                                             | Delete                                                          |
 
+### Calendar
+
+| Tool           | Arguments                           | Purpose                                                                        |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------------------ |
+| `get_calendar` | `board?`, `from?`, `to?`, `source?` | A board's scheduled tasks, by day; window with `from`/`to`, filter by provider |
+
+A calendar is a **property of a board** — it is the board's tasks that carry a calendar
+day, so there is nothing separate to create. Write it with `create_task` /
+`schedule_task`; read it with `get_calendar`. The result is
+`{ board, canWrite, from, to, scheduled, count, tasks }`: `scheduled` is the whole
+calendar, `count`/`tasks` the window you asked for, and `canWrite` says whether your
+access allows writing it.
+
+`source` narrows to what one provider mirrored (`"contact"`, `"gcal"`, …) — how an
+integration finds the entries it wrote before, to update or withdraw them.
+
 ### Boards
 
-| Tool           | Arguments    | Purpose                                                                                           |
-| -------------- | ------------ | ------------------------------------------------------------------------------------------------- |
-| `list_boards`  | —            | Your boards + any shared with you; each row carries `handle`, `access`, `mode`, `lanes`           |
-| `get_board`    | `board`      | One board fully hydrated: metadata (`repo`, `mode`, `lanes`) + every task, each flagged `claimed` |
-| `create_board` | `id`, `name` | Create a board (your own). Slug in, unique `handle` minted server-side                            |
+| Tool           | Arguments    | Purpose                                                                                             |
+| -------------- | ------------ | --------------------------------------------------------------------------------------------------- |
+| `list_boards`  | —            | Your boards + any shared with you; each row carries `handle`, `access`, `calendar`, `mode`, `lanes` |
+| `get_board`    | `board`      | One board fully hydrated: metadata (`repo`, `mode`, `lanes`) + every task, each flagged `claimed`   |
+| `create_board` | `id`, `name` | Create a board (your own). Slug in, unique `handle` minted server-side                              |
 
 ### Notes (`list_tasks` pagination)
 
@@ -112,7 +128,10 @@ board you don't own. It then appears in your `list_boards` with `access` set acc
 and an `ownerUserId`. **Address a shared board by its `handle`, never a slug** — slugs
 resolve only within your own tasks, so passing the owner's slug would reach your own
 (empty) board of that name, never theirs. A `readonly` grantee's writes are refused
-(`FORBIDDEN`); a `contributor`'s task writes land in the owner's board. Granting, listing,
+(`FORBIDDEN`); a `contributor`'s task writes land in the owner's board — including
+calendar entries, which the owner sees immediately in their own calendar. Each row's
+`calendar.ref` is always the reference that resolves **for you**, so you never have to
+work out whether to send a slug or a handle. Granting, listing,
 and revoking shares are **owner-only** and done over HTTP (`/task/api/boards/:ref/shares`),
 not MCP.
 

@@ -7,7 +7,13 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers, BoardSchemaLockedError } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
-import { getContext, handleOperation, handleBatchOperation, withBoardLock } from './route-utils'
+import {
+  getContext,
+  handleOperation,
+  handleBatchOperation,
+  withBoardLock,
+  boardLockKey
+} from './route-utils'
 import { getBoardConfig } from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { AppContext } from '../types'
@@ -216,7 +222,7 @@ export function createTagsBatchRoutes() {
     }
 
     const { storage, auth } = getContext(c)
-    const boardsKey = `${auth.userType}:${auth.sessionId}:${boardId}`
+    const boardsKey = boardLockKey(auth.sessionId, boardId)
 
     const result = await withBoardLock(boardsKey, async () => {
       return TaskHandlers.batchUpdateTags(storage, auth, { ...body, boardId })
@@ -276,7 +282,7 @@ export function createTagsBatchRoutes() {
     }
 
     const { storage, auth } = getContext(c)
-    const boardsKey = `${auth.userType}:${auth.sessionId}:${boardId}`
+    const boardsKey = boardLockKey(auth.sessionId, boardId)
 
     const result = await withBoardLock(boardsKey, async () => {
       return TaskHandlers.batchUpdateTags(storage, auth, { ...body, boardId })
@@ -335,9 +341,9 @@ export function createTagsBatchRoutes() {
           auth,
           body as { sourceBoardId: string; targetBoardId: string; taskIds: string[] }
         ),
-      (body, userType, sessionId) => [
-        `${userType}:${sessionId}:${body.sourceBoardId}`,
-        `${userType}:${sessionId}:${body.targetBoardId}`
+      (body, sessionId) => [
+        boardLockKey(sessionId, body.sourceBoardId as string),
+        boardLockKey(sessionId, body.targetBoardId as string)
       ]
     )
   }) as never)
@@ -392,9 +398,9 @@ export function createTagsBatchRoutes() {
           auth,
           body as { sourceBoardId: string; targetBoardId: string; taskIds: string[] }
         ),
-      (body, userType, sessionId) => [
-        `${userType}:${sessionId}:${body.sourceBoardId}`,
-        `${userType}:${sessionId}:${body.targetBoardId}`
+      (body, sessionId) => [
+        boardLockKey(sessionId, body.sourceBoardId as string),
+        boardLockKey(sessionId, body.targetBoardId as string)
       ]
     )
   }) as never)
@@ -451,7 +457,7 @@ export function createTagsBatchRoutes() {
           auth,
           body as { boardId: string; tag: string; taskIds: string[] }
         ),
-      (body, userType, sessionId) => [`${userType}:${sessionId}:${body.boardId}`]
+      (body, sessionId) => [boardLockKey(sessionId, body.boardId as string)]
     )
   }) as never)
 

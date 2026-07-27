@@ -67,6 +67,10 @@ export function createBoardRoutes() {
         ])
         board.tasks = tasksFile.tasks
         board.stats = statsFile
+        // The calendar descriptor counts the board's dated tasks, so it has to be
+        // recomputed against the tasks we just swapped in — the handler built it
+        // from the viewer-scoped (empty) read.
+        board.calendar = TaskHandlers.boardCalendar(board)
       })
     )
 

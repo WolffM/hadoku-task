@@ -114,6 +114,26 @@ export interface PresetSourceStatus {
   error?: string
 }
 
+/**
+ * A board's calendar, as a first-class property of the board.
+ *
+ * Every board HAS one: it is the board's dated tasks (`Task.date`), not a
+ * separate collection. This descriptor is what makes it addressable — a caller
+ * (including a grantee on a shared board) reads `board.calendar.ref` and writes
+ * there, instead of inferring "the calendar" from whichever board it happened to
+ * resolve. Read it at `GET /boards/{ref}/calendar`.
+ */
+export interface BoardCalendar {
+  /** The board reference to address this calendar by — pass it as `board`. */
+  ref: string
+  /** Display name; follows the board's name. */
+  name: string
+  /** Whether THIS caller may write to it (false for a readonly grantee). */
+  canWrite: boolean
+  /** How many of the board's currently-visible tasks are on the calendar. */
+  scheduled: number
+}
+
 // Board types (multi-board support)
 export interface Board {
   id: string // boardId, e.g. "main", "work"
@@ -150,6 +170,10 @@ export interface Board {
   // owner; `access` is THIS caller's level on it.
   ownerUserId?: string
   access?: 'owner' | 'contributor' | 'readonly'
+  // This board's calendar (§9) — the dated subset of `tasks`, described as a
+  // property of the board so it can be addressed directly. Populated on read
+  // wherever `tasks` is; absent on metadata-only payloads.
+  calendar?: BoardCalendar
   // Who this board is shared WITH, annotated with display name + tier. Hydrated
   // by GET /boards for boards this viewer OWNS (only an owner may see a board's
   // grantees), so the share UI renders the list immediately instead of fetching

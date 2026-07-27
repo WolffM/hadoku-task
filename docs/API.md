@@ -52,6 +52,23 @@ interface TaskStorage {
 
 ## Task Endpoints
 
+### Addressing a board
+
+Every task endpoint takes the board the SAME way, so an integration that hits more
+than one of them encodes the board once:
+
+- as a **query parameter** — `?board=<ref>` (or the older `?boardId=<ref>`) — on
+  every task route, and
+- in the **body** — `"board": "<ref>"` (or `"boardId"`) — on the routes that carry
+  one. The body wins when both are present.
+
+Omitted, it defaults to `main`. A `<ref>` is your own board's id, or the globally
+unique `handle` of a board shared with you (`GET /boards` returns both, plus your
+`access` level on each). A bare slug ALWAYS resolves inside your own namespace, so
+passing someone else's board id can never reach their data.
+
+---
+
 ### GET `/`
 
 Get all active tasks for a board.
@@ -269,11 +286,21 @@ Get all boards for the current user.
       "name": "Main Board",
       "tags": ["work", "home"],
       "tasks": [...],
-      "stats": {...}
+      "stats": {...},
+      "calendar": {
+        "ref": "main",
+        "name": "Main Board",
+        "canWrite": true,
+        "scheduled": 3
+      }
     }
   ]
 }
 ```
+
+Every board carries its `calendar` (see [Board Calendars](#board-calendars)).
+`calendar.ref` is the reference to address that board by — for a board shared with
+you it is the handle, so a client never has to work out which reference resolves.
 
 ---
 
@@ -682,6 +709,71 @@ Get task statistics for a board.
     }
   ]
 }
+```
+
+---
+
+## Board Calendars
+
+A calendar is a **property of a board**, not a collection of its own: it is the
+board's tasks that carry a calendar day. `date` (local `"YYYY-MM-DD"`) is the
+membership key — a task with `date` (or with `startTime`/`endTime`, which backfill
+it) is on the board's calendar; a task without one lives in board view only. There
+is nothing to create, enable, or keep in sync.
+
+So you **write** a calendar with the ordinary task endpoints pointed at the board,
+and **read** it here.
+
+### GET `/boards/:ref/calendar`
+
+The board's scheduled tasks, ordered by day then start time.
+
+**Query Parameters:**
+
+- `from` (optional): inclusive first day, `"YYYY-MM-DD"`
+- `to` (optional): inclusive last day, `"YYYY-MM-DD"`
+- `source` (optional): only tasks mirrored from this provider (`Task.source`) —
+  how an integration reconciles what it already wrote
+
+**Response:**
+
+```json
+{
+  "board": "MRY93H8LG7ZCSK998165RCUBHW",
+  "calendar": { "ref": "MRY93H8LG7ZCSK998165RCUBHW", "name": "Main", "canWrite": true, "scheduled": 12 },
+  "from": "2026-08-01",
+  "to": "2026-08-31",
+  "count": 2,
+  "tasks": [...]
+}
+```
+
+`scheduled` is the whole calendar; `count`/`tasks` are the window you asked for.
+`canWrite` is false for a readonly grantee — reads work, writes are refused with
+403 `FORBIDDEN`.
+
+**Shared boards.** Pass the board's `handle` as `:ref` and you read the OWNER's
+calendar; a contributor grant lets you create and delete on it with the task
+endpoints using that same ref. Writes land in the owner's data and are immediately
+visible in the owner's own calendar view. 404 `BOARD_NOT_FOUND` when the ref is a
+board that isn't shared with you.
+
+**Example — mirror an appointment onto a shared calendar, then withdraw it:**
+
+```bash
+# Discover the board you may write, and the ref that addresses its calendar
+curl -H "X-User-Key: $KEY" https://hadoku.me/task/api/boards \
+  | jq '.boards[] | select(.access == "contributor") | .calendar'
+
+# Create a timed entry on it
+curl -X POST https://hadoku.me/task/api -H "X-User-Key: $KEY" \
+  -d '{"id":"01HQ...","title":"Intro call","board":"<ref>",
+       "startTime":"2026-08-11T17:00:00Z","endTime":"2026-08-11T17:30:00Z",
+       "source":"contact","sourceId":"appt_2"}'
+
+# Reconcile what you have mirrored, then withdraw one
+curl -H "X-User-Key: $KEY" "https://hadoku.me/task/api/boards/<ref>/calendar?source=contact"
+curl -X DELETE "https://hadoku.me/task/api/01HQ...?board=<ref>" -H "X-User-Key: $KEY"
 ```
 
 ---
