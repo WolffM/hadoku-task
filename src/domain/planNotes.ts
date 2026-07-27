@@ -47,6 +47,22 @@ function isQuestionsHeading(title: string): boolean {
 }
 
 /**
+ * Strip a leading list marker and surrounding `*`/`_` emphasis so the "no open
+ * questions" sentinel is recognized regardless of the markdown an agent wraps
+ * it in — e.g. `_No open questions._` or `- No open questions.`. Mirrors the
+ * tolerant-heading pattern above: written each pass by an agent, so a strict
+ * match would silently miscount.
+ */
+function stripSentinelMarkup(text: string): string {
+  let s = text.trim()
+  const listMatch = LIST_ITEM.exec(s)
+  if (listMatch) s = s.slice(listMatch[0].length).trim()
+  const emphasisMatch = /^(\*{1,3}|_{1,3})([\s\S]*)\1$/.exec(s)
+  if (emphasisMatch) s = emphasisMatch[2].trim()
+  return s
+}
+
+/**
  * Split a plan into its `## ` sections. Content before the first heading becomes
  * a leading section with an empty title. Never throws, never drops input.
  */
@@ -124,7 +140,7 @@ export function openQuestionCount(sections: PlanSection[]): number {
   if (!section) return 0
 
   const body = section.body.trim()
-  if (!body || NO_QUESTIONS.test(body)) return 0
+  if (!body || NO_QUESTIONS.test(stripSentinelMarkup(body))) return 0
 
   const items = listItems(body)
   if (!body.includes('?')) return items.length

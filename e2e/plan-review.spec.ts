@@ -134,6 +134,16 @@ test.describe('plan review', () => {
       notes: '## Questions\n\nNo open questions.\n'
     })
     await createTask(request, boardId, { id: `${boardId}-c`, title: 'Nothing written', notes: '' })
+    await createTask(request, boardId, {
+      id: `${boardId}-d`,
+      title: 'Sentinel wrapped in emphasis',
+      notes: '## Questions\n\n_No open questions._\n'
+    })
+    await createTask(request, boardId, {
+      id: `${boardId}-e`,
+      title: 'Sentinel as a bullet',
+      notes: '## Questions\n\n- No open questions.\n'
+    })
     await signIn(page)
     await openBoard(page, boardId)
   })
@@ -145,6 +155,12 @@ test.describe('plan review', () => {
     await expect(card(page, 'Nothing to answer').locator('.task-app__item-questions')).toHaveCount(
       0
     )
+    await expect(
+      card(page, 'Sentinel wrapped in emphasis').locator('.task-app__item-questions')
+    ).toHaveCount(0)
+    await expect(
+      card(page, 'Sentinel as a bullet').locator('.task-app__item-questions')
+    ).toHaveCount(0)
   })
 
   test('the plan opens outside the card, at a real size', async ({ page }) => {
