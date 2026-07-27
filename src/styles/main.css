@@ -242,6 +242,74 @@
   font-weight: var(--font-weight-normal);
 }
 
+/* Task-button toggles: one chip per card control, laid out in a row above the
+   live preview so the checkbox and its effect read as a single unit. */
+.settings-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hdk-space-xs);
+}
+
+/* The settings popout is narrow (~300px), so the three chips only stay on one
+   row if they share it evenly and stay compact. flex-wrap is the fallback for
+   anything narrower still. */
+.settings-toggle-chip {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hdk-space-xs);
+  padding: var(--hdk-space-sm) var(--hdk-space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.settings-toggle-chip:hover {
+  background: var(--color-bg-alt);
+}
+
+.settings-toggle-chip input[type='checkbox'] {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.settings-toggle-chip-glyph {
+  font-size: var(--hdk-text-sm);
+  line-height: 1;
+}
+
+.settings-preview-caption {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The preview is a real TaskItem, so it must not be clickable or draggable —
+   toggling a checkbox is the only interaction in this block. */
+.settings-preview-stage {
+  padding: var(--hdk-space-md);
+  border-radius: var(--hdk-radius);
+  background: var(--color-bg-alt);
+  pointer-events: none;
+}
+
+.settings-preview-stage .task-app__item {
+  cursor: default;
+}
+
 /* Hide cancel button in settings modal - only show Close */
 .settings-section ~ .modal-actions button:first-child {
   display: none;

@@ -279,6 +279,7 @@ export interface UserPreferences {
   themeMode?: 'simple' | 'advanced' // Toggle the theme's advanced visuals
   // Device-specific settings (localStorage only)
   theme?: string
+  showNotesButton?: boolean
   showCompleteButton?: boolean
   showDeleteButton?: boolean
   showTagButton?: boolean

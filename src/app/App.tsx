@@ -108,6 +108,7 @@ export default function App(props: TaskAppProps = {}) {
   const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false
 
   // Convenience getters for preferences
+  const showNotesButton = preferences.showNotesButton ?? true
   const showCompleteButton = preferences.showCompleteButton ?? true
   const showDeleteButton = preferences.showDeleteButton ?? true
   const showTagButton = preferences.showTagButton ?? false
@@ -470,6 +471,7 @@ export default function App(props: TaskAppProps = {}) {
             getSortTitle={sortHook.getSortTitle}
             deleteTag={handlers.handleDeleteTag}
             onDeletePersistedTag={deleteTagOnBoard}
+            showNotesButton={showNotesButton}
             showCompleteButton={showCompleteButton}
             showDeleteButton={showDeleteButton}
             showTagButton={showTagButton}

@@ -23,6 +23,7 @@ interface TaskItemProps {
   onDragStart?: (e: React.DragEvent, taskId: string) => void
   onDragEnd?: (e: React.DragEvent) => void
   selected?: boolean
+  showNotesButton?: boolean
   showCompleteButton?: boolean
   showDeleteButton?: boolean
   showTagButton?: boolean
@@ -40,6 +41,7 @@ export function TaskItem({
   onDragStart,
   onDragEnd,
   selected = false,
+  showNotesButton = true,
   showCompleteButton = true,
   showDeleteButton = true,
   showTagButton = false
@@ -205,7 +207,7 @@ export function TaskItem({
         )}
       </div>
       <div className="task-app__item-actions">
-        {onSetNotes && (
+        {onSetNotes && showNotesButton && (
           <button
             className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''}`}
             onClick={() => setNotesOpen(true)}

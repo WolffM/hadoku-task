@@ -50,6 +50,7 @@ interface TaskLayoutProps {
   getSortTitle: (direction: SortDirection) => string
   deleteTag: (tag: string) => void
   onDeletePersistedTag?: (tag: string) => void
+  showNotesButton?: boolean
   showCompleteButton?: boolean
   showDeleteButton?: boolean
   showTagButton?: boolean
@@ -85,6 +86,7 @@ export function TaskLayout({
   getSortTitle,
   deleteTag: _deleteTag,
   onDeletePersistedTag: _onDeletePersistedTag,
+  showNotesButton = true,
   showCompleteButton = true,
   showDeleteButton = true,
   showTagButton = false
@@ -124,6 +126,7 @@ export function TaskLayout({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         selected={selectedIds?.has(task.id) ?? false}
+        showNotesButton={showNotesButton}
         showCompleteButton={showCompleteButton}
         showDeleteButton={showDeleteButton}
         showTagButton={showTagButton}

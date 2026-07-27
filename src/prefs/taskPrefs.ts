@@ -19,7 +19,7 @@
  *
  * Per-field scope split (locked decision):
  *   device-scoped (differs per device): theme, themeMode, alwaysVerticalLayout,
- *     showCompleteButton, showDeleteButton, showTagButton
+ *     showNotesButton, showCompleteButton, showDeleteButton, showTagButton
  *   user-scoped (syncs across devices): displayName, experimentalThemes
  *
  * The public surface mirrors the shapes usePreferences/useSessionInitialization
@@ -41,6 +41,7 @@ export const TaskPrefsSchema = z.object({
   displayName: z.string().optional(),
   themeMode: z.enum(['simple', 'advanced']).optional(),
   theme: z.string().optional(),
+  showNotesButton: z.boolean().optional(),
   showCompleteButton: z.boolean().optional(),
   showDeleteButton: z.boolean().optional(),
   showTagButton: z.boolean().optional()
@@ -52,6 +53,7 @@ const DEVICE_FIELDS = [
   'theme',
   'themeMode',
   'alwaysVerticalLayout',
+  'showNotesButton',
   'showCompleteButton',
   'showDeleteButton',
   'showTagButton'
@@ -81,6 +83,7 @@ function getClient(): PrefsClient<TaskPrefs> {
       theme: getDefaultTheme(),
       themeMode: 'simple',
       alwaysVerticalLayout: false,
+      showNotesButton: true,
       showCompleteButton: true,
       showDeleteButton: true,
       showTagButton: false,
@@ -130,6 +133,7 @@ export const DEFAULT_TASK_PREFERENCES: UserPreferences = {
   alwaysVerticalLayout: false,
   themeMode: 'simple',
   theme: getDefaultTheme(),
+  showNotesButton: true,
   showCompleteButton: true,
   showDeleteButton: true,
   showTagButton: false
