@@ -342,43 +342,89 @@ jobs:
             needs_task_bump=true
           fi
 
-          # Perform bumps in dependency order
-          if [[ "$needs_ui_bump" = "true" ]]; then
-            bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
-          fi
-
-          if [[ "$needs_themes_bump" = "true" ]]; then
-            bump_package_version "./themes" "@wolffm/themes"
-          fi
-
-          if [[ "$needs_task_bump" = "true" ]]; then
-            bump_package_version "." "@wolffm/task"
-          fi
-
-          # Update lock file
-          echo "🔄 Updating lock file..."
-          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
-
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Commit and push changes.
-          # [skip ci] is REQUIRED: this run already builds + publishes below with
-          # the freshly bumped versions, so the bump commit is only a bookkeeping
-          # record. Without it the push re-triggers this workflow, which then sees
-          # its own bump commit as "task changed", bumps again, and churns the
-          # patch number on every run.
-          # Name what actually moved, so `git log` on main reads as a release
-          # record instead of an accusation about a hook.
-          BUMPED=""
-          [ "$needs_ui_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task-ui-components@$(node -p "require('./task-ui-components/package.json').version")"
-          [ "$needs_themes_bump" = "true" ] && BUMPED="$BUMPED @wolffm/themes@$(node -p "require('./themes/package.json').version")"
-          [ "$needs_task_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task@$(node -p "require('./package.json').version")"
+          # Assign versions, commit, push — retrying against a moving main.
+          #
+          # Several merges landing on main inside a minute each start their own
+          # run, and every run that bumps pushes a chore(release) commit. The
+          # loser of that push race used to die right here with
+          # "! [rejected] main -> main (fetch first)", abandoning its publish
+          # even though its version was already committed locally.
+          #
+          # Rebasing the loser's commit is not a fix: both commits rewrite the
+          # same version line (guaranteed conflict), and worse, the version this
+          # run picked may have been published by the winner in the meantime.
+          # So on rejection we throw our commit away, take the new main, and
+          # re-run the whole assignment. bump_package_version always steps at
+          # least one patch past whatever main now carries and skips anything
+          # already on the registry, so the two runs cannot land on the same
+          # number. Resetting to the new main is also safe to build from: main
+          # is linear here, so the new tip is a superset of the commit that
+          # triggered this run.
+          #
+          # No workflow-level `concurrency` group instead: GitHub keeps only one
+          # pending run per group and cancels the rest, and a cancelled run
+          # takes its `event.before..sha` detection window with it — the next
+          # run would never see those files change and would silently skip a
+          # package's publish. That is the exact stranding bug the "Detect
+          # changed packages" step exists to prevent. Every push keeps its own
+          # run; they just tolerate each other now.
+          push_attempts=0
+          max_push_attempts=5
+          while :; do
+            # Perform bumps in dependency order
+            if [[ "$needs_ui_bump" = "true" ]]; then
+              bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
+            fi
 
-          git add -A
-          git commit -m "chore(release):${BUMPED} [skip ci]"
-          git push
+            if [[ "$needs_themes_bump" = "true" ]]; then
+              bump_package_version "./themes" "@wolffm/themes"
+            fi
+
+            if [[ "$needs_task_bump" = "true" ]]; then
+              bump_package_version "." "@wolffm/task"
+            fi
+
+            # Update lock file
+            echo "🔄 Updating lock file..."
+            pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
+
+            # Commit and push changes.
+            # [skip ci] is REQUIRED: this run already builds + publishes below with
+            # the freshly bumped versions, so the bump commit is only a bookkeeping
+            # record. Without it the push re-triggers this workflow, which then sees
+            # its own bump commit as "task changed", bumps again, and churns the
+            # patch number on every run.
+            # Name what actually moved, so `git log` on main reads as a release
+            # record instead of an accusation about a hook.
+            BUMPED=""
+            [ "$needs_ui_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task-ui-components@$(node -p "require('./task-ui-components/package.json').version")"
+            [ "$needs_themes_bump" = "true" ] && BUMPED="$BUMPED @wolffm/themes@$(node -p "require('./themes/package.json').version")"
+            [ "$needs_task_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task@$(node -p "require('./package.json').version")"
+
+            git add -A
+            git commit -m "chore(release):${BUMPED} [skip ci]"
+
+            # Explicit refspec: HEAD is what we just committed on, regardless of
+            # what the local branch/upstream config looks like after a reset.
+            if git push origin HEAD:main; then
+              break
+            fi
+
+            push_attempts=$((push_attempts + 1))
+            if [ "$push_attempts" -ge "$max_push_attempts" ]; then
+              echo "❌ main moved under this run $max_push_attempts times — giving up."
+              echo "   Nothing was published; re-run this workflow once main is quiet."
+              exit 1
+            fi
+            echo "⚠️  main moved while this run was assigning versions"
+            echo "   (attempt $push_attempts/$max_push_attempts) — re-assigning on top of the new main..."
+            git fetch origin main
+            git reset --hard FETCH_HEAD
+          done
 
           echo "✅ Versions assigned and pushed:${BUMPED}"
           echo ""
