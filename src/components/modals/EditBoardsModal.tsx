@@ -209,6 +209,8 @@ export function EditBoardsModal({
         <li
           className={[
             'edit-boards__row',
+            'hdk-advanced-surface',
+            'hdk-advanced-surface--shift',
             b.id === currentBoardId ? 'is-current' : '',
             draggable ? 'is-draggable' : '',
             dragId === b.id ? 'is-dragging' : '',
