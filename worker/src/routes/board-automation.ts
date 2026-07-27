@@ -15,8 +15,10 @@ import {
   LaneNotEditableError,
   LaneSetInvalidError,
   ActivationDigestMismatchError,
-  BoardNotFoundError
+  BoardNotFoundError,
+  DomainError
 } from '@wolffm/task/api'
+import type { Access } from './board-sharing'
 
 interface D1Like {
   prepare(sql: string): {
@@ -286,15 +288,30 @@ export interface ActivateResult {
 /**
  * Activate (or re-activate) automation on a board (§5.4). `dryRun` returns the
  * preview + digest and writes nothing. A commit must echo the preview digest
- * (`expectedDigest`); a mismatch → 409 DIGEST_MISMATCH. Owner-scoped: the caller
- * has already been checked as the board owner at the route.
+ * (`expectedDigest`); a mismatch → 409 DIGEST_MISMATCH.
+ *
+ * `access` decides how far the caller may go, and the split is deliberate:
+ *
+ *   - **owner** — anything, including the first conversion and a migration that
+ *     displaces tasks.
+ *   - **contributor** — may UPGRADE a board that is already in automation mode,
+ *     provided the new lane set strands nothing (`preview.toInbox === 0`). This
+ *     is what lets a provider ship a schema version without a human in the loop:
+ *     re-orders, renames of non-lane metadata, added lanes, version bumps.
+ *   - anything else — refused.
+ *
+ * The line is drawn at `toInbox` rather than at "is it the same schemaId" because
+ * toInbox is the only thing that measures actual harm: it counts tasks whose
+ * current lane would vanish, which is precisely the case a human should look at.
+ * A provider that genuinely needs to strand tasks still can — it just needs the
+ * owner, which is the point.
  */
 export async function activateAutomation(
   db: D1Like,
   ownerId: string,
   boardId: string,
   payload: ActivatePayload,
-  opts: { dryRun: boolean; expectedDigest?: string }
+  opts: { dryRun: boolean; expectedDigest?: string; access?: Access }
 ): Promise<ActivateResult> {
   const cfg = await getBoardConfig(db, ownerId, boardId)
   if (!cfg) throw new BoardNotFoundError(boardId)
@@ -303,8 +320,31 @@ export async function activateAutomation(
   const tasks = await getActiveTaskTags(db, ownerId, boardId)
   const preview = buildPreview(cfg, tasks, lanes)
 
+  // A dry run writes nothing, so anyone with write access may run one — a
+  // contributor needs it to discover whether its upgrade is committable.
   if (opts.dryRun) {
     return { ok: true, dryRun: true, preview }
+  }
+
+  const access = opts.access ?? 'owner'
+  if (access !== 'owner') {
+    if (access !== 'contributor') {
+      throw new DomainError('Only a contributor or the owner can activate automation', 'FORBIDDEN', 403)
+    }
+    if (cfg.mode !== 'automation') {
+      throw new DomainError(
+        'Converting a standard board to an automation board is owner-only; a contributor may only upgrade a board that is already automated.',
+        'FORBIDDEN',
+        403
+      )
+    }
+    if (preview.toInbox > 0) {
+      throw new DomainError(
+        `This lane set would strand ${preview.toInbox} task(s) in the Inbox, so it needs the board owner. A contributor may only apply a lane set that displaces nothing.`,
+        'FORBIDDEN',
+        403
+      )
+    }
   }
 
   if (opts.expectedDigest !== undefined && opts.expectedDigest !== preview.digest) {

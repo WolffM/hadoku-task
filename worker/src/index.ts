@@ -85,7 +85,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   )
 
   // 2. Authentication Middleware — trusts the edge-stamped tier (centralized
-  // auth channel) instead of validating ADMIN_KEYS/FRIEND_KEYS. Drop-in for
+  // auth channel) instead of resolving keys in-worker. Drop-in for
   // createHadokuAuth: same authContext + extend. Direct *.workers.dev hits
   // degrade to public; the throttle middleware + route guards handle the rest.
   // (edge stamps X-Edge-Auth + X-Hadoku-Tier on /task/api/* via handleApiRoute.)
