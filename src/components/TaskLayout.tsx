@@ -105,11 +105,6 @@ export function TaskLayout({
     onDragEnd?.(e)
   }
 
-  // Notes are an agent-flow affordance (write a plan → review → work), so the
-  // button only exists on boards that declare notes. Withholding the handler is
-  // what hides it — TaskItem renders the control only when it can save.
-  const notesHandler = boardType.notesEnabled ? onSetNotes : undefined
-
   // Helper to render TaskItems with consistent props
   const renderTaskItems = (taskList: Task[], direction: SortDirection) =>
     sortTasksByAge(taskList, direction).map(task => (
@@ -121,7 +116,7 @@ export function TaskLayout({
         onComplete={onComplete}
         onDelete={onDelete}
         onEditTag={onEditTag}
-        onSetNotes={notesHandler}
+        onSetNotes={onSetNotes}
         onRenameTask={onRenameTask}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

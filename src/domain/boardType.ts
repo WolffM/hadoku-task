@@ -33,13 +33,6 @@ export interface BoardTypeConfig {
   /** Whether the user can create/edit tags (lanes) on this board. */
   tagsEditable: boolean
   /**
-   * Whether tasks carry a notes body. Notes exist for the agent flow — a plan is
-   * written, reviewed, then worked — so the affordance only appears where it
-   * means something. A standard board's tasks are one-liners; a notes button on
-   * every row there is clutter.
-   */
-  notesEnabled: boolean
-  /**
    * Hide lanes with no tasks. An automation board declares its full lane
    * vocabulary up front, so most lanes sit empty most of the time and the board
    * turns into a wall of empty columns. Empty lanes are still rendered while a
@@ -57,7 +50,6 @@ export const STANDARD_BOARD: BoardTypeConfig = {
   untaggedPosition: 'bottom',
   untaggedLabel: 'Other Tasks',
   tagsEditable: true,
-  notesEnabled: false,
   hideEmptyLanes: false
 }
 
@@ -70,7 +62,6 @@ export const AUTOMATION_BOARD: BoardTypeConfig = {
   untaggedPosition: 'top',
   untaggedLabel: 'Inbox',
   tagsEditable: false,
-  notesEnabled: true,
   hideEmptyLanes: true
 }
 
