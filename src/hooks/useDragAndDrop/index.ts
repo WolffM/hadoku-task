@@ -208,7 +208,7 @@ export function useDragAndDrop({
       // Do not start when clicking inside a task item or direct interactive controls
       // Allow starting inside tag columns (empty areas) so box-select works there.
       const interactiveSelector =
-        '.task-app__item, .task-app__controls, button, input, textarea, .task-app__item-actions'
+        '.task-app__item, .task-app__controls, button, input, textarea, .task-app__item-actions, .modal-overlay'
       if (tg.closest && tg.closest(interactiveSelector)) {
         return
       }
