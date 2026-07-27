@@ -83,12 +83,18 @@
   min-width: var(--size-action-btn-width);
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  /* The button stretches to the card's full height, so centering the glyph
+     drags it to the middle of a tall card — the control appears to shrink and
+     wander off as the task grows, and you have to hunt down a colour ribbon to
+     find it. Pin the glyph where it sits on a minimum-height card instead, so
+     it stays put no matter how tall the task gets. The whole ribbon is still
+     clickable; only the mark moves. */
+  align-items: flex-start;
   justify-content: center;
   border-radius: 0;
   opacity: 0.7;
   margin: 0;
-  padding: 0;
+  padding: calc(var(--size-task-item-min-height) / 2 - 0.5em) 0 0 0;
   align-self: stretch;
   height: auto;
   box-sizing: border-box;

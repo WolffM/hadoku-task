@@ -608,13 +608,42 @@ An explicit field, not a `metadata` convention, because a convention is unenforc
 from the UI.
 
 - `notes?: string | null` on `Task` (`src/domain/types.ts`), a real column on every task.
-- An expandable markdown body on the task card (`src/components/TaskItem.tsx`).
 - Readable/writable over HTTP and MCP (`get_task`, `update_task`, plus `set_task_notes` so a long plan
   doesn't round-trip the whole task).
 - A runner that wants "don't start without a plan" checks `notes` before claiming — its rule, not a flag
   we store.
 - Size-capped (~64 KB) → `413 NOTES_TOO_LARGE`.
 - Claim history lives in `task_claim_log`, not here. `notes` never becomes a log file.
+
+### 6.1 The review surface
+
+Once a provider's pipeline is live, `notes` stops being a scratch field: the agent writes a plan, parks
+the task in `plan-review`, and stops; a human reads that plan and answers **in the same field**. Every
+task on every automation board passes through it, so its geometry is throughput.
+
+- The body opens in a **popout** (`src/components/NotesPopout.tsx`), not inside the card. A plan is a
+  40–60 line document and a card can only ever give it a column's width.
+- It portals out of the task card (which is `overflow: hidden` and draggable) but **into
+  `.task-app-container`** — every theme token is scoped there, so a panel portalled to `<body>` keeps
+  the light defaults and burns white into a dark board.
+- **Edit mode is never smaller than read mode.** Writing the answer is the interaction the protocol
+  depends on; the panel grows when editing rather than shrinking.
+- The doc is split on `## ` headings (`src/domain/planNotes.ts`) and rendered section by section
+  (`src/components/PlanMarkdown.tsx` — a small purpose-built renderer, no markdown dependency, since
+  the shape is known and the bundle is cold-load profiled).
+- **`## Questions` is the only section that asks anything of the human**, so it is the only one that
+  looks different: tinted and rail-accented, counted on the card and in the panel header, with the
+  reply box directly beneath it.
+- A reply is **appended as free text** under `## Questions` (end of doc when there is no such section).
+  Deliberately no structured answer form: the provider contract takes free text anywhere and parses
+  what it wrote, so constraining the reply would remove a capability. Discoverability was the gap, not
+  format. The agent rewrites the doc each pass and echoes answers into `## Settled`, which is what
+  makes appending safe.
+
+The open-question count is a heuristic and cannot be exact — there is no marker separating an agent's
+question from a human's answer in a free-text field. It counts `?`-bearing items when the section has
+any, and every item when the section phrases its questions imperatively; it errs toward going quiet
+once you have answered rather than nagging forever.
 
 ## 7. Shared boards
 

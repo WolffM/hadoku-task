@@ -2,11 +2,6 @@
  * Task item styles - List and individual task items
  */
 
-/* Component-specific sizes */
-.task-app-container {
-  --size-task-item-min-height: 60px;
-}
-
 .task-app__list {
   list-style: none;
   padding: 0;
@@ -84,15 +79,10 @@
    TaskItem drops the row's `draggable` for the duration of a press that starts
    here, which is what actually lets the browser select instead of drag; these
    rules give the matching affordance (I-beam) and keep selection enabled. */
-.task-app__item-notes,
-.task-app__notes-body,
-.task-app__item-meta-row {
+.task-app__item-meta-row,
+.task-app__item-questions {
   -webkit-user-select: text;
   user-select: text;
-}
-
-.task-app__notes-body {
-  cursor: text;
 }
 
 /* Click-to-rename affordance: only hint at it when a rename handler exists. */
@@ -158,71 +148,32 @@
   min-height: 100%;
 }
 
-/* ── Task notes (expandable body, §6) ──────────────────────────────── */
+/* ── Task notes (§6) ───────────────────────────────────────────────
+   The body itself lives in the popout (notes-popout.css) — the card only
+   advertises that notes exist and whether they're waiting on you. */
 .task-app__notes-toggle.has-notes {
   color: var(--color-primary);
 }
 
-.task-app__item-notes {
-  margin-top: var(--hdk-space-sm);
-  display: flex;
-  flex-direction: column;
-  gap: var(--hdk-space-sm);
+/* An unanswered plan is the one state a reviewer scanning a lane needs to spot
+   without opening anything, so it gets the warning tint rather than another
+   muted grey line. */
+.task-app__notes-toggle.has-questions {
+  background-color: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+  opacity: 1;
 }
 
-.task-app__notes-body {
-  margin: 0;
-  padding: var(--hdk-space-sm);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius-sm);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: var(--hdk-text-sm);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-
-.task-app__notes-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: var(--hdk-space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius-sm);
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: var(--hdk-text-sm);
-  resize: vertical;
-}
-
-.task-app__notes-actions {
-  display: flex;
-  gap: var(--hdk-space-sm);
-}
-
-.task-app__notes-btn {
-  padding: var(--hdk-space-xs) var(--hdk-space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius-sm);
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  font-size: var(--hdk-text-sm);
-}
-.task-app__notes-btn:hover {
-  color: var(--color-text);
-}
-.task-app__notes-save {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: transparent;
-}
-.task-app__notes-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.task-app__item-questions {
+  margin-top: var(--hdk-space-xs);
+  align-self: flex-start;
+  padding: 0 var(--hdk-space-sm);
+  border-radius: 999px;
+  background-color: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------------

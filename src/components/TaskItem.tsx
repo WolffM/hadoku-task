@@ -2,10 +2,12 @@
  * TaskItem component - renders a single task with actions
  */
 
-import React, { useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import type { Task } from '../domain/types'
 import { formatAge } from '../utils/formatters'
 import { formatTagsForDisplay } from '../domain/utils/tags'
+import { openQuestionCount, parsePlanNotes } from '../domain/planNotes'
+import { NotesPopout } from './NotesPopout'
 import { TagIcon } from '@wolffm/task-ui-components'
 
 interface TaskItemProps {
@@ -50,30 +52,20 @@ export function TaskItem({
   const isCompleted = task.state === 'Completed'
 
   const hasNotes = !!(task.notes && task.notes.trim())
+  // Notes open in a popout rather than inside the card: a plan is a 40–60 line
+  // document, and the card can only ever give it a column's worth of width.
   const [notesOpen, setNotesOpen] = useState(false)
-  const [editingNotes, setEditingNotes] = useState(false)
-  const [draftNotes, setDraftNotes] = useState('')
-  const [savingNotes, setSavingNotes] = useState(false)
 
-  const openNotes = () => {
-    setNotesOpen(o => !o)
-    setEditingNotes(false)
-  }
-  const startEditNotes = () => {
-    setDraftNotes(task.notes ?? '')
-    setEditingNotes(true)
-    setNotesOpen(true)
-  }
-  const saveNotes = async () => {
-    if (!onSetNotes || savingNotes) return
-    setSavingNotes(true)
-    try {
-      await onSetNotes(task.id, draftNotes)
-      setEditingNotes(false)
-    } finally {
-      setSavingNotes(false)
-    }
-  }
+  // How many things this task is waiting on a human for. Surfaced on the card so
+  // a reviewer can see which of a lane's tasks need them without opening each
+  // one — Questions is the only section that asks anything, so it's the only
+  // thing worth counting here.
+  const openQuestions = useMemo(() => openQuestionCount(parsePlanNotes(task.notes)), [task.notes])
+
+  // The popout portals to the app root: out of this card (which clips and
+  // drags), but not out of `.task-app-container`, which is where every theme
+  // token is scoped. Read at click time, so the ref is always populated.
+  const itemRef = useRef<HTMLLIElement>(null)
 
   // A draggable element swallows mousedown-drag to start an HTML5 drag, so text
   // inside it can't be selected. Pressing inside a text region turns the row's
@@ -114,6 +106,7 @@ export function TaskItem({
 
   return (
     <li
+      ref={itemRef}
       className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''} ${isCompleted ? 'is-completed' : ''}`}
       data-task-id={task.id}
       data-task-state={task.state}
@@ -205,64 +198,20 @@ export function TaskItem({
           <div className="task-app__item-age">{formatAge(task.createdAt)}</div>
         </div>
 
-        {notesOpen && (
-          <div className="task-app__item-notes" onMouseDown={suppressDragForText}>
-            {editingNotes ? (
-              <>
-                <textarea
-                  className="task-app__notes-input"
-                  value={draftNotes}
-                  autoFocus
-                  rows={6}
-                  placeholder="Write a plan or notes (markdown)…"
-                  onChange={e => setDraftNotes(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Escape') setEditingNotes(false)
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void saveNotes()
-                  }}
-                />
-                <div className="task-app__notes-actions">
-                  <button
-                    className="task-app__notes-btn task-app__notes-save"
-                    onClick={() => void saveNotes()}
-                    disabled={savingNotes}
-                  >
-                    {savingNotes ? 'Saving…' : 'Save'}
-                  </button>
-                  <button
-                    className="task-app__notes-btn"
-                    onClick={() => setEditingNotes(false)}
-                    disabled={savingNotes}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : hasNotes ? (
-              <>
-                <pre className="task-app__notes-body">{task.notes}</pre>
-                {onSetNotes && (
-                  <button className="task-app__notes-btn" onClick={startEditNotes}>
-                    Edit
-                  </button>
-                )}
-              </>
-            ) : (
-              <button className="task-app__notes-btn" onClick={startEditNotes}>
-                ＋ Add notes
-              </button>
-            )}
+        {openQuestions > 0 && (
+          <div className="task-app__item-questions" onMouseDown={suppressDragForText}>
+            {openQuestions} open {openQuestions === 1 ? 'question' : 'questions'}
           </div>
         )}
       </div>
       <div className="task-app__item-actions">
         {onSetNotes && (
           <button
-            className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''}`}
-            onClick={openNotes}
-            title={hasNotes ? 'View / edit notes' : 'Add notes'}
-            aria-label={hasNotes ? 'View or edit notes' : 'Add notes'}
-            aria-expanded={notesOpen}
+            className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''}`}
+            onClick={() => setNotesOpen(true)}
+            title={hasNotes ? 'Open notes' : 'Add notes'}
+            aria-label={hasNotes ? 'Open notes' : 'Add notes'}
+            aria-haspopup="dialog"
           >
             📝
           </button>
@@ -300,6 +249,17 @@ export function TaskItem({
           </button>
         )}
       </div>
+
+      {notesOpen && (
+        <NotesPopout
+          title={task.title}
+          notes={task.notes}
+          onSave={onSetNotes ? notes => onSetNotes(task.id, notes) : undefined}
+          onClose={() => setNotesOpen(false)}
+          startEditing={!hasNotes}
+          host={itemRef.current?.closest('.task-app-container')}
+        />
+      )}
     </li>
   )
 }

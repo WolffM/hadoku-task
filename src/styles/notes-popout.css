@@ -1,0 +1,344 @@
+/**
+ * Notes popout — the plan-review surface (see NotesPopout.tsx).
+ *
+ * Sizing is the whole point: a plan is a 40–60 line document, so the panel takes
+ * a real share of the viewport instead of a column's worth of a task card. Read
+ * and edit share the same flex body, and the panel grows when editing, so
+ * entering edit mode can never shrink the writing area.
+ */
+
+.notes-popout__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--hdk-space-xl);
+  z-index: 10000;
+}
+
+.notes-popout {
+  display: flex;
+  flex-direction: column;
+  width: min(920px, 100%);
+  height: min(860px, 88vh);
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  box-shadow: var(--hdk-shadow-lg);
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+.notes-popout:focus {
+  outline: none;
+}
+
+/* Editing is the interaction the protocol depends on, so it gets MORE room than
+   reading, never less. */
+.notes-popout--editing {
+  height: min(1000px, 95vh);
+  width: min(1040px, 100%);
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+
+.notes-popout__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hdk-space-lg);
+  padding: var(--hdk-space-xl) var(--hdk-space-2xl);
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.notes-popout__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--hdk-space-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-popout__title {
+  margin: 0;
+  font-size: var(--hdk-text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+/* The count is the "you are being asked something" signal, visible before the
+   reader has scrolled anywhere. */
+.notes-popout__question-count {
+  flex-shrink: 0;
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  border-radius: 999px;
+  background-color: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.notes-popout__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--hdk-radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notes-popout__close:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text);
+}
+
+/* ── Read mode ────────────────────────────────────────────────────── */
+
+.notes-popout__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--hdk-space-xl) var(--hdk-space-2xl);
+}
+
+.notes-popout__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.notes-popout__section + .notes-popout__section {
+  margin-top: var(--hdk-space-2xl);
+}
+
+.notes-popout__section-title {
+  margin: 0 0 var(--hdk-space-md) 0;
+  font-size: var(--hdk-text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Questions is the only section that asks anything of the human, so it is the
+   only one that looks different — a tinted block with an accent rail, hard to
+   scroll past. */
+.notes-popout__section--questions {
+  padding: var(--hdk-space-lg);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--hdk-radius-sm);
+  background-color: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+}
+
+.notes-popout__section--questions .notes-popout__section-title {
+  color: var(--color-on-warning-bg);
+}
+
+.notes-popout__section--questions .plan-md {
+  color: var(--color-on-warning-bg);
+}
+
+/* ── Reply box (answers append into notes) ────────────────────────── */
+
+.notes-popout__reply {
+  margin-top: var(--hdk-space-lg);
+  padding-top: var(--hdk-space-lg);
+  border-top: 1px solid var(--color-warning);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-sm);
+}
+
+.notes-popout__reply-label {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-on-warning-bg);
+}
+
+.notes-popout__reply-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--hdk-space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--hdk-text-sm);
+  line-height: var(--line-height-relaxed);
+  resize: vertical;
+}
+
+.notes-popout__reply-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--hdk-shadow-focus-sm);
+}
+
+.notes-popout__reply-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Edit mode ────────────────────────────────────────────────────── */
+
+.notes-popout__editor {
+  flex: 1;
+  min-height: 0;
+  margin: var(--hdk-space-xl) var(--hdk-space-2xl);
+  padding: var(--hdk-space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--hdk-text-sm);
+  line-height: var(--line-height-relaxed);
+  resize: none;
+}
+
+.notes-popout__editor:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--hdk-shadow-focus-sm);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+
+.notes-popout__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--hdk-space-md);
+  padding: var(--hdk-space-lg) var(--hdk-space-2xl);
+  border-top: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.notes-popout__hint {
+  margin-right: auto;
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-secondary);
+}
+
+.notes-popout__btn {
+  padding: var(--hdk-space-sm) var(--hdk-space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+  cursor: pointer;
+}
+
+.notes-popout__btn:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.notes-popout__btn--primary {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
+}
+
+.notes-popout__btn--primary:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-on-primary);
+}
+
+.notes-popout__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Rendered plan markdown ───────────────────────────────────────── */
+
+.plan-md {
+  font-size: var(--hdk-text-sm);
+  line-height: var(--line-height-relaxed);
+  word-break: break-word;
+}
+
+.plan-md p {
+  margin: 0 0 var(--hdk-space-md) 0;
+}
+
+.plan-md ul,
+.plan-md ol {
+  margin: 0 0 var(--hdk-space-md) 0;
+  padding-left: var(--hdk-space-2xl);
+}
+
+.plan-md li {
+  margin-bottom: var(--hdk-space-xs);
+}
+
+.plan-md > *:last-child {
+  margin-bottom: 0;
+}
+
+.plan-md__subheading {
+  margin: var(--hdk-space-lg) 0 var(--hdk-space-sm) 0;
+  font-size: var(--hdk-text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.plan-md code {
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+  background-color: var(--color-bg-alt);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+}
+
+.plan-md__code {
+  margin: 0 0 var(--hdk-space-md) 0;
+  padding: var(--hdk-space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--hdk-radius-sm);
+  background-color: var(--color-bg-alt);
+  color: var(--color-text);
+  overflow-x: auto;
+}
+
+.plan-md__code code {
+  padding: 0;
+  background: none;
+}
+
+/* Phones get the whole screen — a plan has no business being letterboxed. */
+@media (max-width: 640px) {
+  .notes-popout__overlay {
+    padding: 0;
+  }
+
+  .notes-popout,
+  .notes-popout--editing {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+
+  .notes-popout__header,
+  .notes-popout__body,
+  .notes-popout__footer {
+    padding-left: var(--hdk-space-lg);
+    padding-right: var(--hdk-space-lg);
+  }
+
+  .notes-popout__editor {
+    margin-left: var(--hdk-space-lg);
+    margin-right: var(--hdk-space-lg);
+  }
+}
