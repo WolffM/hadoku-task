@@ -39,22 +39,8 @@ function makeKV() {
   }
 }
 
-// task_events predates the migration files; the stats path reads it on every
-// board read, so the harness DB must have it (empty is enough).
-const TASK_EVENTS_DDL = `
-  CREATE TABLE IF NOT EXISTS task_events (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_key   TEXT NOT NULL,
-    board_id   TEXT NOT NULL,
-    task_id    TEXT,
-    event_type TEXT NOT NULL,
-    metadata   TEXT,
-    timestamp  TEXT NOT NULL DEFAULT (datetime('now'))
-  );`
-
 function makeEnv() {
   const d1: FakeD1 = makeSqliteD1(MIGRATION)
-  d1.__raw.exec(TASK_EVENTS_DDL)
   return {
     TASKS_KV: makeKV(),
     DB: d1,

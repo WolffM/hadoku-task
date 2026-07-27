@@ -20,6 +20,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { TASK_EVENTS_BASE_DDL } from './task-events-schema'
 
 interface D1RunResult {
   success: true
@@ -119,6 +120,12 @@ export interface FakeD1 {
 export function makeSqliteD1(migrationSqlPath?: string): FakeD1 {
   const db = new DatabaseSync(':memory:')
   db.exec('PRAGMA foreign_keys = ON;')
+  // task_events predates every migration file (created by hand in prod), so it
+  // must exist BEFORE they run — migration 0004 rebuilds it. Creating it here,
+  // in its real pre-0004 shape WITH its CHECK constraint, is what makes the
+  // harness DB match prod: an over-permissive stand-in let the `uncompleted`
+  // event pass every local check and then 500 in production.
+  db.exec(TASK_EVENTS_BASE_DDL)
   if (migrationSqlPath) {
     const files = statSync(migrationSqlPath).isDirectory()
       ? readdirSync(migrationSqlPath)

@@ -25,12 +25,6 @@ import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 const EDGE_SECRET = 'test-edge-secret'
 const MIGRATION = join(process.cwd(), 'worker/migrations')
 
-const TASK_EVENTS_DDL = `
-  CREATE TABLE IF NOT EXISTS task_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, user_key TEXT NOT NULL, board_id TEXT NOT NULL,
-    task_id TEXT, event_type TEXT NOT NULL, metadata TEXT,
-    timestamp TEXT NOT NULL DEFAULT (datetime('now')));`
-
 function makeKV() {
   const store = new Map<string, string>()
   return {
@@ -49,7 +43,6 @@ function makeKV() {
 }
 
 const d1: FakeD1 = makeSqliteD1(MIGRATION)
-d1.__raw.exec(TASK_EVENTS_DDL)
 
 const env = {
   TASKS_KV: makeKV(),
@@ -457,8 +450,11 @@ async function main() {
   const upgraded = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
     b => b.id === 'flow'
   )
-  check('the upgrade applied (schemaVersion bumped)', upgraded?.schemaVersion === 2,
-    JSON.stringify(upgraded?.schemaVersion))
+  check(
+    'the upgrade applied (schemaVersion bumped)',
+    upgraded?.schemaVersion === 2,
+    JSON.stringify(upgraded?.schemaVersion)
+  )
   check('lanes were relabelled', upgraded?.lanes?.[0]?.label === 'Needs Plan v2')
 
   // The destructive case stays owner-only: drop a lane that holds tasks.
@@ -470,8 +466,11 @@ async function main() {
     dryRun: true
   })
   const destructiveStrands = r.json?.preview?.toInbox
-  check('the destructive preview shows tasks would be stranded', destructiveStrands > 0,
-    `toInbox=${destructiveStrands}`)
+  check(
+    'the destructive preview shows tasks would be stranded',
+    destructiveStrands > 0,
+    `toInbox=${destructiveStrands}`
+  )
   r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/activate-automation`, {
     lanes: DESTRUCTIVE,
     digest: r.json?.preview?.digest
@@ -489,8 +488,11 @@ async function main() {
   const afterRefusal = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
     b => b.id === 'flow'
   )
-  check('the refused activation wrote nothing', afterRefusal?.lanes?.length === 3,
-    JSON.stringify(afterRefusal?.lanes?.length))
+  check(
+    'the refused activation wrote nothing',
+    afterRefusal?.lanes?.length === 3,
+    JSON.stringify(afterRefusal?.lanes?.length)
+  )
 
   // ---------------------------------------------------------------------
   section('9. Re-activation clears tasks in removed lanes to the Inbox')

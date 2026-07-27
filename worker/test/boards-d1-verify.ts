@@ -40,25 +40,9 @@ function makeKV() {
   }
 }
 
-// task_events predates the migration files (created manually in prod via
-// `wrangler d1 execute`; migration 0001 only mutates it). The stats path reads
-// it on every board read, so the harness DB must have it — empty is enough,
-// this suite doesn't assert on stats.
-const TASK_EVENTS_DDL = `
-  CREATE TABLE IF NOT EXISTS task_events (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_key   TEXT NOT NULL,
-    board_id   TEXT NOT NULL,
-    task_id    TEXT,
-    event_type TEXT NOT NULL,
-    metadata   TEXT,
-    timestamp  TEXT NOT NULL DEFAULT (datetime('now'))
-  );`
-
 function makeEnv() {
   const { kv, store } = makeKV()
   const d1: FakeD1 = makeSqliteD1(MIGRATION)
-  d1.__raw.exec(TASK_EVENTS_DDL)
   // TASKS_KV is still bound (prefs/session routes use it) but the boards/tasks
   // storage no longer reads or writes it — the D1 cutover is complete.
   const env = { TASKS_KV: kv, DB: d1, EDGE_AUTH_SECRET: EDGE_SECRET }
