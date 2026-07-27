@@ -26,7 +26,7 @@ import type {
   Task
 } from '@wolffm/task/api'
 import { TaskUtils } from '@wolffm/task/api'
-import { VersionConflictError } from '@wolffm/task/api'
+import { VersionConflictError, completedCutoff } from '@wolffm/task/api'
 import { DEFAULT_BOARD_ID, DEFAULT_BOARD_NAME } from '../constants'
 import {
   getBoardStats as getD1BoardStats,
@@ -36,6 +36,15 @@ import {
 } from '../events'
 import { maskKey } from '@wolffm/worker-utils'
 import type { Env } from '../types'
+
+/**
+ * "Still on the board", in SQL. Active always; Completed until its grace window
+ * elapses. Deleted never. Binds ONE parameter — the cutoff from
+ * completedCutoff() — and must be kept identical between the read (getTasks) and
+ * the reconcile scan in saveTasks/batchSaveTasks; see the note there for why.
+ * Served by the tasks_board(user_id, board_id, state) index.
+ */
+const VISIBLE_PREDICATE = `(state = 'Active' OR (state = 'Completed' AND closed_at > ?))`
 
 // D1 is bound as `env.DB`; type it loosely to avoid a hard workers-types dep here.
 interface D1Like {
@@ -344,10 +353,10 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         .prepare(
           `SELECT id, title, notes, tag, state, date, start_time, end_time, source, source_id,
                   metadata, created_at, updated_at, closed_at
-             FROM tasks WHERE user_id = ? AND board_id = ? AND state = 'Active'
+             FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}
              ORDER BY created_at, id`
         )
-        .bind(uid, boardId)
+        .bind(uid, boardId, completedCutoff())
         .all<TaskRow>()
       return {
         version: tasksVersion ?? 1,
@@ -367,12 +376,18 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       const uid = sessionId ?? 'public'
       const ts = nowIso()
 
-      // Reconcile the board's active-task rows to match the file (the whole-file
-      // contract: the file is the full active set). Upsert every task; delete
-      // rows no longer present. Bump the board's tasks_version to the file's.
+      // Reconcile the board's VISIBLE rows to match the file. The file is the
+      // full visible set, never the full table — so the existing-id scan uses the
+      // SAME predicate getTasks read with. Without that, every closed task (and
+      // every Deleted row) would be hard-deleted by the next write, silently
+      // destroying the history this whole design exists to keep.
+      //
+      // No race: completedCutoff() is monotonic, so this cutoff is always >= the
+      // one the read used. The write's window is a subset of the read's, meaning
+      // a task can never be absent from the file yet still look deletable.
       const existing = await db
-        .prepare(`SELECT id FROM tasks WHERE user_id = ? AND board_id = ?`)
-        .bind(uid, boardId)
+        .prepare(`SELECT id FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}`)
+        .bind(uid, boardId, completedCutoff())
         .all<{ id: string }>()
       const existingIds = new Set(existing.results.map(r => r.id))
       const desiredIds = new Set(tasks.tasks.map(t => t.id))
@@ -420,9 +435,13 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
       for (const w of writes) {
         const boardId = w.boardId || DEFAULT_BOARD_ID
+        // Same visible-window scan as saveTasks — a closed or deleted row must
+        // never become a deletion candidate just because it aged out of view.
         const existing = await db
-          .prepare('SELECT id FROM tasks WHERE user_id = ? AND board_id = ?')
-          .bind(uid, boardId)
+          .prepare(
+            `SELECT id FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}`
+          )
+          .bind(uid, boardId, completedCutoff())
           .all<{ id: string }>()
         const existingIds = new Set(existing.results.map(r => r.id))
         const desiredIds = new Set(w.tasks.tasks.map(t => t.id))

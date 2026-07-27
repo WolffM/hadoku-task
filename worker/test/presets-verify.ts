@@ -25,7 +25,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 let pass = 0
 let fail = 0
@@ -180,7 +180,9 @@ async function main() {
     const shapes: Array<[string, unknown]> = [
       [
         'https://p.test/wrapped',
-        { presets: [{ schemaId: 'tenhands', schemaVersion: 1, label: 'TenHands OSS', lanes: LANES }] }
+        {
+          presets: [{ schemaId: 'tenhands', schemaVersion: 1, label: 'TenHands OSS', lanes: LANES }]
+        }
       ],
       ['https://p.test/array', [{ schemaId: 'tenhands', schemaVersion: 2, lanes: LANES }]],
       ['https://p.test/single', { schemaId: 'solo', schemaVersion: 3, lanes: LANES }]
@@ -223,9 +225,7 @@ async function main() {
         ]
       }
     }))
-    const r = await getPresets(
-      envWith([{ id: 'p', label: 'P', url: 'https://p.test/mixed' }])
-    )
+    const r = await getPresets(envWith([{ id: 'p', label: 'P', url: 'https://p.test/mixed' }]))
     check('only the valid preset survives', r.presets.length === 1, JSON.stringify(r.presets))
     check('the survivor is the good one', r.presets[0]?.schemaId === 'good')
     check('one bad preset does not blank the others', r.sources[0]?.ok === true)
@@ -243,7 +243,10 @@ async function main() {
     let served = 0
     routes.set(url, () => {
       served++
-      return { body: { presets: [{ schemaId: 'c', schemaVersion: 1, lanes: LANES }] }, etag: '"v1"' }
+      return {
+        body: { presets: [{ schemaId: 'c', schemaVersion: 1, lanes: LANES }] },
+        etag: '"v1"'
+      }
     })
     const env = envWith([{ id: 'p', label: 'P', url }])
 
@@ -253,7 +256,11 @@ async function main() {
     check('first call is not flagged cached', !first.sources[0]?.cached)
 
     const second = await getPresets(env)
-    check('second call inside TTL → no network at all', hits.get(url) === 1, `hits=${hits.get(url)}`)
+    check(
+      'second call inside TTL → no network at all',
+      hits.get(url) === 1,
+      `hits=${hits.get(url)}`
+    )
     check('second call flagged cached', second.sources[0]?.cached === true)
     check('second call still returns the presets', second.presets.length === 1)
     check('provider body served exactly once', served === 1, `served=${served}`)
@@ -284,7 +291,10 @@ async function main() {
       conditional.get(url)?.[0] === '"rev-1"',
       JSON.stringify(conditional.get(url))
     )
-    check('provider answered 304 → flagged notModified', revalidated.sources[0]?.notModified === true)
+    check(
+      'provider answered 304 → flagged notModified',
+      revalidated.sources[0]?.notModified === true
+    )
     check('304 keeps the previously parsed lanes', revalidated.presets[0]?.lanes?.length === 3)
   }
 
@@ -336,7 +346,9 @@ async function main() {
 
     // Never-reachable provider: report the failure rather than an empty picker.
     routes.set('https://p.test/dead', () => ({ throws: true }))
-    const dead = await getPresets(envWith([{ id: 'p', label: 'TenHands', url: 'https://p.test/dead' }]))
+    const dead = await getPresets(
+      envWith([{ id: 'p', label: 'TenHands', url: 'https://p.test/dead' }])
+    )
     check('never-reachable → ok:false', dead.sources[0]?.ok === false)
     check('never-reachable → error explains why', dead.sources[0]?.error === 'Provider unreachable')
     check('never-reachable → no presets invented', dead.presets.length === 0)

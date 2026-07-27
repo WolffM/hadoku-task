@@ -7,6 +7,7 @@ import { logger } from '@wolffm/logger/client'
 import type { Task, BoardsFile, Board } from '../../domain/types'
 import { DomainError } from '../../domain/types'
 import { formatError } from '../../domain/utils/tags'
+import { isVisible } from '../../domain/utils/lifecycle'
 
 /**
  * Check if an error is a 404 (not found) error
@@ -97,7 +98,10 @@ export function extractBoardTasks(boards: BoardsFile | null, boardId: string): B
       taskCount: board.tasks?.length || 0
     })
     return {
-      tasks: (board.tasks || []).filter((t: Task) => t.state === 'Active'),
+      // Keep completed tasks — they render struck through until their window
+      // elapses. The server has already dropped Deleted rows and closed ones, so
+      // isVisible here is a belt-and-braces guard for anything cached client-side.
+      tasks: (board.tasks || []).filter((t: Task) => isVisible(t)),
       foundBoard: true
     }
   } else {

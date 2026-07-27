@@ -27,6 +27,16 @@ export * as TaskHandlers from '../domain/handlers/handlers.js'
 export * as TaskUtils from '../domain/utils/shared.js'
 export type { Storage as TaskStorage } from './storage.js'
 
+// Task lifecycle: ONE definition of "still on the board", shared by every
+// storage backend. The D1 adapter expresses it in SQL for perf, the localStorage
+// adapter applies isVisible() in JS — but the window is defined here, once.
+export {
+  COMPLETED_WINDOW_MS,
+  completedCutoff,
+  isVisible,
+  isRecentlyCompleted
+} from '../domain/utils/lifecycle.js'
+
 // Core Entity Types
 export type {
   Task,
@@ -34,6 +44,7 @@ export type {
   Board,
   BoardsFile,
   StatsFile,
+  StatsEventType,
   UserType,
   ULID,
   Lane

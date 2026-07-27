@@ -22,7 +22,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 const TASK_EVENTS_DDL = `
   CREATE TABLE IF NOT EXISTS task_events (
@@ -94,11 +94,17 @@ interface Board {
   ownerUserId?: string
   access?: string
   tasks?: Task[]
-  shares?: Array<{ granteeUserId: string; level: string; name?: string | null; tier?: string | null }>
+  shares?: Array<{
+    granteeUserId: string
+    level: string
+    name?: string | null
+    tier?: string | null
+  }>
 }
 interface Task {
   id: string
   title?: string
+  state?: string
 }
 interface ResponseBody {
   boards?: Board[]
@@ -367,8 +373,16 @@ async function main() {
     level: 'readonly'
   })
   check('grant readonly → 200', r.status === 200, JSON.stringify(r.json))
-  // Active now: ot2 + ct1 (ot1 was completed by the contributor in §5).
-  check('reader reads the active tasks', (await tasksOn(READER, handle)).length === 2)
+  // Visible now: ot2 + ct1 active, plus ot1 which the contributor completed in §5
+  // — completing retains a task on the board (struck through) for 24h, so the
+  // reader sees all three, one of them Completed.
+  const readerTasks = await tasksOn(READER, handle)
+  check('reader reads the board tasks', readerTasks.length === 3, `n=${readerTasks.length}`)
+  check(
+    'the contributor-completed task reads as Completed',
+    readerTasks.find(t => t.id === 'ot1')?.state === 'Completed',
+    `state=${readerTasks.find(t => t.id === 'ot1')?.state}`
+  )
   r = await req(READER, 'POST', '/task/api', {
     id: 'rx',
     title: 'should be refused',

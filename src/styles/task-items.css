@@ -224,3 +224,42 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* --------------------------------------------------------------------------
+ * Completed tasks (§ task lifecycle)
+ *
+ * A completed task is NOT removed — it stays on the board, faded and struck
+ * through, until its 24h window elapses and it closes out of view on its own.
+ * The fade lands on the CONTENT only: the action buttons stay at full strength
+ * so the ↺ (reopen) and × (dismiss now) remain easy targets.
+ * -------------------------------------------------------------------------- */
+.task-app__item.is-completed .task-app__item-content {
+  opacity: 0.55;
+  transition:
+    opacity var(--transition-smooth),
+    text-decoration-color var(--transition-smooth);
+}
+
+.task-app__item.is-completed .task-app__item-title {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  /* currentColor keeps the rule readable in every theme without naming a hue. */
+  text-decoration-color: currentColor;
+}
+
+/* A completed card shouldn't compete with live work for attention. */
+.task-app__item.is-completed {
+  box-shadow: none;
+}
+
+/* The ✓ has become ↺ (reopen), so it must stop reading as a success action. */
+.task-app__action-btn.task-app__complete-btn.is-completed {
+  background: var(--color-neutral);
+  color: var(--color-on-neutral);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-app__item.is-completed .task-app__item-content {
+    transition: none;
+  }
+}

@@ -137,7 +137,6 @@ export function useSessionInitialization({
       // flips after its fast cache paint — so the shell still reveals with
       // content, without this hook waiting on the network.
       setIsLoaded(true)
-
     }
 
     void initializeSession()

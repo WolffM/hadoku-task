@@ -176,6 +176,9 @@ export interface BoardsFile {
   boards: Board[]
 }
 
+/** Every event the stats timeline can carry. See StatsFile.timeline. */
+export type StatsEventType = 'created' | 'completed' | 'edited' | 'deleted' | 'uncompleted'
+
 export interface StatsFile {
   version: 2
   updatedAt: string
@@ -185,9 +188,12 @@ export interface StatsFile {
     edited: number
     deleted: number
   }
+  // `uncompleted` is the ✓-toggle undoing a completion. It is a timeline event
+  // but NOT a counter: `counters.completed` is the NET count, so a
+  // complete/uncomplete/complete cycle reads as one completion, not two.
   timeline: Array<{
     t: string
-    event: 'created' | 'completed' | 'edited' | 'deleted'
+    event: StatsEventType
     id?: ULID
   }>
   // Persistent snapshot of every task ever seen (by id)

@@ -23,7 +23,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 const TASK_EVENTS_DDL = `
   CREATE TABLE IF NOT EXISTS task_events (
@@ -499,14 +499,20 @@ async function main() {
   // Blank clears it — that's how the UI clears, by emptying the field on blur.
   r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: '' })
   check('empty string → 200', r.status === 200, `status=${r.status}`)
-  check('empty string CLEARS the repo (null, not "")', (await repoOf('flow')) === null,
-    JSON.stringify(await repoOf('flow')))
+  check(
+    'empty string CLEARS the repo (null, not "")',
+    (await repoOf('flow')) === null,
+    JSON.stringify(await repoOf('flow'))
+  )
 
   // Explicit null clears too.
   await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: 'WolffM/hadoku-task' })
   r = await req(OWNER, 'POST', '/task/api/boards/flow/repo', { repo: null })
-  check('null → 200 and clears', r.status === 200 && (await repoOf('flow')) === null,
-    `status=${r.status} repo=${JSON.stringify(await repoOf('flow'))}`)
+  check(
+    'null → 200 and clears',
+    r.status === 200 && (await repoOf('flow')) === null,
+    `status=${r.status} repo=${JSON.stringify(await repoOf('flow'))}`
+  )
 
   // Owner-only: a contributor drives work through a board, it can't remap one.
   r = await req(CONTRIB, 'POST', `/task/api/boards/${flowHandle}/repo`, { repo: 'evil/repo' })

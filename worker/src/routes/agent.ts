@@ -349,7 +349,10 @@ export function createAgentRoutes() {
       mode: cfg.mode,
       schemaId: cfg.schemaId,
       schemaVersion: cfg.schemaVersion,
-      taskTags: file.tasks.map(t => t.tag)
+      // ACTIVE tags only. `toInbox` counts tasks a migration would strand, and a
+      // completed task isn't going anywhere — counting it would report a real
+      // migration where the board is actually safe.
+      taskTags: file.tasks.filter(t => t.state === 'Active').map(t => t.tag)
     })
     if (ctx.access === 'owner' && cfg.mode === 'automation') {
       warmPresets(binding, c)

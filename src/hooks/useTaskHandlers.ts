@@ -67,7 +67,9 @@ export function useTaskHandlers({
   }
 
   const handleDeleteTag = (tag: string) => {
-    const tagTasks = tasks.filter(t => splitTags(t.tag).includes(tag))
+    // Count live work only — "clear this tag from N tasks" shouldn't include
+    // struck-through ones the user already considers done.
+    const tagTasks = tasks.filter(t => t.state === 'Active' && splitTags(t.tag).includes(tag))
     setConfirmClearTag({ tag, count: tagTasks.length })
   }
 

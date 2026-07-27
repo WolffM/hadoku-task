@@ -20,7 +20,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 function makeKV() {
   const store = new Map<string, string>()

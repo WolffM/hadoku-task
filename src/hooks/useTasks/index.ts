@@ -449,6 +449,14 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     }
   }
 
+  // `tasks` carries mixed state — Active plus anything completed in the last 24h,
+  // because the board RENDERS completed tasks (struck through) until they close.
+  // Anything that COUNTS tasks rather than rendering them wants this instead:
+  // lane ranking, tag existence, empty-lane detection, calendar occupancy. A
+  // completed task inflating its tag's frequency could push a live lane off a
+  // 6-lane board for a day. Pick the variable that names what you mean.
+  const activeTasks = useMemo(() => tasks.filter(t => t.state === 'Active'), [tasks])
+
   // Stable identity: `api` is memoized, so this share facade is too. Without the
   // memo a NEW object every render would re-fire the share UI's autocomplete
   // effect on every render (a fetch storm), never letting a result settle.
@@ -471,6 +479,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   return {
     // Task state
     tasks,
+    activeTasks,
     pendingOperations,
 
     // Task operations

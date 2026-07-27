@@ -120,7 +120,10 @@ function walkTs(dir: string, out: string[] = []): string[] {
  */
 function codesEmittedInSource(): Map<string, string> {
   const found = new Map<string, string>()
-  const files = [...walkTs(join(process.cwd(), 'worker/src')), ...walkTs(join(process.cwd(), 'src'))]
+  const files = [
+    ...walkTs(join(process.cwd(), 'worker/src')),
+    ...walkTs(join(process.cwd(), 'src'))
+  ]
   for (const file of files) {
     const text = readFileSync(file, 'utf8')
     const rel = file.slice(process.cwd().length + 1)

@@ -18,7 +18,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 function makeKV() {
   const store = new Map<string, string>()
@@ -81,7 +81,7 @@ interface ResponseBody {
   version?: number
   currentVersion?: number
   code?: string
-  tasks?: Array<{ id: string; title: string; tag?: string | null }>
+  tasks?: Array<{ id: string; title: string; tag?: string | null; state?: string }>
   boards?: Array<{ id: string; name: string; tasks?: unknown[] }>
 }
 
@@ -200,10 +200,17 @@ async function sectionA_taskOCC() {
   )
 
   r = await req(env, 'GET', '/task/api/tasks')
+  // Completing retains the task (it renders struck through until its 24h window
+  // elapses), so both t1 and t2 are still listed — t1 as Completed.
   check(
-    'completed task left active list',
-    r.json?.tasks?.length === 1,
+    'completed task is retained, not removed',
+    r.json?.tasks?.length === 2,
     `len=${r.json?.tasks?.length}`
+  )
+  check(
+    'completed task carries state=Completed',
+    r.json?.tasks?.find(t => t.id === 't1')?.state === 'Completed',
+    `state=${r.json?.tasks?.find(t => t.id === 't1')?.state}`
   )
 
   r = await req(env, 'DELETE', '/task/api/t2', { headers: { 'If-Match': '5' } })

@@ -6,7 +6,16 @@
  * Auth should be enforced at the API boundary (express routes), not in handlers.
  */
 
-import type { Task, TasksFile, StatsFile, Board, BoardsFile, ULID, AuthContext } from '../types.js'
+import type {
+  Task,
+  TasksFile,
+  StatsFile,
+  StatsEventType,
+  Board,
+  BoardsFile,
+  ULID,
+  AuthContext
+} from '../types.js'
 import { TaskNotFoundError, BoardNotFoundError, VersionConflictError } from '../types.js'
 import type { Storage } from '../../server/storage.js'
 import { utcDayFromISO } from '../utils/calendar.js'
@@ -83,16 +92,21 @@ function updateBoardAtIndex(
 function recordStatsEvent(
   stats: StatsFile,
   task: Task,
-  eventType: 'created' | 'completed' | 'edited' | 'deleted',
+  eventType: StatsEventType,
   timestamp: string
 ): StatsFile {
+  // `uncompleted` lands on the timeline but decrements `completed` rather than
+  // getting a counter of its own, so counters.completed stays the NET number of
+  // completions across any number of ✓-toggle flips.
+  const counters =
+    eventType === 'uncompleted'
+      ? { ...stats.counters, completed: Math.max(0, stats.counters.completed - 1) }
+      : { ...stats.counters, [eventType]: stats.counters[eventType] + 1 }
+
   return {
     ...stats,
     updatedAt: timestamp,
-    counters: {
-      ...stats.counters,
-      [eventType]: stats.counters[eventType] + 1
-    },
+    counters,
     timeline: [...stats.timeline, { t: timestamp, event: eventType, id: task.id }],
     tasks: {
       ...stats.tasks,
@@ -173,8 +187,14 @@ export function updateBatchMoveStats(
 // --- Task Operation Pattern Helper ---
 
 /**
- * Helper for closing tasks (completing or deleting)
- * Consolidates the duplicate logic between completeTask and deleteTask
+ * Helper for closing tasks (completing or deleting).
+ *
+ * The task is RETAINED, not spliced out. Completing marks it Completed and it
+ * stays on the board — struck through — until its grace window elapses (see
+ * `lifecycle.ts`); deleting marks it Deleted and it leaves view immediately.
+ * Either way the record survives, which is what makes a retrospective possible
+ * and what makes the change feed's `state='Deleted'` rows real instead of
+ * theoretical. Visibility is decided on read, never by destroying data here.
  */
 export function closeTask(
   tasks: TasksFile,
@@ -195,7 +215,7 @@ export function closeTask(
   }
 
   const newTasks = [...tasks.tasks]
-  newTasks.splice(taskIndex, 1) // Remove from active tasks
+  newTasks[taskIndex] = closedTask
 
   return {
     updatedTasks: {
@@ -204,6 +224,41 @@ export function closeTask(
       updatedAt: timestamp
     },
     closedTask
+  }
+}
+
+/**
+ * Reopen a Completed task (the ✓-on-a-completed-task toggle). Clears closedAt so
+ * it is unambiguously back in the Active set rather than a Completed task with a
+ * stale close time.
+ */
+export function reopenTask(
+  tasks: TasksFile,
+  taskId: string,
+  timestamp: string
+): {
+  updatedTasks: TasksFile
+  reopenedTask: Task
+} {
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
+
+  const reopenedTask: Task = {
+    ...task,
+    state: 'Active',
+    closedAt: null,
+    updatedAt: timestamp
+  }
+
+  const newTasks = [...tasks.tasks]
+  newTasks[taskIndex] = reopenedTask
+
+  return {
+    updatedTasks: {
+      ...tasks,
+      tasks: newTasks,
+      updatedAt: timestamp
+    },
+    reopenedTask
   }
 }
 
@@ -227,7 +282,7 @@ export async function withTaskOperation<T>(
     timestamp: string
   ) => {
     updatedTasks: TasksFile
-    statsEvents: Array<{ task: Task; eventType: 'created' | 'completed' | 'edited' | 'deleted' }>
+    statsEvents: Array<{ task: Task; eventType: StatsEventType }>
     result: T
   },
   // Optimistic-concurrency guard (L2). When provided, the operation only applies

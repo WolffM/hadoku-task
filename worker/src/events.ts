@@ -5,7 +5,7 @@
  * Replaces the old stats system that stored everything in KV.
  */
 
-export type TaskEventType = 'created' | 'completed' | 'edited' | 'deleted'
+export type TaskEventType = 'created' | 'completed' | 'edited' | 'deleted' | 'uncompleted'
 
 export interface TaskEvent {
   userKey: string
@@ -20,6 +20,32 @@ export interface EventStats {
   completed: number
   edited: number
   deleted: number
+}
+
+/**
+ * Fold raw `GROUP BY event_type` rows into the reported counters.
+ *
+ * `uncompleted` has no counter of its own — it CANCELS a completion, so
+ * `completed` is the net figure. The log is append-only (counters are derived,
+ * never stored), so netting on read is the only place this can happen: a
+ * complete/uncomplete/complete cycle must read as one completion, not two.
+ */
+function tallyEvents(rows: Array<{ event_type: string; count: number }>): EventStats {
+  const stats: EventStats = { created: 0, completed: 0, edited: 0, deleted: 0 }
+  let uncompleted = 0
+
+  for (const row of rows) {
+    if (row.event_type === 'uncompleted') {
+      uncompleted = row.count
+      continue
+    }
+    if (row.event_type in stats) {
+      stats[row.event_type as keyof EventStats] = row.count
+    }
+  }
+
+  stats.completed = Math.max(0, stats.completed - uncompleted)
+  return stats
 }
 
 /**
@@ -61,19 +87,7 @@ export async function getBoardStats(
     .bind(userKey, boardId)
     .all()
 
-  const stats: EventStats = {
-    created: 0,
-    completed: 0,
-    edited: 0,
-    deleted: 0
-  }
-
-  for (const row of result.results) {
-    const eventType = row.event_type as TaskEventType
-    stats[eventType] = row.count as number
-  }
-
-  return stats
+  return tallyEvents(result.results as unknown as Array<{ event_type: string; count: number }>)
 }
 
 /**
@@ -167,19 +181,7 @@ export async function getUserStats(db: D1Database, userKey: string): Promise<Eve
     .bind(userKey)
     .all()
 
-  const stats: EventStats = {
-    created: 0,
-    completed: 0,
-    edited: 0,
-    deleted: 0
-  }
-
-  for (const row of result.results) {
-    const eventType = row.event_type as TaskEventType
-    stats[eventType] = row.count as number
-  }
-
-  return stats
+  return tallyEvents(result.results as unknown as Array<{ event_type: string; count: number }>)
 }
 
 /**

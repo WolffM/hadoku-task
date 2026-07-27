@@ -208,8 +208,12 @@ export function createTaskRoutes() {
     method: 'post',
     path: '/{id}/complete',
     tags: ['Tasks'],
-    summary: 'Complete a task',
-    description: 'Marks a task as completed',
+    summary: 'Complete a task (toggle)',
+    description:
+      'Marks a task completed. The task is NOT removed: it stays on the board struck through ' +
+      'for 24h, then closes out of view on its own. Calling this on an already-completed task ' +
+      'REOPENS it — the response `state` says which way the toggle went. Use DELETE to dismiss ' +
+      'a task immediately.',
     request: {
       params: z.object({
         id: z.string().openapi({ example: '01HXYZ123ABC' })

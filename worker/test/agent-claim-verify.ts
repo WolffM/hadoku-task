@@ -23,7 +23,7 @@ import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 const TASK_EVENTS_DDL = `
   CREATE TABLE IF NOT EXISTS task_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_key TEXT NOT NULL, board_id TEXT NOT NULL,
@@ -615,9 +615,18 @@ async function main() {
       (relDone.json as unknown as { completed?: boolean }).completed === true,
     JSON.stringify(relDone.json)
   )
+  // An agent completing a task marks it Completed; it is NOT removed. It stays
+  // on the board struck through for its 24h window (see task-lifecycle-verify),
+  // so the owner can see what the agent finished — and reopen it if the agent
+  // got it wrong.
+  const landed = (await req('GET', '/task/api/tasks?boardId=auto')).json?.tasks?.find(
+    t => t.id === 'land1'
+  )
+  check('the agent-completed task is still listed', !!landed, 'task vanished on agent completion')
   check(
-    'the completed task is gone from the active list',
-    !(await req('GET', '/task/api/tasks?boardId=auto')).json?.tasks?.some(t => t.id === 'land1')
+    '…marked Completed rather than removed',
+    (landed as unknown as { state?: string })?.state === 'Completed',
+    `state=${(landed as unknown as { state?: string })?.state}`
   )
 
   // ---------------------------------------------------------------------

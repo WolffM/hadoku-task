@@ -18,7 +18,8 @@
  * schema rather than a hand-copied approximation.
  */
 import { DatabaseSync } from 'node:sqlite'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 
 interface D1RunResult {
   success: true
@@ -109,11 +110,23 @@ export interface FakeD1 {
  * Build an in-memory D1 shim. If `migrationSqlPath` is given, its SQL is applied
  * to create the schema; otherwise the DB starts empty (caller runs its own DDL).
  */
+/**
+ * Boot an in-memory DB from the real migrations. Accepts either a single .sql
+ * file or the migrations DIRECTORY — pass the directory (what the harnesses do)
+ * and every migration is applied in filename order, so a new one is picked up
+ * everywhere without editing each harness.
+ */
 export function makeSqliteD1(migrationSqlPath?: string): FakeD1 {
   const db = new DatabaseSync(':memory:')
   db.exec('PRAGMA foreign_keys = ON;')
   if (migrationSqlPath) {
-    db.exec(readFileSync(migrationSqlPath, 'utf8'))
+    const files = statSync(migrationSqlPath).isDirectory()
+      ? readdirSync(migrationSqlPath)
+          .filter(f => f.endsWith('.sql'))
+          .sort()
+          .map(f => join(migrationSqlPath, f))
+      : [migrationSqlPath]
+    for (const file of files) db.exec(readFileSync(file, 'utf8'))
   }
 
   return {

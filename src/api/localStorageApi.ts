@@ -271,27 +271,22 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
     },
 
     async completeTask(id: string, boardId: string = 'main'): Promise<Task> {
-      // Get the task BEFORE completing it (since handler removes it from active list)
-      const tasksFile = await storage.getTasks(userType, sessionId, boardId)
-      const taskToComplete = tasksFile.tasks.find(t => t.id === id)
+      // The handler RETAINS the task (completing is not removing) and toggles:
+      // completing an already-completed task reopens it. So read the result back
+      // rather than assuming a state — hardcoding 'Completed' here would report
+      // the wrong thing on every reopen.
+      await TaskHandlers.completeTask(storage, authContext, id, boardId)
 
-      if (!taskToComplete) {
+      const after = await storage.getTasks(userType, sessionId, boardId)
+      const updatedTask = after.tasks.find(t => t.id === id)
+      if (!updatedTask) {
         throw new TaskNotFoundError(id)
       }
-
-      // Use handler to complete the task (removes from active, updates stats)
-      await TaskHandlers.completeTask(storage, authContext, id, boardId)
 
       // Broadcast update
       deferredBroadcast('tasks-updated', { sessionId: SESSION_ID, userType, boardId })
 
-      // Return the completed task with updated state
-      return {
-        ...taskToComplete,
-        state: 'Completed',
-        closedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+      return updatedTask
     },
 
     async deleteTask(

@@ -23,7 +23,7 @@ import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 const API_PORT = Number(process.env.DEV_API_PORT ?? 3001)
 const PROVIDER_PORT = Number(process.env.DEV_PROVIDER_PORT ?? 3002)
 const EDGE_SECRET = 'dev-edge-secret'
-const MIGRATION = join(process.cwd(), 'worker/migrations/0002_boards_and_tasks.sql')
+const MIGRATION = join(process.cwd(), 'worker/migrations')
 
 // The dev user every browser request is attributed to.
 const USER = { key: 'dev-key', id: 'dev-uid', tier: 'friend' }

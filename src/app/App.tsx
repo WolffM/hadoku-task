@@ -132,6 +132,7 @@ export default function App(props: TaskAppProps = {}) {
   // Task operations hook
   const {
     tasks,
+    activeTasks,
     pendingOperations,
     initialLoad,
     addTask,
@@ -251,7 +252,9 @@ export default function App(props: TaskAppProps = {}) {
   // Computed values
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
   const persistedTags: string[] = currentBoard?.tags || []
-  const allTags = Array.from(new Set([...persistedTags, ...getAllTags(tasks)]))
+  // activeTasks, not tasks: a tag whose only remaining tasks are completed has no
+  // live work on it and shouldn't keep a lane alive for the next 24h.
+  const allTags = Array.from(new Set([...persistedTags, ...getAllTags(activeTasks)]))
 
   // Board-type descriptor (§5.3): the layout/ordering knobs come from here, not
   // scattered literals. Standard boards reproduce today's behaviour exactly.
@@ -262,7 +265,10 @@ export default function App(props: TaskAppProps = {}) {
       ? // Automation: lanes are the board's declared tag order (uncapped by default).
         persistedTags.slice(0, laneLimit ?? undefined)
       : // Standard: frequency-ranked, capped (isMobile ? 3 : 6) — unchanged.
-        getTopTags(tasks, laneLimit ?? Infinity)
+        // Ranked on ACTIVE tasks only, or a lane you just cleared would hold its
+        // position for a day on the strength of its struck-through tasks and push
+        // a lane with live work off the board.
+        getTopTags(activeTasks, laneLimit ?? Infinity)
 
   // Handle preference changes from settings modal
   const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
@@ -436,6 +442,7 @@ export default function App(props: TaskAppProps = {}) {
         {currentView === 'board' ? (
           <TaskLayout
             tasks={tasks}
+            activeTasks={activeTasks}
             topTags={topTags}
             boardType={boardType}
             isMobile={isMobile}
@@ -469,7 +476,10 @@ export default function App(props: TaskAppProps = {}) {
           />
         ) : (
           <CalendarDayView
-            tasks={tasks}
+            // The calendar answers "what is on my day", so a finished item must
+            // not keep occupying its slot. The 24h strikeout is a board
+            // affordance; completing something clears it from the schedule.
+            tasks={activeTasks}
             selectedDate={calendarDate}
             onDateChange={setCalendarDate}
             onCreateTask={(title, schedule) => void addTask(title, schedule)}

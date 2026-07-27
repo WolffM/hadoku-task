@@ -151,6 +151,11 @@ export const TOOLS: ToolDef[] = [
     handler: async (args, ctx) => {
       const r = await resolveBoard(args, ctx)
       let tasks = await TaskHandlers.getBoardTasks(r.storage, r.auth, r.boardId)
+      // getBoardTasks returns the board's VISIBLE set, which includes tasks
+      // completed in the last 24h (they stay on screen struck through). This tool
+      // promises active tasks, and an agent must never pick up work that is
+      // already done — so filter to Active here rather than widening the promise.
+      tasks = tasks.filter(t => t.state === 'Active')
       const date = str(args.date)
       if (date) tasks = tasks.filter(t => dayOf(t) === date)
       const tag = str(args.tag)

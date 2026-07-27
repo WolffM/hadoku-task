@@ -177,6 +177,10 @@ export const CompleteTaskResponseSchema = z
   .object({
     ok: z.literal(true),
     message: z.string().openapi({ example: 'Task 01HXYZ123ABC completed' }),
+    // The endpoint TOGGLES: calling it on an already-completed task reopens it.
+    // `state` is what the task ended up as, so a caller never has to guess which
+    // way the toggle went.
+    state: z.enum(['Active', 'Completed']).openapi({ example: 'Completed' }),
     version: z.number().optional().openapi({ example: 8 })
   })
   .openapi('CompleteTaskResponse')

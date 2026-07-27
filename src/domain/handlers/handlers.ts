@@ -19,6 +19,7 @@ import { assertNotesWithinLimit } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
 import { splitTags } from '../utils/tags.js'
 import { utcDayFromISO } from '../utils/calendar.js'
+import { isVisible } from '../utils/lifecycle.js'
 
 import {
   backfillTaskDate,
@@ -28,6 +29,7 @@ import {
   prepareTasksForBoard,
   updateBatchMoveStats,
   closeTask,
+  reopenTask,
   withTaskOperation,
   withBoardOperation,
   modifyBoardTags
@@ -54,7 +56,13 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
 
       return {
         ...board,
-        tasks: tasksFile.tasks.map(backfillTaskDate),
+        // isVisible drops Deleted rows and Completed ones past their window. The
+        // D1 adapter has already filtered in SQL so this is a no-op there; the
+        // localStorage adapter is a dumb blob read, and this is where its window
+        // gets applied. It must NOT move into that adapter's getTasks: its
+        // saveTasks overwrites the whole blob, so a filtered read would make the
+        // next read-modify-write erase everything it filtered out.
+        tasks: tasksFile.tasks.filter(t => isVisible(t)).map(backfillTaskDate),
         stats: statsFile
       }
     })
@@ -88,7 +96,7 @@ export async function getBoardTasks(
   boardId: string
 ): Promise<Task[]> {
   const tasks = await storage.getTasks(auth.userType, auth.sessionId, boardId)
-  return tasks.tasks.map(backfillTaskDate)
+  return tasks.tasks.filter(t => isVisible(t)).map(backfillTaskDate)
 }
 
 /**
@@ -216,8 +224,12 @@ export async function updateTask(
 }
 
 /**
- * Complete a task (removes from active tasks, records in stats) - board-scoped storage
- * Public users cannot complete tasks
+ * Complete a task - board-scoped storage.
+ *
+ * The task is NOT removed: it stays on the board struck through until its grace
+ * window elapses (lifecycle.ts), then falls out of view on its own. Completing
+ * an already-completed task reopens it — the ✓ is a toggle.
+ * Public users cannot complete tasks.
  */
 export async function completeTask(
   storage: Storage,
@@ -225,18 +237,36 @@ export async function completeTask(
   taskId: ULID,
   boardId: string = 'main',
   expectedVersion?: number
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: boolean; message: string; state: Task['state'] }> {
   return withTaskOperation(
     storage,
     auth,
     boardId,
     (tasks, stats, timestamp) => {
-      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp)
+      const { task: current } = findTaskOrThrow(tasks, taskId)
 
+      if (current.state === 'Completed') {
+        const { updatedTasks, reopenedTask } = reopenTask(tasks, taskId, timestamp)
+        return {
+          updatedTasks,
+          statsEvents: [{ task: reopenedTask, eventType: 'uncompleted' as const }],
+          result: {
+            ok: true,
+            message: `Task ${taskId} reopened`,
+            state: 'Active' as Task['state']
+          }
+        }
+      }
+
+      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp)
       return {
         updatedTasks,
-        statsEvents: [{ task: closedTask, eventType: 'completed' }],
-        result: { ok: true, message: `Task ${taskId} completed` }
+        statsEvents: [{ task: closedTask, eventType: 'completed' as const }],
+        result: {
+          ok: true,
+          message: `Task ${taskId} completed`,
+          state: 'Completed' as Task['state']
+        }
       }
     },
     expectedVersion
@@ -244,7 +274,12 @@ export async function completeTask(
 }
 
 /**
- * Delete a task (removes from active tasks, records in stats) - board-scoped storage
+ * Delete a task - board-scoped storage.
+ *
+ * A SOFT delete: the task leaves view immediately (unlike completing, there is
+ * no grace window) but the record is retained as state='Deleted' so history and
+ * the §4.4 change feed stay intact. The × on a completed task lands here too,
+ * which is how you dismiss one before its window elapses.
  */
 export async function deleteTask(
   storage: Storage,

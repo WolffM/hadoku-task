@@ -44,6 +44,10 @@ export function TaskItem({
 }: TaskItemProps) {
   const isCompleting = pendingOperations.has(`complete-${task.id}`)
   const isDeleting = pendingOperations.has(`delete-${task.id}`)
+  // Completed tasks stay on the board, faded and struck through, until their 24h
+  // window elapses. The ✓ is a toggle from here — clicking it reopens the task —
+  // and the × still dismisses it immediately.
+  const isCompleted = task.state === 'Completed'
 
   const hasNotes = !!(task.notes && task.notes.trim())
   const [notesOpen, setNotesOpen] = useState(false)
@@ -110,8 +114,9 @@ export function TaskItem({
 
   return (
     <li
-      className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''}`}
+      className={`task-app__item hdk-advanced-surface hdk-advanced-surface--shift ${selected ? 'selected' : ''} ${isCompleted ? 'is-completed' : ''}`}
       data-task-id={task.id}
+      data-task-state={task.state}
       draggable={isDraggable && !editingTitle && !textDragSuppressed}
       onMouseUp={restoreDrag}
       onMouseLeave={restoreDrag}
@@ -274,12 +279,14 @@ export function TaskItem({
         )}
         {showCompleteButton && (
           <button
-            className="task-app__action-btn task-app__complete-btn"
+            className={`task-app__action-btn task-app__complete-btn ${isCompleted ? 'is-completed' : ''}`}
             onClick={() => onComplete(task.id)}
-            title="Complete task"
+            title={isCompleted ? 'Reopen task' : 'Complete task'}
+            aria-label={isCompleted ? 'Reopen task' : 'Complete task'}
+            aria-pressed={isCompleted}
             disabled={isCompleting || isDeleting}
           >
-            {isCompleting ? '⏳' : '✓'}
+            {isCompleting ? '⏳' : isCompleted ? '↺' : '✓'}
           </button>
         )}
         {showDeleteButton && (
