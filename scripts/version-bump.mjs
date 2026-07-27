@@ -45,6 +45,19 @@ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim()
  * Deliberately not matched: docs/, plugins/, e2e/, scripts/, .github/, *.md —
  * none of them change a published artifact, so they must not burn a version.
  */
+/**
+ * Under `worker/` but NOT part of any published artifact, so they must not burn
+ * a version. `files` is ["dist", ...]: nothing under worker/ ships directly, and
+ * only worker/src reaches the tarball at all (compiled into dist/worker). Test
+ * harnesses and migration SQL cannot change what is published — same reasoning
+ * that already excludes docs/, e2e/, scripts/ and plugins/, they just happen to
+ * sit under a prefix that otherwise means "task".
+ *
+ * Checked before the `task` match below, and mirrored by the second `grep -Ev`
+ * in publish.yml's "Detect changed packages".
+ */
+const DEV_ONLY = /^worker\/(test|migrations)\//
+
 const PACKAGES = [
   { key: 'ui', path: 'task-ui-components', name: '@wolffm/task-ui-components' },
   { key: 'themes', path: 'themes', name: '@wolffm/themes' },
@@ -56,6 +69,7 @@ export function classify(files) {
   for (const file of files) {
     if (file.startsWith('task-ui-components/')) changed.add('ui')
     else if (file.startsWith('themes/')) changed.add('themes')
+    else if (DEV_ONLY.test(file)) continue
     else if (/^(src\/|worker\/|package\.json$|vite\.config\.|tsconfig\.|tsup\.)/.test(file)) {
       changed.add('task')
     }

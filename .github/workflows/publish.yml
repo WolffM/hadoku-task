@@ -82,7 +82,13 @@ jobs:
 
           if echo "$CHANGED" | grep -qE "^task-ui-components/"; then ui=true; fi
           if echo "$CHANGED" | grep -qE "^themes/"; then themes=true; fi
-          if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
+          # The second -Ev drops worker/test/ and worker/migrations/: they sit under
+          # a prefix that means "task", but `files` is ["dist", ...] so neither can
+          # reach the tarball — only worker/src does, compiled into dist/worker.
+          # Test harnesses and migration SQL must not burn a version, same as
+          # docs/, e2e/, scripts/ and plugins/. Mirrors DEV_ONLY in
+          # scripts/version-bump.mjs — the two must agree or CI keeps stepping in.
+          if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -Ev "^worker/(test|migrations)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
 
           # Dependency chain: `task` bundles both themes + task-ui-components,
           # and themes imports task-ui-components. A dependency change must
