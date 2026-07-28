@@ -6,7 +6,7 @@
 import React from 'react'
 import { Modal } from '@wolffm/task-ui-components'
 import type { BoardsFile } from '../../domain/types'
-import { splitTags } from '../../domain/utils/tags'
+import { normalizeTag } from '../../domain/utils/tags'
 
 export interface EditTagModalProps {
   isOpen: boolean
@@ -35,7 +35,8 @@ export function EditTagModal({
 }: EditTagModalProps) {
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
   const boardTags = currentBoard?.tags || []
-  const currentTags = splitTags(currentTag)
+  // A task carries one tag, so the pills are a radio group, not checkboxes.
+  const selectedTag = normalizeTag(currentTag)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -47,7 +48,7 @@ export function EditTagModal({
   return (
     <Modal
       isOpen={isOpen}
-      title="Edit Tags"
+      title="Edit Tag"
       onClose={onClose}
       onConfirm={onConfirm}
       confirmLabel="Save"
@@ -57,16 +58,18 @@ export function EditTagModal({
         {/* Show existing board tags as clickable pills */}
         {boardTags.length > 0 && (
           <div className="edit-tag-pills">
-            <label className="edit-tag-label">Select Tags</label>
-            <div className="edit-tag-pills-container">
+            <label className="edit-tag-label">Select Tag</label>
+            <div className="edit-tag-pills-container" role="radiogroup" aria-label="Select tag">
               {[...boardTags].sort().map(tag => {
-                const isActive = currentTags.includes(tag)
+                const isActive = selectedTag === tag
                 return (
                   <button
                     key={tag}
                     className={`edit-tag-pill ${isActive ? 'active' : ''}`}
                     onClick={() => onToggleTagPill(tag)}
                     type="button"
+                    role="radio"
+                    aria-checked={isActive}
                   >
                     #{tag}
                   </button>
@@ -77,7 +80,7 @@ export function EditTagModal({
         )}
 
         <div className="edit-tag-field">
-          <label className="edit-tag-label">Add New Tag</label>
+          <label className="edit-tag-label">New Tag</label>
           <input
             type="text"
             className="edit-tag-input"
@@ -89,7 +92,7 @@ export function EditTagModal({
           />
           <div className="edit-tag-hint">
             <div>"one tag" → #one-tag</div>
-            <div>"#two #tags" → #two #tags</div>
+            <div>Replaces the current tag — a task has one.</div>
           </div>
         </div>
       </div>

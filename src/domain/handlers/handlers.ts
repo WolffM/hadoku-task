@@ -18,7 +18,7 @@ import type {
 } from '../types.js'
 import { assertNotesWithinLimit } from '../types.js'
 import { generateULID, now } from '../utils/shared.js'
-import { splitTags } from '../utils/tags.js'
+import { splitTags, normalizeTag } from '../utils/tags.js'
 import { utcDayFromISO, calendarTasks, type CalendarQuery } from '../utils/calendar.js'
 import { isVisible } from '../utils/lifecycle.js'
 
@@ -203,7 +203,9 @@ export async function createTask(
         id,
         title: input.title,
         notes: input.notes ?? null,
-        tag: input.tag ?? null,
+        // One tag per task is an invariant, not a UI convention: MCP, the REST
+        // API and the app all land here, so the collapse happens here too.
+        tag: normalizeTag(input.tag),
         state: 'Active',
         createdAt,
         // Creation IS the first mutation: stamp updatedAt so the change feed (§4.4),
@@ -256,6 +258,10 @@ export async function updateTask(
         ...input,
         updatedAt: timestamp
       }
+
+      // A write that touches the tag collapses it to one (see createTask). An
+      // untouched tag is left exactly as stored.
+      if (input.tag !== undefined) updatedTask.tag = normalizeTag(input.tag)
 
       // Keep `date` consistent with a (re)scheduled startTime unless the caller set
       // it explicitly — covers drag-to-reschedule and timed/all-day conversions.
@@ -585,7 +591,7 @@ export async function batchUpdateTags(
         updatedCount++
         return {
           ...task,
-          tag: update.tag || undefined,
+          tag: normalizeTag(update.tag) ?? undefined,
           updatedAt: timestamp
         }
       }

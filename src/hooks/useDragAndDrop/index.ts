@@ -136,26 +136,6 @@ export function useDragAndDrop({
         return copy
       })
 
-      // If the drag started inside a tag-column, include the source tag
-      try {
-        const col = el.closest('.task-app__tag-column') as HTMLElement | null
-        if (col) {
-          const hdr = col.querySelector('.task-app__tag-header') || col.querySelector('h3')
-          const txt = hdr ? hdr.textContent || '' : ''
-          // header looks like "#tag"
-          const srcTag = txt.trim().replace(/^#/, '')
-          if (srcTag) {
-            try {
-              e.dataTransfer.setData('application/x-hadoku-task-source', srcTag)
-            } catch {
-              /* Intentionally ignore errors */
-            }
-          }
-        }
-      } catch {
-        /* Intentionally ignore errors */
-      }
-
       // Use the clone as drag image and align it so the cursor remains at the same
       // relative position within the row as when the drag started.
       try {
@@ -358,39 +338,21 @@ export function useDragAndDrop({
     const ids = extractDraggedTaskIds(e)
     if (ids.length === 0) return
 
-    // read source tag if provided
-    let srcTag: string | null = null
-    try {
-      const s = e.dataTransfer.getData('application/x-hadoku-task-source')
-      if (s) srcTag = s
-    } catch {
-      /* Intentionally ignore errors */
-    }
     logger.info('[useDragAndDrop] onDrop: processing', {
       targetTag,
       ids,
-      srcTag,
       taskCount: ids.length
     })
 
-    // Build list of tag updates using helper
+    // Build list of tag updates using helper. A drop SETS the tag — a task
+    // carries one tag, so moving it into a lane must take it out of the lane it
+    // came from rather than leaving it in both.
     const updates = buildTagUpdates(tasks, ids, existingTags => {
-      if (targetTag === 'other') {
-        // remove all tags
-        return existingTags.length === 0 ? null : ''
-      }
-
-      // Add targetTag if missing
-      const hasTarget = existingTags.includes(targetTag)
-
-      // If drag source specified and different from target, remove srcTag if present
-      let newTags = existingTags.slice()
-      if (!hasTarget) newTags.push(targetTag)
-      if (srcTag && srcTag !== targetTag) {
-        newTags = newTags.filter(t => t !== srcTag)
-      }
-
-      return newTags.join(' ').trim()
+      const nextTag = targetTag === 'other' ? '' : targetTag
+      const currentTag = existingTags.length ? existingTags[existingTags.length - 1] : ''
+      // Already exactly there (and not a stale multi-tag row to collapse): no-op.
+      if (currentTag === nextTag && existingTags.length <= 1) return null
+      return nextTag
     })
 
     logger.info('[useDragAndDrop] onDrop: updating tasks', { updateCount: updates.length })
@@ -435,13 +397,14 @@ export function useDragAndDrop({
 
     logger.info('[useDragAndDrop] onFilterDrop', { filterTag, ids, taskCount: ids.length })
 
-    // Build list of tag updates using helper
+    // Dropping on a filter chip SETS that tag, for the same reason a lane drop
+    // does: one tag per task.
     const updates = buildTagUpdates(tasks, ids, existingTags => {
-      if (existingTags.includes(filterTag)) {
+      if (existingTags.length === 1 && existingTags[0] === filterTag) {
         logger.info('[useDragAndDrop] Task already has tag', { filterTag })
-        return null // Tag already exists, skip
+        return null
       }
-      return [...existingTags, filterTag].join(' ')
+      return filterTag
     })
 
     if (updates.length === 0) {

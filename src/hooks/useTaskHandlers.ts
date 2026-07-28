@@ -4,7 +4,7 @@
 
 import type { Task, BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from './useModalState'
-import { splitTags, formatError } from '../domain/utils/tags'
+import { splitTags, normalizeTag, formatError } from '../domain/utils/tags'
 import { validateBoardName as validateBoardNameUtil } from '../utils/validation'
 import { logger } from '@wolffm/logger/client'
 
@@ -80,12 +80,8 @@ export function useTaskHandlers({
 
       // Check if we have pending task IDs to tag
       if (pendingTaskOperation?.type === 'apply-tag' && pendingTaskOperation.taskIds.length > 0) {
-        const updates = pendingTaskOperation.taskIds.map(taskId => {
-          const task = tasks.find(t => t.id === taskId)
-          const existingTags = splitTags(task?.tag)
-          const newTags = [...new Set([...existingTags, normalized])]
-          return { taskId, tag: newTags.join(' ') }
-        })
+        // Set, not union: a task carries one tag, and the one just created is it.
+        const updates = pendingTaskOperation.taskIds.map(taskId => ({ taskId, tag: normalized }))
 
         await bulkUpdateTaskTags(updates)
         clearSelection()
@@ -114,23 +110,20 @@ export function useTaskHandlers({
     if (!editTagModal) return
 
     const { taskId, currentTag } = editTagModal
-    const currentTags = splitTags(currentTag)
-    const newTagsFromInput = editTagInput.trim()
-      ? editTagInput
-          .trim()
-          .replace(/\s+/g, '-')
-          .split('#')
-          .filter(Boolean)
-          .map(t => t.trim())
-      : []
+    // The typed tag wins over the selected pill — it's the later gesture — and
+    // "#two #tags" collapses to the last one, because a task carries one tag.
+    const typedTag = normalizeTag(
+      editTagInput
+        .trim()
+        .split('#')
+        .filter(Boolean)
+        .map(t => t.trim().replace(/\s+/g, '-'))
+        .join(' ')
+    )
 
-    // Create new tags on the board first
-    for (const newTag of newTagsFromInput) {
-      await createTagOnBoard(newTag)
-    }
+    if (typedTag) await createTagOnBoard(typedTag)
 
-    const allTags = [...new Set([...currentTags, ...newTagsFromInput])].sort()
-    const finalTag = allTags.join(' ')
+    const finalTag = typedTag ?? normalizeTag(currentTag) ?? ''
 
     await updateTaskTags(taskId, { tag: finalTag })
 
@@ -138,23 +131,14 @@ export function useTaskHandlers({
     setEditTagInput('')
   }
 
+  // Pills are single-select: picking one replaces whatever the task had, and
+  // picking the active one clears it.
   const toggleTagPill = (tag: string) => {
     if (!editTagModal) return
 
     const { taskId, currentTag } = editTagModal
-    const currentTags = splitTags(currentTag)
-    const tagExists = currentTags.includes(tag)
-
-    if (tagExists) {
-      const newTags = currentTags
-        .filter(t => t !== tag)
-        .sort()
-        .join(' ')
-      setEditTagModal({ taskId, currentTag: newTags })
-    } else {
-      const newTags = [...currentTags, tag].sort().join(' ')
-      setEditTagModal({ taskId, currentTag: newTags })
-    }
+    const isActive = normalizeTag(currentTag) === tag
+    setEditTagModal({ taskId, currentTag: isActive ? '' : tag })
   }
 
   const validateBoardName = (name: string): string | null => {

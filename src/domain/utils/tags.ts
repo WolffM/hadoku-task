@@ -12,6 +12,17 @@ export function splitTags(tagString: string | null | undefined): string[] {
 }
 
 /**
+ * A task carries AT MOST ONE tag. `Task.tag` is still a string, and historical
+ * rows may hold several space-separated tokens, so every write funnels through
+ * here: the LAST token wins, because the last tag applied is the one the user
+ * meant. Returns null for "no tag".
+ */
+export function normalizeTag(tagString: string | null | undefined): string | null {
+  const tags = splitTags(tagString)
+  return tags.length ? tags[tags.length - 1] : null
+}
+
+/**
  * Format tags for display with # prefix (e.g., "#work #urgent")
  */
 export function formatTagsForDisplay(tagString: string | null | undefined): string {
@@ -29,17 +40,17 @@ export function formatError(error: unknown): string {
 }
 
 /**
- * Extract normalized tags from a tags string (e.g., "#friend #soon")
- * Returns tags as space-separated string or undefined if no tags
+ * Extract the tag from a tags string (e.g., "#friend #soon").
+ * A task holds one tag, so "#friend #soon" yields `soon` — the last one typed
+ * wins, same rule as every other tag write. Undefined when there is no tag.
  */
 function extractTags(tagsText: string): string | undefined {
-  const normalizeTag = (tag: string) => tag.trim().replace(/\s+/g, '-')
   const tags =
     tagsText
       .match(/#[^\s#]+/g)
-      ?.map(tag => normalizeTag(tag.slice(1)))
+      ?.map(tag => tag.slice(1).trim().replace(/\s+/g, '-'))
       .filter(Boolean) || []
-  return tags.length ? tags.join(' ') : undefined
+  return tags.length ? tags[tags.length - 1] : undefined
 }
 
 /**
