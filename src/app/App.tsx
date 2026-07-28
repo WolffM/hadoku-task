@@ -265,11 +265,14 @@ export default function App(props: TaskAppProps = {}) {
     boardType.laneOrder === 'declared'
       ? // Automation: lanes are the board's declared tag order (uncapped by default).
         persistedTags.slice(0, laneLimit ?? undefined)
-      : // Standard: frequency-ranked, capped (isMobile ? 3 : 6) — unchanged.
-        // Ranked on ACTIVE tasks only, or a lane you just cleared would hold its
+      : // Standard: frequency-ranked, capped (isMobile ? 3 : 6).
+        // RANKED on active tasks, or a lane you just cleared would hold its
         // position for a day on the strength of its struck-through tasks and push
-        // a lane with live work off the board.
-        getTopTags(activeTasks, laneLimit ?? Infinity)
+        // a lane with live work off the board. But a tag that still has something
+        // to render comes along at the tail (zero count): drop it and its
+        // completed tasks fall through to "Other Tasks", which is for UNTAGGED
+        // work. They keep their column until the grace window takes them.
+        getTopTags(activeTasks, laneLimit ?? Infinity, getAllTags(tasks))
 
   // Handle preference changes from settings modal
   const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
@@ -443,7 +446,6 @@ export default function App(props: TaskAppProps = {}) {
         {currentView === 'board' ? (
           <TaskLayout
             tasks={tasks}
-            activeTasks={activeTasks}
             topTags={topTags}
             boardType={boardType}
             isMobile={isMobile}

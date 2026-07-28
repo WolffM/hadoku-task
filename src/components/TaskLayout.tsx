@@ -14,13 +14,6 @@ import { splitTags, getTasksByTag, getRemainingTasks } from '../domain/utils/tag
 interface TaskLayoutProps {
   /** What gets RENDERED: Active plus anything completed inside its 24h window. */
   tasks: Task[]
-  /**
-   * What gets COUNTED. Lane emptiness is a statement about live work — a lane
-   * holding nothing but struck-through tasks is done, and on an automation board
-   * (hideEmptyLanes) it should collapse rather than sit there looking occupied
-   * for a day.
-   */
-  activeTasks: Task[]
   topTags: string[]
   boardType?: BoardTypeConfig
   isMobile?: boolean
@@ -58,7 +51,6 @@ interface TaskLayoutProps {
 
 export function TaskLayout({
   tasks,
-  activeTasks,
   topTags,
   boardType = STANDARD_BOARD,
   isMobile = false,
@@ -199,11 +191,15 @@ export function TaskLayout({
         })
       : // Drop empty lanes where the board asks for it (automation declares its
         // whole lane vocabulary, so most lanes sit empty and the board becomes a
-        // wall of empty columns). Not while a drag is in flight: an empty lane is
-        // still a drop target, and on an automation board dragging is how a task
-        // advances — hiding `approved` while it's empty would make it unreachable.
+        // wall of empty columns). Empty means "renders nothing", struck-through
+        // tasks included: a lane collapsed while it still held completed tasks
+        // dumped them into the Inbox, which is for UNTAGGED work — a `#landed`
+        // task is not inbox work. They leave with their grace window instead.
+        // Not while a drag is in flight either: an empty lane is still a drop
+        // target, and on an automation board dragging is how a task advances —
+        // hiding `approved` while it's empty would make it unreachable.
         boardType.hideEmptyLanes && !isDragging
-        ? laneCandidates.filter(tag => getTasksByTag(activeTasks, tag).length > 0)
+        ? laneCandidates.filter(tag => getTasksByTag(tasks, tag).length > 0)
         : laneCandidates
 
   // No tags: simple list (use visibleTopTags length so filters can collapse layout)
