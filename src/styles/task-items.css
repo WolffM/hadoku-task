@@ -75,12 +75,27 @@
   white-space: normal;
 }
 
-/* Text regions on a card stay selectable even though the row is draggable.
-   TaskItem drops the row's `draggable` for the duration of a press that starts
-   here, which is what actually lets the browser select instead of drag; these
-   rules give the matching affordance (I-beam) and keep selection enabled. */
-.task-app__item-meta-row,
-.task-app__item-questions {
+/* Selection is scoped to the glyphs, not to the boxes that lay them out. The
+   card is a drag handle first: anywhere it isn't covered by text, a press must
+   start a drag, so the card opts OUT of selection and each run of copyable text
+   opts back in via an inline span, whose box is exactly the text. TaskItem drops
+   the row's `draggable` for a press that starts on one of those spans, which is
+   what actually lets the browser select instead of drag; `cursor: text` puts the
+   I-beam on precisely the same pixels. */
+.task-app__item {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.task-app__item-text {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+/* An input manages its own selection — never inherit the card's opt-out. */
+.task-app__item input,
+.task-app__item textarea {
   -webkit-user-select: text;
   user-select: text;
 }

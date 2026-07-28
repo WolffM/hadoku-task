@@ -70,10 +70,15 @@ export function TaskItem({
   const itemRef = useRef<HTMLLIElement>(null)
 
   // A draggable element swallows mousedown-drag to start an HTML5 drag, so text
-  // inside it can't be selected. Pressing inside a text region turns the row's
-  // draggable OFF for that gesture, which hands the drag back to the browser as a
-  // normal text selection; it flips back on mouseup so dragging the card
-  // elsewhere is unaffected.
+  // inside it can't be selected. Pressing ON THE TEXT turns the row's draggable
+  // OFF for that gesture, which hands the drag back to the browser as a normal
+  // text selection; it flips back on mouseup so dragging the card elsewhere is
+  // unaffected.
+  //
+  // The handler hangs off the inline <span> around each glyph run, never off the
+  // block that lays it out: a block fills the card's width, so hanging it there
+  // turned the whole meta row — most of it empty space — into a no-drag zone and
+  // the card became almost impossible to pick up. An inline box IS the text.
   const [textDragSuppressed, setTextDragSuppressed] = useState(false)
   const suppressDragForText = () => setTextDragSuppressed(true)
   const restoreDrag = () => setTextDragSuppressed(false)
@@ -191,18 +196,28 @@ export function TaskItem({
           </div>
         )}
 
-        <div className="task-app__item-meta-row" onMouseDown={suppressDragForText}>
+        <div className="task-app__item-meta-row">
           {task.tag ? (
-            <div className="task-app__item-tag">{formatTagsForDisplay(task.tag)}</div>
+            <div className="task-app__item-tag">
+              <span className="task-app__item-text" onMouseDown={suppressDragForText}>
+                {formatTagsForDisplay(task.tag)}
+              </span>
+            </div>
           ) : (
             <div />
           )}
-          <div className="task-app__item-age">{formatAge(task.createdAt)}</div>
+          <div className="task-app__item-age">
+            <span className="task-app__item-text" onMouseDown={suppressDragForText}>
+              {formatAge(task.createdAt)}
+            </span>
+          </div>
         </div>
 
         {openQuestions > 0 && (
-          <div className="task-app__item-questions" onMouseDown={suppressDragForText}>
-            {openQuestions} open {openQuestions === 1 ? 'question' : 'questions'}
+          <div className="task-app__item-questions">
+            <span className="task-app__item-text" onMouseDown={suppressDragForText}>
+              {openQuestions} open {openQuestions === 1 ? 'question' : 'questions'}
+            </span>
           </div>
         )}
       </div>
