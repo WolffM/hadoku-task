@@ -27,6 +27,11 @@ export * as TaskHandlers from '../domain/handlers/handlers.js'
 export * as TaskUtils from '../domain/utils/shared.js'
 export type { Storage as TaskStorage } from './storage.js'
 
+// One tag per task. The handlers apply this to everything that writes through
+// them; it is exported because the agent-claim routes write `tag` with direct
+// SQL and must apply the identical rule rather than a lookalike.
+export { normalizeTag } from '../domain/utils/tags.js'
+
 // Task lifecycle: ONE definition of "still on the board", shared by every
 // storage backend. The D1 adapter expresses it in SQL for perf, the localStorage
 // adapter applies isVisible() in JS — but the window is defined here, once.

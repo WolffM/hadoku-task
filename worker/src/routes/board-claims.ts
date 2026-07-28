@@ -20,7 +20,8 @@ import {
   LaneUnknownError,
   LaneChangedError,
   TaskNotFoundError,
-  assertNotesWithinLimit
+  assertNotesWithinLimit,
+  normalizeTag
 } from '@wolffm/task/api'
 
 interface D1Like {
@@ -48,15 +49,26 @@ function expiryFrom(now: string, leaseSeconds: number): string {
 }
 
 /**
- * Validate an AGENT-path destination lane. On an automation board the lane must
- * exist (LANE_UNKNOWN otherwise); empty ⇒ Inbox, always fine. On a standard
- * board a lane is written as a free tag, unchanged.
+ * Validate an agent's destination lane and return the tag to WRITE.
+ *
+ * It returns rather than merely asserting so the value that was checked is the
+ * value that lands — asserting on one string and writing another is how these
+ * three call sites drifted apart in the first place.
+ *
+ * A task carries one tag, and these routes write `tag` with direct SQL, so they
+ * apply the same collapse the handlers do (last token wins). On an automation
+ * board that is belt-and-braces: a lane tag can't contain whitespace, so the
+ * lane-membership check below already rejects anything multi-token. On a
+ * NON-automation board there is no lane vocabulary to check against and the
+ * early return skipped every guard, which let an agent claim or release a task
+ * with `lane: "a b"` and write two tags straight past the handlers.
  */
-function assertAgentLane(mode: string, lanes: Lane[], lane: string | null | undefined): void {
-  const t = (lane ?? '').trim()
-  if (t === '') return
-  if (mode !== 'automation') return
+function agentLaneTag(mode: string, lanes: Lane[], lane: string | null | undefined): string {
+  const t = normalizeTag(lane) ?? ''
+  if (t === '') return ''
+  if (mode !== 'automation') return t
   if (!lanes.some(l => l.tag === t)) throw new LaneUnknownError(t)
+  return t
 }
 
 /** Read a task's current tag (owner scope). Null result ⇒ no active task row. */
@@ -119,7 +131,7 @@ export async function claimTask(
 ): Promise<ClaimResult> {
   const task = await currentTaskTag(db, ownerId, boardId, taskId)
   if (!task) throw new TaskNotFoundError(taskId)
-  assertAgentLane(opts.mode, opts.lanes, opts.lane)
+  const lane = agentLaneTag(opts.mode, opts.lanes, opts.lane)
 
   const now = nowIso()
   const token = newToken()
@@ -154,7 +166,6 @@ export async function claimTask(
       )
       .bind(ownerId, boardId, taskId, agentId, now)
   ]
-  const lane = (opts.lane ?? '').trim()
   if (lane !== '') {
     stmts.push(
       db
@@ -203,8 +214,7 @@ export async function setLane(
   const now = nowIso()
   const claim = await liveClaim(db, ownerId, taskId, now)
   if (!claim || claim.token !== token || !claim.live) throw new LeaseLostError()
-  assertAgentLane(opts.mode, opts.lanes, lane)
-  const t = (lane ?? '').trim()
+  const t = agentLaneTag(opts.mode, opts.lanes, lane)
   await db
     .prepare(
       `UPDATE tasks SET tag = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`
@@ -280,8 +290,7 @@ export async function releaseClaim(
     if (current !== opts.ifCurrentLane) throw new LaneChangedError(task.tag)
   }
 
-  assertAgentLane(opts.mode, opts.lanes, opts.lane)
-  const lane = (opts.lane ?? '').trim()
+  const lane = agentLaneTag(opts.mode, opts.lanes, opts.lane)
 
   const stmts: Array<{ run(): Promise<unknown> }> = []
   // Build the task UPDATE from exactly the fields the runner is writing: tag

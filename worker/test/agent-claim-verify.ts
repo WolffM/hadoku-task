@@ -713,6 +713,59 @@ async function main() {
   check('notes exactly at the cap are accepted', (await capTask())?.notes?.length === 64 * 1024)
   check('and the retry landed the task in its lane', (await tag('cap1')) === 'review')
 
+  // ---------------------------------------------------------------------
+  section('13. An agent cannot write two tags — on ANY board type (§5.2)')
+  // ---------------------------------------------------------------------
+  // The claim routes write `tag` with direct SQL, so they bypass the handlers'
+  // single-tag collapse and need their own. On an automation board the lane
+  // vocabulary already rejects a multi-token lane; a STANDARD board has no
+  // vocabulary to check against, which is the hole this closes.
+  await req('POST', '/task/api/boards', { id: 'plain', name: 'Plain' })
+  await req('POST', '/task/api', { id: 'p1', title: 'Free tagged', boardId: 'plain', tag: 'alpha' })
+
+  const plainTag = async () =>
+    (await req('GET', '/task/api/tasks?boardId=plain')).json?.tasks?.find(t => t.id === 'p1')?.tag
+
+  r = await req('POST', '/task/api/agent/claim', {
+    board: 'plain',
+    taskId: 'p1',
+    agentId: 'agent-plain',
+    lane: 'beta gamma'
+  })
+  check('claim with a two-token lane → 200', r.status === 200, JSON.stringify(r.json))
+  check(
+    '…and the task holds ONE tag, the last one',
+    (await plainTag()) === 'gamma',
+    `tag="${await plainTag()}"`
+  )
+
+  const plainToken = (r.json as { token?: string } | null)?.token as string
+  r = await req('POST', '/task/api/agent/set-lane', {
+    board: 'plain',
+    taskId: 'p1',
+    token: plainToken,
+    lane: 'delta epsilon'
+  })
+  check('set-lane with a two-token lane → 200', r.status === 200, JSON.stringify(r.json))
+  check(
+    '…and set-lane also collapses to the last tag',
+    (await plainTag()) === 'epsilon',
+    `tag="${await plainTag()}"`
+  )
+
+  r = await req('POST', '/task/api/agent/release', {
+    board: 'plain',
+    taskId: 'p1',
+    token: plainToken,
+    lane: 'zeta eta'
+  })
+  check('release with a two-token lane → 200', r.status === 200, JSON.stringify(r.json))
+  check(
+    '…and release also collapses to the last tag',
+    (await plainTag()) === 'eta',
+    `tag="${await plainTag()}"`
+  )
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }
