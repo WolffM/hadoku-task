@@ -159,20 +159,22 @@ export default function App(props: TaskAppProps = {}) {
     shareApi
   } = useTasks({ userType, sessionId: effectiveSessionId, onSyncError: reportSyncError })
 
+  // Modal state hook
+  const modals = useModalState()
+
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({
     tasks,
     onTaskUpdate: updateTaskTags,
     onBulkUpdate: bulkUpdateTaskTags,
     // Board-only interaction; disabling in calendar keeps text selectable/copyable.
-    enabled: currentView === 'board'
+    // Also disabled while any modal is open, so drag-to-select never engages
+    // underneath an open panel (e.g. Edit Boards).
+    enabled: currentView === 'board' && !modals.isAnyModalOpen
   })
 
   // Sort hook
   const sortHook = useTaskSort()
-
-  // Modal state hook
-  const modals = useModalState()
 
   // Pull-to-refresh — only inside the mobile WebView; desktop pull is meaningless.
   // Reuses the same handler the in-app refresh button does (initialLoad → syncFromApi).

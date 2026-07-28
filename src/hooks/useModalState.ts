@@ -56,6 +56,11 @@ export interface UseModalStateReturn {
   setValidationError: (error: string | null) => void
   pendingTaskOperation: PendingTaskOperation | null
   setPendingTaskOperation: (op: PendingTaskOperation | null) => void
+
+  // True while any modal/dialog/context-menu is open — used to suppress
+  // board-only interactions (e.g. marquee drag-to-select) that would
+  // otherwise fire underneath the open panel.
+  isAnyModalOpen: boolean
 }
 
 /**
@@ -108,6 +113,18 @@ export function useModalState(): UseModalStateReturn {
     null
   )
 
+  const isAnyModalOpen = Boolean(
+    showNewBoardDialog ||
+      showEditBoardsDialog ||
+      showShareDialog ||
+      showNewTagDialog ||
+      showSettingsModal ||
+      editTagModal ||
+      confirmClearTag ||
+      boardContextMenu ||
+      tagContextMenu
+  )
+
   return {
     confirmClearTag,
     setConfirmClearTag,
@@ -134,6 +151,7 @@ export function useModalState(): UseModalStateReturn {
     validationError,
     setValidationError,
     pendingTaskOperation,
-    setPendingTaskOperation
+    setPendingTaskOperation,
+    isAnyModalOpen
   }
 }
