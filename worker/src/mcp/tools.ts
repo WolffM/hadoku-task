@@ -16,7 +16,13 @@ import type {
   UpdateTaskInput,
   Lane
 } from '@wolffm/task/api'
-import { assertHumanLaneWrite, getBoardConfig } from '../routes/board-automation'
+import {
+  assertHumanLaneWrite,
+  getBoardConfig,
+  notifyLaneWrite,
+  dispatchToken
+} from '../routes/board-automation'
+import type { Env } from '../types'
 import {
   claimTask,
   heartbeatClaim,
@@ -55,6 +61,14 @@ export interface ToolCtx {
   callerId: string
   /** D1, for the D1-direct claim protocol (§4). */
   db: ToolDb
+  /** Bindings — read for the lane-change dispatch token (§5.2). */
+  env: Env
+  /**
+   * The transport's own context object, passed through untouched and read ONLY
+   * for an ExecutionContext to hang fire-and-forget work on. A transport that has
+   * none omits it, and the work is awaited inline instead.
+   */
+  host?: unknown
   defaultBoard: string
   /**
    * Resolve a board ref to the owner's scope + caller's access. Own boards
@@ -106,6 +120,36 @@ async function resolveBoard(
     throw new Error(`Read-only access to board ${ref}`)
   }
   return r
+}
+
+/**
+ * Wake the board's runner after a human-path lane write (§5.2) — the MCP twin of
+ * what handleBoardOperation does for the HTTP routes. Call AFTER the write.
+ * Never throws, and no-ops unless the board is automated, wired to a repo, and
+ * the tag is a `user` lane.
+ *
+ * The stateless MCP transport has no ExecutionContext, so this awaits the
+ * dispatch inline. That's fine: it is timeout-bounded and swallows its failures.
+ */
+function wakeRunner(
+  r: ResolvedBoard,
+  ctx: ToolCtx,
+  taskId: string,
+  tag: string | null | undefined
+): Promise<void> {
+  return notifyLaneWrite(
+    {
+      db: ctx.db,
+      ownerId: r.ownerId,
+      boardId: r.boardId,
+      taskId,
+      laneTag: tag,
+      lanes: r.lanes,
+      mode: r.mode,
+      token: dispatchToken(ctx.env)
+    },
+    ctx.host
+  )
 }
 
 async function findTask(r: ResolvedBoard, id: string): Promise<Task | undefined> {
@@ -223,6 +267,7 @@ export const TOOLS: ToolDef[] = [
         metadata: obj(args.metadata) ?? null
       }
       const { id } = await TaskHandlers.createTask(r.storage, r.auth, input, r.boardId)
+      await wakeRunner(r, ctx, id, input.tag)
       return findTask(r, id)
     }
   },
@@ -258,6 +303,7 @@ export const TOOLS: ToolDef[] = [
       if (args.endTime !== undefined) input.endTime = str(args.endTime) ?? null
       if (args.metadata !== undefined) input.metadata = obj(args.metadata) ?? null
       await TaskHandlers.updateTask(r.storage, r.auth, id, input, r.boardId)
+      if (args.tag !== undefined) await wakeRunner(r, ctx, id, input.tag)
       return findTask(r, id)
     }
   },

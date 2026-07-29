@@ -7,7 +7,12 @@ import type { Context } from 'hono'
 import type { TaskStorage, AuthContext as TaskAuthContext, Lane } from '@wolffm/task/api'
 import { createD1Storage } from './d1-storage'
 import { resolveBoardAccess, type Access } from './board-sharing'
-import { parseLanes, assertHumanLaneWrite } from './board-automation'
+import {
+  parseLanes,
+  assertHumanLaneWrite,
+  notifyLaneWrite,
+  dispatchToken
+} from './board-automation'
 import { DEFAULT_SESSION_ID, DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext, Env } from '../types'
 
@@ -243,7 +248,8 @@ export async function withBoardLock<T>(boardsKey: string, operation: () => Promi
  * `laneTag` opts into automation lane enforcement (§5.2): when the key is
  * present, the value is the tag this HUMAN-path write would land the task in,
  * and it's validated against the board's lanes (throws 403/422). Omit the key
- * for writes that don't touch the tag (complete, delete, schedule).
+ * for writes that don't touch the tag (complete, delete, schedule). It also
+ * arms the outbound wake dispatch, which needs `taskId` to name what moved.
  */
 export async function handleBoardOperation<T>(
   c: Context<AppContext>,
@@ -252,7 +258,7 @@ export async function handleBoardOperation<T>(
   // for a shared board addressed by handle, that differs from `boardId`, and the
   // handler must scope by the owner's slug, not the handle.
   operation: (storage: TaskStorage, auth: TaskAuthContext, resolvedBoardId: string) => Promise<T>,
-  opts: { write?: boolean; laneTag?: string | null } = {}
+  opts: { write?: boolean; laneTag?: string | null; taskId?: string } = {}
 ): Promise<Response> {
   const ctx = await getBoardContext(c, boardId)
   if (!ctx) {
@@ -275,6 +281,25 @@ export async function handleBoardOperation<T>(
   const result = await withBoardLock(boardsKey, async () => {
     return operation(storage, auth as TaskAuthContext, ctx.boardId)
   })
+
+  // Wake the board's runner AFTER the write commits — a dispatch for a write that
+  // then threw would send the pipeline looking for a task that never moved. A
+  // failed dispatch never fails the human's write: notifyLaneWrite can't throw.
+  if ('laneTag' in opts && opts.taskId) {
+    await notifyLaneWrite(
+      {
+        db: c.env.DB,
+        ownerId: ctx.ownerId,
+        boardId: ctx.boardId,
+        taskId: opts.taskId,
+        laneTag: opts.laneTag,
+        lanes: ctx.lanes,
+        mode: ctx.mode,
+        token: dispatchToken(c.env)
+      },
+      c
+    )
+  }
 
   setVersionETag(c, result)
   return c.json(result)

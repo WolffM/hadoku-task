@@ -110,7 +110,12 @@ const env = {
         label: 'TenHands',
         url: `http://localhost:${PROVIDER_PORT}/automation/presets`
       }
-    ])
+    ]),
+  // The lane-change wake dispatch (§5.2) skips silently with no token binding, so
+  // a default dev/e2e run never POSTs to GitHub — deliberate: the specs must be
+  // hermetic. Supply a PAT to smoke-test the real outbound call end to end:
+  //   node ../hadoku_site/scripts/secrets/dev-vault.mjs -- pnpm run dev:api
+  GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || process.env.HADOKU_SITE_TOKEN
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────

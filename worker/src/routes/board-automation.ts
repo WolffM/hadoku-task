@@ -18,6 +18,7 @@ import {
   BoardNotFoundError,
   DomainError
 } from '@wolffm/task/api'
+import { logger } from '../logger'
 import type { Access } from './board-sharing'
 
 interface D1Like {
@@ -104,6 +105,178 @@ export function assertHumanLaneWrite(lanes: Lane[], tag: string | null | undefin
   if (lane.editableBy === 'agent') {
     throw new LaneNotEditableError(t)
   }
+}
+
+/**
+ * The wake signal: does this write land the task in a lane a HUMAN owns?
+ *
+ * Deliberately STRUCTURAL, not semantic. Which lanes are claimable is the
+ * runner's business (`agent.ts`: the worker performs no orchestration), and it
+ * changes on the runner's schedule — so this never names `approved` or any other
+ * lane. It answers only "did a person move something into a lane people write?".
+ * The runner decides whether that is actionable, and gains a lane without a
+ * change landing here.
+ *
+ * Two exclusions do the real filtering:
+ *
+ *   - **A cleared tag (→ Inbox) is not a signal.** assertHumanLaneWrite permits
+ *     it, but the Inbox is where half-formed thoughts land, and a runner that
+ *     waits for edits to settle before planning one would be defeated by a push
+ *     on every save. The backstop sweep picks a settled task up anyway.
+ *   - **An `agent` lane is not a signal.** Those are the pipeline's own writes;
+ *     it does not need waking to hear from itself.
+ */
+export function isUserLaneWrite(lanes: Lane[], tag: string | null | undefined): boolean {
+  const t = (tag ?? '').trim()
+  if (t === '') return false
+  return laneByTag(lanes).get(t)?.editableBy === 'user'
+}
+
+/** GitHub's `event_type`. The runner's workflow triggers on exactly this string. */
+const DISPATCH_EVENT_TYPE = 'taskauto'
+/** A hung dispatch must not hold a `waitUntil` open. */
+const DISPATCH_TIMEOUT_MS = 5000
+/** `owner/name` — the shape the repo-validate route accepts (schemas/autoland-v1.json). */
+const REPO_SHAPE = /^[\w.-]+\/[\w.-]+$/
+
+/**
+ * The dispatch PAT: the dedicated binding when an operator has pushed it, else
+ * the read token, which resolves from the same HADOKU_SITE_TOKEN vault key and is
+ * verified to carry `repo` scope. One place so the fallback can be deleted in one
+ * edit once the honest name is deployed everywhere.
+ */
+export function dispatchToken(env: {
+  GITHUB_DISPATCH_TOKEN?: string
+  GITHUB_READ_TOKEN?: string
+}): string | undefined {
+  return env.GITHUB_DISPATCH_TOKEN || env.GITHUB_READ_TOKEN
+}
+
+/** What a hook site supplies to {@link notifyLaneWrite}. */
+export interface LaneWriteNotice {
+  db: D1Like
+  /** The board OWNER's userId — the scope `getBoardConfig` reads under. */
+  ownerId: string
+  /** The owner's board slug (not a shared handle the caller may have passed). */
+  boardId: string
+  taskId: string
+  /** The lane tag this write landed the task in. */
+  laneTag: string | null | undefined
+  /** The board's lane set, already resolved by the caller — saves a re-read. */
+  lanes: Lane[]
+  /** 'standard' | 'automation', as resolved for the write. */
+  mode: string
+  /** The dispatch PAT. Absent ⇒ skip silently; an unconfigured install must not fail writes. */
+  token: string | undefined
+}
+
+/**
+ * POST the `repository_dispatch`. Never throws and never retries: the runner's
+ * cron is the delivery guarantee, this is only the fast path (§ "No delivery
+ * guarantee"). A `204` is success; anything else is logged and dropped.
+ */
+async function postDispatch(repo: string, token: string, payload: Record<string, unknown>) {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'hadoku-task-worker',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ event_type: DISPATCH_EVENT_TYPE, client_payload: payload }),
+      signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS)
+    })
+    if (res.status === 204) {
+      logger.info('lane-change dispatch sent', { repo, ...payload })
+      return
+    }
+    // GitHub answers 404 — not 403 — when the token can't see a private repo, so
+    // an under-scoped PAT looks like a missing repo. Log the status either way.
+    logger.warn('lane-change dispatch rejected', {
+      repo,
+      status: res.status,
+      body: (await res.text().catch(() => '')).slice(0, 200)
+    })
+  } catch (e) {
+    logger.warn('lane-change dispatch failed', {
+      repo,
+      error: e instanceof Error ? e.message : String(e)
+    })
+  }
+}
+
+/**
+ * Read the board's `repo` + `handle` and dispatch. Never throws. The config read
+ * happens here rather than in the caller so a board with no repo — the common
+ * case — costs nothing until the cheap structural predicate has already passed.
+ */
+async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<void> {
+  let cfg: BoardConfig | null = null
+  try {
+    cfg = await getBoardConfig(n.db, n.ownerId, n.boardId)
+  } catch (e) {
+    logger.warn('lane-change dispatch: board config unreadable', {
+      boardId: n.boardId,
+      error: e instanceof Error ? e.message : String(e)
+    })
+    return
+  }
+  if (!cfg || cfg.mode !== 'automation') return
+
+  const repo = (cfg.repo ?? '').trim()
+  if (!repo || !REPO_SHAPE.test(repo)) return
+
+  await postDispatch(repo, token, {
+    boardId: n.boardId,
+    handle: cfg.handle,
+    taskId: n.taskId,
+    lane: (n.laneTag ?? '').trim(),
+    at: nowIso()
+  })
+}
+
+/**
+ * Wake the runner: a human just landed a task in a `user` lane on an automation
+ * board wired to a repo. ALWAYS call this AFTER the write commits — a dispatch
+ * for a write that then failed validation sends the pipeline looking for a task
+ * that never moved.
+ *
+ * `host` is the transport's context object, read ONLY for an ExecutionContext to
+ * hang the call on. `c.executionCtx` is a **THROWING GETTER**, not a
+ * possibly-undefined property — `c.executionCtx?.waitUntil(p)` reads as safe and
+ * is not, it raises "This context has no ExecutionContext" wherever one isn't
+ * supplied (a direct `app.request()` caller, and the MCP path). Hence the
+ * try/catch, and hence owning the hazard here rather than at three call sites.
+ *
+ * Where there is no ExecutionContext the dispatch is awaited INLINE instead of
+ * skipped. It is timeout-bounded and cannot throw, so the cost is bounded; and a
+ * wake signal is not a nicety like `warmPresets` — dropping it on the dev stack
+ * and in the verify harnesses would mean the thing is never exercised outside
+ * production. Cloudflare always supplies an ExecutionContext, so the human's
+ * write never waits on GitHub in prod.
+ */
+export async function notifyLaneWrite(n: LaneWriteNotice, host: unknown): Promise<void> {
+  if (n.mode !== 'automation') return
+  if (!n.token) return
+  if (!isUserLaneWrite(n.lanes, n.laneTag)) return
+
+  const pending = dispatchLaneWrite(n, n.token)
+
+  let waitUntil: ((p: Promise<unknown>) => void) | null = null
+  try {
+    const ctx = (host as { executionCtx?: { waitUntil(p: Promise<unknown>): void } }).executionCtx
+    if (ctx && typeof ctx.waitUntil === 'function') waitUntil = ctx.waitUntil.bind(ctx)
+  } catch {
+    // No ExecutionContext here — fall through and await inline.
+  }
+  if (waitUntil) {
+    waitUntil(pending)
+    return
+  }
+  await pending
 }
 
 /** A stable FNV-1a hex digest — content fingerprint, not a security hash. */
@@ -329,7 +502,11 @@ export async function activateAutomation(
   const access = opts.access ?? 'owner'
   if (access !== 'owner') {
     if (access !== 'contributor') {
-      throw new DomainError('Only a contributor or the owner can activate automation', 'FORBIDDEN', 403)
+      throw new DomainError(
+        'Only a contributor or the owner can activate automation',
+        'FORBIDDEN',
+        403
+      )
     }
     if (cfg.mode !== 'automation') {
       throw new DomainError(

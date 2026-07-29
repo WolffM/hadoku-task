@@ -43,6 +43,11 @@ export async function handleMcp(c: Context<AppContext>): Promise<Response> {
     auth,
     callerId: auth?.sessionId ?? DEFAULT_SESSION_ID,
     db: c.env.DB as ToolCtx['db'],
+    env: c.env,
+    // Passed for its ExecutionContext, if this invocation has one. A stateless
+    // POST usually does; a direct app.request() caller does not, and the tools
+    // fall back to awaiting their outbound work inline.
+    host: c,
     defaultBoard: DEFAULT_BOARD_ID,
     // Share-aware board resolution — identical to the HTTP routes, so a shared
     // handle reaches the owner's data and a readonly grantee's writes are refused.

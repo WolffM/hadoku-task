@@ -19,6 +19,14 @@ export interface Env {
   // real check. Resolved from the HADOKU_SITE_TOKEN vault key. Optional: without
   // it, validation falls back to an unauthenticated probe (public repos only).
   GITHUB_READ_TOKEN?: string
+  // GitHub PAT (repo scope) for the outbound `repository_dispatch` that wakes an
+  // automation board's runner when a human lands a task in a user lane (§5.2).
+  // Its own binding rather than reusing GITHUB_READ_TOKEN, because a write under
+  // a name ending in _READ_TOKEN is a lie and the two uses should be scopeable
+  // apart without a code change. Falls back to GITHUB_READ_TOKEN (same
+  // HADOKU_SITE_TOKEN vault key today) so the feature works before an operator
+  // pushes the new binding. Absent ⇒ no dispatch, board writes unaffected.
+  GITHUB_DISPATCH_TOKEN?: string
   // Automation preset providers (§5.4): a JSON array of {id,label,url}, e.g.
   // [{"id":"tenhands","label":"TenHands","url":"https://…/automation/presets"}].
   // Each URL is fetched server-side for the lane contracts the activation UI

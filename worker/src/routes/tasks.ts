@@ -154,7 +154,7 @@ export function createTaskRoutes() {
       c,
       boardId,
       (storage, auth, bid) => TaskHandlers.createTask(storage, auth, input, bid, expectedVersion),
-      { write: true, laneTag: input.tag ?? null }
+      { write: true, laneTag: input.tag ?? null, taskId: input.id }
     )
   }) as never)
 
@@ -226,7 +226,7 @@ export function createTaskRoutes() {
           bid,
           expectedVersion
         ),
-      { write: true, ...laneOpts }
+      { write: true, taskId: id, ...laneOpts }
     )
   }) as never)
 

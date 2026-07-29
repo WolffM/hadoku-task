@@ -461,6 +461,18 @@ Update tags for multiple tasks.
 }
 ```
 
+Also served at `POST /boards/:boardId/tasks/batch/update-tags`, which takes the board in the path
+instead of the body. Same handler; the legacy alias above is the one the UI calls.
+
+**This is the write path a lane drag takes.** The board's drop handlers bulk-update even for a
+single card, so this endpoint — not `PATCH /:id` — is the primary human lane write. It therefore
+carries the same automation rules as the single-task path: the board reference is resolved through
+the sharing layer (so a shared `handle` reaches the owner's data, and a readonly grantee gets `403`),
+every update's tag is checked against the board's lanes on an automation board (`403
+LANE_NOT_EDITABLE` for an `agent` lane, `422 LANE_INVALID` for a non-lane), and a write that lands
+in a `user` lane fires the [wake dispatch](#the-wake-dispatch--repository_dispatch-on-a-human-lane-write)
+— once per request, since a multi-card drag is one gesture.
+
 ---
 
 ### POST `/batch-move`
@@ -828,6 +840,54 @@ if you want it checked against GitHub. → `{ ok, repo }`.
 unknown slug resolves to "your own not-yet-created board", so this is answered from whether the
 write actually touched a row — otherwise a typo'd ref would return `{ ok: true }` having stored
 nothing.
+
+Setting a `repo` also arms the wake dispatch below.
+
+### The wake dispatch — `repository_dispatch` on a human lane write
+
+Not an endpoint: an **outbound** call the worker makes. When a human-path write lands a task in a
+`user` lane on an automation board that records a `repo`, the worker POSTs
+`repository_dispatch` (`event_type: "taskauto"`) to `api.github.com/repos/{repo}/dispatches`:
+
+```json
+{
+  "boardId": "<owner-scoped slug>",
+  "handle": "<board handle>",
+  "taskId": "<task id>",
+  "lane": "<destination lane tag>",
+  "at": "<ISO-8601>"
+}
+```
+
+A runner's cron is throttled hard by GitHub (measured on one repo: 78 of 254 `*/15` ticks
+delivered, median gap 46 min), so a task dragged into a claimable lane could sit ~23 minutes before
+anything looked at it. `repository_dispatch` isn't throttled that way and starts a run in seconds.
+The cron stays as the backstop — this only shortens the wait for the first look.
+
+The predicate is **structural, not semantic**: _a human wrote a task into a lane a human may write,
+on a board wired to a repo_. It never names a lane. Which lanes are claimable is the runner's
+policy and changes on the runner's schedule (`routes/agent.ts`: the worker performs no
+orchestration), so the worker says only "a person moved something here" and the runner decides
+whether that is actionable. Over-firing costs an idle run; a lane added on the runner's side needs
+no change here.
+
+Therefore it fires for a lane write from any human surface — the batch tag endpoints (what a drag
+writes through), `POST /`, `PATCH /:id`, and the MCP `create_task` / `update_task` — and **not**:
+
+- when the tag is cleared to the Inbox (a settle delay is the point of an Inbox; the backstop sweep
+  picks up a task once it goes quiet)
+- into an `agent` lane (those are the pipeline's own writes, and the human path is refused anyway)
+- on a standard board, or an automation board with no `repo`
+- on a write that doesn't touch the tag (complete, delete, schedule, rename)
+
+It is fire-and-forget off the response path (`waitUntil`), 5s-bounded, no retries and no queue.
+**A failed dispatch never fails the human's write** — a non-`204` is logged with the repo and
+status and dropped. A multi-card drag is one gesture, so it sends one dispatch, not one per card.
+
+Needs the `GITHUB_DISPATCH_TOKEN` binding (`repo` scope; falls back to `GITHUB_READ_TOKEN`, which
+resolves from the same vault key). With neither bound, nothing is sent and board writes are
+unaffected. Note GitHub answers **404, not 403**, when a token can't see a private repo, so an
+under-scoped PAT looks like a missing repo in the logs.
 
 ### GET `/automation/presets`
 

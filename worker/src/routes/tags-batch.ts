@@ -8,14 +8,33 @@ import { TaskHandlers, BoardSchemaLockedError } from '@wolffm/task/api'
 import { badRequest, requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
-  getContext,
+  getBoardContext,
   handleOperation,
   handleBatchOperation,
   withBoardLock,
   boardLockKey
 } from './route-utils'
-import { getBoardConfig } from './board-automation'
+import {
+  getBoardConfig,
+  assertHumanLaneWrite,
+  isUserLaneWrite,
+  notifyLaneWrite,
+  dispatchToken
+} from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
+import {
+  CreateTagInputSchema,
+  CreateTagResponseSchema,
+  DeleteTagInputSchema,
+  DeleteTagResponseSchema,
+  BatchUpdateTagsInputSchema,
+  BatchUpdateTagsResponseSchema,
+  BatchMoveTasksInputSchema,
+  BatchMoveTasksResponseSchema,
+  BatchClearTagInputSchema,
+  BatchClearTagResponseSchema,
+  ErrorResponseSchema
+} from '../schemas'
 import type { AppContext } from '../types'
 
 /**
@@ -32,19 +51,71 @@ async function assertBoardNotLocked(c: any, boardId: string): Promise<void> {
     throw new BoardSchemaLockedError()
   }
 }
-import {
-  CreateTagInputSchema,
-  CreateTagResponseSchema,
-  DeleteTagInputSchema,
-  DeleteTagResponseSchema,
-  BatchUpdateTagsInputSchema,
-  BatchUpdateTagsResponseSchema,
-  BatchMoveTasksInputSchema,
-  BatchMoveTasksResponseSchema,
-  BatchClearTagInputSchema,
-  BatchClearTagResponseSchema,
-  ErrorResponseSchema
-} from '../schemas'
+/**
+ * Batch tag update — the shared implementation behind both route aliases, and the
+ * write path a LANE DRAG actually takes: the board's drop handler bulk-updates
+ * even for a single card (useDragAndDrop's onDrop → onBulkUpdate), so this is the
+ * primary human lane write, not an edge case.
+ *
+ * It resolves the board through getBoardContext like every other task write
+ * (route-utils' one rule) rather than the caller-scoped getContext it used to
+ * use. Two things need that: §5.2 lane enforcement, which this path skipped
+ * entirely — a drag could land a task in an `agent` lane the single-task PATCH
+ * refuses — and the outbound wake dispatch, which needs the board's owner + lanes.
+ * A shared board addressed by handle now also reaches the owner's data here,
+ * which it previously could not.
+ *
+ * The dispatch fires ONCE per request: a multi-card drag is one human gesture, so
+ * it is one wake signal, not N.
+ */
+async function batchUpdateTags(c: any, boardId: string): Promise<Response> {
+  const body = c.req.valid('json')
+
+  const error = requireFields(body, ['updates'])
+  if (error) {
+    return badRequest(c, error)
+  }
+
+  const ctx = await getBoardContext(c, boardId)
+  if (!ctx) {
+    return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+  }
+  if (ctx.access === 'readonly') {
+    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+  }
+
+  const updates = (body.updates ?? []) as Array<{ taskId?: string; tag?: string | null }>
+  if (ctx.mode === 'automation') {
+    for (const u of updates) assertHumanLaneWrite(ctx.lanes, u.tag)
+  }
+
+  const boardsKey = boardLockKey(ctx.ownerId, ctx.boardId)
+  const result = await withBoardLock(boardsKey, async () => {
+    return TaskHandlers.batchUpdateTags(ctx.storage, ctx.auth, { ...body, boardId: ctx.boardId })
+  })
+
+  // After the write commits. `landed` is the first task that reached a user lane —
+  // the gesture's representative, since the payload is a wake signal the runner
+  // logs rather than acts on.
+  const landed = updates.filter(u => u.taskId && isUserLaneWrite(ctx.lanes, u.tag))
+  if (landed.length > 0) {
+    await notifyLaneWrite(
+      {
+        db: c.env.DB,
+        ownerId: ctx.ownerId,
+        boardId: ctx.boardId,
+        taskId: landed[0].taskId as string,
+        laneTag: landed[0].tag,
+        lanes: ctx.lanes,
+        mode: ctx.mode,
+        token: dispatchToken(c.env)
+      },
+      c
+    )
+  }
+
+  return c.json(result, 200)
+}
 
 export function createTagsBatchRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -216,19 +287,7 @@ export function createTagsBatchRoutes() {
       boardId
     })
 
-    const error = requireFields(body, ['updates'])
-    if (error) {
-      return badRequest(c, error)
-    }
-
-    const { storage, auth } = getContext(c)
-    const boardsKey = boardLockKey(auth.sessionId, boardId)
-
-    const result = await withBoardLock(boardsKey, async () => {
-      return TaskHandlers.batchUpdateTags(storage, auth, { ...body, boardId })
-    })
-
-    return c.json(result, 200)
+    return batchUpdateTags(c, boardId)
   }) as never)
 
   // Batch Update Tags (legacy alias)
@@ -276,19 +335,7 @@ export function createTagsBatchRoutes() {
       boardId
     })
 
-    const error = requireFields(body, ['updates'])
-    if (error) {
-      return badRequest(c, error)
-    }
-
-    const { storage, auth } = getContext(c)
-    const boardsKey = boardLockKey(auth.sessionId, boardId)
-
-    const result = await withBoardLock(boardsKey, async () => {
-      return TaskHandlers.batchUpdateTags(storage, auth, { ...body, boardId })
-    })
-
-    return c.json(result, 200)
+    return batchUpdateTags(c, boardId)
   }) as never)
 
   // Batch Move Tasks
