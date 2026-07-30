@@ -356,6 +356,85 @@ export async function grantAutomationRunnerShare(
 }
 
 /**
+ * Every live registry row keyed by LOWERCASED display name, for callers that
+ * resolve many names at once. `resolveRegistryName` costs a full `key:` scan per
+ * name; a reconcile over N boards would pay that 2N times. This pays it once.
+ *
+ * A name can appear on more than one live row only through operator error (the
+ * registry treats names as unique, `isNameTaken`-style); last row wins, which
+ * matches how `registryNameMap` resolves a duplicate userId.
+ */
+export async function liveRowsByName(
+  env: Env
+): Promise<Map<string, { userId: string; name: string | null; tier?: string }>> {
+  const map = new Map<string, { userId: string; name: string | null; tier?: string }>()
+  for (const row of await readLiveRows(env)) {
+    if (row.name) map.set(row.name.trim().toLowerCase(), row)
+  }
+  return map
+}
+
+/**
+ * Grant `contributor`, reporting what the write actually did to any existing row.
+ *
+ * `force` is what separates a reconcile from the incidental auto-grants: the
+ * automatic paths use INSERT ... DO NOTHING so they can never escalate a level an
+ * owner set by hand, but a reconcile is an owner deliberately asking for these
+ * connections to exist. So `force` upserts to contributor — and reports
+ * `escalated` with the level it replaced, so the change is never silent.
+ */
+export async function grantContributor(
+  env: Env,
+  ownerId: string,
+  boardId: string,
+  granteeUserId: string,
+  force: boolean
+): Promise<{ outcome: 'granted' | 'already_shared' | 'escalated'; previousLevel?: string }> {
+  const db = env.DB as unknown as {
+    prepare(sql: string): {
+      bind(...a: unknown[]): {
+        first<T>(): Promise<T | null>
+        run(): Promise<{ meta: { changes: number } }>
+      }
+    }
+  }
+  const existing = await db
+    .prepare(
+      'SELECT level FROM board_shares WHERE owner_user_id = ? AND board_id = ? AND grantee_user_id = ?'
+    )
+    .bind(ownerId, boardId, granteeUserId)
+    .first<{ level: string }>()
+
+  if (existing) {
+    if (existing.level === 'contributor')
+      return { outcome: 'already_shared', previousLevel: 'contributor' }
+    if (!force) return { outcome: 'already_shared', previousLevel: existing.level }
+    await db
+      .prepare(
+        'UPDATE board_shares SET level = ? WHERE owner_user_id = ? AND board_id = ? AND grantee_user_id = ?'
+      )
+      .bind('contributor', ownerId, boardId, granteeUserId)
+      .run()
+    return { outcome: 'escalated', previousLevel: existing.level }
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO board_shares (owner_user_id, board_id, grantee_user_id, level, created_at)
+         VALUES (?, ?, ?, 'contributor', ?)
+       ON CONFLICT(owner_user_id, board_id, grantee_user_id) DO NOTHING`
+    )
+    .bind(ownerId, boardId, granteeUserId, nowIso())
+    .run()
+  return { outcome: 'granted' }
+}
+
+/** The registry name of the automation runner, for callers outside this module. */
+export function automationRunnerName(env: Env): string {
+  return env.AUTOMATION_RUNNER_KEY_NAME?.trim() || DEFAULT_RUNNER_NAME
+}
+
+/**
  * The registry display name of a repo's service key, by convention:
  * **`<repo name, with a leading `hadoku-` trimmed>-service-key`**.
  *

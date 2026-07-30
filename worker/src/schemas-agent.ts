@@ -294,6 +294,56 @@ export const AutoShareResultSchema = z
   })
   .openapi('AutoShareResult')
 
+/** One board's worth of reconcile outcome. */
+export const ReconcileBoardSchema = z
+  .object({
+    boardId: z.string(),
+    repo: z.string().nullable(),
+    mode: z.string(),
+    grants: z.array(
+      z.object({
+        kind: z.enum(['repo', 'automation-runner']),
+        name: z.string().openapi({ description: 'Target registry display name.' }),
+        outcome: z.enum(['granted', 'already_shared', 'escalated', 'skipped']),
+        previousLevel: z
+          .string()
+          .optional()
+          .openapi({ description: 'The level replaced, on `escalated`.' }),
+        granteeUserId: z.string().optional(),
+        reason: z.string().optional().openapi({ description: 'Why, on `skipped`.' })
+      })
+    )
+  })
+  .openapi('ReconcileBoard')
+
+export const ReconcileSharesResponseSchema = z
+  .object({
+    dryRun: z.boolean(),
+    summary: z.object({
+      boardsScanned: z.number(),
+      boardsWithWork: z.number(),
+      granted: z.number(),
+      escalated: z.number(),
+      alreadyShared: z.number(),
+      skipped: z.number()
+    }),
+    boards: z.array(ReconcileBoardSchema)
+  })
+  .openapi('ReconcileSharesResponse')
+
+export const ReconcileSharesInputSchema = z
+  .object({
+    dryRun: z.boolean().optional().openapi({
+      description:
+        'Defaults to TRUE. A bulk grant across every board you own must be asked for explicitly, so you have to pass `false` to write anything.'
+    }),
+    force: z.boolean().optional().openapi({
+      description:
+        'Defaults to TRUE. Upgrades an existing lower-level share to `contributor`, reported as `escalated` with the level it replaced. Pass `false` to leave any existing row alone.'
+    })
+  })
+  .openapi('ReconcileSharesInput')
+
 export const SetRepoResponseSchema = z
   .object({
     ok: z.boolean(),

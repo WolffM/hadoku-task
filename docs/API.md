@@ -1009,6 +1009,49 @@ forgot — the symptom was a runner 403 long after activation looked fine.
   call — it comes back `granted: false` with `reason` ∈ `already_shared` | `no_registry_row` |
   `no_user_id` | `registry_unavailable` | `self`.
 
+### POST `/boards/reconcile-shares`
+
+Backfill for links made **before** the auto-grants shipped, and a drift check afterwards. The
+automatic grants only fire on the write that creates a link, so a board connected earlier still has
+no share. This walks every board **you own** and repairs both kinds:
+
+- a linked `repo` → that repo's service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`)
+- `mode: automation` → the automation runner (`tenhands-service-key`)
+
+Body: `{ dryRun?, force? }`, **both defaulting to `true`**.
+
+- **`dryRun` defaults to TRUE.** A bulk grant across every board you own has to be asked for, so you
+  must pass `false` to write anything. A dry run resolves and reports the full plan and touches
+  nothing.
+- **`force` defaults to TRUE.** An existing share below `contributor` is upgraded and reported as
+  `escalated` with the `previousLevel` it replaced — never silently. Pass `force: false` to leave
+  existing rows exactly as they are. (This is the one place that escalates: the incidental
+  auto-grants never do, because there nobody asked.)
+
+**Both names are verified before anything is granted** — that check is the point of doing this
+deliberately rather than blind-inserting from the `boards` table:
+
+1. the **repo** is probed against GitHub, so a typo'd mapping can never mint a share;
+2. the derived **key name** must resolve to a live, signed-in registry row.
+
+Either check failing is reported as `outcome: "skipped"` with a `reason`, and grants nothing.
+
+→ `{ dryRun, summary: { boardsScanned, boardsWithWork, granted, escalated, alreadyShared, skipped },
+boards: [ { boardId, repo, mode, grants: [ { kind, name, outcome, previousLevel?, granteeUserId?,
+reason? } ] } ] }`. Boards with no link at all are omitted entirely.
+
+Owner-scoped by construction — it reads `boards WHERE user_id = <caller>`, so it can only ever
+grant on boards you own. Re-running is safe and idempotent.
+
+```sh
+# See the plan (writes nothing):
+curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
+  -H "X-User-Key: $KEY" -H 'Content-Type: application/json' -d '{}'
+# Apply it:
+curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
+  -H "X-User-Key: $KEY" -H 'Content-Type: application/json' -d '{"dryRun":false}'
+```
+
 ### POST `/boards/:ref/deactivate-automation`
 
 Owner-only. Restores the pre-activation tag list. → `{ ok, mode: "standard", restoredTags }`.

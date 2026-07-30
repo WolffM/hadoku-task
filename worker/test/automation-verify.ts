@@ -22,7 +22,12 @@
  *   - connecting a repo shares the board with THAT repo's service key, derived by
  *     the `<repo minus "hadoku->-service-key` convention: owner segment dropped,
  *     trim case-insensitive, an unminted key can't cost the repo mapping, and
- *     clearing the repo neither grants nor revokes.
+ *     clearing the repo neither grants nor revokes;
+ *   - POST /boards/reconcile-shares backfills links made BEFORE the auto-grants
+ *     existed (legacy rows written straight into D1): dry run by default, both the
+ *     repo (GitHub-probed, stubbed here) and the key name verified before any
+ *     grant, force repairs a sub-contributor share and names what it replaced,
+ *     and re-running grants nothing new.
  *
  * Run via: pnpm run test:worker  (or `... automation-verify`).
  */
@@ -94,6 +99,30 @@ const env = {
   })
 } as Record<string, unknown>
 
+/**
+ * Stub GitHub, so the reconcile's repo probe is deterministic and offline. Only
+ * api.github.com is intercepted; `app.request()` doesn't route through global
+ * fetch, so nothing else in the harness is affected.
+ */
+const GITHUB_KNOWN = new Set([
+  'WolffM/hadoku-aggregator',
+  'WolffM/hadoku_site',
+  'WolffM/tenhands',
+  'WolffM/hadoku-task'
+])
+const realFetch = globalThis.fetch
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  const m = url.match(/^https:\/\/api\.github\.com\/repos\/(.+)$/)
+  if (!m) return realFetch(input as RequestInfo, init)
+  const full = m[1]
+  if (!GITHUB_KNOWN.has(full)) return new Response('{}', { status: 404 })
+  return new Response(JSON.stringify({ full_name: full, private: true, default_branch: 'main' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}) as typeof fetch
+
 const app = createTaskHandler()
 
 interface User {
@@ -120,6 +149,15 @@ interface Body {
     lanes?: Lane[] | null
     tags?: string[]
     handle?: string
+    // reconcile report rows reuse this field with a different shape
+    boardId?: string
+    grants?: Array<{
+      kind: string
+      name: string
+      outcome: string
+      previousLevel?: string
+      reason?: string
+    }>
   }>
   preview?: {
     digest: string
@@ -139,6 +177,15 @@ interface Body {
     reason?: string
   }
   repoServiceKeyShare?: { granted: boolean; name: string; reason?: string }
+  dryRun?: boolean
+  summary?: {
+    boardsScanned: number
+    boardsWithWork: number
+    granted: number
+    escalated: number
+    alreadyShared: number
+    skipped: number
+  }
   serviceKeyShare?: { granted: boolean; name: string; granteeUserId?: string; reason?: string }
   repo?: string | null
   shares?: Array<{ granteeUserId: string; level: string; name: string | null }>
@@ -981,6 +1028,163 @@ async function main() {
     'activating WITHOUT a repo reports no repo grant',
     r.status === 200 && r.json?.repoServiceKeyShare === undefined,
     JSON.stringify(r.json?.repoServiceKeyShare)
+  )
+
+  // ---------------------------------------------------------------------
+  section('14. Reconcile backfills links made BEFORE the auto-grants shipped')
+  // ---------------------------------------------------------------------
+  // Simulate legacy rows the only way that's honest: write the link straight into
+  // D1 and leave no share behind, exactly as a board connected before the feature
+  // existed looks today.
+  const legacy = (id: string, repo: string | null, mode: string) => {
+    d1.__raw
+      .prepare(
+        `INSERT INTO boards (user_id, id, handle, name, tags, mode, repo, lanes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, '[]', ?, ?, ?, ?, ?)`
+      )
+      .run(
+        OWNER.id,
+        id,
+        `LEGACY${id.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
+        id,
+        mode,
+        repo,
+        mode === 'automation' ? JSON.stringify(LANES) : null,
+        new Date().toISOString(),
+        new Date().toISOString()
+      )
+  }
+  legacy('old-repo', 'WolffM/hadoku-aggregator', 'standard')
+  legacy('old-auto', null, 'automation')
+  legacy('old-both', 'WolffM/hadoku_site', 'automation')
+  legacy('old-typo', 'WolffM/not-a-real-repo', 'standard')
+
+  const sharesOn = async (board: string) => {
+    const r = await req(OWNER, 'GET', `/task/api/boards/${board}/shares`)
+    return r.json?.shares ?? []
+  }
+  const planFor = (body: Body | null, board: string) =>
+    body?.boards?.find(b => b.boardId === board)?.grants ?? []
+
+  // A dry run is the DEFAULT — a bulk grant across every board you own must be
+  // asked for, never stumbled into.
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', {})
+  check(
+    'reconcile defaults to a dry run',
+    r.status === 200 && r.json?.dryRun === true,
+    `status=${r.status} ${JSON.stringify(r.json?.summary)}`
+  )
+  check(
+    'the dry run plans the repo key for a legacy repo link',
+    planFor(r.json, 'old-repo').some(
+      g => g.kind === 'repo' && g.name === 'aggregator-service-key' && g.outcome === 'granted'
+    ),
+    JSON.stringify(planFor(r.json, 'old-repo'))
+  )
+  check(
+    'the dry run plans the runner for a legacy automation board',
+    planFor(r.json, 'old-auto').some(
+      g => g.kind === 'automation-runner' && g.name === 'tenhands-service-key'
+    ),
+    JSON.stringify(planFor(r.json, 'old-auto'))
+  )
+  check(
+    'a board that is BOTH linked and automated plans both grants',
+    planFor(r.json, 'old-both').length === 2 &&
+      planFor(r.json, 'old-both').some(g => g.name === 'site-service-key') &&
+      planFor(r.json, 'old-both').some(g => g.name === 'tenhands-service-key'),
+    JSON.stringify(planFor(r.json, 'old-both'))
+  )
+  check(
+    'a repo that does NOT validate against GitHub is skipped, not granted',
+    planFor(r.json, 'old-typo').every(g => g.outcome === 'skipped') &&
+      planFor(r.json, 'old-typo')[0]?.reason?.includes('did not validate'),
+    JSON.stringify(planFor(r.json, 'old-typo'))
+  )
+  check('the dry run wrote NOTHING', (await sharesOn('old-repo')).length === 0)
+
+  // Commit.
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  check(
+    'the commit reports dryRun false and grants',
+    r.json?.dryRun === false && (r.json?.summary?.granted ?? 0) >= 4,
+    JSON.stringify(r.json?.summary)
+  )
+  check(
+    'the legacy repo link is now really shared with its repo key',
+    (await sharesOn('old-repo')).some(
+      s => s.name === 'aggregator-service-key' && s.level === 'contributor'
+    ),
+    JSON.stringify(await sharesOn('old-repo'))
+  )
+  check(
+    'the legacy automation board is now really shared with the runner',
+    (await sharesOn('old-auto')).some(
+      s => s.name === 'tenhands-service-key' && s.level === 'contributor'
+    ),
+    JSON.stringify(await sharesOn('old-auto'))
+  )
+  check(
+    'the unvalidated repo got NO share at all',
+    (await sharesOn('old-typo')).length === 0,
+    JSON.stringify(await sharesOn('old-typo'))
+  )
+
+  // Functional proof, not just rows: the repo's key can drive a board it was never
+  // hand-shared, through the backfill alone.
+  const oldRepoHandle = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
+    b => b.id === 'old-repo'
+  )?.handle
+  await req(OWNER, 'POST', '/task/api', { id: 'OR1', title: 'legacy task', boardId: 'old-repo' })
+  r = await req(AGGREGATOR, 'GET', `/task/api/tasks?boardId=${oldRepoHandle}`)
+  check(
+    "the repo's key can now read the backfilled board",
+    r.status === 200 && (r.json?.tasks ?? []).some(t => t.id === 'OR1'),
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // Re-running is safe: nothing new, and the counts say so.
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  check(
+    're-running grants nothing new — every link reports already_shared',
+    r.json?.summary?.granted === 0 &&
+      r.json?.summary?.escalated === 0 &&
+      (r.json?.summary?.alreadyShared ?? 0) >= 4,
+    JSON.stringify(r.json?.summary)
+  )
+
+  // force (the default) repairs a share that sits below contributor, and says so.
+  await req(OWNER, 'POST', '/task/api/boards/old-repo/shares', {
+    name: 'aggregator-service-key',
+    level: 'readonly'
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false, force: false })
+  check(
+    'force:false leaves a readonly share alone',
+    (await sharesOn('old-repo')).find(s => s.name === 'aggregator-service-key')?.level ===
+      'readonly',
+    JSON.stringify(await sharesOn('old-repo'))
+  )
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  check(
+    'force (the default) escalates it back to contributor and NAMES the level it replaced',
+    planFor(r.json, 'old-repo').some(
+      g => g.outcome === 'escalated' && g.previousLevel === 'readonly'
+    ),
+    JSON.stringify(planFor(r.json, 'old-repo'))
+  )
+  check(
+    '…and the share really is contributor now',
+    (await sharesOn('old-repo')).find(s => s.name === 'aggregator-service-key')?.level ===
+      'contributor',
+    JSON.stringify(await sharesOn('old-repo'))
+  )
+
+  // A standard board with no repo is not "work" — it must not appear in the report.
+  check(
+    'boards with no link at all are left out of the report entirely',
+    !r.json?.boards?.some(b => b.boardId === 'plain-none'),
+    JSON.stringify(r.json?.boards?.map(b => b.boardId))
   )
 
   console.log(`\n${pass} passed, ${fail} failed`)

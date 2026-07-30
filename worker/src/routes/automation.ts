@@ -17,7 +17,14 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation, githubToken } from './board-automation'
-import { grantAutomationRunnerShare, grantRepoServiceKeyShare } from './shares'
+import {
+  grantAutomationRunnerShare,
+  grantRepoServiceKeyShare,
+  repoServiceKeyName,
+  automationRunnerName,
+  liveRowsByName,
+  grantContributor
+} from './shares'
 import { listPresets } from './board-presets'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
@@ -28,6 +35,8 @@ import {
   ListPresetsResponseSchema,
   SetRepoInputSchema,
   SetRepoResponseSchema,
+  ReconcileSharesInputSchema,
+  ReconcileSharesResponseSchema,
   ForbiddenErrorSchema,
   BoardNotFoundErrorSchema,
   DigestMismatchErrorSchema,
@@ -207,6 +216,173 @@ export function createAutomationRoutes() {
       })
     })
     return c.json({ ok: true, repo, ...(serviceKeyShare && { serviceKeyShare }) })
+  }) as never)
+
+  // One-time (and re-runnable) reconcile of every link on the caller's OWN boards.
+  //
+  // The auto-grants only fire on the write that creates the link, so every board
+  // connected BEFORE they shipped is still missing its shares. This is the backfill,
+  // and it stays useful afterwards as a drift check.
+  //
+  // Both names are verified before anything is granted, which is the whole point of
+  // doing this deliberately rather than blind-inserting from the boards table:
+  //   - the REPO is probed against GitHub, so a typo'd mapping can't mint a share;
+  //   - the KEY NAME must resolve to a live, signed-in registry row.
+  // Anything that fails either check is reported as `skipped` with a reason.
+  const reconcileRoute = createRoute({
+    method: 'post',
+    path: '/boards/reconcile-shares',
+    tags: ['Sharing'],
+    summary: 'Backfill repo + automation shares across your own boards',
+    description:
+      'For every board you own: a linked `repo` grants that repo\'s service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`), and an automation board grants the automation runner. Both the repo (probed against GitHub) and the derived key name (resolved in the registry) must check out first. `dryRun` defaults to TRUE — pass `false` to write.',
+    request: {
+      body: { content: { 'application/json': { schema: ReconcileSharesInputSchema } } }
+    },
+    responses: {
+      200: {
+        description: 'What was reconciled (or would be)',
+        content: { 'application/json': { schema: ReconcileSharesResponseSchema } }
+      }
+    }
+  })
+  app.openapi(reconcileRoute, (async (c: any) => {
+    const auth = c.get('authContext')
+    const body = (c.req.valid('json') ?? {}) as { dryRun?: boolean; force?: boolean }
+    // Both default to TRUE: a bulk grant must be asked for explicitly (dryRun), and
+    // an operator running a reconcile is asking for these links to exist (force).
+    const dryRun = body.dryRun !== false
+    const force = body.force !== false
+
+    const { results: boards } = await c.env.DB.prepare(
+      'SELECT id, repo, mode FROM boards WHERE user_id = ? ORDER BY id'
+    )
+      .bind(auth.sessionId)
+      .all()
+
+    // Resolve the registry ONCE for the whole run — per-name lookups each cost a
+    // full `key:` scan, which over N boards is the difference between one pass and
+    // 2N of them.
+    const registry = await liveRowsByName(c.env)
+
+    // Probe each DISTINCT repo once; several boards often share one checkout.
+    const repos = [
+      ...new Set(
+        (boards as Array<{ repo: string | null }>).map(b => b.repo?.trim()).filter(Boolean)
+      )
+    ] as string[]
+    const validated = new Map<string, { valid: boolean; reason: string; message?: string }>()
+    await Promise.all(
+      repos.map(async repo => {
+        validated.set(repo, await validateRepo(repo, githubToken(c.env)))
+      })
+    )
+
+    const report: Array<Record<string, unknown>> = []
+    const tally = { granted: 0, escalated: 0, alreadyShared: 0, skipped: 0 }
+
+    for (const b of boards as Array<{ id: string; repo: string | null; mode: string }>) {
+      const grants: Array<Record<string, unknown>> = []
+
+      const boardRepo = b.repo?.trim() || null
+      const targets: Array<{ kind: 'repo' | 'automation-runner'; name: string | null }> = []
+      if (boardRepo) targets.push({ kind: 'repo', name: repoServiceKeyName(boardRepo) })
+      if (b.mode === 'automation') {
+        targets.push({ kind: 'automation-runner', name: automationRunnerName(c.env) })
+      }
+
+      for (const t of targets) {
+        // Check the repo BEFORE the key: a bad mapping is the more actionable
+        // finding, and it's the one that must never result in a grant.
+        if (t.kind === 'repo') {
+          const v = boardRepo ? validated.get(boardRepo) : undefined
+          if (!v?.valid) {
+            grants.push({
+              kind: t.kind,
+              name: t.name ?? '(underivable)',
+              outcome: 'skipped',
+              reason: `repo did not validate (${v?.reason ?? 'unknown'})${v?.message ? `: ${v.message}` : ''}`
+            })
+            tally.skipped++
+            continue
+          }
+        }
+        if (!t.name) {
+          grants.push({
+            kind: t.kind,
+            name: '(underivable)',
+            outcome: 'skipped',
+            reason: 'no key name could be derived from that repo'
+          })
+          tally.skipped++
+          continue
+        }
+        const row = registry.get(t.name.toLowerCase())
+        if (!row) {
+          grants.push({
+            kind: t.kind,
+            name: t.name,
+            outcome: 'skipped',
+            reason: 'no live registry row with that display name'
+          })
+          tally.skipped++
+          continue
+        }
+        if (row.userId === auth.sessionId) {
+          grants.push({
+            kind: t.kind,
+            name: t.name,
+            outcome: 'skipped',
+            reason: 'that key already owns this board'
+          })
+          tally.skipped++
+          continue
+        }
+        if (dryRun) {
+          grants.push({
+            kind: t.kind,
+            name: t.name,
+            outcome: 'granted',
+            granteeUserId: row.userId
+          })
+          tally.granted++
+          continue
+        }
+        const res = await grantContributor(c.env, auth.sessionId, b.id, row.userId, force)
+        grants.push({
+          kind: t.kind,
+          name: t.name,
+          outcome: res.outcome,
+          granteeUserId: row.userId,
+          ...(res.previousLevel && { previousLevel: res.previousLevel })
+        })
+        if (res.outcome === 'granted') tally.granted++
+        else if (res.outcome === 'escalated') tally.escalated++
+        else tally.alreadyShared++
+      }
+
+      if (grants.length) report.push({ boardId: b.id, repo: b.repo ?? null, mode: b.mode, grants })
+    }
+
+    logRequest('POST', '/task/api/boards/reconcile-shares', {
+      dryRun,
+      boards: boards.length,
+      granted: tally.granted,
+      escalated: tally.escalated,
+      skipped: tally.skipped
+    })
+    return c.json({
+      dryRun,
+      summary: {
+        boardsScanned: boards.length,
+        boardsWithWork: report.length,
+        granted: tally.granted,
+        escalated: tally.escalated,
+        alreadyShared: tally.alreadyShared,
+        skipped: tally.skipped
+      },
+      boards: report
+    })
   }) as never)
 
   // Validate a board's repo by probing GitHub. Signed-in only.
