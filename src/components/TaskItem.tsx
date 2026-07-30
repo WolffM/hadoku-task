@@ -21,7 +21,6 @@ interface TaskItemProps {
   /** Rename the task. Absent ⇒ the title is plain text, not click-to-edit. */
   onRenameTask?: (taskId: string, title: string) => Promise<void>
   onDragStart?: (e: React.DragEvent, taskId: string) => void
-  onDragEnd?: (e: React.DragEvent) => void
   selected?: boolean
   showNotesButton?: boolean
   showCompleteButton?: boolean
@@ -39,7 +38,6 @@ export function TaskItem({
   onSetNotes,
   onRenameTask,
   onDragStart,
-  onDragEnd,
   selected = false,
   showNotesButton = true,
   showCompleteButton = true,
@@ -134,19 +132,9 @@ export function TaskItem({
             }
           : undefined
       }
-      onDragEnd={e => {
-        // Remove dragging class if present
-        const el = e.currentTarget as HTMLElement
-        el.classList.remove('dragging')
-        // Call external onDragEnd if provided
-        if (onDragEnd) {
-          try {
-            onDragEnd(e)
-          } catch {
-            // Ignore drag end errors
-          }
-        }
-      }}
+      // No onDragEnd: a drop that moves this card unmounts it before `dragend`
+      // would fire, so drag teardown lives on a document listener in
+      // useDragAndDrop instead of here.
     >
       <div className="task-app__item-content">
         {editingTitle ? (

@@ -58,6 +58,16 @@ export function useDragAndDrop({
   } | null>(null)
   const [selectionJustEndedAt, setSelectionJustEndedAt] = useState<number | null>(null)
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null)
+  /**
+   * Is a card drag in flight? Owned here, not by the layout, because ending a
+   * drag can't be observed from the dragged element (see endDrag).
+   */
+  const [isDragging, setIsDragging] = useState(false)
+  /**
+   * The off-screen clone used as the drag image. Held in a ref rather than on the
+   * element, for the same reason: the element may be gone by cleanup time.
+   */
+  const dragImageRef = useRef<HTMLElement | null>(null)
 
   /**
    * Extract dragged task IDs from drag event
@@ -84,6 +94,7 @@ export function useDragAndDrop({
   }
 
   function onDragStart(e: React.DragEvent, taskId: string) {
+    setIsDragging(true)
     const idsToDrag =
       selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
     logger.info('[useDragAndDrop] onDragStart', {
@@ -124,9 +135,7 @@ export function useDragAndDrop({
       clone.style.top = '-9999px'
       clone.style.left = '-9999px'
       document.body.appendChild(clone)
-
-      // Store reference so we can remove it on dragend
-      ;(el as HTMLElement & { __dragImage?: HTMLElement }).__dragImage = clone
+      dragImageRef.current = clone
 
       // ensure selection includes the dragged item
       setSelectedIds(prev => {
@@ -156,23 +165,53 @@ export function useDragAndDrop({
     }
   }
 
-  function onDragEnd(e: React.DragEvent) {
-    try {
-      const el = e.currentTarget as HTMLElement & { __dragImage?: HTMLElement }
-      el.classList.remove('dragging')
-      const clone = el.__dragImage
-      if (clone?.parentNode) clone.parentNode.removeChild(clone)
-      if (clone) delete el.__dragImage
-    } catch {
-      /* Intentionally ignore errors */
-    }
-    // Remove clone and clear selection after any drag completes
-    try {
-      clearSelection()
-    } catch {
-      /* Intentionally ignore errors */
-    }
+  /**
+   * Tear down a drag, whatever ended it.
+   *
+   * This CANNOT hang off the dragged element's own `dragend`. A successful lane
+   * drop re-renders the board with the card in a different column, so the source
+   * `<li>` unmounts before `dragend` would fire — and a `dragend` whose source
+   * node has left the document is never dispatched. Everything below used to be
+   * keyed to that handler, so a real drop leaked all of it: the off-screen drag
+   * image stayed on `document.body` forever, the moved card stayed selected, and
+   * `isDragging` stuck true, which pinned every empty lane visible (they're only
+   * rendered mid-drag so they stay droppable) until a reload.
+   *
+   * Wired to document-level `drop` + `dragend` instead, so it runs whether the
+   * drag landed on a target, was dropped on nothing, or was cancelled.
+   */
+  function endDrag() {
+    setIsDragging(false)
+    const clone = dragImageRef.current
+    if (clone?.parentNode) clone.parentNode.removeChild(clone)
+    dragImageRef.current = null
+    // Any `.dragging` card still mounted (a cancelled drag, or a drop that didn't
+    // move the card) needs its class back off — the source node is the only place
+    // that class lives, and we may be running without a reference to it.
+    document
+      .querySelectorAll('.task-app__item.dragging')
+      .forEach(el => el.classList.remove('dragging'))
+    clearSelection()
   }
+
+  // The document listeners below are attached once, so they call through this ref
+  // rather than closing over the render that installed them.
+  const endDragRef = useRef(endDrag)
+  useEffect(() => {
+    endDragRef.current = endDrag
+  })
+
+  // Bubble phase, on `document`: React delegates its own handlers to the app root,
+  // so the lane's `onDrop` has already run by the time this fires.
+  useEffect(() => {
+    const teardown = () => endDragRef.current()
+    document.addEventListener('drop', teardown)
+    document.addEventListener('dragend', teardown)
+    return () => {
+      document.removeEventListener('drop', teardown)
+      document.removeEventListener('dragend', teardown)
+    }
+  }, [])
 
   // Selection marquee handlers
   function selectionStartHandler(e: React.MouseEvent) {
@@ -440,13 +479,13 @@ export function useDragAndDrop({
     isSelecting,
     marqueeRect,
     selectionJustEndedAt,
+    isDragging,
     // selection handlers
     selectionStartHandler,
     selectionMoveHandler,
     selectionEndHandler,
     clearSelection,
     onDragStart,
-    onDragEnd,
     onDragOver,
     onDragLeave,
     onDrop,

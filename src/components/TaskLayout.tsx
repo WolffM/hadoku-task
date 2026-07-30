@@ -33,7 +33,12 @@ interface TaskLayoutProps {
   /** Rename a task from its title, edited inline on the card. */
   onRenameTask?: (taskId: string, title: string) => Promise<void>
   onDragStart: (e: React.DragEvent, taskId: string) => void
-  onDragEnd?: (e: React.DragEvent) => void
+  /**
+   * Is a card drag in flight? Hidden empty lanes reappear while it is, so they
+   * stay droppable. Owned by the drag hook — a drop that moves the card unmounts
+   * the source `<li>`, so the layout cannot see the drag end for itself.
+   */
+  isDragging?: boolean
   onDragOver: (e: React.DragEvent, targetTag: string) => void
   onDragLeave: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent, targetTag: string) => void
@@ -64,7 +69,7 @@ export function TaskLayout({
   onSetNotes,
   onRenameTask,
   onDragStart,
-  onDragEnd,
+  isDragging = false,
   selectedIds,
   onSelectionStart: _onSelectionStart,
   onSelectionMove: _onSelectionMove,
@@ -83,20 +88,6 @@ export function TaskLayout({
   showDeleteButton = true,
   showTagButton = false
 }: TaskLayoutProps) {
-  // Is a task drag in flight? Tracked here rather than in the drag hook because
-  // only the layout needs it: hidden empty lanes must reappear during a drag so
-  // they stay droppable. Wrapping the handlers we already thread to TaskItem
-  // keeps this self-contained.
-  const [isDragging, setIsDragging] = React.useState(false)
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    setIsDragging(true)
-    onDragStart(e, taskId)
-  }
-  const handleDragEnd = (e: React.DragEvent) => {
-    setIsDragging(false)
-    onDragEnd?.(e)
-  }
-
   // Helper to render TaskItems with consistent props
   const renderTaskItems = (taskList: Task[], direction: SortDirection) =>
     sortTasksByAge(taskList, direction).map(task => (
@@ -110,8 +101,7 @@ export function TaskLayout({
         onEditTag={onEditTag}
         onSetNotes={onSetNotes}
         onRenameTask={onRenameTask}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+        onDragStart={onDragStart}
         selected={selectedIds?.has(task.id) ?? false}
         showNotesButton={showNotesButton}
         showCompleteButton={showCompleteButton}
