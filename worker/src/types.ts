@@ -27,6 +27,12 @@ export interface Env {
   // HADOKU_SITE_TOKEN vault key today) so the feature works before an operator
   // pushes the new binding. Absent ⇒ no dispatch, board writes unaffected.
   GITHUB_DISPATCH_TOKEN?: string
+  // Registry display name of the automation runner that gets `contributor` on a
+  // board automatically when it's activated as an automation board (§5.4, §7).
+  // Defaults to 'tenhands-service-key' — the app identity TenHands' worker
+  // presents. A binding only because that name has been retired and re-minted
+  // before; a rename shouldn't need a deploy here to keep auto-sharing working.
+  AUTOMATION_RUNNER_KEY_NAME?: string
   // Automation preset providers (§5.4): a JSON array of {id,label,url}, e.g.
   // [{"id":"tenhands","label":"TenHands","url":"https://…/automation/presets"}].
   // Each URL is fetched server-side for the lane contracts the activation UI

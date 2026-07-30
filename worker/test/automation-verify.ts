@@ -14,7 +14,11 @@
  *   - the lane structure is locked: createTag/deleteTag/batchClearTag -> 409;
  *   - a bad lane set -> 422 LANE_SET_INVALID; activation is owner-only;
  *   - re-activation clears tasks in removed lanes to the Inbox;
- *   - deactivate restores the standard tag list.
+ *   - deactivate restores the standard tag list;
+ *   - an owner's committing activation auto-shares the board with the automation
+ *     runner (resolved by registry NAME), proven functionally: the runner reads,
+ *     claims and set-lanes a board nobody hand-shared. Idempotent, never escalates
+ *     an owner's deliberate `readonly`, owner-only, and reports why when it can't.
  *
  * Run via: pnpm run test:worker  (or `... automation-verify`).
  */
@@ -42,6 +46,28 @@ function makeKV() {
   }
 }
 
+// Mock the read-only key registry: key:{rawKey} → { userId, name, tier }. `list` is
+// needed as well as `get` because resolving a grantee by NAME (which is how the
+// automation runner is found) scans the `key:` prefix.
+function makeSessionsKV(
+  entries: Record<string, { userId?: string; name?: string; tier?: string; retiredAt?: number }>
+) {
+  const store = new Map<string, string>()
+  for (const [rawKey, rec] of Object.entries(entries)) {
+    store.set(`key:${rawKey}`, JSON.stringify(rec))
+  }
+  return {
+    async get(key: string) {
+      return store.get(key) ?? null
+    },
+    async list({ prefix }: { prefix: string } = { prefix: '' }) {
+      return { keys: [...store.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })) }
+    },
+    async put() {},
+    async delete() {}
+  }
+}
+
 const d1: FakeD1 = makeSqliteD1(MIGRATION)
 
 const env = {
@@ -49,13 +75,13 @@ const env = {
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',
-  SESSIONS_KV: {
-    async get(key: string) {
-      return key === 'key:contrib-key' ? JSON.stringify({ userId: 'contrib-uid' }) : null
-    },
-    async put() {},
-    async delete() {}
-  }
+  SESSIONS_KV: makeSessionsKV({
+    'contrib-key': { userId: 'contrib-uid' },
+    // The automation runner's real prod identity (§7): the name auto-share resolves.
+    'tenhands-key': { userId: 'tenhands-uid', name: 'tenhands-service-key', tier: 'service' },
+    // The operator-side dev-vault caller shares the stem but must never be picked.
+    'tenhands-devvault-key': { userId: 'devvault-uid', name: 'tenhands-devvault', tier: 'service' }
+  })
 } as Record<string, unknown>
 
 const app = createTaskHandler()
@@ -66,6 +92,7 @@ interface User {
 }
 const OWNER: User = { key: 'owner-key', id: 'owner-uid' }
 const CONTRIB: User = { key: 'contrib-key', id: 'contrib-uid' }
+const RUNNER: User = { key: 'tenhands-key', id: 'tenhands-uid' }
 
 interface Lane {
   tag: string
@@ -91,8 +118,16 @@ interface Body {
   }
   applied?: { mode: string; laneCount: number; tasksToInbox: number }
   ok?: boolean
+  token?: string
   mode?: string
   restoredTags?: string[]
+  automationRunnerShare?: {
+    granted: boolean
+    name: string
+    granteeUserId?: string
+    reason?: string
+  }
+  shares?: Array<{ granteeUserId: string; level: string; name: string | null }>
   code?: string
   error?: string
   structuredContent?: { boards?: Array<{ id: string; mode?: string; lanes?: Lane[] }> }
@@ -600,6 +635,190 @@ async function main() {
     r.status === 404 && r.json?.code === 'BOARD_NOT_FOUND',
     `status=${r.status} ${JSON.stringify(r.json)}`
   )
+
+  // ---------------------------------------------------------------------
+  section('12. Activation auto-shares the board with the automation runner (§7)')
+  // ---------------------------------------------------------------------
+  // The point of the feature: an automation board is useless to the runner until
+  // it holds a share, and that hand-typed step is the one everyone forgot. So
+  // prove the grant FUNCTIONALLY — the runner must be able to drive the board it
+  // was never explicitly shared with.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'auto', name: 'Auto' })
+  await req(OWNER, 'POST', '/task/api', { id: 'a1', title: 'Runner target', boardId: 'auto' })
+
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    dryRun: true
+  })
+  const autoDigest = r.json?.preview?.digest
+  check(
+    'a dry run reports no grant (it writes nothing, and resolves no registry)',
+    r.status === 200 && r.json?.automationRunnerShare === undefined,
+    JSON.stringify(r.json?.automationRunnerShare)
+  )
+
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    digest: autoDigest
+  })
+  check('commit → 200', r.status === 200, JSON.stringify(r.json))
+  check(
+    'commit granted the runner a share, resolved by registry NAME',
+    r.json?.automationRunnerShare?.granted === true &&
+      r.json?.automationRunnerShare?.name === 'tenhands-service-key' &&
+      r.json?.automationRunnerShare?.granteeUserId === 'tenhands-uid',
+    JSON.stringify(r.json?.automationRunnerShare)
+  )
+
+  // The share is real, at contributor, and named — not just a claim in a response.
+  const autoHandle = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
+    b => b.id === 'auto'
+  )?.handle
+  r = await req(OWNER, 'GET', '/task/api/boards/auto/shares')
+  const runnerShare = r.json?.shares?.find(s => s.granteeUserId === 'tenhands-uid')
+  check(
+    'the share row exists at contributor, annotated with the runner name',
+    runnerShare?.level === 'contributor' && runnerShare?.name === 'tenhands-service-key',
+    JSON.stringify(r.json?.shares)
+  )
+  check(
+    'the dev-vault identity that shares the name stem was NOT granted anything',
+    !r.json?.shares?.some(s => s.granteeUserId === 'devvault-uid'),
+    JSON.stringify(r.json?.shares)
+  )
+
+  // Functional proof, over the real agent flow the runner actually uses: read the
+  // board by handle, claim a task, set-lane it into an AGENT lane. Every one of
+  // those needs a contributor share, and nobody granted one by hand.
+  r = await req(RUNNER, 'GET', `/task/api/tasks?boardId=${autoHandle}`)
+  check(
+    'the runner can now READ the board it was never hand-shared',
+    r.status === 200 && (r.json?.tasks ?? []).some(t => t.id === 'a1'),
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  r = await req(RUNNER, 'POST', '/task/api/agent/claim', {
+    board: autoHandle,
+    taskId: 'a1',
+    agentId: 'tenhands'
+  })
+  const runnerToken = r.json?.token
+  check(
+    'the runner can CLAIM a task on it',
+    r.status === 200 && !!runnerToken,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  r = await req(RUNNER, 'POST', '/task/api/agent/set-lane', {
+    board: autoHandle,
+    taskId: 'a1',
+    token: runnerToken,
+    lane: 'working'
+  })
+  check(
+    'the runner can WRITE an agent lane on it',
+    r.status === 200,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check(
+    "the write landed in the OWNER's namespace",
+    (await tasks(OWNER, 'auto')).find(t => t.id === 'a1')?.tag === 'working',
+    JSON.stringify(await tasks(OWNER, 'auto'))
+  )
+  await req(RUNNER, 'POST', '/task/api/agent/release', {
+    board: autoHandle,
+    taskId: 'a1',
+    token: runnerToken
+  })
+
+  // Re-activation is idempotent: it reports the existing row, it doesn't re-grant.
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    dryRun: true
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    digest: r.json?.preview?.digest
+  })
+  check(
+    're-activation reports already_shared, not a second grant',
+    r.json?.automationRunnerShare?.granted === false &&
+      r.json?.automationRunnerShare?.reason === 'already_shared',
+    JSON.stringify(r.json?.automationRunnerShare)
+  )
+
+  // An owner who deliberately pins the runner to readonly must not have that
+  // silently escalated back to contributor by the next activation. This is why the
+  // insert is DO NOTHING and not the upsert the manual grant path uses.
+  await req(OWNER, 'POST', '/task/api/boards/auto/shares', {
+    name: 'tenhands-service-key',
+    level: 'readonly'
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    dryRun: true
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/auto/activate-automation', {
+    lanes: LANES,
+    digest: r.json?.preview?.digest
+  })
+  r = await req(OWNER, 'GET', '/task/api/boards/auto/shares')
+  check(
+    "re-activation did NOT escalate the owner's deliberate readonly back to contributor",
+    r.json?.shares?.find(s => s.granteeUserId === 'tenhands-uid')?.level === 'readonly',
+    JSON.stringify(r.json?.shares)
+  )
+  r = await req(RUNNER, 'PATCH', '/task/api/a1', { tag: 'needs-plan', boardId: autoHandle })
+  check(
+    'and the readonly runner is genuinely refused the write → 403',
+    r.status === 403,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // A CONTRIBUTOR upgrading an already-automated board must not be able to hand a
+  // third identity access to a board it doesn't own — so it grants nothing. (It has
+  // to be `auto`, not `flow`: section 10 deactivated flow, and converting a standard
+  // board is owner-only, so a contributor would 403 before reaching the grant.)
+  await req(OWNER, 'POST', '/task/api/boards/auto/shares', {
+    key: 'contrib-key',
+    level: 'contributor'
+  })
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${autoHandle}/activate-automation`, {
+    lanes: LANES,
+    dryRun: true
+  })
+  r = await req(CONTRIB, 'POST', `/task/api/boards/${autoHandle}/activate-automation`, {
+    lanes: LANES,
+    digest: r.json?.preview?.digest
+  })
+  check(
+    "a contributor's activation reports no grant (owner-only)",
+    r.status === 200 && r.json?.automationRunnerShare === undefined,
+    `status=${r.status} ${JSON.stringify(r.json?.automationRunnerShare)}`
+  )
+
+  // A registry with no row for the configured runner name is reported, not hidden:
+  // activation still succeeds, and the response says exactly why nothing was granted.
+  env.AUTOMATION_RUNNER_KEY_NAME = 'no-such-runner-key'
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'orphan', name: 'Orphan' })
+  r = await req(OWNER, 'POST', '/task/api/boards/orphan/activate-automation', {
+    lanes: LANES,
+    dryRun: true
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/orphan/activate-automation', {
+    lanes: LANES,
+    digest: r.json?.preview?.digest
+  })
+  check(
+    'an unresolvable runner name → activation still succeeds',
+    r.status === 200 && r.json?.applied?.mode === 'automation',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check(
+    '…and reports no_registry_row rather than silently skipping',
+    r.json?.automationRunnerShare?.granted === false &&
+      r.json?.automationRunnerShare?.reason === 'no_registry_row',
+    JSON.stringify(r.json?.automationRunnerShare)
+  )
+  delete env.AUTOMATION_RUNNER_KEY_NAME
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)

@@ -2,9 +2,14 @@
  * Automation-board activation routes (§5.4).
  *
  * `activate-automation` is a destructive migration, not a toggle: it replaces a
- * board's freeform tags with a fixed lane set and locks the structure. It is
- * OWNER-ONLY (a contributor drives work through a board; it can't reshape one)
- * and mandates a `dryRun` preview whose digest the committing call echoes back.
+ * board's freeform tags with a fixed lane set and locks the structure. The first
+ * conversion of a standard board is OWNER-ONLY; a contributor may only upgrade a
+ * board that is already automated, and only with a lane set that strands nothing
+ * (the split lives in `activateAutomation`, where the preview exists). Either way
+ * it mandates a `dryRun` preview whose digest the committing call echoes back.
+ *
+ * An owner's committing activation also auto-grants the automation runner
+ * `contributor` on the board — see `grantAutomationRunnerShare`.
  *
  * Declared with createRoute so the routes validate and appear in the OpenAPI spec.
  */
@@ -12,6 +17,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation } from './board-automation'
+import { grantAutomationRunnerShare } from './shares'
 import { listPresets } from './board-presets'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
@@ -281,6 +287,20 @@ export function createAutomationRoutes() {
       },
       { dryRun, expectedDigest: dryRun ? undefined : body.digest, access: ctx.access }
     )
+
+    // A board that just became an automation board is useless to the runner until
+    // it holds a share, so grant it here instead of making every owner remember.
+    // Owner-only on purpose: a contributor upgrading a board must not be able to
+    // hand a third identity access to someone else's board — that's the owner's
+    // call. Dry runs write nothing, so they don't resolve the registry either.
+    if (!dryRun && ctx.access === 'owner') {
+      const share = await grantAutomationRunnerShare(c.env, ctx.ownerId, ctx.boardId)
+      logRequest('POST', `/task/api/boards/${ref}/activate-automation`, {
+        board: ctx.boardId,
+        runnerShare: share.granted ? `granted:${share.name}` : `skipped:${share.reason}`
+      })
+      return c.json({ ...result, automationRunnerShare: share })
+    }
     return c.json(result)
   }) as never)
 

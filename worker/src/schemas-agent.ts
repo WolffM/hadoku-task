@@ -265,15 +265,11 @@ export const ListPresetsResponseSchema = z
  * clear it — the UI clears by blurring an emptied field, not by a DELETE. */
 export const SetRepoInputSchema = z
   .object({
-    repo: z
-      .string()
-      .nullable()
-      .optional()
-      .openapi({
-        example: 'WolffM/hadoku-task',
-        description:
-          '"owner/name". Empty, null, or omitted clears the mapping. Stored as given — probe it against GitHub with GET /repos/validate first if you want it checked.'
-      })
+    repo: z.string().nullable().optional().openapi({
+      example: 'WolffM/hadoku-task',
+      description:
+        '"owner/name". Empty, null, or omitted clears the mapping. Stored as given — probe it against GitHub with GET /repos/validate first if you want it checked.'
+    })
   })
   .openapi('SetRepoInput')
 
@@ -426,6 +422,21 @@ export const ActivateResponseSchema = z
         mode: z.literal('automation'),
         laneCount: z.number(),
         tasksToInbox: z.number()
+      })
+      .optional(),
+    // Present on a committing activation by the OWNER only. The runner gets
+    // `contributor` automatically so an automation board is usable the moment it
+    // exists; `granted: false` names why (already shared, no such registry row,
+    // registry unreachable) rather than leaving a missing grant to be discovered
+    // later as a 403 from the runner.
+    automationRunnerShare: z
+      .object({
+        granted: z.boolean(),
+        name: z.string().openapi({ example: 'tenhands-service-key' }),
+        granteeUserId: z.string().optional(),
+        reason: z
+          .enum(['already_shared', 'no_registry_row', 'no_user_id', 'registry_unavailable', 'self'])
+          .optional()
       })
       .optional()
   })

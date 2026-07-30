@@ -953,6 +953,25 @@ the board owner. The line is `toInbox`, not "same `schemaId`", because `toInbox`
 that measures actual harm: it counts tasks whose current lane would vanish. A refused contributor
 commit is `403 FORBIDDEN` and writes nothing.
 
+**The runner is shared in automatically.** An **owner's** committing activation also grants the
+automation runner `contributor` on the board, and reports it as
+`automationRunnerShare: { granted, name, granteeUserId?, reason? }`. Without it every automation
+board needed a hand-typed share before the runner could touch it, and that was the step everyone
+forgot — the symptom was a runner 403 long after activation looked fine.
+
+- The grantee is resolved by registry **name**, default `tenhands-service-key` (the identity the
+  TenHands worker presents — not `tenhands-devvault`, which is only the operator's dev-vault
+  caller). Overridable with the `AUTOMATION_RUNNER_KEY_NAME` binding, because that name has been
+  retired and re-minted before.
+- **Idempotent, and never escalating.** An existing share of any level is left alone and reported
+  as `granted: false, reason: "already_shared"` — so an owner who deliberately pins the runner to
+  `readonly` keeps it across re-activations.
+- **Owner-only**, so a contributor upgrading a board can't hand a third identity access to a board
+  it doesn't own. A contributor's activation omits the field entirely, as does any `dryRun`.
+- **Never fatal.** The activation is already committed, so a registry miss or outage can't fail the
+  call — it comes back `granted: false` with `reason` ∈ `already_shared` | `no_registry_row` |
+  `no_user_id` | `registry_unavailable` | `self`.
+
 ### POST `/boards/:ref/deactivate-automation`
 
 Owner-only. Restores the pre-activation tag list. → `{ ok, mode: "standard", restoredTags }`.

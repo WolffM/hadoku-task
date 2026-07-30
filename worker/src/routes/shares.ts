@@ -68,31 +68,17 @@ async function resolveGrantee(
     if (!env.SESSIONS_KV) {
       return { error: 'Name resolution unavailable; pass `userId` instead.', status: 400 }
     }
-    const target = input.name.trim().toLowerCase()
-    if (!target) return { error: '`name` is empty.', status: 400 }
-    // Same shape as isNameTaken: list the `key:` prefix, get each row, skip
-    // retired rows, match the name case-insensitively.
-    const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
-    for (const entry of list.keys) {
-      const raw = await env.SESSIONS_KV.get(entry.name)
-      if (!raw) continue
-      let rec: KeyRow
-      try {
-        rec = JSON.parse(raw) as KeyRow
-      } catch {
-        continue
-      }
-      if (rec.retiredAt) continue
-      if (rec.name && rec.name.trim().toLowerCase() === target) {
-        if (!rec.userId) return noUserId
-        return { userId: rec.userId, name: rec.name, tier: rec.tier }
+    if (!input.name.trim()) return { error: '`name` is empty.', status: 400 }
+    const row = await resolveRegistryName(env, input.name)
+    if (!row) {
+      return {
+        error: `No registered key named "${input.name}".`,
+        status: 404,
+        code: 'NAME_NOT_FOUND'
       }
     }
-    return {
-      error: `No registered key named "${input.name}".`,
-      status: 404,
-      code: 'NAME_NOT_FOUND'
-    }
+    if (!row.userId) return noUserId
+    return { userId: row.userId, name: row.name, tier: row.tier }
   }
 
   const key = input.key
@@ -110,6 +96,42 @@ async function resolveGrantee(
   // userId is lazily minted on first sign-in; a key that never signed in has none.
   if (!rec.userId) return noUserId
   return { userId: rec.userId, name: rec.name, tier: rec.tier }
+}
+
+/**
+ * Resolve a registry DISPLAY NAME to its live row.
+ *
+ * Same shape as `isNameTaken` in edge-router: list the `key:` prefix, get each
+ * row, skip retired rows, match the name case-insensitively. Returns null when no
+ * live row carries the name; `userId: null` when a row matched but has never
+ * signed in (userId is minted lazily, and a key without one cannot hold a share).
+ *
+ * The caller checks the SESSIONS_KV binding itself when it needs to tell "no
+ * registry" apart from "no such name" — both look like null from here.
+ */
+export async function resolveRegistryName(
+  env: Env,
+  name: string
+): Promise<{ name: string; userId: string | null; tier?: string } | null> {
+  if (!env.SESSIONS_KV) return null
+  const target = name.trim().toLowerCase()
+  if (!target) return null
+  const list = await env.SESSIONS_KV.list({ prefix: 'key:' })
+  for (const entry of list.keys) {
+    const raw = await env.SESSIONS_KV.get(entry.name)
+    if (!raw) continue
+    let rec: KeyRow
+    try {
+      rec = JSON.parse(raw) as KeyRow
+    } catch {
+      continue
+    }
+    if (rec.retiredAt) continue
+    if (rec.name && rec.name.trim().toLowerCase() === target) {
+      return { name: rec.name, userId: rec.userId ?? null, tier: rec.tier }
+    }
+  }
+  return null
 }
 
 /**
@@ -244,6 +266,81 @@ export async function annotatedSharesByBoard(
 }
 
 const nowIso = () => new Date().toISOString()
+
+/**
+ * The automation runner's registry identity: the key TenHands' worker actually
+ * presents (hadoku_site keeps its value in the `TENHANDS_SERVICE_KEY` vault item
+ * and the PM2 wrapper fetches it). Deliberately NOT `tenhands-devvault`, which is
+ * only the operator-side dev-vault caller and never touches a board.
+ *
+ * Overridable via binding because this name has churned before — the app's key was
+ * retired and re-minted under a second identity (hadoku_site 881cddd2), and a
+ * rename must not need a deploy of this worker to keep auto-sharing working.
+ */
+const DEFAULT_RUNNER_NAME = 'tenhands-service-key'
+
+/** Why an auto-grant didn't happen. Reported, never silently swallowed. */
+export type RunnerShareOutcome =
+  | { granted: true; name: string; granteeUserId: string }
+  | {
+      granted: false
+      name: string
+      reason: 'already_shared' | 'no_registry_row' | 'no_user_id' | 'registry_unavailable' | 'self'
+    }
+
+/**
+ * Give the automation runner `contributor` on a board that just became an
+ * automation board — the grant it needs to read lanes and move tasks (§7, §5.4).
+ * Without this every automation board needed a hand-typed share before the runner
+ * could touch it, which is the step everyone forgot.
+ *
+ * INSERT ... DO NOTHING, not the upsert `upsertShare` uses: if an owner has
+ * deliberately pinned the runner to `readonly` on this board, a re-activation must
+ * not silently escalate it back to contributor. An existing row of any level is
+ * reported as `already_shared` and left alone.
+ *
+ * Never throws — the caller has already committed the activation, and a registry
+ * hiccup must not turn a succeeded write into a 500. The outcome goes back in the
+ * response so a failed grant is visible rather than mysterious.
+ */
+export async function grantAutomationRunnerShare(
+  env: Env,
+  ownerId: string,
+  boardId: string
+): Promise<RunnerShareOutcome> {
+  const name = env.AUTOMATION_RUNNER_KEY_NAME?.trim() || DEFAULT_RUNNER_NAME
+  if (!env.SESSIONS_KV) return { granted: false, name, reason: 'registry_unavailable' }
+  try {
+    const row = await resolveRegistryName(env, name)
+    if (!row) return { granted: false, name, reason: 'no_registry_row' }
+    if (!row.userId) return { granted: false, name, reason: 'no_user_id' }
+    // The runner owning the board is not an error, but a self-share is meaningless.
+    if (row.userId === ownerId) return { granted: false, name, reason: 'self' }
+    const db = env.DB as unknown as {
+      prepare(sql: string): {
+        bind(...a: unknown[]): { run(): Promise<{ meta: { changes: number } }> }
+      }
+    }
+    const res = await db
+      .prepare(
+        `INSERT INTO board_shares (owner_user_id, board_id, grantee_user_id, level, created_at)
+           VALUES (?, ?, ?, 'contributor', ?)
+         ON CONFLICT(owner_user_id, board_id, grantee_user_id) DO NOTHING`
+      )
+      .bind(ownerId, boardId, row.userId, nowIso())
+      .run()
+    if (res.meta.changes === 0) return { granted: false, name, reason: 'already_shared' }
+    return { granted: true, name, granteeUserId: row.userId }
+  } catch (err) {
+    // Not swallowed: the activation stands, but say loudly why the grant didn't.
+    logRequest('POST', 'auto-share/automation-runner', {
+      board: boardId,
+      runner: name,
+      error: err instanceof Error ? err.message : String(err)
+    })
+    return { granted: false, name, reason: 'registry_unavailable' }
+  }
+}
 
 // Narrowed to the codes each (route, status) can actually emit — see agent.ts.
 const forbidden = { 'application/json': { schema: ForbiddenErrorSchema } }
