@@ -16,7 +16,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
-import { activateAutomation, deactivateAutomation } from './board-automation'
+import { activateAutomation, deactivateAutomation, githubToken } from './board-automation'
 import { grantAutomationRunnerShare } from './shares'
 import { listPresets } from './board-presets'
 import { tierAtLeast } from '@wolffm/worker-utils'
@@ -218,7 +218,7 @@ export function createAutomationRoutes() {
       })
     }
     const { repo } = c.req.valid('query')
-    const result = await validateRepo(repo, c.env.GITHUB_READ_TOKEN)
+    const result = await validateRepo(repo, githubToken(c.env))
     return c.json(result)
   }) as never)
 

@@ -14,19 +14,21 @@ export interface Env {
   // prefs-api. Optional so local/dev without the binding still boots (grant-by-key
   // then returns a clear error; grant-by-userId still works).
   SESSIONS_KV?: KVNamespace
-  // GitHub PAT (read scope) for validating a board's `repo` against the GitHub
-  // API. Private WolffM repos 404 unauthenticated, so a token is needed for a
-  // real check. Resolved from the HADOKU_SITE_TOKEN vault key. Optional: without
-  // it, validation falls back to an unauthenticated probe (public repos only).
+  // THE GitHub PAT — the worker's single GitHub credential, resolved from the
+  // HADOKU_SITE_TOKEN vault key. Read `githubToken(env)` rather than this field:
+  // one accessor, so there is one answer to "which credential does GitHub see".
+  //
+  // Two uses, and the name undersells the second: validating a board's `repo`
+  // (private WolffM repos 404 unauthenticated, so a real check needs a token) and
+  // the outbound `repository_dispatch` that wakes an automation board's runner
+  // (§5.2) — a WRITE, which needs `repo` scope. It is deliberately NOT split into
+  // a second binding: the value would be identical, and a duplicate secret to
+  // keep in sync buys nothing until there is a genuinely narrower token to put in
+  // one of them. Split it then, at this one accessor.
+  //
+  // Optional. Absent ⇒ repo validation degrades to an unauthenticated probe
+  // (public repos only) and no dispatch is sent; board writes are unaffected.
   GITHUB_READ_TOKEN?: string
-  // GitHub PAT (repo scope) for the outbound `repository_dispatch` that wakes an
-  // automation board's runner when a human lands a task in a user lane (§5.2).
-  // Its own binding rather than reusing GITHUB_READ_TOKEN, because a write under
-  // a name ending in _READ_TOKEN is a lie and the two uses should be scopeable
-  // apart without a code change. Falls back to GITHUB_READ_TOKEN (same
-  // HADOKU_SITE_TOKEN vault key today) so the feature works before an operator
-  // pushes the new binding. Absent ⇒ no dispatch, board writes unaffected.
-  GITHUB_DISPATCH_TOKEN?: string
   // Registry display name of the automation runner that gets `contributor` on a
   // board automatically when it's activated as an automation board (§5.4, §7).
   // Defaults to 'tenhands-service-key' — the app identity TenHands' worker

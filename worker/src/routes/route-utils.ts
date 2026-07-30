@@ -7,12 +7,7 @@ import type { Context } from 'hono'
 import type { TaskStorage, AuthContext as TaskAuthContext, Lane } from '@wolffm/task/api'
 import { createD1Storage } from './d1-storage'
 import { resolveBoardAccess, type Access } from './board-sharing'
-import {
-  parseLanes,
-  assertHumanLaneWrite,
-  notifyLaneWrite,
-  dispatchToken
-} from './board-automation'
+import { parseLanes, assertHumanLaneWrite, notifyLaneWrite, githubToken } from './board-automation'
 import { DEFAULT_SESSION_ID, DEFAULT_BOARD_ID } from '../constants'
 import type { AppContext, Env } from '../types'
 
@@ -295,7 +290,7 @@ export async function handleBoardOperation<T>(
         laneTag: opts.laneTag,
         lanes: ctx.lanes,
         mode: ctx.mode,
-        token: dispatchToken(c.env)
+        token: githubToken(c.env)
       },
       c
     )

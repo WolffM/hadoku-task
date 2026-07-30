@@ -20,7 +20,7 @@ import {
   assertHumanLaneWrite,
   getBoardConfig,
   notifyLaneWrite,
-  dispatchToken
+  githubToken
 } from '../routes/board-automation'
 import type { Env } from '../types'
 import {
@@ -146,7 +146,7 @@ function wakeRunner(
       laneTag: tag,
       lanes: r.lanes,
       mode: r.mode,
-      token: dispatchToken(ctx.env)
+      token: githubToken(ctx.env)
     },
     ctx.host
   )

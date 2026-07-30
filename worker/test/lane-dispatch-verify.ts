@@ -127,13 +127,13 @@ function makeKV() {
 
 const d1: FakeD1 = makeSqliteD1(MIGRATION)
 
-/** The dispatch token binding, mutated in place to test the unconfigured case. */
+/** The worker's one GitHub binding, mutated in place to test the unconfigured case. */
 const env = {
   TASKS_KV: makeKV(),
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',
-  GITHUB_DISPATCH_TOKEN: 'test-dispatch-pat'
+  GITHUB_READ_TOKEN: 'test-github-pat'
 } as Record<string, unknown>
 
 const app = createTaskHandler()
@@ -291,8 +291,8 @@ async function main() {
     JSON.stringify(one?.body.event_type)
   )
   check(
-    'bearer-authed with the dispatch binding',
-    one?.headers.authorization === 'Bearer test-dispatch-pat',
+    'bearer-authed with the GitHub binding',
+    one?.headers.authorization === 'Bearer test-github-pat',
     JSON.stringify(one?.headers.authorization)
   )
   check(
@@ -462,7 +462,7 @@ async function main() {
   // ---------------------------------------------------------------------
   section('8. With no token binding at all, nothing is attempted')
   // ---------------------------------------------------------------------
-  delete env.GITHUB_DISPATCH_TOKEN
+  delete env.GITHUB_READ_TOKEN
   r = await drag('flow', ['d4'], 'approved')
   check(
     'unconfigured install → the board write still succeeds',
@@ -472,24 +472,15 @@ async function main() {
   check('and no dispatch is attempted', drained().length === 0)
   check('and the tag persisted', storedTag('d4') === 'approved', `tag="${storedTag('d4')}"`)
 
-  // The read token is the documented fallback while the honest binding is rolled out.
-  env.GITHUB_READ_TOKEN = 'test-read-pat'
+  // Restored, and it is that ONE binding the dispatch authenticates with — there is
+  // no second GitHub credential to fall back to or be shadowed by.
+  env.GITHUB_READ_TOKEN = 'test-github-pat'
   await drag('flow', ['d4'], 'replan')
   out = drained()
-  check('GITHUB_READ_TOKEN is the fallback', out.length === 1, `count=${out.length}`)
+  check('the single GitHub binding arms the dispatch', out.length === 1, `count=${out.length}`)
   check(
     'and it is the token that goes out',
-    out[0]?.headers.authorization === 'Bearer test-read-pat',
-    JSON.stringify(out[0]?.headers.authorization)
-  )
-
-  // The dedicated binding WINS when both are present.
-  env.GITHUB_DISPATCH_TOKEN = 'test-dispatch-pat'
-  await drag('flow', ['d4'], 'approved')
-  out = drained()
-  check(
-    'the dedicated binding wins over the read token',
-    out[0]?.headers.authorization === 'Bearer test-dispatch-pat',
+    out[0]?.headers.authorization === 'Bearer test-github-pat',
     JSON.stringify(out[0]?.headers.authorization)
   )
 

@@ -140,16 +140,19 @@ const DISPATCH_TIMEOUT_MS = 5000
 const REPO_SHAPE = /^[\w.-]+\/[\w.-]+$/
 
 /**
- * The dispatch PAT: the dedicated binding when an operator has pushed it, else
- * the read token, which resolves from the same HADOKU_SITE_TOKEN vault key and is
- * verified to carry `repo` scope. One place so the fallback can be deleted in one
- * edit once the honest name is deployed everywhere.
+ * The worker's GitHub credential — for the repo-validation READ and the
+ * lane-change dispatch WRITE alike. Both go through here rather than reaching for
+ * the binding, so "which credential does GitHub see" has one answer, and giving
+ * the write its own narrower token later is a change to this function instead of a
+ * hunt through call sites.
+ *
+ * The binding is named `GITHUB_READ_TOKEN` for a reason worth not re-litigating:
+ * that is the name already deployed, and renaming a live secret to improve a
+ * comment would break both uses until an operator pushed the new one. The name is
+ * a little wrong; the indirection is where the honesty lives.
  */
-export function dispatchToken(env: {
-  GITHUB_DISPATCH_TOKEN?: string
-  GITHUB_READ_TOKEN?: string
-}): string | undefined {
-  return env.GITHUB_DISPATCH_TOKEN || env.GITHUB_READ_TOKEN
+export function githubToken(env: { GITHUB_READ_TOKEN?: string }): string | undefined {
+  return env.GITHUB_READ_TOKEN
 }
 
 /** What a hook site supplies to {@link notifyLaneWrite}. */

@@ -884,10 +884,12 @@ It is fire-and-forget off the response path (`waitUntil`), 5s-bounded, no retrie
 **A failed dispatch never fails the human's write** — a non-`204` is logged with the repo and
 status and dropped. A multi-card drag is one gesture, so it sends one dispatch, not one per card.
 
-Needs the `GITHUB_DISPATCH_TOKEN` binding (`repo` scope; falls back to `GITHUB_READ_TOKEN`, which
-resolves from the same vault key). With neither bound, nothing is sent and board writes are
-unaffected. Note GitHub answers **404, not 403**, when a token can't see a private repo, so an
-under-scoped PAT looks like a missing repo in the logs.
+Authenticates with the worker's single GitHub binding, `GITHUB_READ_TOKEN` (needs `repo` scope for
+this write) — the same credential `GET /repos/validate` reads with. Both go through
+`githubToken(env)` rather than the binding, so giving the write a narrower token later is a change
+in one function. Unbound ⇒ nothing is sent and board writes are unaffected. Note GitHub answers
+**404, not 403**, when a token can't see a private repo, so an under-scoped PAT looks like a
+missing repo in the logs.
 
 ### GET `/automation/presets`
 

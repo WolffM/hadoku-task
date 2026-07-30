@@ -19,7 +19,7 @@ import {
   assertHumanLaneWrite,
   isUserLaneWrite,
   notifyLaneWrite,
-  dispatchToken
+  githubToken
 } from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
 import {
@@ -108,7 +108,7 @@ async function batchUpdateTags(c: any, boardId: string): Promise<Response> {
         laneTag: landed[0].tag,
         lanes: ctx.lanes,
         mode: ctx.mode,
-        token: dispatchToken(c.env)
+        token: githubToken(c.env)
       },
       c
     )
