@@ -280,7 +280,7 @@ const nowIso = () => new Date().toISOString()
 const DEFAULT_RUNNER_NAME = 'tenhands-service-key'
 
 /** Why an auto-grant didn't happen. Reported, never silently swallowed. */
-export type RunnerShareOutcome =
+export type AutoShareOutcome =
   | { granted: true; name: string; granteeUserId: string }
   | {
       granted: false
@@ -289,32 +289,30 @@ export type RunnerShareOutcome =
     }
 
 /**
- * Give the automation runner `contributor` on a board that just became an
- * automation board — the grant it needs to read lanes and move tasks (§7, §5.4).
- * Without this every automation board needed a hand-typed share before the runner
- * could touch it, which is the step everyone forgot.
+ * Grant a registry identity `contributor` on a board, resolved by DISPLAY NAME.
  *
  * INSERT ... DO NOTHING, not the upsert `upsertShare` uses: if an owner has
- * deliberately pinned the runner to `readonly` on this board, a re-activation must
+ * deliberately pinned this grantee to `readonly` on this board, an auto-grant must
  * not silently escalate it back to contributor. An existing row of any level is
  * reported as `already_shared` and left alone.
  *
- * Never throws — the caller has already committed the activation, and a registry
- * hiccup must not turn a succeeded write into a 500. The outcome goes back in the
- * response so a failed grant is visible rather than mysterious.
+ * Never throws — every caller has already committed its write by the time this
+ * runs, and a registry hiccup must not turn a succeeded write into a 500. The
+ * outcome goes back in the response so a failed grant is visible, not mysterious.
  */
-export async function grantAutomationRunnerShare(
+async function grantShareByName(
   env: Env,
   ownerId: string,
-  boardId: string
-): Promise<RunnerShareOutcome> {
-  const name = env.AUTOMATION_RUNNER_KEY_NAME?.trim() || DEFAULT_RUNNER_NAME
+  boardId: string,
+  name: string,
+  what: string
+): Promise<AutoShareOutcome> {
   if (!env.SESSIONS_KV) return { granted: false, name, reason: 'registry_unavailable' }
   try {
     const row = await resolveRegistryName(env, name)
     if (!row) return { granted: false, name, reason: 'no_registry_row' }
     if (!row.userId) return { granted: false, name, reason: 'no_user_id' }
-    // The runner owning the board is not an error, but a self-share is meaningless.
+    // The grantee owning the board is not an error, but a self-share is meaningless.
     if (row.userId === ownerId) return { granted: false, name, reason: 'self' }
     const db = env.DB as unknown as {
       prepare(sql: string): {
@@ -332,14 +330,81 @@ export async function grantAutomationRunnerShare(
     if (res.meta.changes === 0) return { granted: false, name, reason: 'already_shared' }
     return { granted: true, name, granteeUserId: row.userId }
   } catch (err) {
-    // Not swallowed: the activation stands, but say loudly why the grant didn't.
-    logRequest('POST', 'auto-share/automation-runner', {
+    // Not swallowed: the caller's write stands, but say loudly why the grant didn't.
+    logRequest('POST', `auto-share/${what}`, {
       board: boardId,
-      runner: name,
+      grantee: name,
       error: err instanceof Error ? err.message : String(err)
     })
     return { granted: false, name, reason: 'registry_unavailable' }
   }
+}
+
+/**
+ * Give the automation runner `contributor` on a board that just became an
+ * automation board — the grant it needs to read lanes and move tasks (§7, §5.4).
+ * Without this every automation board needed a hand-typed share before the runner
+ * could touch it, which is the step everyone forgot.
+ */
+export async function grantAutomationRunnerShare(
+  env: Env,
+  ownerId: string,
+  boardId: string
+): Promise<AutoShareOutcome> {
+  const name = env.AUTOMATION_RUNNER_KEY_NAME?.trim() || DEFAULT_RUNNER_NAME
+  return grantShareByName(env, ownerId, boardId, name, 'automation-runner')
+}
+
+/**
+ * The registry display name of a repo's service key, by convention:
+ * **`<repo name, with a leading `hadoku-` trimmed>-service-key`**.
+ *
+ *   WolffM/hadoku-aggregator → aggregator-service-key
+ *   WolffM/tenhands          → tenhands-service-key
+ *
+ * The owner segment is dropped — a key is named for the repo, not who hosts it.
+ * Returns null when there's nothing to derive from, so the caller can skip the
+ * lookup rather than resolve a garbage name.
+ *
+ * This convention is the whole reason repo→key is answerable at all: the registry
+ * row carries no `repo` field (hadoku_site `RegistryRecord` is
+ * {userId, name, tier, createdAt, lastSeenAt, retiredAt}), so the NAME is the only
+ * link between a board's checkout mapping and an identity. If the convention ever
+ * stops holding, this derivation is the single place that has to change.
+ */
+export function repoServiceKeyName(repo: string | null | undefined): string | null {
+  const trimmed = (repo ?? '').trim()
+  if (!trimmed) return null
+  // Boards store "owner/name"; take the repo name, tolerating a trailing slash.
+  const segments = trimmed.split('/').filter(Boolean)
+  const repoName = segments.length ? segments[segments.length - 1].trim() : ''
+  if (!repoName) return null
+  const stem = repoName.toLowerCase().startsWith('hadoku-')
+    ? repoName.slice('hadoku-'.length)
+    : repoName
+  // A repo named exactly "hadoku-" would trim to nothing; don't invent a name.
+  if (!stem) return null
+  return `${stem}-service-key`
+}
+
+/**
+ * Give a board's repo its own service key `contributor` on that board, so
+ * connecting a repo is all it takes for that repo's agent to reach the work
+ * (§5.5, §7). The grantee is derived from the repo name — see
+ * `repoServiceKeyName` for the convention and why a name is the only link.
+ *
+ * Returns null when no name is derivable (no repo, or the repo was cleared), which
+ * the caller reports as "not attempted" rather than as a failed grant.
+ */
+export async function grantRepoServiceKeyShare(
+  env: Env,
+  ownerId: string,
+  boardId: string,
+  repo: string | null | undefined
+): Promise<AutoShareOutcome | null> {
+  const name = repoServiceKeyName(repo)
+  if (!name) return null
+  return grantShareByName(env, ownerId, boardId, name, 'repo-service-key')
 }
 
 // Narrowed to the codes each (route, status) can actually emit — see agent.ts.

@@ -273,8 +273,36 @@ export const SetRepoInputSchema = z
   })
   .openapi('SetRepoInput')
 
+/**
+ * The result of an automatic board share. Registered once and reused, so a
+ * generated client gets ONE type for every auto-grant rather than a fresh inline
+ * shape per route. `granted: false` always names a `reason` — a grant that didn't
+ * happen is reported, never silently skipped.
+ */
+export const AutoShareResultSchema = z
+  .object({
+    granted: z.boolean(),
+    name: z.string().openapi({
+      example: 'aggregator-service-key',
+      description: 'Registry display name the grantee was resolved by.'
+    }),
+    granteeUserId: z.string().optional().openapi({ description: 'Set when granted.' }),
+    reason: z
+      .enum(['already_shared', 'no_registry_row', 'no_user_id', 'registry_unavailable', 'self'])
+      .optional()
+      .openapi({ description: 'Set when not granted.' })
+  })
+  .openapi('AutoShareResult')
+
 export const SetRepoResponseSchema = z
-  .object({ ok: z.boolean(), repo: z.string().nullable() })
+  .object({
+    ok: z.boolean(),
+    repo: z.string().nullable(),
+    // Present when a repo was SET (not cleared): connecting a repo also grants that
+    // repo's service key contributor on the board, resolved by the naming
+    // convention `<repo, minus a leading "hadoku-">-service-key`.
+    serviceKeyShare: AutoShareResultSchema.optional()
+  })
   .openapi('SetRepoResponse')
 
 /** Lane shape for the activation REQUEST body: deliberately permissive so the
@@ -429,16 +457,10 @@ export const ActivateResponseSchema = z
     // exists; `granted: false` names why (already shared, no such registry row,
     // registry unreachable) rather than leaving a missing grant to be discovered
     // later as a 403 from the runner.
-    automationRunnerShare: z
-      .object({
-        granted: z.boolean(),
-        name: z.string().openapi({ example: 'tenhands-service-key' }),
-        granteeUserId: z.string().optional(),
-        reason: z
-          .enum(['already_shared', 'no_registry_row', 'no_user_id', 'registry_unavailable', 'self'])
-          .optional()
-      })
-      .optional()
+    automationRunnerShare: AutoShareResultSchema.optional(),
+    // Present when the activation also CONNECTED a repo (`repo` in the body), on
+    // the same terms: that repo's own service key gets contributor too.
+    repoServiceKeyShare: AutoShareResultSchema.optional()
   })
   .openapi('ActivateAutomationResponse')
 

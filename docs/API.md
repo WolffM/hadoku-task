@@ -843,6 +843,37 @@ nothing.
 
 Setting a `repo` also arms the wake dispatch below.
 
+**Connecting a repo shares the board with that repo's service key.** Setting a `repo` grants that
+repo's own service key `contributor` on the board, reported as
+`serviceKeyShare: { granted, name, granteeUserId?, reason? }`. Connecting the repo is the whole
+setup — no second, hand-typed share step.
+
+The grantee is derived from the repo name by **convention**:
+
+```
+<repo name, with a leading "hadoku-" trimmed>-service-key
+
+WolffM/hadoku-aggregator  →  aggregator-service-key
+WolffM/tenhands           →  tenhands-service-key
+```
+
+The owner segment is dropped (a key is named for the repo, not who hosts it) and the `hadoku-` trim
+is case-insensitive. This is convention rather than lookup because the key registry row carries no
+`repo` field — the display name is the only link between a checkout mapping and an identity, so
+`repoServiceKeyName` in `worker/src/routes/shares.ts` is the single place that changes if the
+convention does.
+
+- Same terms as the automation-runner grant: **idempotent and never escalating** (an existing share
+  of any level is left alone and reported `already_shared`), **owner-only**, and **never fatal** —
+  a repo whose key hasn't been minted yet reports `no_registry_row` and the repo mapping still
+  saves.
+- **Clearing the repo grants nothing and revokes nothing.** The field is simply absent from the
+  response. Removing someone's access is an explicit owner action through the share panel, not a
+  side effect of blanking a field.
+- `POST /boards/:ref/activate-automation` does the same thing when its body carries a `repo`,
+  reported as `repoServiceKeyShare` alongside `automationRunnerShare`. A re-activation that omits
+  `repo` connects nothing new (the column is `COALESCE`d), so it reports no repo grant.
+
 ### The wake dispatch — `repository_dispatch` on a human lane write
 
 Not an endpoint: an **outbound** call the worker makes. When a human-path write lands a task in a

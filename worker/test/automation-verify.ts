@@ -18,7 +18,11 @@
  *   - an owner's committing activation auto-shares the board with the automation
  *     runner (resolved by registry NAME), proven functionally: the runner reads,
  *     claims and set-lanes a board nobody hand-shared. Idempotent, never escalates
- *     an owner's deliberate `readonly`, owner-only, and reports why when it can't.
+ *     an owner's deliberate `readonly`, owner-only, and reports why when it can't;
+ *   - connecting a repo shares the board with THAT repo's service key, derived by
+ *     the `<repo minus "hadoku->-service-key` convention: owner segment dropped,
+ *     trim case-insensitive, an unminted key can't cost the repo mapping, and
+ *     clearing the repo neither grants nor revokes.
  *
  * Run via: pnpm run test:worker  (or `... automation-verify`).
  */
@@ -80,7 +84,10 @@ const env = {
     // The automation runner's real prod identity (§7): the name auto-share resolves.
     'tenhands-key': { userId: 'tenhands-uid', name: 'tenhands-service-key', tier: 'service' },
     // The operator-side dev-vault caller shares the stem but must never be picked.
-    'tenhands-devvault-key': { userId: 'devvault-uid', name: 'tenhands-devvault', tier: 'service' }
+    'tenhands-devvault-key': { userId: 'devvault-uid', name: 'tenhands-devvault', tier: 'service' },
+    // A repo's own service key, named by the convention
+    // `<repo, minus a leading "hadoku-">-service-key` (§5.5).
+    'aggregator-key': { userId: 'aggregator-uid', name: 'aggregator-service-key', tier: 'service' }
   })
 } as Record<string, unknown>
 
@@ -93,6 +100,7 @@ interface User {
 const OWNER: User = { key: 'owner-key', id: 'owner-uid' }
 const CONTRIB: User = { key: 'contrib-key', id: 'contrib-uid' }
 const RUNNER: User = { key: 'tenhands-key', id: 'tenhands-uid' }
+const AGGREGATOR: User = { key: 'aggregator-key', id: 'aggregator-uid' }
 
 interface Lane {
   tag: string
@@ -127,6 +135,9 @@ interface Body {
     granteeUserId?: string
     reason?: string
   }
+  repoServiceKeyShare?: { granted: boolean; name: string; reason?: string }
+  serviceKeyShare?: { granted: boolean; name: string; granteeUserId?: string; reason?: string }
+  repo?: string | null
   shares?: Array<{ granteeUserId: string; level: string; name: string | null }>
   code?: string
   error?: string
@@ -819,6 +830,143 @@ async function main() {
     JSON.stringify(r.json?.automationRunnerShare)
   )
   delete env.AUTOMATION_RUNNER_KEY_NAME
+
+  // ---------------------------------------------------------------------
+  section("13. Connecting a repo shares the board with that repo's service key (§5.5)")
+  // ---------------------------------------------------------------------
+  // The grantee is derived from the repo NAME by convention:
+  // `<repo, minus a leading "hadoku-">-service-key`. The registry row carries no
+  // `repo` field, so the name is the only link between a checkout mapping and an
+  // identity — which makes this derivation worth pinning down precisely.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'linked', name: 'Linked' })
+  await req(OWNER, 'POST', '/task/api', { id: 'L1', title: 'Repo work', boardId: 'linked' })
+
+  r = await req(OWNER, 'POST', '/task/api/boards/linked/repo', {
+    repo: 'WolffM/hadoku-aggregator'
+  })
+  check(
+    'hadoku-aggregator → aggregator-service-key, granted',
+    r.status === 200 &&
+      r.json?.serviceKeyShare?.granted === true &&
+      r.json?.serviceKeyShare?.name === 'aggregator-service-key' &&
+      r.json?.serviceKeyShare?.granteeUserId === 'aggregator-uid',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // Functional proof: the repo's own key can now reach the board it drives.
+  const linkedHandle = (await req(OWNER, 'GET', '/task/api/boards')).json?.boards?.find(
+    b => b.id === 'linked'
+  )?.handle
+  r = await req(AGGREGATOR, 'GET', `/task/api/tasks?boardId=${linkedHandle}`)
+  check(
+    "the repo's service key can now READ the board it was never hand-shared",
+    r.status === 200 && (r.json?.tasks ?? []).some(t => t.id === 'L1'),
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // A repo WITHOUT the hadoku- prefix keeps its whole name (this is the real shape
+  // of tenhands' key, so the convention has to leave it alone).
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'plain', name: 'Plain' })
+  r = await req(OWNER, 'POST', '/task/api/boards/plain/repo', { repo: 'WolffM/tenhands' })
+  check(
+    'a repo with no hadoku- prefix → tenhands-service-key, granted',
+    r.json?.serviceKeyShare?.granted === true &&
+      r.json?.serviceKeyShare?.name === 'tenhands-service-key',
+    JSON.stringify(r.json?.serviceKeyShare)
+  )
+
+  // The owner segment is dropped, and a bare repo name works the same way.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'bare', name: 'Bare' })
+  r = await req(OWNER, 'POST', '/task/api/boards/bare/repo', { repo: 'hadoku-aggregator' })
+  check(
+    'a bare repo name (no owner segment) derives the same key',
+    r.json?.serviceKeyShare?.name === 'aggregator-service-key' &&
+      r.json?.serviceKeyShare?.granted === true,
+    JSON.stringify(r.json?.serviceKeyShare)
+  )
+
+  // The prefix trim is case-insensitive, and resolution is too — so this lands on
+  // the SAME identity that's already shared on `linked`.
+  r = await req(OWNER, 'POST', '/task/api/boards/linked/repo', {
+    repo: 'WolffM/HADOKU-Aggregator'
+  })
+  check(
+    'the hadoku- trim is case-insensitive, and re-connecting reports already_shared',
+    r.json?.serviceKeyShare?.granted === false &&
+      r.json?.serviceKeyShare?.reason === 'already_shared',
+    JSON.stringify(r.json?.serviceKeyShare)
+  )
+
+  // A repo whose key hasn't been minted yet must NOT cost the repo mapping.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'unminted', name: 'Unminted' })
+  r = await req(OWNER, 'POST', '/task/api/boards/unminted/repo', { repo: 'WolffM/hadoku-nothing' })
+  check(
+    'an unminted repo key → no_registry_row, and the repo still saves',
+    r.status === 200 &&
+      r.json?.repo === 'WolffM/hadoku-nothing' &&
+      r.json?.serviceKeyShare?.granted === false &&
+      r.json?.serviceKeyShare?.name === 'nothing-service-key' &&
+      r.json?.serviceKeyShare?.reason === 'no_registry_row',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  check(
+    '…and it really persisted on the board',
+    (await repoOf('unminted')) === 'WolffM/hadoku-nothing',
+    String(await repoOf('unminted'))
+  )
+
+  // Clearing the repo attempts no grant — and must NOT revoke the existing one.
+  // Taking access away is an explicit owner action, not a side effect of blanking
+  // a field.
+  r = await req(OWNER, 'POST', '/task/api/boards/linked/repo', { repo: '' })
+  check(
+    'clearing the repo reports no grant attempt at all',
+    r.status === 200 && r.json?.repo === null && r.json?.serviceKeyShare === undefined,
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+  r = await req(OWNER, 'GET', '/task/api/boards/linked/shares')
+  check(
+    '…and the share it granted earlier is left intact, not silently revoked',
+    r.json?.shares?.some(s => s.granteeUserId === 'aggregator-uid'),
+    JSON.stringify(r.json?.shares)
+  )
+
+  // An activation that CONNECTS a repo earns the same grant, alongside the runner's.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'both', name: 'Both' })
+  r = await req(OWNER, 'POST', '/task/api/boards/both/activate-automation', {
+    lanes: LANES,
+    repo: 'WolffM/hadoku-aggregator',
+    dryRun: true
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/both/activate-automation', {
+    lanes: LANES,
+    repo: 'WolffM/hadoku-aggregator',
+    digest: r.json?.preview?.digest
+  })
+  check(
+    'activating WITH a repo grants both the runner and the repo service key',
+    r.json?.automationRunnerShare?.granted === true &&
+      r.json?.automationRunnerShare?.name === 'tenhands-service-key' &&
+      r.json?.repoServiceKeyShare?.granted === true &&
+      r.json?.repoServiceKeyShare?.name === 'aggregator-service-key',
+    JSON.stringify(r.json)
+  )
+
+  // A re-activation that omits `repo` connects nothing new (COALESCE keeps the
+  // existing mapping), so it must not claim a repo grant it didn't attempt.
+  r = await req(OWNER, 'POST', '/task/api/boards/both/activate-automation', {
+    lanes: LANES,
+    dryRun: true
+  })
+  r = await req(OWNER, 'POST', '/task/api/boards/both/activate-automation', {
+    lanes: LANES,
+    digest: r.json?.preview?.digest
+  })
+  check(
+    'activating WITHOUT a repo reports no repo grant',
+    r.status === 200 && r.json?.repoServiceKeyShare === undefined,
+    JSON.stringify(r.json?.repoServiceKeyShare)
+  )
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)

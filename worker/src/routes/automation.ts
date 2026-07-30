@@ -17,7 +17,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation, githubToken } from './board-automation'
-import { grantAutomationRunnerShare } from './shares'
+import { grantAutomationRunnerShare, grantRepoServiceKeyShare } from './shares'
 import { listPresets } from './board-presets'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
@@ -189,8 +189,24 @@ export function createAutomationRoutes() {
     if (res.meta.changes === 0) {
       return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }, 404)
     }
-    logRequest('POST', `/task/api/boards/${ref}/repo`, { board: ctx.boardId, repo })
-    return c.json({ ok: true, repo })
+    // Connecting a repo is all it should take for that repo's own agent to reach
+    // the board, so grant its service key here rather than making every owner
+    // remember a second, hand-typed step. Clearing the repo grants nothing — and
+    // deliberately does NOT revoke: taking access away is the owner's call, made
+    // explicitly through the share panel, not a side effect of blanking a field.
+    const serviceKeyShare = repo
+      ? await grantRepoServiceKeyShare(c.env, ctx.ownerId, ctx.boardId, repo)
+      : null
+    logRequest('POST', `/task/api/boards/${ref}/repo`, {
+      board: ctx.boardId,
+      repo,
+      ...(serviceKeyShare && {
+        serviceKeyShare: serviceKeyShare.granted
+          ? `granted:${serviceKeyShare.name}`
+          : `skipped:${serviceKeyShare.reason}`
+      })
+    })
+    return c.json({ ok: true, repo, ...(serviceKeyShare && { serviceKeyShare }) })
   }) as never)
 
   // Validate a board's repo by probing GitHub. Signed-in only.
@@ -295,11 +311,25 @@ export function createAutomationRoutes() {
     // call. Dry runs write nothing, so they don't resolve the registry either.
     if (!dryRun && ctx.access === 'owner') {
       const share = await grantAutomationRunnerShare(c.env, ctx.ownerId, ctx.boardId)
+      // An activation that also CONNECTS a repo is a repo connection like any
+      // other, so it earns the same grant as POST /repo. Only when the body
+      // carried one — a re-activation that omits `repo` keeps the board's existing
+      // mapping (COALESCE) and isn't connecting anything new.
+      const repoShare = body.repo
+        ? await grantRepoServiceKeyShare(c.env, ctx.ownerId, ctx.boardId, body.repo)
+        : null
       logRequest('POST', `/task/api/boards/${ref}/activate-automation`, {
         board: ctx.boardId,
-        runnerShare: share.granted ? `granted:${share.name}` : `skipped:${share.reason}`
+        runnerShare: share.granted ? `granted:${share.name}` : `skipped:${share.reason}`,
+        ...(repoShare && {
+          repoShare: repoShare.granted ? `granted:${repoShare.name}` : `skipped:${repoShare.reason}`
+        })
       })
-      return c.json({ ...result, automationRunnerShare: share })
+      return c.json({
+        ...result,
+        automationRunnerShare: share,
+        ...(repoShare && { repoServiceKeyShare: repoShare })
+      })
     }
     return c.json(result)
   }) as never)
