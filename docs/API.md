@@ -851,14 +851,18 @@ setup — no second, hand-typed share step.
 The grantee is derived from the repo name by **convention**:
 
 ```
-<repo name, with a leading "hadoku-" trimmed>-service-key
+<repo name, with a leading "hadoku-" (or "hadoku_") trimmed>-service-key
 
 WolffM/hadoku-aggregator  →  aggregator-service-key
 WolffM/tenhands           →  tenhands-service-key
+WolffM/hadoku_site        →  site-service-key
 ```
 
-The owner segment is dropped (a key is named for the repo, not who hosts it) and the `hadoku-` trim
-is case-insensitive. This is convention rather than lookup because the key registry row carries no
+The owner segment is dropped (a key is named for the repo, not who hosts it), the trim is
+case-insensitive, and the separator after `hadoku` may be `-` or `_` — `WolffM/hadoku_site` is a
+real repo whose key is `site-service-key`, so a hyphen-only trim would match nothing. No live key
+name begins with `hadoku`, so accepting both can't collide. This is convention rather than lookup
+because the key registry row carries no
 `repo` field — the display name is the only link between a checkout mapping and an identity, so
 `repoServiceKeyName` in `worker/src/routes/shares.ts` is the single place that changes if the
 convention does.

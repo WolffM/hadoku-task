@@ -361,6 +361,12 @@ export async function grantAutomationRunnerShare(
  *
  *   WolffM/hadoku-aggregator → aggregator-service-key
  *   WolffM/tenhands          → tenhands-service-key
+ *   WolffM/hadoku_site       → site-service-key
+ *
+ * The separator after `hadoku` may be `-` or `_`, because one real repo spells it
+ * with an underscore: `WolffM/hadoku_site`'s key is `site-service-key`, so a
+ * hyphen-only trim would leave `hadoku_site-service-key` and match nothing. No
+ * live key name begins with `hadoku`, so accepting both can't collide.
  *
  * The owner segment is dropped — a key is named for the repo, not who hosts it.
  * Returns null when there's nothing to derive from, so the caller can skip the
@@ -379,9 +385,7 @@ export function repoServiceKeyName(repo: string | null | undefined): string | nu
   const segments = trimmed.split('/').filter(Boolean)
   const repoName = segments.length ? segments[segments.length - 1].trim() : ''
   if (!repoName) return null
-  const stem = repoName.toLowerCase().startsWith('hadoku-')
-    ? repoName.slice('hadoku-'.length)
-    : repoName
+  const stem = /^hadoku[-_]/i.test(repoName) ? repoName.slice('hadoku-'.length) : repoName
   // A repo named exactly "hadoku-" would trim to nothing; don't invent a name.
   if (!stem) return null
   return `${stem}-service-key`

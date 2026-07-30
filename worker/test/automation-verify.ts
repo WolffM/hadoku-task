@@ -87,7 +87,10 @@ const env = {
     'tenhands-devvault-key': { userId: 'devvault-uid', name: 'tenhands-devvault', tier: 'service' },
     // A repo's own service key, named by the convention
     // `<repo, minus a leading "hadoku-">-service-key` (§5.5).
-    'aggregator-key': { userId: 'aggregator-uid', name: 'aggregator-service-key', tier: 'service' }
+    'aggregator-key': { userId: 'aggregator-uid', name: 'aggregator-service-key', tier: 'service' },
+    // The real key for WolffM/hadoku_site — the one repo that spells the prefix
+    // with an underscore, which a hyphen-only trim would fail to resolve.
+    'site-key': { userId: 'site-uid', name: 'site-service-key', tier: 'service' }
   })
 } as Record<string, unknown>
 
@@ -882,6 +885,18 @@ async function main() {
     'a bare repo name (no owner segment) derives the same key',
     r.json?.serviceKeyShare?.name === 'aggregator-service-key' &&
       r.json?.serviceKeyShare?.granted === true,
+    JSON.stringify(r.json?.serviceKeyShare)
+  )
+
+  // The separator after `hadoku` may be an underscore: WolffM/hadoku_site is a real
+  // repo whose real key is `site-service-key`, and a hyphen-only trim misses it.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'site', name: 'Site' })
+  r = await req(OWNER, 'POST', '/task/api/boards/site/repo', { repo: 'WolffM/hadoku_site' })
+  check(
+    'hadoku_site (underscore prefix) → site-service-key, granted',
+    r.json?.serviceKeyShare?.granted === true &&
+      r.json?.serviceKeyShare?.name === 'site-service-key' &&
+      r.json?.serviceKeyShare?.granteeUserId === 'site-uid',
     JSON.stringify(r.json?.serviceKeyShare)
   )
 
