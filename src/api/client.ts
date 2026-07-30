@@ -89,27 +89,92 @@ function adminHeaders(userType: string, sessionId?: string) {
   return headers
 }
 
-export type SyncErrorReporter = (operation: string, reason: 'http-error' | 'network') => void
+/**
+ * What the server said when it refused a background sync, when it said anything
+ * useful. Without this a reporter can only say "something was rejected" — and for
+ * a refusal the user caused and can act on (moving a task into a lane only the
+ * agent may write), naming the reason is the whole difference between a usable
+ * message and a shrug.
+ */
+export interface SyncErrorDetail {
+  status: number
+  /** The domain error code, e.g. `LANE_NOT_EDITABLE`. */
+  code?: string
+  /** The server's human-readable message, safe to show as-is. */
+  message?: string
+  /** The optimistic local write was rolled back, so the UI now matches the server. */
+  reverted?: boolean
+}
+
+export type SyncErrorReporter = (
+  operation: string,
+  reason: 'http-error' | 'network',
+  detail?: SyncErrorDetail
+) => void
 
 /**
- * Fire-and-forget server sync with consistent logging
- * Used for optimistic updates where localStorage is source of truth
+ * A 4xx the server will give the same answer to however many times we ask —
+ * the write is wrong, not the moment. `408`/`429` are the exceptions: both mean
+ * "ask again", so they belong with the transient failures.
+ *
+ * This is the line an optimistic client has to draw somewhere: local state is
+ * normally the source of truth and a failed sync is retried, but a definitive
+ * refusal makes the local copy the WRONG one, and keeping it shows the user a
+ * change that did not happen.
+ */
+function isDefinitiveRefusal(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429
+}
+
+/** Read a domain error body without letting a non-JSON response become a second failure. */
+async function readErrorDetail(r: globalThis.Response): Promise<SyncErrorDetail> {
+  const detail: SyncErrorDetail = { status: r.status }
+  try {
+    const body = (await r.json()) as { error?: unknown; code?: unknown }
+    if (typeof body?.code === 'string') detail.code = body.code
+    if (typeof body?.error === 'string') detail.message = body.error
+  } catch {
+    /* an HTML error page or empty body — the status alone is what we have */
+  }
+  return detail
+}
+
+/**
+ * Fire-and-forget server sync with consistent logging.
+ * Used for optimistic updates where localStorage is source of truth.
+ *
+ * `onRefused` runs for a definitive 4xx BEFORE `onError`, so a caller can undo
+ * its optimistic write and have the reporter say so in the same breath. It must
+ * not throw; a failed sync is already the unhappy path.
  */
 function backgroundSync(
   url: string,
   options: globalThis.RequestInit,
   operation: string,
   context: Record<string, unknown>,
-  onError?: SyncErrorReporter
+  onError?: SyncErrorReporter,
+  onRefused?: (detail: SyncErrorDetail) => Promise<boolean> | boolean
 ): void {
   fetch(url, options)
-    .then(r => {
+    .then(async r => {
       if (!r.ok) {
+        const detail = await readErrorDetail(r)
         logger.warn(`[api] ${operation}: Server sync returned error`, {
           status: r.status,
+          code: detail.code,
           ...context
         })
-        onError?.(operation, 'http-error')
+        if (onRefused && isDefinitiveRefusal(r.status)) {
+          try {
+            detail.reverted = (await onRefused(detail)) === true
+          } catch (revertErr) {
+            logger.error(`[api] ${operation}: could not revert the optimistic write`, {
+              ...context,
+              error: formatError(revertErr)
+            })
+          }
+        }
+        onError?.(operation, 'http-error', detail)
       } else {
         logger.info(`[api] ${operation}: Server sync completed`, context)
       }
@@ -665,6 +730,29 @@ export function createApi(
         count: updates.length
       })
 
+      // This is the write path a LANE DRAG takes, and on an automation board the
+      // server can refuse it outright — an `agent` lane is not the human's to
+      // write. Capture where each task was BEFORE the optimistic move so a refusal
+      // can put it back; otherwise the card sits in the lane it never reached and
+      // only snaps back at the next full sync, which reads as data loss.
+      const before = await (async () => {
+        try {
+          const bf = await localStorage.getBoards()
+          const board = bf.boards.find(b => b.id === boardId)
+          const byId = new Map((board?.tasks ?? []).map(t => [t.id, t.tag ?? null]))
+          return updates
+            .filter(u => byId.has(u.taskId))
+            .map(u => ({ taskId: u.taskId, tag: byId.get(u.taskId) ?? null }))
+        } catch (err) {
+          // No snapshot means no revert, which is strictly better than no move.
+          logger.warn('[api] batchUpdateTags: could not snapshot prior tags', {
+            boardId,
+            error: formatError(err)
+          })
+          return null
+        }
+      })()
+
       // 1. OPTIMISTIC: Update tags in localStorage
       await localStorage.batchUpdateTags(boardId, updates)
       logger.info('[api] batchUpdateTags: Updated locally', { boardId, count: updates.length })
@@ -679,7 +767,19 @@ export function createApi(
         },
         'batchUpdateTags',
         { boardId, count: updates.length },
-        onSyncError
+        onSyncError,
+        async () => {
+          if (!before || before.length === 0) return false
+          // Re-applying through the same local write broadcasts `tasks-updated`,
+          // which is what repaints the board — so the card visibly returns to
+          // where it was rather than waiting for a reload.
+          await localStorage.batchUpdateTags(boardId, before)
+          logger.info('[api] batchUpdateTags: reverted the optimistic move', {
+            boardId,
+            count: before.length
+          })
+          return true
+        }
       )
     },
 

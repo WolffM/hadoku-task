@@ -20,11 +20,34 @@ interface UseTasksProps {
 export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
+
+  // Read through refs so the reporter below can keep ONE identity for the life of
+  // the hook. It is a dependency of the `api` memo, so a reporter that changed
+  // every render would rebuild the API client every render.
+  const onSyncErrorRef = useRef(onSyncError)
+  onSyncErrorRef.current = onSyncError
+  const reloadRef = useRef<() => Promise<void>>(async () => {})
+
+  /**
+   * Report a failed background sync, and repaint when one was rolled back.
+   *
+   * The client undoes a refused optimistic write in localStorage and broadcasts
+   * it — but `BroadcastChannel` does not deliver to the context that posted, so
+   * the tab where the drag happened is the one tab that would keep showing a move
+   * the server refused. Reload it from the corrected cache.
+   */
+  const handleSyncError = useCallback<SyncErrorReporter>((operation, reason, detail) => {
+    onSyncErrorRef.current?.(operation, reason, detail)
+    if (detail?.reverted) void reloadRef.current()
+  }, [])
+
   // ✅ FIX: Recreate API when userType or sessionId changes
   const api = useMemo(
     () =>
-      createApi(userType as 'public' | 'friend' | 'admin', sessionId || 'public', { onSyncError }),
-    [userType, sessionId, onSyncError]
+      createApi(userType as 'public' | 'friend' | 'admin', sessionId || 'public', {
+        onSyncError: handleSyncError
+      }),
+    [userType, sessionId, handleSyncError]
   )
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
@@ -77,6 +100,10 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     const { tasks: boardTasks } = extractBoardTasks(bf, currentBoardIdRef.current)
     setTasks(boardTasks)
   }
+
+  // Kept current so `handleSyncError` — created once, above — always reaches the
+  // live `reload` rather than the one from the render it was defined in.
+  reloadRef.current = reload
 
   // Single owner of the board-load lifecycle. On a user-context change: clear the
   // previous user's data, paint from the (now faithful) cache immediately so the

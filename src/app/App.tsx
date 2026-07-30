@@ -23,6 +23,7 @@ import { isMobileApp } from '../utils/platform'
 import { useTaskHandlers } from '../hooks/useTaskHandlers'
 import { useSessionInitialization } from '../hooks/useSessionInitialization'
 import { getAnonSessionId } from '../api/session'
+import type { SyncErrorDetail } from '../api/client'
 import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -119,13 +120,24 @@ export default function App(props: TaskAppProps = {}) {
   // Surface backgroundSync failures from the API client as user-visible toasts.
   // Why: optimistic writes hide network failures otherwise. Mobile users especially
   // see no signal when a complete/delete never reached the server.
+  //
+  // A REFUSAL is not a sync failure and must not read like one. When the server
+  // explains itself — an automation board refusing a move into an agent-owned lane
+  // is the case that matters — show its own words, and say the move was undone
+  // rather than the hedged "may not persist" (it definitely didn't, and the card
+  // has already gone back). Operation names are internal, so they stay out of the
+  // message a person reads unless there is nothing better to say.
   const reportSyncError = React.useCallback(
-    (operation: string, reason: 'http-error' | 'network') => {
-      const friendly =
-        reason === 'network'
-          ? `Server sync failed (${operation}) — check connection`
-          : `Server rejected ${operation} — changes may not persist`
-      showToast(friendly, 'error', 4000)
+    (operation: string, reason: 'http-error' | 'network', detail?: SyncErrorDetail) => {
+      let friendly: string
+      if (reason === 'network') {
+        friendly = `Server sync failed (${operation}) — check connection`
+      } else if (detail?.message) {
+        friendly = detail.reverted ? `${detail.message} — move undone` : detail.message
+      } else {
+        friendly = `Server rejected ${operation} — changes may not persist`
+      }
+      showToast(friendly, 'error', 5000)
     },
     [showToast]
   )
