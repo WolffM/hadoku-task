@@ -1021,8 +1021,9 @@ no share. This walks every board **you own** and repairs both kinds:
 Body: `{ dryRun?, force?, allOwners? }` — `dryRun` and `force` both default to `true`.
 
 - **`dryRun` defaults to TRUE.** A bulk grant across every board you own has to be asked for, so you
-  must pass `false` to write anything. A dry run resolves and reports the full plan and touches
-  nothing.
+  must pass `false` to write anything. A dry run runs the **same** resolution and the same
+  branching as the commit — including the existing-share lookup — and stops short of the write, so
+  its tally is what the commit will actually do rather than an optimistic guess.
 - **`force` defaults to TRUE.** An existing share below `contributor` is upgraded and reported as
   `escalated` with the `previousLevel` it replaced — never silently. Pass `force: false` to leave
   existing rows exactly as they are. (This is the one place that escalates: the incidental

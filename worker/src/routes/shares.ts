@@ -388,7 +388,14 @@ export async function grantContributor(
   ownerId: string,
   boardId: string,
   granteeUserId: string,
-  force: boolean
+  force: boolean,
+  /**
+   * Resolve the outcome without writing. A preview MUST run the same reads and
+   * the same branching as the commit, or its plan is a guess — reporting every
+   * target as `granted` when six of them already had a share overstated the work
+   * by nearly 2x, which is exactly the thing a dry run exists to prevent.
+   */
+  previewOnly = false
 ): Promise<{ outcome: 'granted' | 'already_shared' | 'escalated'; previousLevel?: string }> {
   const db = env.DB as unknown as {
     prepare(sql: string): {
@@ -409,6 +416,7 @@ export async function grantContributor(
     if (existing.level === 'contributor')
       return { outcome: 'already_shared', previousLevel: 'contributor' }
     if (!force) return { outcome: 'already_shared', previousLevel: existing.level }
+    if (previewOnly) return { outcome: 'escalated', previousLevel: existing.level }
     await db
       .prepare(
         'UPDATE board_shares SET level = ? WHERE owner_user_id = ? AND board_id = ? AND grantee_user_id = ?'
@@ -417,6 +425,8 @@ export async function grantContributor(
       .run()
     return { outcome: 'escalated', previousLevel: existing.level }
   }
+
+  if (previewOnly) return { outcome: 'granted' }
 
   await db
     .prepare(
