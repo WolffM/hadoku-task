@@ -220,7 +220,14 @@ export function createApi(
     },
 
     // Sync from API - called once on initial page load to get server state
-    async syncFromApi(): Promise<void> {
+    //
+    // Returns whether server state actually landed in the cache. Callers need
+    // that: on failure the UI keeps rendering the previous cache (or nothing at
+    // all on a first load), which is indistinguishable from an account that
+    // genuinely has no tasks unless someone says otherwise. Failures are still
+    // logged here and NOT thrown — a background refresh that can't reach the
+    // server is a degraded state to display, not an exception to unwind.
+    async syncFromApi(): Promise<boolean> {
       const startTime = now()
       try {
         logger.info('[api] syncFromApi: Starting API sync...', { userType, sessionId })
@@ -245,7 +252,7 @@ export function createApi(
         // Validate response structure
         if (!apiData || !apiData.boards || !Array.isArray(apiData.boards)) {
           logger.error('[api] syncFromApi: Invalid response structure', { apiData })
-          return
+          return false
         }
 
         const duration = now() - startTime
@@ -257,12 +264,14 @@ export function createApi(
 
         // Update localStorage with server state
         await syncBoardsToLocalStorage(localStorage, apiData, userType, sessionId)
+        return true
       } catch (error) {
         const duration = now() - startTime
         logger.error('[api] syncFromApi: Sync from API failed', {
           error: formatError(error),
           durationMs: Math.round(duration)
         })
+        return false
       }
     },
 

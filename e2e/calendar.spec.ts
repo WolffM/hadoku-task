@@ -147,7 +147,9 @@ test.describe('Calendar day view', () => {
       localStorage.setItem(key, JSON.stringify(blob))
     })
     await page.reload()
-    await page.getByRole('button', { name: 'Calendar view', exact: true }).click()
+    // No re-click: the view choice is persisted, so the reload comes back into
+    // the calendar. (See calendar-discoverability.spec.ts.)
+    await expect(page.locator('.calendar-day-view')).toBeVisible()
 
     const card = page.locator('.calendar-agenda__card', { hasText: 'Synced Meeting' })
     await expect(card).toBeVisible()

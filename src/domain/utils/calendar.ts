@@ -55,12 +55,87 @@ export function taskDay(task: Task): string | null {
 }
 
 /**
+ * Parse a "YYYY-MM-DD" day string into a Date at local midnight.
+ *
+ * The inverse of {@link toDayString}, and deliberately NOT `new Date(day)` —
+ * the Date constructor reads a bare date string as UTC midnight, which is the
+ * *previous* day everywhere west of UTC. Anything that turns a membership key
+ * back into a calendar position must round-trip through here.
+ */
+export function fromDayString(day: string): Date {
+  const [y, m, d] = day.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/**
  * Get tasks scheduled on a specific day — both all-day (date only) and timed
  * (date derived from startTime). Membership is keyed off the calendar day.
  */
 export function getCalendarTasks(tasks: Task[], date: Date): Task[] {
   const target = toDayString(date)
   return tasks.filter(task => taskDay(task) === target)
+}
+
+/** The nearest day holding a scheduled task, and which way it lies from the anchor. */
+export interface NearestScheduledDay {
+  /** "YYYY-MM-DD", in the viewer's local timezone (same key {@link taskDay} answers). */
+  day: string
+  /** Where it sits relative to the anchor day. */
+  direction: 'future' | 'past'
+  /** How many tasks that day holds. */
+  count: number
+}
+
+/**
+ * Find the closest day to `anchor` that actually has something scheduled,
+ * ignoring the anchor day itself.
+ *
+ * This exists because an empty day is otherwise indistinguishable from a broken
+ * sync: the calendar opens on today, integration-mirrored events (a booked
+ * appointment, say) are nearly always in the future, and the empty state gave no
+ * hint that the board held anything at all. The future wins ties — a calendar
+ * answers "what's coming up" first.
+ */
+export function nearestScheduledDay(tasks: Task[], anchor: Date): NearestScheduledDay | null {
+  const anchorDay = toDayString(anchor)
+  const counts = new Map<string, number>()
+  for (const task of tasks) {
+    const day = taskDay(task)
+    if (!day || day === anchorDay) continue
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+  if (counts.size === 0) return null
+
+  const anchorTime = fromDayString(anchorDay).getTime()
+  let best: NearestScheduledDay | null = null
+  let bestDistance = Infinity
+  for (const [day, count] of counts) {
+    const direction = day > anchorDay ? 'future' : 'past'
+    const distance = Math.abs(fromDayString(day).getTime() - anchorTime)
+    // Nearer always wins; at equal distance the future day takes it. Written as
+    // an explicit swap rather than a sort key so it doesn't depend on the order
+    // tasks happen to arrive in.
+    const wins =
+      distance < bestDistance ||
+      (distance === bestDistance && direction === 'future' && best?.direction === 'past')
+    if (wins) {
+      best = { day, direction, count }
+      bestDistance = distance
+    }
+  }
+  return best
+}
+
+/**
+ * How many tasks are scheduled on or after `from` — the count the board view
+ * advertises so scheduled work isn't invisible from the view that can't show it.
+ */
+export function countUpcomingScheduled(tasks: Task[], from: Date): number {
+  const fromDay = toDayString(from)
+  return tasks.filter(task => {
+    const day = taskDay(task)
+    return day !== null && day >= fromDay
+  }).length
 }
 
 /**

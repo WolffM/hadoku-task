@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react'
 import type { Task } from '../../domain/types'
+import type { SyncState } from '../../hooks/useTasks'
 import { CalendarAgendaItem } from './CalendarAgendaItem'
 import {
   getCalendarTasks,
@@ -16,7 +17,9 @@ import {
   isSameDay,
   formatTime,
   createTimeOnDay,
+  fromDayString,
   getMinutesSinceMidnight,
+  nearestScheduledDay,
   toDayString
 } from '../../domain/utils/calendar'
 
@@ -41,6 +44,11 @@ export interface CalendarDayViewProps {
   onDeleteTask: (taskId: string) => void
   onEditTag: (taskId: string) => void
   pendingOperations: Set<string>
+  /**
+   * Whether `tasks` is server truth. An empty day reads very differently when the
+   * refresh never landed, so the empty state says which one it is.
+   */
+  syncState?: SyncState
 }
 
 /** One hour, in ms — the length of a default create slot. */
@@ -73,7 +81,8 @@ export function CalendarDayView({
   onCreateTask,
   onDeleteTask,
   onEditTag,
-  pendingOperations
+  pendingOperations,
+  syncState = 'synced'
 }: CalendarDayViewProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
@@ -93,6 +102,11 @@ export function CalendarDayView({
   const nowIndex = isToday
     ? timedTasks.findIndex(t => getMinutesSinceMidnight(t.startTime) >= nowMinutes)
     : -1
+
+  // The signpost out of an empty day. Without it, "nothing here" and "the sync is
+  // broken" look identical — and a mirrored appointment (always booked for a
+  // future day) sits one click away with nothing pointing at it.
+  const nearest = dayTasks.length === 0 ? nearestScheduledDay(tasks, selectedDate) : null
 
   const handlePrevDay = () => onDateChange(addDays(selectedDate, -1))
   const handleNextDay = () => onDateChange(addDays(selectedDate, 1))
@@ -183,7 +197,22 @@ export function CalendarDayView({
       {/* Agenda list */}
       {dayTasks.length === 0 ? (
         <div className="calendar-agenda calendar-agenda--empty">
-          <p className="calendar-agenda__empty-text">Nothing scheduled for this day.</p>
+          <p className="calendar-agenda__empty-text">
+            {syncState === 'stale'
+              ? // Say the cache might be lying rather than asserting an empty day.
+                "Nothing scheduled for this day — but the last refresh didn't land, so this may be out of date."
+              : 'Nothing scheduled for this day.'}
+          </p>
+          {nearest && (
+            <button
+              className="calendar-nearest-btn"
+              onClick={() => onDateChange(fromDayString(nearest.day))}
+            >
+              {nearest.direction === 'future' ? 'Next scheduled' : 'Last scheduled'}:{' '}
+              {formatCalendarDate(fromDayString(nearest.day))}
+              {nearest.count > 1 ? ` (${nearest.count})` : ''}
+            </button>
+          )}
         </div>
       ) : (
         <div className="calendar-agenda">

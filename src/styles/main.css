@@ -559,6 +559,7 @@
    (which sets margin-left:auto), so the others must reset it, else multiple
    auto-margins split the free space and strand buttons in the middle. */
 .task-app__filter-calendar {
+  position: relative;
   margin-left: auto;
 }
 .task-app__filter-sync,
@@ -569,6 +570,50 @@
   background: var(--color-primary-bg);
   color: var(--color-on-primary-bg);
   border-radius: var(--hdk-radius-sm);
+}
+
+/* Count of scheduled work the BOARD can't show. Sits on the calendar button,
+   which is the only route to it. */
+.task-app__filter-calendar-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Off-screen but readable by assistive tech — carries the scheduled count as the
+   calendar button's description without altering its accessible name. */
+.task-app__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Failed-refresh pill. Takes over the calendar button's right-alignment so the
+   whole control cluster stays flush right when it appears. */
+.task-app__filter-stale {
+  margin-left: auto;
+  background: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+  border-color: var(--color-warning);
+}
+.task-app__filter-stale + .task-app__filter-calendar {
+  margin-left: 0;
 }
 
 /* Automation boards get their own row below the standard boards (visual split,

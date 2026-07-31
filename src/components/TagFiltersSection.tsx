@@ -10,6 +10,10 @@ import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/logger/client'
 import type { PendingTaskOperation } from '../hooks/useModalState'
+import type { SyncState } from '../hooks/useTasks'
+
+/** Ties the calendar button to its off-screen "N scheduled" description. */
+const SCHEDULED_COUNT_ID = 'task-app-scheduled-count'
 
 export interface TagFiltersSectionProps {
   tags: string[]
@@ -33,6 +37,14 @@ export interface TagFiltersSectionProps {
   currentView: 'board' | 'calendar'
   /** Toggle between board and calendar (the calendar button in this row). */
   onToggleCalendar: () => void
+  /**
+   * Tasks scheduled today or later. Badged onto the calendar button in board
+   * view, which otherwise gives no sign that the board holds scheduled work it
+   * isn't showing.
+   */
+  upcomingScheduledCount?: number
+  /** Whether the board on screen is server truth — drives the stale pill. */
+  syncState?: SyncState
 }
 
 export function TagFiltersSection({
@@ -52,9 +64,14 @@ export function TagFiltersSection({
   onShareBoard,
   canShareBoard,
   currentView,
-  onToggleCalendar
+  onToggleCalendar,
+  upcomingScheduledCount = 0,
+  syncState = 'synced'
 }: TagFiltersSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
+
+  // Only worth advertising from the board — the calendar already shows them.
+  const showScheduledCount = currentView === 'board' && upcomingScheduledCount > 0
 
   const handleSyncClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isSyncing) return
@@ -125,11 +142,37 @@ export function TagFiltersSection({
         </>
       )}
 
+      {/* Stale pill: the ONLY on-screen sign that a background refresh failed.
+          Doubles as the retry — the thing a person wants the moment they see it. */}
+      {syncState === 'stale' && (
+        <button
+          className="pill-btn task-app__filter-stale"
+          onClick={handleSyncClick}
+          disabled={isSyncing}
+          // Not "offline": a 500 reached the server just fine. All we can honestly
+          // claim is that the refresh didn't land.
+          title="The last refresh didn't land, so this may be out of date. Click to retry."
+        >
+          ⚠ Not synced
+        </button>
+      )}
+
       <button
         className={`sync-btn task-app__filter-calendar ${currentView === 'calendar' ? 'is-active' : ''}`}
         onClick={onToggleCalendar}
-        title={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
+        title={
+          currentView === 'calendar'
+            ? 'Back to board'
+            : upcomingScheduledCount > 0
+              ? `Calendar view — ${upcomingScheduledCount} scheduled`
+              : 'Calendar view'
+        }
+        // The accessible NAME stays fixed. The count rides in a description
+        // instead (announced after the name, and referenced from outside the
+        // button) so it doesn't rename the control every time a task is
+        // scheduled — the name is what tests and assistive tech address it by.
         aria-label={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
+        aria-describedby={showScheduledCount ? SCHEDULED_COUNT_ID : undefined}
         aria-pressed={currentView === 'calendar'}
       >
         <svg
@@ -148,7 +191,17 @@ export function TagFiltersSection({
           <line x1="8" y1="2" x2="8" y2="6"></line>
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
+        {showScheduledCount && (
+          <span className="task-app__filter-calendar-badge" aria-hidden="true">
+            {upcomingScheduledCount > 9 ? '9+' : upcomingScheduledCount}
+          </span>
+        )}
       </button>
+      {showScheduledCount && (
+        <span id={SCHEDULED_COUNT_ID} className="task-app__sr-only">
+          {upcomingScheduledCount} scheduled
+        </span>
+      )}
 
       {userType !== 'public' && (
         <button

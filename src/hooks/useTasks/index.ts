@@ -17,6 +17,14 @@ interface UseTasksProps {
   onSyncError?: SyncErrorReporter
 }
 
+/**
+ * How much to trust what's on screen.
+ * - `pending` — first server sync still in flight; the cache is painted.
+ * - `synced`  — the last sync landed, this is server truth.
+ * - `stale`   — the last sync failed; the cache (possibly empty) is all there is.
+ */
+export type SyncState = 'pending' | 'synced' | 'stale'
+
 export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
@@ -70,13 +78,21 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // reveal with content instead of gating on the slower network round-trip.
   const [boardsLoaded, setBoardsLoaded] = useState(false)
 
+  // Whether what's on screen is server truth. Everything painted before the first
+  // sync lands comes from localStorage, and a failed sync leaves it there — the
+  // UI must be able to say "this might be out of date" instead of presenting a
+  // stale (or empty) cache as fact. Public users never sync, so their local data
+  // IS the truth: they start, and stay, 'synced'.
+  const [syncState, setSyncState] = useState<SyncState>('syncFromApi' in api ? 'pending' : 'synced')
+
   // Force a fresh network sync, then repaint. Used by the refresh button and
   // pull-to-refresh. The mount effect below uses a cache-first variant so the
   // first paint doesn't wait on the network.
   async function initialLoad() {
     logger.info('[useTasks] initialLoad called')
     if ('syncFromApi' in api) {
-      await api.syncFromApi()
+      const ok = await api.syncFromApi()
+      setSyncState(ok ? 'synced' : 'stale')
     }
     await reload()
   }
@@ -121,6 +137,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     setTasks([])
     setPendingOperations(new Set())
     setBoards(null)
+    setSyncState('syncFromApi' in api ? 'pending' : 'synced')
     selectBoard('main')
     void (async () => {
       // Fast cache paint (localStorage for authed users). Reveal the shell even
@@ -135,10 +152,12 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       }
       if ('syncFromApi' in api) {
         try {
-          await api.syncFromApi() // network → refreshes the faithful cache
+          const ok = await api.syncFromApi() // network → refreshes the faithful cache
+          setSyncState(ok ? 'synced' : 'stale')
           await reload() // seamless repaint with server truth
         } catch (err) {
           logger.warn('[useTasks] background board sync failed', { error: String(err) })
+          setSyncState('stale')
         }
       }
     })()
@@ -524,6 +543,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     // Board state
     boards,
     boardsLoaded,
+    syncState,
     currentBoardId,
 
     // Board operations

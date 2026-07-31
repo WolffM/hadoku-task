@@ -31,6 +31,7 @@ import { AppHeader, ConnectedThemePicker } from '@wolffm/task-ui-components'
 import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
 import { getThemeIcon } from './themeConfig'
 import type { ThemeName, ViewType } from './types'
+import { loadViewPreference, saveViewPreference } from './viewPreference'
 import { BoardsSection } from '../components/BoardsSection'
 import { TagFiltersSection } from '../components/TagFiltersSection'
 import { TaskLayout } from '../components/TaskLayout'
@@ -41,6 +42,7 @@ import { CalendarDayView } from '../components/calendar/CalendarDayView'
 import { MarqueeOverlay } from '../components/MarqueeOverlay'
 import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
+import { countUpcomingScheduled } from '../domain/utils/calendar'
 import { boardTypeConfig } from '../domain/boardType'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
@@ -74,8 +76,15 @@ export default function App(props: TaskAppProps = {}) {
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [isLoaded, setIsLoaded] = useState(false)
-  const [currentView, setCurrentView] = useState<ViewType>('board')
+  // Restored from the last visit — a reset-to-board on every reload is what made
+  // scheduled work undiscoverable for anyone who lives in the calendar.
+  const [currentView, setCurrentView] = useState<ViewType>(loadViewPreference)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
+
+  const changeView = React.useCallback((next: ViewType) => {
+    setCurrentView(next)
+    saveViewPreference(next)
+  }, [])
 
   // Initialize effectiveSessionId immediately for public users to prevent storage churn
   const [effectiveSessionId, setEffectiveSessionId] = useState(() => {
@@ -159,6 +168,7 @@ export default function App(props: TaskAppProps = {}) {
     renameTask,
     boards,
     boardsLoaded,
+    syncState,
     currentBoardId,
     createBoard,
     deleteBoard,
@@ -268,6 +278,20 @@ export default function App(props: TaskAppProps = {}) {
   // activeTasks, not tasks: a tag whose only remaining tasks are completed has no
   // live work on it and shouldn't keep a lane alive for the next 24h.
   const allTags = Array.from(new Set([...persistedTags, ...getAllTags(activeTasks)]))
+
+  // What the board view is hiding: scheduled work from today forward. Counted on
+  // activeTasks to match what the calendar actually renders (completing something
+  // clears it from the schedule), so the badge can never promise a day that then
+  // turns up empty.
+  //
+  // NOT board.calendar.scheduled from the API (boardCalendar, handlers.ts): that
+  // counts every dated task ever, completed and past included — an integrator's
+  // reconciliation total, not "what's coming up". It is also absent in public
+  // mode, which has no server payload at all.
+  const upcomingScheduledCount = React.useMemo(
+    () => countUpcomingScheduled(activeTasks, new Date()),
+    [activeTasks]
+  )
 
   // Board-type descriptor (§5.3): the layout/ordering knobs come from here, not
   // scattered literals. Standard boards reproduce today's behaviour exactly.
@@ -452,7 +476,9 @@ export default function App(props: TaskAppProps = {}) {
             return !!b && (!b.access || b.access === 'owner')
           })()}
           currentView={currentView}
-          onToggleCalendar={() => setCurrentView(v => (v === 'board' ? 'calendar' : 'board'))}
+          onToggleCalendar={() => changeView(currentView === 'board' ? 'calendar' : 'board')}
+          upcomingScheduledCount={upcomingScheduledCount}
+          syncState={syncState}
         />
 
         {currentView === 'board' ? (
@@ -503,6 +529,7 @@ export default function App(props: TaskAppProps = {}) {
             onDeleteTask={deleteTask}
             onEditTag={handlers.handleEditTag}
             pendingOperations={pendingOperations}
+            syncState={syncState}
           />
         )}
 
