@@ -133,7 +133,9 @@ export default function App(props: TaskAppProps = {}) {
       if (reason === 'network') {
         friendly = `Server sync failed (${operation}) — check connection`
       } else if (detail?.message) {
-        friendly = detail.reverted ? `${detail.message} — move undone` : detail.message
+        // "undone", not "move undone": every optimistic write rolls back now, not
+        // just a drag, and a refused delete or rename is not a move.
+        friendly = detail.reverted ? `${detail.message} — undone` : detail.message
       } else {
         friendly = `Server rejected ${operation} — changes may not persist`
       }

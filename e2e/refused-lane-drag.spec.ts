@@ -135,7 +135,7 @@ test.describe('a refused lane drag', () => {
     // move was undone rather than hedging that it "may not persist".
     const toast = page.locator('.toast, [role="alert"]').filter({ hasText: 'agent-owned' })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
-    await expect(toast.first()).toContainText('move undone')
+    await expect(toast.first()).toContainText('undone')
 
     // The optimistic move is rolled back, so the UI agrees with the server again.
     await expect.poll(() => cardTags(page, 'Refused move'), { timeout: 5000 }).toEqual([])
