@@ -300,6 +300,10 @@ export const ReconcileBoardSchema = z
     boardId: z.string(),
     repo: z.string().nullable(),
     mode: z.string(),
+    ownerId: z
+      .string()
+      .optional()
+      .openapi({ description: 'Present on an allOwners sweep — whose board this is.' }),
     grants: z.array(
       z.object({
         kind: z.enum(['repo', 'automation-runner']),
@@ -319,7 +323,9 @@ export const ReconcileBoardSchema = z
 export const ReconcileSharesResponseSchema = z
   .object({
     dryRun: z.boolean(),
+    allOwners: z.boolean(),
     summary: z.object({
+      /** Boards CARRYING A LINK that were considered — not every board that exists. */
       boardsScanned: z.number(),
       boardsWithWork: z.number(),
       granted: z.number(),
@@ -339,7 +345,11 @@ export const ReconcileSharesInputSchema = z
     }),
     force: z.boolean().optional().openapi({
       description:
-        'Defaults to TRUE. Upgrades an existing lower-level share to `contributor`, reported as `escalated` with the level it replaced. Pass `false` to leave any existing row alone.'
+        "Defaults to TRUE. Upgrades an existing lower-level share to `contributor`, reported as `escalated` with the level it replaced. Pass `false` to leave any existing row alone. Silently does not apply to boards you do not own — another owner's deliberate level is theirs to change."
+    }),
+    allOwners: z.boolean().optional().openapi({
+      description:
+        "Sweep EVERY owner's boards, not just your own. Needs a service-tier key (403 otherwise). Safe to expose at that tier because the grantee is fully determined by the board's own repo, or is the fixed automation runner — a caller cannot choose who gets access, so this can only create the shares the system would have made automatically."
     })
   })
   .openapi('ReconcileSharesInput')

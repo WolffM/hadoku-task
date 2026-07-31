@@ -1018,7 +1018,7 @@ no share. This walks every board **you own** and repairs both kinds:
 - a linked `repo` → that repo's service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`)
 - `mode: automation` → the automation runner (`tenhands-service-key`)
 
-Body: `{ dryRun?, force? }`, **both defaulting to `true`**.
+Body: `{ dryRun?, force?, allOwners? }` — `dryRun` and `force` both default to `true`.
 
 - **`dryRun` defaults to TRUE.** A bulk grant across every board you own has to be asked for, so you
   must pass `false` to write anything. A dry run resolves and reports the full plan and touches
@@ -1040,8 +1040,21 @@ Either check failing is reported as `outcome: "skipped"` with a `reason`, and gr
 boards: [ { boardId, repo, mode, grants: [ { kind, name, outcome, previousLevel?, granteeUserId?,
 reason? } ] } ] }`. Boards with no link at all are omitted entirely.
 
-Owner-scoped by construction — it reads `boards WHERE user_id = <caller>`, so it can only ever
-grant on boards you own. Re-running is safe and idempotent.
+**`allOwners: true` sweeps every owner's boards, and needs a service-tier key** (403 below that).
+This is deliberately _not_ privileged information: the grantee is fully determined by the board's
+own `repo`, or is the fixed automation runner, so **a caller cannot choose who gets access**. The
+sweep can only create the shares the system would already have made automatically on the next
+write. Report rows carry `ownerId` in this mode.
+
+The one thing it must not do is let one owner's agent overwrite **another** owner's deliberate
+level, so **`force` silently does not apply to boards you don't own** — an existing `readonly` set
+by hand stays `readonly`, reported with
+`reason: "left alone: force does not apply to another owner's board"`. That board's owner can still
+escalate it by running the reconcile themselves. Creating a _missing_ share cross-owner is fine
+(it's deterministic); changing one someone set by hand is theirs to do.
+
+Without `allOwners` it reads `boards WHERE user_id = <caller>`, so the default is owner-scoped and
+any signed-in caller can run it on their own boards. Re-running is safe and idempotent either way.
 
 ```sh
 # See the plan (writes nothing):
@@ -1050,6 +1063,11 @@ curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
 # Apply it:
 curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
   -H "X-User-Key: $KEY" -H 'Content-Type: application/json' -d '{"dryRun":false}'
+
+# Every owner's boards (service-tier key required):
+curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
+  -H "X-User-Key: $SERVICE_KEY" -H 'Content-Type: application/json' \
+  -d '{"allOwners":true,"dryRun":false}'
 ```
 
 ### POST `/boards/:ref/deactivate-automation`

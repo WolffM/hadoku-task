@@ -151,6 +151,7 @@ interface Body {
     handle?: string
     // reconcile report rows reuse this field with a different shape
     boardId?: string
+    ownerId?: string
     grants?: Array<{
       kind: string
       name: string
@@ -178,6 +179,7 @@ interface Body {
   }
   repoServiceKeyShare?: { granted: boolean; name: string; reason?: string }
   dryRun?: boolean
+  allOwners?: boolean
   summary?: {
     boardsScanned: number
     boardsWithWork: number
@@ -209,6 +211,38 @@ async function req(
       headers: {
         'X-Edge-Auth': EDGE_SECRET,
         'X-Hadoku-Tier': 'friend',
+        'X-User-Key': user.key,
+        'X-User-Id': user.id,
+        'Content-Type': 'application/json'
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    },
+    env
+  )
+  let json: Body | null = null
+  try {
+    json = (await res.clone().json()) as Body
+  } catch {
+    /* non-json */
+  }
+  return { status: res.status, json }
+}
+
+/** Same as `req`, but stamps a specific tier — edge-router sets this in prod. */
+async function reqTier(
+  user: User,
+  tier: string,
+  method: string,
+  path: string,
+  body?: unknown
+): Promise<{ status: number; json: Body | null }> {
+  const res = await app.request(
+    'http://localhost' + path,
+    {
+      method,
+      headers: {
+        'X-Edge-Auth': EDGE_SECRET,
+        'X-Hadoku-Tier': tier,
         'X-User-Key': user.key,
         'X-User-Id': user.id,
         'Content-Type': 'application/json'
@@ -1185,6 +1219,102 @@ async function main() {
     'boards with no link at all are left out of the report entirely',
     !r.json?.boards?.some(b => b.boardId === 'plain-none'),
     JSON.stringify(r.json?.boards?.map(b => b.boardId))
+  )
+
+  // ---------------------------------------------------------------------
+  section('15. allOwners: a service-tier sweep across every owner (§7)')
+  // ---------------------------------------------------------------------
+  // A SECOND owner with a legacy link the caller can't otherwise touch.
+  const OTHER: User = { key: 'other-key', id: 'other-uid' }
+  d1.__raw
+    .prepare(
+      `INSERT INTO boards (user_id, id, handle, name, tags, mode, repo, created_at, updated_at)
+              VALUES (?, 'their-board', 'LEGACYTHEIRS', 'Theirs', '[]', 'standard', ?, ?, ?)`
+    )
+    .run(OTHER.id, 'WolffM/hadoku-aggregator', new Date().toISOString(), new Date().toISOString())
+
+  const theirShares = async () => {
+    const r = await req(OTHER, 'GET', '/task/api/boards/their-board/shares')
+    return r.json?.shares ?? []
+  }
+
+  // Own-scope can't see it — that's the whole reason allOwners exists.
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  check(
+    "an own-scope reconcile never touches another owner's board",
+    (await theirShares()).length === 0,
+    JSON.stringify(await theirShares())
+  )
+
+  // friend tier is refused the sweep.
+  r = await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { allOwners: true })
+  check(
+    'allOwners from a friend-tier caller → 403 FORBIDDEN',
+    r.status === 403 && r.json?.code === 'FORBIDDEN',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // A service-tier caller may sweep. RUNNER is registered tier:'service'.
+  r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
+    allOwners: true
+  })
+  check(
+    'allOwners from a service-tier caller → 200, and reports it',
+    r.status === 200 && r.json?.allOwners === true && r.json?.dryRun === true,
+    `status=${r.status} ${JSON.stringify(r.json?.summary)}`
+  )
+  const theirPlan = r.json?.boards?.find(b => b.boardId === 'their-board')
+  check(
+    "the sweep plans the other owner's board and names whose it is",
+    theirPlan?.ownerId === OTHER.id &&
+      theirPlan?.grants?.some(g => g.name === 'aggregator-service-key'),
+    JSON.stringify(theirPlan)
+  )
+  check('that dry run still wrote nothing', (await theirShares()).length === 0)
+
+  r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
+    allOwners: true,
+    dryRun: false
+  })
+  check(
+    "the committed sweep really shares the OTHER owner's board",
+    (await theirShares()).some(
+      s => s.name === 'aggregator-service-key' && s.level === 'contributor'
+    ),
+    JSON.stringify(await theirShares())
+  )
+
+  // The boundary that matters: a service caller must NOT overwrite a level another
+  // owner set by hand, even with force (the default).
+  await req(OTHER, 'POST', '/task/api/boards/their-board/shares', {
+    name: 'tenhands-service-key',
+    level: 'readonly'
+  })
+  d1.__raw
+    .prepare("UPDATE boards SET mode = 'automation', lanes = ? WHERE user_id = ? AND id = ?")
+    .run(JSON.stringify(LANES), OTHER.id, 'their-board')
+  r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
+    allOwners: true,
+    dryRun: false
+  })
+  check(
+    "force does NOT escalate another owner's deliberate readonly",
+    (await theirShares()).find(s => s.name === 'tenhands-service-key')?.level === 'readonly',
+    JSON.stringify(await theirShares())
+  )
+  check(
+    '…and the report says so rather than looking like a plain no-op',
+    r.json?.boards
+      ?.find(b => b.boardId === 'their-board')
+      ?.grants?.some(g => g.reason?.includes("another owner's board")),
+    JSON.stringify(r.json?.boards?.find(b => b.boardId === 'their-board'))
+  )
+  // But the owner themselves still can.
+  r = await req(OTHER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  check(
+    'the board OWNER can still escalate it themselves',
+    (await theirShares()).find(s => s.name === 'tenhands-service-key')?.level === 'contributor',
+    JSON.stringify(await theirShares())
   )
 
   console.log(`\n${pass} passed, ${fail} failed`)

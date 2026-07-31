@@ -233,9 +233,9 @@ export function createAutomationRoutes() {
     method: 'post',
     path: '/boards/reconcile-shares',
     tags: ['Sharing'],
-    summary: 'Backfill repo + automation shares across your own boards',
+    summary: 'Backfill repo + automation shares (yours, or every owner at service tier)',
     description:
-      'For every board you own: a linked `repo` grants that repo\'s service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`), and an automation board grants the automation runner. Both the repo (probed against GitHub) and the derived key name (resolved in the registry) must check out first. `dryRun` defaults to TRUE — pass `false` to write.',
+      'For every linked board: a `repo` grants that repo\'s service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`), and an automation board grants the automation runner. Both the repo (probed against GitHub) and the derived key name (resolved in the registry) must check out first. Defaults to your own boards; `allOwners: true` sweeps everyone\'s and needs a service-tier key. `dryRun` defaults to TRUE — pass `false` to write.',
     request: {
       body: { content: { 'application/json': { schema: ReconcileSharesInputSchema } } }
     },
@@ -243,22 +243,54 @@ export function createAutomationRoutes() {
       200: {
         description: 'What was reconciled (or would be)',
         content: { 'application/json': { schema: ReconcileSharesResponseSchema } }
+      },
+      403: {
+        description: 'allOwners without a service-tier key (FORBIDDEN)',
+        content: forbidden
       }
     }
   })
   app.openapi(reconcileRoute, (async (c: any) => {
     const auth = c.get('authContext')
-    const body = (c.req.valid('json') ?? {}) as { dryRun?: boolean; force?: boolean }
+    const body = (c.req.valid('json') ?? {}) as {
+      dryRun?: boolean
+      force?: boolean
+      allOwners?: boolean
+    }
     // Both default to TRUE: a bulk grant must be asked for explicitly (dryRun), and
     // an operator running a reconcile is asking for these links to exist (force).
     const dryRun = body.dryRun !== false
     const force = body.force !== false
 
-    const { results: boards } = await c.env.DB.prepare(
-      'SELECT id, repo, mode FROM boards WHERE user_id = ? ORDER BY id'
-    )
-      .bind(auth.sessionId)
-      .all()
+    // A cross-owner sweep needs SERVICE tier. It isn't privileged information —
+    // the grantee is fully determined by the board's own repo (or the fixed
+    // runner), so a caller cannot choose who gets access and this can only ever
+    // create the shares the system would have made automatically. What it must not
+    // do is let one owner's agent overwrite ANOTHER owner's deliberate level, so
+    // `force` is dropped on boards the caller doesn't own (see below).
+    const allOwners = body.allOwners === true
+    if (allOwners && !tierAtLeast(auth, 'service')) {
+      return c.json(
+        {
+          error: "Reconciling every owner's boards needs a service-tier key.",
+          code: 'FORBIDDEN'
+        },
+        403
+      )
+    }
+
+    // Only boards that actually carry a link are candidates, filtered in SQL so a
+    // full sweep doesn't drag every board in the system through the worker.
+    const linked = `(repo IS NOT NULL AND TRIM(repo) != '') OR mode = 'automation'`
+    const { results: boards } = allOwners
+      ? await c.env.DB.prepare(
+          `SELECT user_id, id, repo, mode FROM boards WHERE ${linked} ORDER BY user_id, id`
+        ).all()
+      : await c.env.DB.prepare(
+          `SELECT user_id, id, repo, mode FROM boards WHERE user_id = ? AND (${linked}) ORDER BY id`
+        )
+          .bind(auth.sessionId)
+          .all()
 
     // Resolve the registry ONCE for the whole run — per-name lookups each cost a
     // full `key:` scan, which over N boards is the difference between one pass and
@@ -281,8 +313,20 @@ export function createAutomationRoutes() {
     const report: Array<Record<string, unknown>> = []
     const tally = { granted: 0, escalated: 0, alreadyShared: 0, skipped: 0 }
 
-    for (const b of boards as Array<{ id: string; repo: string | null; mode: string }>) {
+    for (const b of boards as Array<{
+      user_id: string
+      id: string
+      repo: string | null
+      mode: string
+    }>) {
       const grants: Array<Record<string, unknown>> = []
+      // In a cross-owner sweep the owner is the ROW's, not the caller's.
+      const ownerId = b.user_id
+      const isOwn = ownerId === auth.sessionId
+      // Never let one caller overwrite ANOTHER owner's deliberate level. Creating a
+      // missing share is deterministic and safe; changing one someone set by hand
+      // is that owner's call, so force applies only to your own boards.
+      const effectiveForce = force && isOwn
 
       const boardRepo = b.repo?.trim() || null
       const targets: Array<{ kind: 'repo' | 'automation-runner'; name: string | null }> = []
@@ -328,7 +372,7 @@ export function createAutomationRoutes() {
           tally.skipped++
           continue
         }
-        if (row.userId === auth.sessionId) {
+        if (row.userId === ownerId) {
           grants.push({
             kind: t.kind,
             name: t.name,
@@ -348,24 +392,41 @@ export function createAutomationRoutes() {
           tally.granted++
           continue
         }
-        const res = await grantContributor(c.env, auth.sessionId, b.id, row.userId, force)
+        const res = await grantContributor(c.env, ownerId, b.id, row.userId, effectiveForce)
         grants.push({
           kind: t.kind,
           name: t.name,
           outcome: res.outcome,
           granteeUserId: row.userId,
-          ...(res.previousLevel && { previousLevel: res.previousLevel })
+          ...(res.previousLevel && { previousLevel: res.previousLevel }),
+          // Say so rather than letting it read as a plain no-op: force was asked
+          // for and deliberately not applied, because this board is someone else's.
+          ...(force &&
+            !isOwn &&
+            res.outcome === 'already_shared' &&
+            res.previousLevel !== 'contributor' && {
+              reason: "left alone: force does not apply to another owner's board"
+            })
         })
         if (res.outcome === 'granted') tally.granted++
         else if (res.outcome === 'escalated') tally.escalated++
         else tally.alreadyShared++
       }
 
-      if (grants.length) report.push({ boardId: b.id, repo: b.repo ?? null, mode: b.mode, grants })
+      if (grants.length) {
+        report.push({
+          boardId: b.id,
+          repo: b.repo ?? null,
+          mode: b.mode,
+          ...(allOwners && { ownerId }),
+          grants
+        })
+      }
     }
 
     logRequest('POST', '/task/api/boards/reconcile-shares', {
       dryRun,
+      allOwners,
       boards: boards.length,
       granted: tally.granted,
       escalated: tally.escalated,
@@ -373,6 +434,7 @@ export function createAutomationRoutes() {
     })
     return c.json({
       dryRun,
+      allOwners,
       summary: {
         boardsScanned: boards.length,
         boardsWithWork: report.length,
