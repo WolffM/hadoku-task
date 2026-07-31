@@ -140,12 +140,60 @@ async function readErrorDetail(r: globalThis.Response): Promise<SyncErrorDetail>
 }
 
 /**
+ * Undo an optimistic local write the server then refused. Returns true when the
+ * local state now matches the server's.
+ *
+ * Every one of these is a targeted inverse rather than a full `syncFromApi()`,
+ * deliberately: a resync is authoritative but it overwrites EVERY board, which
+ * would discard any other optimistic write still in flight. The narrow undo only
+ * touches what this call changed.
+ */
+type Undo = () => Promise<boolean> | boolean
+
+/**
+ * The refused-sync path, shared by `backgroundSync` and by `createTask`'s
+ * hand-rolled fetch (which reads the server's id and so can't use the generic
+ * helper). Reads the reason, undoes the write when the refusal is definitive, and
+ * reports both in one call.
+ */
+async function reportRefusal(
+  r: globalThis.Response,
+  operation: string,
+  context: Record<string, unknown>,
+  onError?: SyncErrorReporter,
+  undo?: Undo
+): Promise<void> {
+  const detail = await readErrorDetail(r)
+  logger.warn(`[api] ${operation}: Server sync returned error`, {
+    status: r.status,
+    code: detail.code,
+    ...context
+  })
+  if (undo && isDefinitiveRefusal(r.status)) {
+    try {
+      detail.reverted = (await undo()) === true
+      if (detail.reverted) {
+        logger.info(`[api] ${operation}: reverted the optimistic write`, context)
+      }
+    } catch (revertErr) {
+      // A failed undo leaves local ahead of the server — bad, but the reload the
+      // reporter would have triggered is exactly what a resync fixes, and dying
+      // here would also swallow the user-facing message.
+      logger.error(`[api] ${operation}: could not revert the optimistic write`, {
+        ...context,
+        error: formatError(revertErr)
+      })
+    }
+  }
+  onError?.(operation, 'http-error', detail)
+}
+
+/**
  * Fire-and-forget server sync with consistent logging.
  * Used for optimistic updates where localStorage is source of truth.
  *
- * `onRefused` runs for a definitive 4xx BEFORE `onError`, so a caller can undo
- * its optimistic write and have the reporter say so in the same breath. It must
- * not throw; a failed sync is already the unhappy path.
+ * `undo` runs for a definitive 4xx before the error is reported, so the local
+ * write is already rolled back by the time the user reads why.
  */
 function backgroundSync(
   url: string,
@@ -153,28 +201,12 @@ function backgroundSync(
   operation: string,
   context: Record<string, unknown>,
   onError?: SyncErrorReporter,
-  onRefused?: (detail: SyncErrorDetail) => Promise<boolean> | boolean
+  undo?: Undo
 ): void {
   fetch(url, options)
     .then(async r => {
       if (!r.ok) {
-        const detail = await readErrorDetail(r)
-        logger.warn(`[api] ${operation}: Server sync returned error`, {
-          status: r.status,
-          code: detail.code,
-          ...context
-        })
-        if (onRefused && isDefinitiveRefusal(r.status)) {
-          try {
-            detail.reverted = (await onRefused(detail)) === true
-          } catch (revertErr) {
-            logger.error(`[api] ${operation}: could not revert the optimistic write`, {
-              ...context,
-              error: formatError(revertErr)
-            })
-          }
-        }
-        onError?.(operation, 'http-error', detail)
+        await reportRefusal(r, operation, context, onError, undo)
       } else {
         logger.info(`[api] ${operation}: Server sync completed`, context)
       }
@@ -210,6 +242,26 @@ export function createApi(
   // Public mode: localStorage only, no server sync
   if (userType === 'public') {
     return localStorage
+  }
+
+  /**
+   * The locally-cached task, read before an optimistic write so a refusal can put
+   * it back. Never throws — an unreadable cache means no undo, which is strictly
+   * better than no write.
+   */
+  const snapshot = async (boardId: string, taskId: string): Promise<Task | null> => {
+    try {
+      const bf = await localStorage.getBoards()
+      const board = bf.boards.find(b => b.id === boardId)
+      return board?.tasks?.find(t => t.id === taskId) ?? null
+    } catch (err) {
+      logger.warn('[api] could not snapshot the task before writing', {
+        boardId,
+        taskId,
+        error: formatError(err)
+      })
+      return null
+    }
   }
 
   // All other modes: Optimistic localStorage with explicit API sync on initial load only
@@ -304,11 +356,19 @@ export function createApi(
       })
         .then(async r => {
           if (!r.ok) {
-            logger.warn('[api] createTask: Server sync returned error', {
-              status: r.status,
-              taskId: localTask.id
-            })
-            onSyncError?.('createTask', 'http-error')
+            // Refused create → remove the local task. The inverse is exact here:
+            // undoing something that should never have existed leaves nothing
+            // behind, unlike restoring a delete.
+            await reportRefusal(
+              r,
+              'createTask',
+              { taskId: localTask.id, boardId },
+              onSyncError,
+              async () => {
+                await localStorage.deleteTask(localTask.id, boardId, suppressBroadcast)
+                return true
+              }
+            )
             return
           }
           const serverResponse = (await r.json()) as { ok: boolean; id: string }
@@ -383,6 +443,19 @@ export function createApi(
         suppressBroadcast
       })
 
+      // The tag-edit path reaches the same lane enforcement a drag does, so a
+      // refusal is expected here too. Snapshot only the fields this patch touches
+      // — re-applying the whole task would clobber anything else changed since.
+      const prior = await snapshot(boardId, id)
+      const undoPatch = prior
+        ? (Object.fromEntries(
+            Object.keys(patch).map(k => [
+              k,
+              (prior as unknown as Record<string, unknown>)[k] ?? null
+            ])
+          ) as TaskPatch)
+        : null
+
       const result = await localStorage.patchTask(id, patch, boardId, suppressBroadcast)
       logger.info('[api] patchTask: Patched locally', { taskId: id, boardId })
 
@@ -395,7 +468,13 @@ export function createApi(
         },
         'patchTask',
         { taskId: id, boardId },
-        onSyncError
+        onSyncError,
+        undoPatch
+          ? async () => {
+              await localStorage.patchTask(id, undoPatch, boardId, suppressBroadcast)
+              return true
+            }
+          : undefined
       )
       return result
     },
@@ -415,14 +494,22 @@ export function createApi(
         },
         'completeTask',
         { taskId: id, boardId },
-        onSyncError
+        onSyncError,
+        // Completing TOGGLES (the handler reopens an already-completed task), so
+        // the inverse of a complete is another complete. Exact in both directions.
+        async () => {
+          await localStorage.completeTask(id, boardId)
+          return true
+        }
       )
       return result
     },
 
     async deleteTask(id: string, boardId: string = 'main', suppressBroadcast: boolean = false) {
       logger.info('[api] deleteTask: Starting', { taskId: id, boardId, suppressBroadcast })
-      await localStorage.deleteTask(id, boardId, suppressBroadcast)
+      // The local delete hands back what it removed, which is the only record of
+      // the task once it is gone.
+      const removed = await localStorage.deleteTask(id, boardId, suppressBroadcast)
       logger.info('[api] deleteTask: Deleted locally', { taskId: id, boardId })
 
       // boardId must be passed as query parameter per OpenAPI spec
@@ -435,7 +522,36 @@ export function createApi(
         },
         'deleteTask',
         { taskId: id, boardId },
-        onSyncError
+        onSyncError,
+        // The one undo that has to REBUILD rather than reverse. CreateTaskInput
+        // carries no `state`, so a completed task comes back Active and is toggled
+        // shut again; `closedAt` is re-stamped rather than preserved. Everything
+        // the board renders — id, title, notes, tag, schedule, metadata, createdAt
+        // — survives, and the alternative (leaving a task deleted that the server
+        // still holds) loses it entirely until the next full sync.
+        removed
+          ? async () => {
+              await localStorage.createTask(
+                {
+                  id: removed.id,
+                  title: removed.title,
+                  notes: removed.notes ?? null,
+                  tag: removed.tag ?? undefined,
+                  createdAt: removed.createdAt,
+                  date: removed.date ?? null,
+                  startTime: removed.startTime ?? null,
+                  endTime: removed.endTime ?? null,
+                  metadata: removed.metadata ?? null
+                },
+                boardId,
+                suppressBroadcast
+              )
+              if (removed.state === 'Completed') {
+                await localStorage.completeTask(id, boardId)
+              }
+              return true
+            }
+          : undefined
       )
     },
 

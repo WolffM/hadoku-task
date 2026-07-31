@@ -17,6 +17,12 @@ export default [
       '**/*.config.js',
       '**/*.config.ts',
       '**/scripts/**',
+      // Sibling git worktrees — scripts/new-worktree.mjs puts every one here.
+      // Without this, `pnpm run lint` walks into whatever other agents currently
+      // have checked out and reports THEIR files: 145 errors from one worktree,
+      // none of them tracked in this tree. A gate that fails on someone else's
+      // work-in-progress is one people stop reading. Mirrored in .prettierignore.
+      '.claude/worktrees/**',
       'themes/dev/editor.bundle.js'
     ]
   },

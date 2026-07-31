@@ -6,6 +6,17 @@ coverage
 .vscode
 .git
 *.log
+
+# Sibling git worktrees. `scripts/new-worktree.mjs` puts every one under
+# .claude/worktrees/, so without this `format:check` walks into whatever every
+# other agent currently has checked out and fails on THEIR in-progress files —
+# a gate that reports someone else's work as this tree's problem is a gate
+# people learn to ignore. eslint.config.js ignores the same path for the same
+# reason; keep the two in step.
+#
+# Scoped to worktrees/ rather than all of .claude, so the tracked
+# settings.local.json stays checked.
+.claude/worktrees
 pnpm-lock.yaml
 package-lock.json
 yarn.lock

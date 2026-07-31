@@ -382,17 +382,9 @@ export function createAutomationRoutes() {
           tally.skipped++
           continue
         }
-        if (dryRun) {
-          grants.push({
-            kind: t.kind,
-            name: t.name,
-            outcome: 'granted',
-            granteeUserId: row.userId
-          })
-          tally.granted++
-          continue
-        }
-        const res = await grantContributor(c.env, ownerId, b.id, row.userId, effectiveForce)
+        // A dry run goes through the SAME resolution, so the plan it prints is what
+        // the commit will actually do — it just stops short of the write.
+        const res = await grantContributor(c.env, ownerId, b.id, row.userId, effectiveForce, dryRun)
         grants.push({
           kind: t.kind,
           name: t.name,

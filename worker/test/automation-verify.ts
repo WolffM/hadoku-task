@@ -1214,6 +1214,26 @@ async function main() {
     JSON.stringify(await sharesOn('old-repo'))
   )
 
+  // THE DRY RUN'S PLAN MUST EQUAL WHAT THE COMMIT DOES. It used to report every
+  // target as `granted` without looking for an existing row, so a prod sweep
+  // previewed 13 grants and then made 7 — a preview you can't act on. Run the two
+  // back to back on a fully-reconciled state and demand identical tallies.
+  const previewSummary = (await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', {})).json
+    ?.summary
+  const commitSummary = (
+    await req(OWNER, 'POST', '/task/api/boards/reconcile-shares', { dryRun: false })
+  ).json?.summary
+  check(
+    'a dry run over already-reconciled boards reports already_shared, NOT granted',
+    previewSummary?.granted === 0 && (previewSummary?.alreadyShared ?? 0) > 0,
+    JSON.stringify(previewSummary)
+  )
+  check(
+    'and the dry run tally matches the commit tally exactly',
+    JSON.stringify(previewSummary) === JSON.stringify(commitSummary),
+    `preview=${JSON.stringify(previewSummary)} commit=${JSON.stringify(commitSummary)}`
+  )
+
   // A standard board with no repo is not "work" — it must not appear in the report.
   check(
     'boards with no link at all are left out of the report entirely',
