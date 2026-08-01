@@ -1,12 +1,13 @@
 /**
  * Lane-change `repository_dispatch` runtime verification (§5.2).
  *
- * When a HUMAN lands a task in a `user` lane on an automation board that records
- * a `repo`, the worker POSTs a `repository_dispatch` to that repo so the runner
- * starts in seconds instead of waiting for its cron. The predicate is deliberately
- * STRUCTURAL — "a person wrote into a lane people write, on a board wired to a
- * repo" — never "the lane is called approved", because which lanes are claimable
- * is the runner's policy and lives in the runner's repo.
+ * When a HUMAN writes a task on an automation board that records a `repo`, the
+ * worker POSTs a `repository_dispatch` to that repo so the runner starts in
+ * seconds instead of waiting for its cron. The predicate is deliberately
+ * STRUCTURAL — "a person wrote something, on a board wired to a repo" — never
+ * "the lane is called approved", because which lanes are claimable is the
+ * runner's policy and lives in the runner's repo. The one exclusion is an
+ * `agent` lane: those are the runner's own writes.
  *
  * Boots the REAL worker against a REAL SQLite D1 and drives it over HTTP + MCP
  * with global `fetch` STUBBED, so every assertion is about a dispatch the worker
@@ -17,7 +18,9 @@
  *     payload, to the board's repo — over the batch endpoint (what a real drag
  *     writes through), the single-task PATCH, create, and MCP;
  *   - a multi-card drag is ONE gesture, so ONE dispatch;
- *   - untagged Inbox writes fire nothing (the settle delay is the point);
+ *   - untagged Inbox writes DO fire — a fresh capture is the most common thing
+ *     a person does here, and it used to be the one action with no fast path;
+ *     the runner honours its own settle window by waiting before it sweeps;
  *   - `agent`-lane writes fire nothing (the pipeline's own writes);
  *   - a standard board, an automation board with no repo, and a write that
  *     doesn't touch the tag all fire nothing;
@@ -271,8 +274,16 @@ async function main() {
     expectedDigest: digest
   })
   check('activated → 200', r.status === 200, `status=${r.status}`)
-  await req('POST', '/task/api', { id: 'd1', title: 'A task', boardId: 'flow' })
+  // Drain BEFORE seeding a task. This used to assert after the create below,
+  // which only passed because an untagged create fired nothing — so it proved
+  // "activation plus a capture fire nothing" and would have gone green even if
+  // activation alone had fired. Now that a capture IS a signal (§5), the two
+  // have to be measured apart, and this is the one that means anything:
+  // configuring a board is not somebody writing a task.
   check('activation itself fires nothing', drained().length === 0)
+
+  await req('POST', '/task/api', { id: 'd1', title: 'A task', boardId: 'flow' })
+  drained() // the capture's own dispatch — asserted in §5, noise here.
 
   // ---------------------------------------------------------------------
   section('2. A drag into a user lane fires exactly one dispatch')
@@ -365,15 +376,28 @@ async function main() {
   check('one dispatch, not two', out.length === 1, `count=${out.length}`)
 
   // ---------------------------------------------------------------------
-  section('5. What must fire NOTHING')
+  section('5. A fresh capture is a signal')
   // ---------------------------------------------------------------------
+  // This is the case the whole change is about. Creating a task IS the common
+  // gesture, and excluding it to protect the runner's settle window left it as
+  // the only action with no fast path — it fell through to a GitHub `schedule`
+  // cron that delivers on a ~45-minute median. The settle window is the
+  // runner's policy and the runner now waits it out itself, so the worker's job
+  // here is simply to say a person touched something.
   await req('POST', '/task/api', { id: 'n1', title: 'Half-formed thought', boardId: 'flow' })
-  check('an untagged Inbox create fires nothing', drained().length === 0)
+  out = drained()
+  check('an untagged Inbox create fires one dispatch', out.length === 1, `count=${out.length}`)
+  const cap = (out[0]?.body.client_payload ?? {}) as Record<string, unknown>
+  check('and it names the created task', cap.taskId === 'n1', JSON.stringify(cap))
+  check('with an empty lane, since the Inbox has no tag', cap.lane === '', JSON.stringify(cap))
 
   await drag('flow', ['d1'], null)
-  check('clearing a tag back to the Inbox fires nothing', drained().length === 0)
+  check('clearing a tag back to the Inbox fires one dispatch', drained().length === 1)
   check('and it really cleared', storedTag('d1') === '', `tag="${storedTag('d1')}"`)
 
+  // ---------------------------------------------------------------------
+  section('6. What must STILL fire nothing')
+  // ---------------------------------------------------------------------
   await req('PATCH', '/task/api/d2', { board: 'flow', title: 'Renamed only' })
   check('a write that does not touch the tag fires nothing', drained().length === 0)
 
@@ -399,7 +423,7 @@ async function main() {
   check('and fires nothing', drained().length === 0)
 
   // ---------------------------------------------------------------------
-  section('6. A standard board, and an automation board with no repo')
+  section('7. A standard board, and an automation board with no repo')
   // ---------------------------------------------------------------------
   await req('POST', '/task/api/boards', { id: 'plain', name: 'Plain' })
   await req('POST', '/task/api', { id: 's1', title: 'Freeform', boardId: 'plain', tag: 'anything' })
@@ -428,7 +452,7 @@ async function main() {
   check('tag persisted', storedTag('nr1') === 'approved', `tag="${storedTag('nr1')}"`)
 
   // ---------------------------------------------------------------------
-  section('7. A failed dispatch NEVER fails the human’s write')
+  section('8. A failed dispatch NEVER fails the human’s write')
   // ---------------------------------------------------------------------
   // 404 is the shape of an under-scoped PAT: GitHub answers 404, not 403, when a
   // token can't see a private repo, so this is the realistic failure.
@@ -460,7 +484,7 @@ async function main() {
   drained()
 
   // ---------------------------------------------------------------------
-  section('8. With no token binding at all, nothing is attempted')
+  section('9. With no token binding at all, nothing is attempted')
   // ---------------------------------------------------------------------
   delete env.GITHUB_READ_TOKEN
   r = await drag('flow', ['d4'], 'approved')

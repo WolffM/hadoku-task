@@ -108,27 +108,39 @@ export function assertHumanLaneWrite(lanes: Lane[], tag: string | null | undefin
 }
 
 /**
- * The wake signal: does this write land the task in a lane a HUMAN owns?
+ * The wake signal: was this write made by a HUMAN?
  *
  * Deliberately STRUCTURAL, not semantic. Which lanes are claimable is the
  * runner's business (`agent.ts`: the worker performs no orchestration), and it
  * changes on the runner's schedule — so this never names `approved` or any other
- * lane. It answers only "did a person move something into a lane people write?".
- * The runner decides whether that is actionable, and gains a lane without a
- * change landing here.
+ * lane. It answers only "did a person touch something on this board?". The
+ * runner decides whether that is actionable, and gains a lane without a change
+ * landing here.
  *
- * Two exclusions do the real filtering:
+ * ONE exclusion does the filtering:
  *
- *   - **A cleared tag (→ Inbox) is not a signal.** assertHumanLaneWrite permits
- *     it, but the Inbox is where half-formed thoughts land, and a runner that
- *     waits for edits to settle before planning one would be defeated by a push
- *     on every save. The backstop sweep picks a settled task up anyway.
  *   - **An `agent` lane is not a signal.** Those are the pipeline's own writes;
  *     it does not need waking to hear from itself.
+ *
+ * A CLEARED TAG (→ Inbox) IS A SIGNAL, and used not to be. The reasoning for
+ * excluding it was sound and the conclusion was still wrong: the runner waits
+ * for edits to settle before planning an Inbox task, so pushing on every save
+ * looked like it would defeat the settle window. What it actually did was leave
+ * *creating a task* — the single most common thing a person does on a board —
+ * as the one action with no fast path at all. Those captures fell through to a
+ * backstop cron that GitHub throttles to a ~45-minute median, so the most
+ * ordinary action had by far the worst latency.
+ *
+ * The settle window is the runner's policy and is now enforced where it
+ * belongs: the runner sleeps out the remainder before it sweeps
+ * (`taskauto.yml`, "Let a fresh capture settle"). That keeps this predicate
+ * free of runner policy, which is the property the whole file is built around.
+ * Over-firing is cheap here — an idle sweep is ~18 seconds — and under-firing
+ * is what cost 45 minutes.
  */
 export function isUserLaneWrite(lanes: Lane[], tag: string | null | undefined): boolean {
   const t = (tag ?? '').trim()
-  if (t === '') return false
+  if (t === '') return true
   return laneByTag(lanes).get(t)?.editableBy === 'user'
 }
 
