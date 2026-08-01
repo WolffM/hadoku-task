@@ -1,0 +1,129 @@
+/* Modal styles for @wolffm/task-ui-components.
+ *
+ * The component shipped without these, which is why it had one adopter: every
+ * other app hand-rolled a dialog rather than reproduce the stylesheet. Import
+ * alongside the other component CSS:
+ *   import '@wolffm/task-ui-components/modal.css'
+ *
+ * Tokens only, so it themes with everything else across all 18 themes.
+ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-overlay);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8vh 16px;
+  z-index: 50;
+}
+
+.modal-card {
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  padding: 20px;
+  width: min(440px, 92vw);
+  max-height: 84vh;
+  overflow: auto;
+  box-shadow: var(--hdk-shadow-lg);
+}
+
+/* The card takes focus on open so Escape works before anything inside is
+ * focused; it must not draw a focus ring for that. Controls keep theirs. */
+.modal-card:focus {
+  outline: none;
+}
+
+/* A dialog that needs room — a review step, a side-by-side. */
+.modal-card--wide {
+  width: min(680px, 94vw);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: var(--hdk-text-lg);
+  font-weight: 600;
+}
+
+.modal-card label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
+  margin: 12px 0 5px;
+}
+
+.modal-input {
+  width: 100%;
+  font: inherit;
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text);
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  padding: 9px 11px;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hdk-space-sm);
+  margin-top: 18px;
+}
+
+.modal-button {
+  font: inherit;
+  font-size: var(--hdk-text-sm);
+  padding: 8px 14px;
+  border-radius: var(--hdk-radius);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.modal-button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.modal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-button--primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* The destructive button carries its accent on the border, not the label.
+ * `--color-danger` as bare text on the card misses AA in 11 of 18 themes —
+ * the same unvalidated accent-over-surface pair that check-usage now gates. */
+.modal-button--danger {
+  border-color: var(--color-danger);
+  color: var(--color-text);
+}
+
+/* Filled on hover, so the label takes `on-danger` — NOT `on-primary`, which is
+ * derived from primary's luminance and misses AA on a danger fill in 9 of 18
+ * themes. `on-danger` over `danger` is the pair check-contrast guarantees. */
+.modal-button--danger:hover:not(:disabled) {
+  background-color: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-on-danger);
+}

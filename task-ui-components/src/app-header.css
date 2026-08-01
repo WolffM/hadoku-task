@@ -18,9 +18,15 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Body text, NOT --color-primary. `primary` is a fill colour: sanctioned only
+ * under --color-on-primary. As bare text on --color-bg it clears the 3:1
+ * large-text floor in just 12 of 18 themes (izakaya-light 1.92, nature-light
+ * 2.15, ocean-light 2.28, lavender-light 2.53, pink-light 2.56,
+ * strawberry-light 2.61). --color-text clears it everywhere at 8.87–17.58.
+ * The brand accent lives in the border-bottom instead. */
 .app-header__title {
   margin: 0;
-  color: var(--color-primary);
+  color: var(--color-text);
   font-size: var(--hdk-text-lg);
   font-weight: 700;
   line-height: 1.2;
@@ -250,7 +256,11 @@
   color: var(--color-text-tertiary);
 }
 
+/* Accent on the rule, legible text in the message. `danger` as bare text on
+ * the popout card misses AA in 11 of 18 themes. */
 .settings-popout__error {
   font-size: 0.75rem;
-  color: var(--color-danger);
+  color: var(--color-text);
+  border-left: 3px solid var(--color-danger);
+  padding-left: 8px;
 }

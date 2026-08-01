@@ -507,11 +507,20 @@ Generic modal dialog with keyboard shortcuts and customizable actions.
 
 **Features:**
 
-- Keyboard shortcuts (Enter to confirm, Escape to close)
-- Optional input field with auto-focus
-- Configurable buttons (show/hide cancel/confirm)
+- `role="dialog"` + `aria-modal` + `aria-labelledby` wired to the title, and
+  focus moved into the dialog on open
+- Escape closes from anywhere in the dialog, with or without an input
+- Enter confirms from the optional input field
+- Configurable buttons (show/hide cancel/confirm), or replace the whole action
+  row via `actions` for flows the fixed pair can't express
 - Danger variant for destructive actions
 - Custom class names for styling
+
+**Styles ship with the package** — import them once:
+
+```ts
+import '@wolffm/task-ui-components/modal.css'
+```
 
 **Usage:**
 
@@ -563,6 +572,12 @@ function MyComponent() {
 | \`showConfirm\`      | \`boolean\`                     | ❌       | Show confirm button (default: true)    |
 | \`className\`        | \`string\`                      | ❌       | Custom CSS class                       |
 | \`overlayClassName\` | \`string\`                      | ❌       | Custom overlay CSS class               |
+| \`actions\`          | \`ReactNode\`                   | ❌       | Replaces the whole action row          |
+| \`lead\`             | \`ReactNode\`                   | ❌       | Rendered left of the title             |
+
+`actions` is checked against `undefined`, not with `??` — passing `null`
+renders **no** action row (a progress step, a viewer), while omitting it keeps
+the default Cancel/Confirm pair.
 
 ---
 

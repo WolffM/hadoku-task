@@ -151,6 +151,13 @@ jobs:
             echo "✓ task-ui-components/src/context-menu.css exists"
           fi
 
+          if [ ! -f "task-ui-components/src/modal.css" ]; then
+            echo "❌ ERROR: task-ui-components/src/modal.css is missing!"
+            missing_files=1
+          else
+            echo "✓ task-ui-components/src/modal.css exists"
+          fi
+
           # Check themes CSS file
           if [ ! -f "themes/src/style.css" ]; then
             echo "❌ ERROR: themes/src/style.css is missing!"

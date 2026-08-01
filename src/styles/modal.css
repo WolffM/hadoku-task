@@ -46,10 +46,13 @@
   margin-top: 0;
 }
 
+/* Accent on the rule, legible text in the message — matching .settings-error. */
 .modal-error {
-  color: var(--color-danger);
+  color: var(--color-text);
   font-size: var(--hdk-text-sm);
   margin-top: var(--hdk-space-md);
+  border-left: 3px solid var(--color-danger);
+  padding-left: var(--hdk-space-sm);
 }
 
 /* Modal Input */
@@ -331,8 +334,9 @@
   cursor: pointer;
   color: var(--color-text-secondary);
 }
+/* Pinned reads as full-strength text against the resting secondary. */
 .edit-boards__pin.is-pinned {
-  color: var(--color-warning);
+  color: var(--color-text);
 }
 
 .edit-boards__name {
@@ -569,13 +573,17 @@
   flex: none;
   border: none;
   background: transparent;
-  color: var(--color-danger);
+  color: var(--color-text);
   cursor: pointer;
   padding: var(--hdk-space-xs);
   line-height: 1;
 }
+/* The tint needs its paired text token. Inheriting the base rule's colour put
+ * `danger` on `danger-bg` here — the tint anti-pattern, one rule removed from
+ * where check-usage could see it. */
 .share-panel__revoke:hover {
   background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
   border-radius: var(--hdk-radius-sm);
 }
 

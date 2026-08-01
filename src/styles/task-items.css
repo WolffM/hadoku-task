@@ -167,7 +167,7 @@
    The body itself lives in the popout (notes-popout.css) — the card only
    advertises that notes exist and whether they're waiting on you. */
 .task-app__notes-toggle.has-notes {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 /* An unanswered plan is the one state a reviewer scanning a lane needs to spot

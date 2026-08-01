@@ -47,6 +47,28 @@ bg-<f>-bg    (faint tint)  →  text-on-<f>-bg     ← NOT text-<f>
 Using `text-<f>` on `bg-<f>-bg` fails WCAG AA in 62 of 90 theme/family
 combinations. That pairing is why badges kept turning up unreadable.
 
+### The same rule, one step further out
+
+A fill colour is not a text colour **on any surface**, not just on its own tint.
+`text-<f>` with no background at all lands on the page or a card, and that pair
+was validated by nothing: `check-contrast` checks `on-<f>` over `<f>`, so
+accent-over-surface passed by never being looked at.
+
+```
+text-<f>  with no background   →  lands on bg / bg-card   ← unvalidated, usually fails
+```
+
+Measured against `--color-bg`: `--color-primary` clears the 3:1 large-text floor
+in only 12 of 18 themes (izakaya-light 1.92, nature-light 2.15, ocean-light 2.28,
+lavender-light 2.53, pink-light 2.56, strawberry-light 2.61). `--color-danger`
+misses AA on a card in 11 of 18. This shipped in `.app-header__title` and reached
+every consuming app at once.
+
+Text on a surface is `text-text` (8.87–17.58 across all 18) or
+`text-text-secondary`. To carry an accent, either pair `bg-<f>-bg` with
+`text-on-<f>-bg`, or move the accent off the glyph entirely — a border, rule, or
+underline is unconstrained by text contrast. `check-usage` gates this.
+
 ---
 
 ## Complete token list

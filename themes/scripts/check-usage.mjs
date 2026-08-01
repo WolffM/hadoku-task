@@ -2,7 +2,7 @@
 /**
  * Gate: theme tokens must exist, and must be paired correctly.
  *
- * Five checks, because each covers a blind spot the others miss:
+ * Six checks, because each covers a blind spot the others miss:
  *
  *   1. `var(--color-*)` in stylesheets  — catches renamed/typo'd tokens.
  *   2. Tailwind colour classes in markup — stylelint only lints .css and never
@@ -17,13 +17,17 @@
  *   5. The tint anti-pattern            — `--color-<f>` as text on
  *      `--color-<f>-bg`. Both tokens exist, so nothing else flags it, but the
  *      pair fails AA in 62 of 90 theme/family combinations.
+ *   6. The accent-as-text anti-pattern  — `--color-<f>` as bare text on a page
+ *      or card surface. check-contrast validates `on-<f>` over `<f>` and never
+ *      looks at accent-over-surface, so the pair passes by being unexamined.
+ *      This is how `.app-header__title` shipped 1.92:1 in izakaya-light.
  *
  *   node themes/scripts/check-usage.mjs [paths...]   (default: cwd)
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, extname, relative } from 'node:path'
-import { parseThemes, allTokenNames, THEMES } from './lib/parse-themes.mjs'
+import { parseThemes, allTokenNames, THEMES, FAMILIES } from './lib/parse-themes.mjs'
 
 const roots = process.argv.slice(2).filter(a => !a.startsWith('--'))
 const targets = roots.length ? roots : [process.cwd()]
@@ -144,18 +148,56 @@ for (const target of targets) {
       // This is the exact pair that failed AA in 62 of 90 theme/family
       // combinations, and no amount of token checking catches it — both
       // tokens exist, they just must not be used together.
+      //
+      // (5) The accent-as-text anti-pattern: `<f>` or `<f>-dark` as bare text,
+      // with no filled background of its own family in the rule. Whatever
+      // surface it lands on is then the page or a card, and THAT pair is
+      // validated by nothing: check-contrast only checks `on-<f>` over `<f>`,
+      // so every accent-over-surface combination passes by never being looked
+      // at. It is not a sanctioned pair — a fill colour is legible only under
+      // `--color-on-<f>`. `.app-header__title` shipped `--color-primary` this
+      // way and missed the 3:1 large-text floor in 6 of 18 themes, in all nine
+      // consuming apps at once. Text on a surface is `--color-text`; to carry
+      // an accent, pair `--color-<f>-bg` with `--color-on-<f>-bg`.
       const stripped = text.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+      const lineAt = offset => stripped.slice(0, offset).split('\n').length
       for (const rule of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         const body = rule[2]
+        const bodyStart = rule.index + rule[1].length + 1
         const bg = body.match(/background(?:-color)?\s*:\s*var\(--color-([a-z]+)-bg\)/)
         const fg = body.match(/(?<!-)color\s*:\s*var\(--color-([a-z]+)\)\s*;/)
         if (bg && fg && bg[1] === fg[1]) {
-          const line = stripped.slice(0, rule.index).split('\n').length
           add(
             rel,
-            line,
+            lineAt(bodyStart + fg.index),
             'tint-pair',
             `--color-${fg[1]} on --color-${bg[1]}-bg fails AA in most themes; use --color-on-${fg[1]}-bg`
+          )
+          continue
+        }
+
+        // Only *bare* accent text is the anti-pattern. A rule that paints its
+        // own background has chosen its backdrop explicitly — whether that is
+        // `var(--color-primary)` (a filled button: check-contrast's `on-<f>`
+        // over `<f>` pair) or a hardcoded gradient (the theme-picker's fixed
+        // light/dark pill previews). Neither lands on the page surface, which
+        // is the pair this check exists to catch. `none`/`transparent` do not
+        // count: they are exactly how a button declares it has no backdrop and
+        // inherits whatever is behind it.
+        const declaredBg = body.match(/background(?:-color)?\s*:\s*([^;]+)/)
+        const paintsOwnBg =
+          declaredBg && !/^\s*(none|transparent|inherit|initial|unset)\s*$/i.test(declaredBg[1])
+        if (paintsOwnBg) continue
+        for (const m of body.matchAll(/(?<!-)color\s*:\s*var\(--color-([a-z]+)(-dark)?\)\s*;/g)) {
+          const family = m[1]
+          if (!FAMILIES.includes(family)) continue
+          add(
+            rel,
+            lineAt(bodyStart + m.index),
+            'accent-as-text',
+            `--color-${family}${m[2] ?? ''} is a fill colour, not a text colour; ` +
+              `on a page or card surface it fails contrast in most themes. ` +
+              `Use --color-text, or --color-${family}-bg + --color-on-${family}-bg.`
           )
         }
       }
@@ -168,7 +210,8 @@ const BY_KIND = {
   'unknown-class': 'Tailwind classes with no matching token',
   fallback: 'var() fallbacks (banned — they hide broken tokens)',
   'layered-import': 'style.css imported into a cascade layer',
-  'tint-pair': 'Family colour used as text on its own tint (fails AA in most themes)'
+  'tint-pair': 'Family colour used as text on its own tint (fails AA in most themes)',
+  'accent-as-text': 'Fill colour used as bare text on a page/card surface (unvalidated pair)'
 }
 
 if (!problems.length) {

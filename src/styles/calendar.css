@@ -38,7 +38,7 @@
 }
 
 .calendar-nav-btn:hover {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .calendar-header__date {
@@ -47,10 +47,12 @@
   gap: var(--hdk-space-md);
 }
 
+/* Neutral text; --today below carries the accent as a tint behind it, which is
+ * the sanctioned way to colour a label (bg-<f>-bg + a readable text token). */
 .calendar-date-label {
   font-size: var(--hdk-text-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .calendar-date-label--today {
@@ -67,7 +69,7 @@
   padding: var(--hdk-space-xs) var(--hdk-space-md);
   font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -203,7 +205,7 @@
 }
 
 .calendar-agenda__tags {
-  color: var(--color-primary);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -250,8 +252,11 @@
   word-break: break-word;
 }
 
+/* Underlined rather than accent-coloured: colour alone can't carry link-ness
+ * when the accent isn't legible on the card in every theme. */
 .calendar-agenda__detail dd a {
-  color: var(--color-primary);
+  color: var(--color-text);
+  text-decoration: underline;
 }
 
 .calendar-agenda__meta-empty {
@@ -320,11 +325,13 @@
   padding: var(--hdk-space-xs) 0;
 }
 
+/* The adjacent .calendar-agenda__now-line already carries the danger accent as
+ * a rule and dot, so the label itself does not need to spend contrast on it. */
 .calendar-agenda__now-label {
   text-align: right;
   font-size: var(--hdk-text-xs);
   font-weight: var(--font-weight-bold);
-  color: var(--color-danger);
+  color: var(--color-text);
 }
 
 .calendar-agenda__now-line {
@@ -372,7 +379,7 @@
   padding: var(--hdk-space-xs) var(--hdk-space-md);
   font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);
 }

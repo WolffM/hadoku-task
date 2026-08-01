@@ -76,7 +76,7 @@
 
 .task-app__tag-header {
   font-size: var(--hdk-text-sm);
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 /* Remaining tasks section */

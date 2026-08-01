@@ -195,10 +195,14 @@
   }
 }
 
+/* The accent moves to the rule on the left; the message itself stays legible
+ * text. `danger` as bare text misses AA on a card in 11 of 18 themes. */
 .settings-error {
-  color: var(--color-danger);
+  color: var(--color-text);
   font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-semibold);
+  border-left: 3px solid var(--color-danger);
+  padding-left: var(--hdk-space-sm);
 }
 
 .settings-option {
@@ -360,7 +364,7 @@
 
 .sync-btn:focus {
   outline: none;
-  color: var(--color-primary);
+  color: var(--color-text);
   opacity: 1;
 }
 
@@ -685,8 +689,11 @@
   background-color: var(--color-bg-hover);
 }
 
+/* At rest this is bare text on the menu surface, so it takes the text token;
+ * the destructive cue is the :hover tint below, which is already the
+ * sanctioned danger-bg + on-danger-bg pair. */
 .context-menu-item.context-menu-item--danger {
-  color: var(--color-danger);
+  color: var(--color-text);
 }
 
 .context-menu-item.context-menu-item--danger:hover {
