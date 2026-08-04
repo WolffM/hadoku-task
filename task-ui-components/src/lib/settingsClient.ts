@@ -98,7 +98,14 @@ export async function setDisplayName(name: string): Promise<string | null> {
   }
 }
 
-export type Tier = 'admin' | 'friend' | 'service' | 'public'
+/**
+ * The hadoku tier ladder, LOW to HIGH: `public < friend < service < wife < admin`.
+ * Mirrors TIER_RANK in @wolffm/worker-utils, which this browser bundle cannot
+ * import (it would pull hono into the client). A tier missing here does not
+ * error — it fails the union and, worse, drops out of every `Record<Tier, …>`
+ * lookup, so the caller renders as if unrecognised. Keep it complete.
+ */
+export type Tier = 'public' | 'friend' | 'service' | 'wife' | 'admin'
 
 export interface Identity {
   userType: Tier

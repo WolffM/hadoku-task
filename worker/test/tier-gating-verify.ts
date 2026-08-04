@@ -2,7 +2,7 @@
  * Tier-hierarchy runtime verification.
  *
  * Boots the REAL worker (createTaskHandler) in-process and asserts that access
- * is decided by RANK — public < friend < service < admin — not by matching a
+ * is decided by RANK — public < friend < service < wife < admin — not by matching a
  * tier name. Every tier at or above a route's minimum must get in.
  *
  * This is the property that used to break. The gates here were hand-rolled
@@ -115,7 +115,9 @@ async function main() {
     (await asTier('admin', 'GET', ADMIN_ROUTE)) !== 403,
     `status=${await asTier('admin', 'GET', ADMIN_ROUTE)}`
   )
-  for (const tier of ['service', 'friend', 'public']) {
+  // `wife` belongs in this list precisely because it outranks service: the
+  // reflex is to assume the highest non-admin tier reaches an admin route.
+  for (const tier of ['wife', 'service', 'friend', 'public']) {
     const status = await asTier(tier, 'GET', ADMIN_ROUTE)
     check(`${tier} is refused by an admin route`, status === 403, `status=${status}`)
   }
@@ -125,7 +127,7 @@ async function main() {
   // ---------------------------------------------------------------------
   // The regression this guards: `service` outranks `friend`, so a service
   // caller must NOT be turned away from a friend-tier route.
-  for (const tier of ['friend', 'service', 'admin']) {
+  for (const tier of ['friend', 'service', 'wife', 'admin']) {
     const res = await app.request(
       'http://localhost' + FRIEND_ROUTE,
       {

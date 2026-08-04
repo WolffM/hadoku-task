@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { createApi, type SyncErrorReporter } from '../../api/client'
+import { createApi, type SyncErrorReporter, type TaskUserTier } from '../../api/client'
 import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
@@ -52,7 +52,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // ✅ FIX: Recreate API when userType or sessionId changes
   const api = useMemo(
     () =>
-      createApi(userType as 'public' | 'friend' | 'admin', sessionId || 'public', {
+      createApi(userType as TaskUserTier, sessionId || 'public', {
         onSyncError: handleSyncError
       }),
     [userType, sessionId, handleSyncError]

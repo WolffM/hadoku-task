@@ -57,8 +57,9 @@ function reportErr(err: unknown) {
 
 const TIER_LABEL: Record<Tier, string> = {
   admin: 'Administrator',
-  friend: 'Friend',
+  wife: 'Wife',
   service: 'Service',
+  friend: 'Friend',
   public: 'Guest'
 }
 
@@ -94,7 +95,12 @@ export function ConnectedSettings({
   const [levelSaving, setLevelSaving] = useState(false)
   const contentLoaded = useRef(false)
 
-  const showContentPill = userType === 'admin' || userType === 'friend' || userType === 'service'
+  // Everyone who is SIGNED IN, expressed as "not public" rather than as a list
+  // of tiers. The list form (`=== 'admin' || === 'friend' || === 'service'`)
+  // is an exact-match allowlist: it silently excluded `wife` the moment that
+  // tier existed, which is the failure the rank model is meant to prevent.
+  // There is no rank helper in this bundle, but "above public" needs none.
+  const showContentPill = userType !== 'public'
 
   // Keep local identity in sync when the host controls it via props.
   useEffect(() => {

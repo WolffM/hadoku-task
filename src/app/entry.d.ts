@@ -9,7 +9,13 @@ export type { ThemeName }
 // Props interface for configuration from parent app
 export interface TaskAppProps {
   basename?: string
-  userType?: 'public' | 'friend' | 'admin'
+  /**
+   * Caller tier, as the host resolved it. `service` and `wife` were both
+   * missing from this union — drift, not a narrower contract: edge-router
+   * stamps either one and the host passes it straight through, so the app was
+   * type-lying about values it already received at runtime.
+   */
+  userType?: 'public' | 'friend' | 'service' | 'wife' | 'admin'
   sessionId?: string
   displayName?: string
   theme?: ThemeName | string

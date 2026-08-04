@@ -27,7 +27,8 @@ import {
   recordIncident,
   blacklistSession,
   THROTTLE_THRESHOLDS,
-  type IncidentRecord
+  type IncidentRecord,
+  type ThrottledTier
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
 import { DomainErrorSchema } from './schemas-agent'
@@ -37,7 +38,16 @@ import type { AppContext, TaskAuthExtension } from './types'
  * Tiers subject to rate limiting. See the throttle middleware below for why
  * this is a set rather than a minimum tier — it is not monotonic in rank.
  */
-const THROTTLED_TIERS: ReadonlySet<string> = new Set(['public', 'service'])
+const THROTTLED_TIERS: ReadonlySet<string> = new Set<ThrottledTier>(['public', 'service'])
+
+/**
+ * Type guard, so the throttle branch narrows `userType` to what `checkThrottle`
+ * accepts. Called inline in the early-return condition below — assigning it to
+ * a boolean first would not narrow.
+ */
+function isThrottledTier(tier: string): tier is ThrottledTier {
+  return THROTTLED_TIERS.has(tier)
+}
 
 // Import route modules
 import { createSessionRoutes } from './routes/session'
@@ -167,8 +177,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
       '/task/api/validate-key',
       '/task/api/session/handshake'
     ]
-    const throttledTier = THROTTLED_TIERS.has(userType)
-    if (skipThrottlePaths.includes(c.req.path) || !throttledTier) {
+    if (skipThrottlePaths.includes(c.req.path) || !isThrottledTier(userType)) {
       return next()
     }
 

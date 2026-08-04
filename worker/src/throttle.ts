@@ -26,6 +26,17 @@ export interface ThrottleLimits {
   public: ThrottleConfig
 }
 
+/**
+ * The tiers the throttle middleware actually calls `checkThrottle` with —
+ * anonymous and machine callers. Human tiers (friend, wife, admin) are exempt,
+ * so they never reach it and deliberately have no ceiling here.
+ *
+ * Naming the subset rather than widening to the full tier union is what keeps
+ * `limits[userType]` total: a tier added to the ladder cannot silently index a
+ * missing config and hand back `undefined` limits.
+ */
+export type ThrottledTier = 'public' | 'service'
+
 export interface IncidentRecord {
   timestamp: string
   type: 'throttle_violation' | 'blacklist' | 'suspicious_pattern'
@@ -91,7 +102,7 @@ export const THROTTLE_THRESHOLDS = {
 export async function checkThrottle(
   kv: KVNamespace,
   sessionId: string,
-  userType: 'admin' | 'friend' | 'service' | 'public',
+  userType: ThrottledTier,
   limits: ThrottleLimits = DEFAULT_THROTTLE_LIMITS
 ): Promise<{ allowed: boolean; state: ThrottleState; reason?: string }> {
   const now = Date.now()

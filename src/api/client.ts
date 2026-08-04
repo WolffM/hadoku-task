@@ -231,8 +231,17 @@ export interface CreateApiOptions {
   onSyncError?: SyncErrorReporter
 }
 
+/**
+ * Tiers this client distinguishes. Only `public` branches (localStorage-only);
+ * every other tier syncs to the server, which is why the union can be widened
+ * without touching a single call site. Kept complete anyway — a tier missing
+ * here becomes a cast at every caller, which is how `service` went unlisted
+ * for months while being passed in at runtime.
+ */
+export type TaskUserTier = 'public' | 'friend' | 'service' | 'wife' | 'admin'
+
 export function createApi(
-  userType: 'public' | 'friend' | 'admin' = 'public',
+  userType: TaskUserTier = 'public',
   sessionId: string = 'public',
   apiOptions: CreateApiOptions = {}
 ) {
