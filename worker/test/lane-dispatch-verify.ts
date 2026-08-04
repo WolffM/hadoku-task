@@ -15,8 +15,11 @@
  *
  * Proves:
  *   - a drag into a user lane fires exactly one dispatch, with the documented
- *     payload, to the board's repo — over the batch endpoint (what a real drag
- *     writes through), the single-task PATCH, create, and MCP;
+ *     payload, to the RUNNER's repo (`AUTOMATION_RUNNER_REPO`) and never to the
+ *     board's own — over the batch endpoint (what a real drag writes through),
+ *     the single-task PATCH, create, and MCP;
+ *   - with the binding unset it falls back to the board's repo, and with the
+ *     binding malformed it fires nothing rather than falling back silently;
  *   - a multi-card drag is ONE gesture, so ONE dispatch;
  *   - untagged Inbox writes DO fire — a fresh capture is the most common thing
  *     a person does here, and it used to be the one action with no fast path;
@@ -37,8 +40,18 @@ import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
 const MIGRATION = join(process.cwd(), 'worker/migrations')
-const REPO = 'WolffM/tenhands'
-const DISPATCH_URL = `https://api.github.com/repos/${REPO}/dispatches`
+// THE BOARD'S REPO AND THE RUNNER'S REPO MUST DIFFER HERE. They used to be one
+// constant, and that single fact is why this harness stayed green through three
+// days of a completely dead fast path: with one `REPO` playing both roles,
+// "dispatched to the board's repo" and "dispatched to the runner's repo" are
+// the same assertion — and the code was doing the first while production needed
+// the second. Every board except the runner's own has two different repos, so
+// this test must too, or it cannot see the bug by construction.
+const BOARD_REPO = 'WolffM/hadoku-pygmalion' // where the board's WORK happens
+const RUNNER_REPO = 'WolffM/tenhands' // where taskauto.yml actually lives
+const DISPATCH_URL = `https://api.github.com/repos/${RUNNER_REPO}/dispatches`
+/** Where a dispatch must NEVER go while AUTOMATION_RUNNER_REPO is set. */
+const BOARD_REPO_URL = `https://api.github.com/repos/${BOARD_REPO}/dispatches`
 
 const USER = { key: 'owner-key', id: 'owner-uid' }
 
@@ -136,7 +149,8 @@ const env = {
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',
-  GITHUB_READ_TOKEN: 'test-github-pat'
+  GITHUB_READ_TOKEN: 'test-github-pat',
+  AUTOMATION_RUNNER_REPO: RUNNER_REPO
 } as Record<string, unknown>
 
 const app = createTaskHandler()
@@ -257,7 +271,7 @@ async function main() {
   section('1. An automation board wired to a repo')
   // ---------------------------------------------------------------------
   await req('POST', '/task/api/boards', { id: 'flow', name: 'Flow' })
-  let r = await req('POST', '/task/api/boards/flow/repo', { repo: REPO })
+  let r = await req('POST', '/task/api/boards/flow/repo', { repo: BOARD_REPO })
   check('repo saved → 200', r.status === 200, `status=${r.status}`)
 
   const dry = await req('POST', '/task/api/boards/flow/activate-automation', {
@@ -294,7 +308,12 @@ async function main() {
   let out = drained()
   check('exactly one dispatch', out.length === 1, `count=${out.length}`)
   const one = out[0]
-  check('to the board’s repo', one?.url === DISPATCH_URL, one?.url)
+  check('to the RUNNER’s repo, not the board’s', one?.url === DISPATCH_URL, one?.url)
+  check(
+    'and specifically NOT to the board’s own repo',
+    one?.url !== BOARD_REPO_URL,
+    `went to ${one?.url}`
+  )
   check('as a POST', one?.method === 'POST', one?.method)
   check(
     'event_type is exactly "taskauto"',
@@ -315,6 +334,10 @@ async function main() {
   check('payload.boardId is the owner-scoped slug', p.boardId === 'flow', JSON.stringify(p))
   check('payload.taskId names what moved', p.taskId === 'd1', JSON.stringify(p))
   check('payload.lane is the destination lane', p.lane === 'approved', JSON.stringify(p))
+  // The payload names the BOARD's repo even though the dispatch went to the
+  // runner's. That is the point: the run's log has to be able to say which board
+  // woke it without the reader knowing the two can differ.
+  check('payload.repo is the BOARD’s repo', p.repo === BOARD_REPO, JSON.stringify(p))
   check(
     'payload.handle is present',
     typeof p.handle === 'string' && p.handle !== '',
@@ -507,6 +530,43 @@ async function main() {
     out[0]?.headers.authorization === 'Bearer test-github-pat',
     JSON.stringify(out[0]?.headers.authorization)
   )
+
+  // ---------------------------------------------------------------------
+  section('10. Where the dispatch is AIMED')
+  // ---------------------------------------------------------------------
+  // The regression this section exists for: the wake signal has to reach the
+  // repo that HOSTS the runner's workflow. Aiming it at the board's own repo
+  // reaches a repo with nothing listening for `taskauto`, and GitHub discards
+  // it with no error anywhere — a fast path that is dead and looks healthy.
+
+  // Unset ⇒ the historical behaviour, which is correct only when the board's
+  // repo IS the runner's. Kept working so an install that never sets the
+  // binding is not silently broken by this change.
+  delete env.AUTOMATION_RUNNER_REPO
+  await drag('flow', ['d4'], 'approved')
+  out = drained()
+  check('binding unset → one dispatch still', out.length === 1, `count=${out.length}`)
+  check(
+    'and it falls back to the board’s own repo',
+    out[0]?.url === BOARD_REPO_URL,
+    out[0]?.url
+  )
+
+  // A typo'd binding must NOT quietly fall back — that is the same silent-death
+  // failure mode wearing a different hat.
+  env.AUTOMATION_RUNNER_REPO = 'not-a-repo-shape'
+  await drag('flow', ['d4'], 'replan')
+  check('a malformed binding fires nothing at all', drained().length === 0)
+  check(
+    'and the human’s write still succeeded',
+    storedTag('d4') === 'replan',
+    `tag="${storedTag('d4')}"`
+  )
+
+  env.AUTOMATION_RUNNER_REPO = RUNNER_REPO
+  await drag('flow', ['d4'], 'approved')
+  out = drained()
+  check('restored → aimed at the runner again', out[0]?.url === DISPATCH_URL, out[0]?.url)
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)

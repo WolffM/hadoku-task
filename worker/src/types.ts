@@ -40,6 +40,15 @@ export interface Env {
   // Each URL is fetched server-side for the lane contracts the activation UI
   // offers. https only. Absent ⇒ no preset picker, paste-JSON still works.
   AUTOMATION_PRESET_SOURCES?: string
+  // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
+  // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
+  // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board
+  // shared with it, so for every board except the runner's own, those two are
+  // different repos. Dispatching to the board's repo instead reaches a repo with
+  // nothing listening for `taskauto`, and GitHub drops it without a trace.
+  // Read `runnerRepo(env)`, never this field. Absent ⇒ falls back to the board's
+  // `repo`, which is correct only when the board's repo IS the runner's.
+  AUTOMATION_RUNNER_REPO?: string
 }
 
 /**

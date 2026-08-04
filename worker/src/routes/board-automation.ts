@@ -167,6 +167,37 @@ export function githubToken(env: { GITHUB_READ_TOKEN?: string }): string | undef
   return env.GITHUB_READ_TOKEN
 }
 
+/**
+ * WHERE the wake signal goes — the repo hosting the RUNNER's workflow, which is
+ * not the repo the board does its work in.
+ *
+ * That distinction cost three days of a silently dead fast path. The dispatch
+ * used to go to `cfg.repo`, on the reasonable-sounding assumption that a board
+ * wired to a repo gets woken by something in that repo. It doesn't: TenHands
+ * runs ONE workflow — `.github/workflows/taskauto.yml` in `WolffM/tenhands` —
+ * that sweeps every board shared with it. So a task written on the `pygmalion`
+ * board dispatched to `WolffM/hadoku-pygmalion`, which has no workflow listening
+ * for `taskauto`, and GitHub discarded it silently. Six of seven boards had no
+ * fast path at all; the seventh worked only because it IS the tenhands board,
+ * where `cfg.repo` happens to equal the runner's repo — which is also why the
+ * verification harness never caught it (it hard-coded one repo for both roles).
+ *
+ * An install-level binding rather than per-board config, because that matches
+ * the fact: boards are DISCOVERED by the runner — anything shared with its key —
+ * so one runner drives all of them. Same reasoning as AUTOMATION_RUNNER_KEY_NAME
+ * beside it in `Env`: the runner's identity and location are install facts that
+ * change without a code deploy. If a second runner ever drives a subset of
+ * boards, THAT is when this earns a per-board field; adding one now would be a
+ * lie with a default.
+ *
+ * Unset ⇒ fall back to `cfg.repo`, the historical behaviour, which is correct
+ * whenever the board's repo IS the runner's repo.
+ */
+export function runnerRepo(env: { AUTOMATION_RUNNER_REPO?: string }): string | undefined {
+  const r = (env.AUTOMATION_RUNNER_REPO ?? '').trim()
+  return r === '' ? undefined : r
+}
+
 /** What a hook site supplies to {@link notifyLaneWrite}. */
 export interface LaneWriteNotice {
   db: D1Like
@@ -183,6 +214,13 @@ export interface LaneWriteNotice {
   mode: string
   /** The dispatch PAT. Absent ⇒ skip silently; an unconfigured install must not fail writes. */
   token: string | undefined
+  /**
+   * The runner's repo, from {@link runnerRepo}. Absent ⇒ dispatch to the board's
+   * own `cfg.repo`. Supplied by the caller alongside `token` so both GitHub
+   * facts arrive from the same place — the env — rather than one being read
+   * here and the other passed in.
+   */
+  runnerRepo?: string | undefined
 }
 
 /**
@@ -241,14 +279,35 @@ async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<voi
   }
   if (!cfg || cfg.mode !== 'automation') return
 
-  const repo = (cfg.repo ?? '').trim()
-  if (!repo || !REPO_SHAPE.test(repo)) return
+  // Still gated on the BOARD having a repo, even though we may not dispatch
+  // there: a board with no repo has no work target, so waking the runner for it
+  // would be pointless. This keeps the "a board with no repo costs nothing"
+  // property the config read is positioned for.
+  const boardRepo = (cfg.repo ?? '').trim()
+  if (!boardRepo || !REPO_SHAPE.test(boardRepo)) return
 
-  await postDispatch(repo, token, {
+  // The runner's repo when configured, the board's own only as a fallback.
+  // See {@link runnerRepo} for why these are different things.
+  const target = n.runnerRepo ?? boardRepo
+  if (!REPO_SHAPE.test(target)) {
+    // Misconfigured binding. Say so loudly rather than falling back to the
+    // board repo: a silent fallback here is exactly the failure that hid a dead
+    // fast path for three days, and it would hide it again.
+    logger.warn('lane-change dispatch: AUTOMATION_RUNNER_REPO is not owner/name', {
+      value: target
+    })
+    return
+  }
+
+  await postDispatch(target, token, {
     boardId: n.boardId,
     handle: cfg.handle,
     taskId: n.taskId,
     lane: (n.laneTag ?? '').trim(),
+    // The board's OWN repo, which is not necessarily where this dispatch went.
+    // Carried so a run's log answers "which board woke me" without the reader
+    // having to know that the two can differ — the thing nobody knew before.
+    repo: boardRepo,
     at: nowIso()
   })
 }
