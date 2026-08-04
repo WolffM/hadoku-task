@@ -153,12 +153,17 @@ const page = await ctx.newPage()
 
 console.log('Authenticating…')
 const who = await authenticate(page)
-if (who.userType !== 'friend') {
-  console.error(`❌ authentication failed (userType=${who.userType}). Set TASK_KEY to a valid friend key.`)
+// "signed in", not "exactly friend". The profiler only needs a session that
+// syncs to the server; any tier above public does that. Testing for equality
+// meant a service/wife/admin key aborted the run with "authentication failed",
+// which is the flagged-tier bug in its most confusing form — the credential
+// works everywhere else.
+if (who.userType === 'public') {
+  console.error(`❌ authentication failed (userType=${who.userType}). Set TASK_KEY to a valid key.`)
   await browser.close()
   process.exit(1)
 }
-console.log(`  authed as friend (session ${who.sessionId.slice(0, 8)}…)\n`)
+console.log(`  authed as ${who.userType} (session ${who.sessionId.slice(0, 8)}…)\n`)
 
 const cdp = await ctx.newCDPSession(page)
 const runs = []
