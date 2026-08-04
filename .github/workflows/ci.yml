@@ -1,0 +1,203 @@
+name: CI
+
+# The app had NO pull-request CI at all. `kate-plugin.yml` was the only
+# workflow on `pull_request`, and it is scoped to `plugins/kate/**` — a Kate
+# editor plugin that is not even part of what this repo deploys. So every PR
+# touching src/, worker/, themes/ or task-ui-components/ landed with nothing
+# verifying it, which is why PR #72 sat open for two days with zero checks.
+#
+# The repo already had `typecheck`, `lint`, `lint:css` and `test:worker` in
+# package.json. This runs them.
+#
+# DELIBERATELY UNFILTERED on pull_request. A required check that never runs
+# never reports, and auto-merge waits only on required checks — so a `paths:`
+# filter is a gate that is ABSENT on some PRs (they merge with nothing
+# verified) and FATAL on others (they wait forever). Scoping lives in the jobs'
+# scope steps below, which always report. See tenhands
+# docs/hadoku-task-automation/pr-gate-invariant.md.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: [self-hosted, hadoku-builder]
+    timeout-minutes: 15
+    steps:
+      # fetch-depth: 0 — the scope step diffs against the PR base, and a shallow
+      # clone has no common ancestor to diff with.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Does this diff need typechecking?
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed="$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}")"
+          echo "changed files:"; echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qE '^(src/|worker/|themes/|task-ui-components/|scripts/|e2e/|.*tsconfig.*\.json|package\.json|pnpm-lock\.yaml|vite\.config\.ts|tsup\.worker\.config\.ts|\.github/workflows/ci\.yml)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "→ no TypeScript sources touched; nothing for tsc to check."
+          fi
+
+      # corepack, not pnpm/action-setup — see publish.yml: the self-installer
+      # shares one directory across every runner instance on this host and dies
+      # with `ENOENT ... uv_cwd` when concurrent jobs race it. The version is
+      # pinned by the `packageManager` field in package.json.
+      - name: Enable pnpm
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
+
+      - uses: actions/setup-node@v6
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@wolffm'
+
+      # @wolffm/logger, prefs-client and worker-utils resolve from GH Packages
+      # (task-ui-components and themes are workspace:* and resolve locally), so
+      # the install needs auth. HADOKU_SITE_TOKEN is what publish.yml uses.
+      - name: Install
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
+      # `typecheck` covers the workspace packages, the app (tsc --noEmit) and
+      # the worker. The workspace packages must be BUILT first — the app's tsc
+      # resolves @wolffm/task-ui-components and @wolffm/themes through their
+      # published `types` entry points, which only exist after a build.
+      - name: Build workspace packages
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm run build:packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
+      - name: Typecheck
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm run typecheck
+
+  lint:
+    name: lint
+    runs-on: [self-hosted, hadoku-builder]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Does this diff need linting?
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed="$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}")"
+          echo "changed files:"; echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qE '^(src/|worker/|themes/|task-ui-components/|scripts/|e2e/|eslint\.config\.js|\.stylelintrc\.cjs|package\.json|pnpm-lock\.yaml|\.github/workflows/ci\.yml)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "→ no lintable sources touched; nothing for eslint or stylelint to read."
+          fi
+
+      - name: Enable pnpm
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
+
+      - uses: actions/setup-node@v6
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@wolffm'
+
+      - name: Install
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
+      - name: ESLint
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm run lint
+
+      # stylelint over src/**/*.css plus the themes package's own validator.
+      - name: Stylelint
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm run lint:css
+
+  worker-tests:
+    name: worker-tests
+    runs-on: [self-hosted, hadoku-builder]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Does this diff need the worker harnesses?
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed="$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}")"
+          echo "changed files:"; echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qE '^(worker/|scripts/run-worker-verify\.mjs|package\.json|pnpm-lock\.yaml|tsup\.worker\.config\.ts|\.github/workflows/ci\.yml)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "→ no worker sources touched; nothing for the verify harnesses to boot."
+          fi
+
+      - name: Enable pnpm
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
+
+      - uses: actions/setup-node@v6
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@wolffm'
+
+      - name: Install
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
+      # Boots the REAL worker (createTaskHandler) in-process against an
+      # in-memory KV. Each harness runs in its own child process and asserts by
+      # exit code.
+      - name: Worker verify harnesses
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm run test:worker
