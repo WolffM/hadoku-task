@@ -42,7 +42,7 @@ jobs:
             gettext
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure
         working-directory: plugins/kate
