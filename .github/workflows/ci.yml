@@ -56,6 +56,19 @@ jobs:
             echo "→ no TypeScript sources touched; nothing for tsc to check."
           fi
 
+      # setup-node BEFORE corepack, matching publish.yml — the order is
+      # load-bearing. `corepack enable` symlinks its shims next to the active
+      # node, and without setup-node that is the host's /usr/bin, where the
+      # runner user cannot write: `EACCES: permission denied, symlink
+      # '../lib/node_modules/corepack/dist/yarn.js' -> '/usr/bin/yarn'`.
+      # setup-node puts node in the writable tool cache first.
+      - uses: actions/setup-node@v6
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@wolffm'
+
       # corepack, not pnpm/action-setup — see publish.yml: the self-installer
       # shares one directory across every runner instance on this host and dies
       # with `ENOENT ... uv_cwd` when concurrent jobs race it. The version is
@@ -65,13 +78,6 @@ jobs:
         run: |
           corepack enable
           corepack prepare pnpm@11.5.0 --activate
-
-      - uses: actions/setup-node@v6
-        if: steps.scope.outputs.run == 'true'
-        with:
-          node-version: '22'
-          registry-url: https://npm.pkg.github.com
-          scope: '@wolffm'
 
       # @wolffm/logger, prefs-client and worker-utils resolve from GH Packages
       # (task-ui-components and themes are workspace:* and resolve locally), so
@@ -122,18 +128,28 @@ jobs:
             echo "→ no lintable sources touched; nothing for eslint or stylelint to read."
           fi
 
-      - name: Enable pnpm
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-
+      # setup-node BEFORE corepack, matching publish.yml — the order is
+      # load-bearing. `corepack enable` symlinks its shims next to the active
+      # node, and without setup-node that is the host's /usr/bin, where the
+      # runner user cannot write: `EACCES: permission denied, symlink
+      # '../lib/node_modules/corepack/dist/yarn.js' -> '/usr/bin/yarn'`.
+      # setup-node puts node in the writable tool cache first.
       - uses: actions/setup-node@v6
         if: steps.scope.outputs.run == 'true'
         with:
           node-version: '22'
           registry-url: https://npm.pkg.github.com
           scope: '@wolffm'
+
+      # corepack, not pnpm/action-setup — see publish.yml: the self-installer
+      # shares one directory across every runner instance on this host and dies
+      # with `ENOENT ... uv_cwd` when concurrent jobs race it. The version is
+      # pinned by the `packageManager` field in package.json.
+      - name: Enable pnpm
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
 
       - name: Install
         if: steps.scope.outputs.run == 'true'
@@ -176,18 +192,28 @@ jobs:
             echo "→ no worker sources touched; nothing for the verify harnesses to boot."
           fi
 
-      - name: Enable pnpm
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-
+      # setup-node BEFORE corepack, matching publish.yml — the order is
+      # load-bearing. `corepack enable` symlinks its shims next to the active
+      # node, and without setup-node that is the host's /usr/bin, where the
+      # runner user cannot write: `EACCES: permission denied, symlink
+      # '../lib/node_modules/corepack/dist/yarn.js' -> '/usr/bin/yarn'`.
+      # setup-node puts node in the writable tool cache first.
       - uses: actions/setup-node@v6
         if: steps.scope.outputs.run == 'true'
         with:
           node-version: '22'
           registry-url: https://npm.pkg.github.com
           scope: '@wolffm'
+
+      # corepack, not pnpm/action-setup — see publish.yml: the self-installer
+      # shares one directory across every runner instance on this host and dies
+      # with `ENOENT ... uv_cwd` when concurrent jobs race it. The version is
+      # pinned by the `packageManager` field in package.json.
+      - name: Enable pnpm
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
 
       - name: Install
         if: steps.scope.outputs.run == 'true'
