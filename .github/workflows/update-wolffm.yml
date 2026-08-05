@@ -191,7 +191,7 @@ jobs:
           OUTCOME: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RUN_ID: ${{ github.run_id }}
-          HADOKU_SERVICE_KEY: ${{ secrets.KEY_SERVICE_HADOKU_TASK }}
+          HADOKU_SERVICE_KEY: ${{ secrets.KEY_SERVICE_TASK }}
         run: |
           case "$OUTCOME" in
             success) status=succeeded ;;
@@ -202,7 +202,7 @@ jobs:
           esac
 
           if [ -z "$HADOKU_SERVICE_KEY" ]; then
-            echo "::warning::KEY_SERVICE_HADOKU_TASK is unset — outcome not reported"
+            echo "::warning::KEY_SERVICE_TASK is unset — outcome not reported"
             exit 0
           fi
 
