@@ -70,6 +70,17 @@ export default defineConfig({
       }
     }
   },
+  resolve: {
+    // HadokuThemeContext is DEFINED in task-ui-components and PROVIDED by
+    // themes' <HadokuThemeRoot>. If the bundle ever carries two copies of
+    // task-ui-components (themes resolving a published tarball while the app
+    // resolves the workspace source), provider and consumer hold different
+    // React contexts and every mount dies with "No <HadokuThemeRoot> above
+    // this component" — that took prod down on 2026-08-05 (4.0.0–4.1.1).
+    // Manifest hygiene (workspace:* in themes/package.json) is the real fix;
+    // this guarantees one instance even if that regresses.
+    dedupe: ['@wolffm/task-ui-components', '@wolffm/themes']
+  },
   build: {
     lib: {
       entry: 'src/app/entry.tsx',

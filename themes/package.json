@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -73,7 +73,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.16",
-    "@wolffm/task-ui-components": "^3.1.0",
+    "@wolffm/task-ui-components": "workspace:*",
     "typescript": "^5.6.3"
   }
 }
