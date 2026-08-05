@@ -58,27 +58,12 @@ body {
     box-shadow 0.3s ease;
 }
 
-/* Light themes explicitly use light color scheme */
-.task-app-container[data-theme='light'],
-.task-app-container[data-theme='strawberry-light'],
-.task-app-container[data-theme='ocean-light'],
-.task-app-container[data-theme='cyberpunk-light'],
-.task-app-container[data-theme='coffee-light'],
-.task-app-container[data-theme='lavender-light'],
-.task-app-container[data-theme='pink-light'] {
-  color-scheme: light;
-}
-
-/* Dark themes explicitly use dark color scheme - tell Dark Reader not to invert */
-.task-app-container[data-theme='dark'],
-.task-app-container[data-theme='strawberry-dark'],
-.task-app-container[data-theme='ocean-dark'],
-.task-app-container[data-theme='cyberpunk-dark'],
-.task-app-container[data-theme='coffee-dark'],
-.task-app-container[data-theme='lavender-dark'],
-.task-app-container[data-theme='pink-dark'] {
-  color-scheme: dark only; /* "only" tells Dark Reader to leave it alone */
-}
+/* No color-scheme enumeration here: @wolffm/themes >= 3.0.14 declares
+   color-scheme on every theme block, so which theme names are light and which
+   are dark is the package's business, not ours. The hand-written list this
+   replaced had gone stale — izakaya was missing, so those two themes got no
+   color-scheme at all and their scrollbars and form controls rendered for the
+   wrong mode. */
 
 /* Additional Dark Reader hints - tell it our dark themes are already dark */
 .task-app-container[data-dark-theme='true'] {
