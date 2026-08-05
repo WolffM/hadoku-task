@@ -66,9 +66,19 @@
   inherits: false;
 }
 
+/* Every theme block below declares `color-scheme`, so a consumer never has to
+   know which theme names are light and which are dark. Six child apps used to
+   each carry a hand-written list of theme names for exactly this, and every
+   one of them had gone stale — all six were missing izakaya, hadoku-task was
+   missing nature too, so those themes got no color-scheme at all and their
+   scrollbars and form controls rendered for the wrong mode. `dark only` on the
+   dark themes is the Dark Reader hint: it says the surface is already dark,
+   do not re-invert it. */
+
 /* ===== LIGHT THEME (Default) ===== */
 :root,
 [data-theme='light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
@@ -215,6 +225,7 @@
 
 /* ===== DARK THEME ===== */
 [data-theme='dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #d8b4fe;
   --color-primary-dark: #c084fc;
@@ -282,6 +293,7 @@
 
 /* ===== STRAWBERRY LIGHT THEME ===== */
 [data-theme='strawberry-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff477a;
@@ -349,6 +361,7 @@
 
 /* ===== STRAWBERRY DARK THEME ===== */
 [data-theme='strawberry-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #ff6b9d;
   --color-primary-dark: #ff8fb3;
@@ -416,6 +429,7 @@
 
 /* ===== OCEAN LIGHT THEME ===== */
 [data-theme='ocean-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
@@ -483,6 +497,7 @@
 
 /* ===== OCEAN DARK THEME ===== */
 [data-theme='ocean-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
@@ -550,6 +565,7 @@
 
 /* ===== CYBERPUNK LIGHT THEME ===== */
 [data-theme='cyberpunk-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #ff006e;
   --color-primary-dark: #ea005e;
@@ -617,6 +633,7 @@
 
 /* ===== CYBERPUNK DARK THEME ===== */
 [data-theme='cyberpunk-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #22d3ee;
   --color-primary-dark: #06b6d4;
@@ -722,6 +739,7 @@
 
 /* ===== COFFEE LIGHT THEME ===== */
 [data-theme='coffee-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #ea580c;
   --color-primary-dark: #d54300;
@@ -789,6 +807,7 @@
 
 /* ===== COFFEE DARK THEME ===== */
 [data-theme='coffee-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #ea580c;
   --color-primary-dark: #d54300;
@@ -856,6 +875,7 @@
 
 /* ===== LAVENDER LIGHT THEME ===== */
 [data-theme='lavender-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #c084fc;
   --color-primary-dark: #a855f7;
@@ -923,6 +943,7 @@
 
 /* ===== LAVENDER DARK THEME ===== */
 [data-theme='lavender-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #c084fc;
   --color-primary-dark: #d8b4fe;
@@ -990,6 +1011,7 @@
 
 /* ===== PINK LIGHT THEME ===== */
 [data-theme='pink-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #ff69b4;
   --color-primary-dark: #ff1493;
@@ -1057,6 +1079,7 @@
 
 /* ===== PINK DARK THEME ===== */
 [data-theme='pink-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #ff10f0;
   --color-primary-dark: #ff69b4;
@@ -1124,6 +1147,7 @@
 
 /* ===== NATURE LIGHT THEME ===== */
 [data-theme='nature-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #6bbe4e;
   --color-primary-dark: #5aa942;
@@ -1191,6 +1215,7 @@
 
 /* ===== NATURE DARK THEME ===== */
 [data-theme='nature-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #5faf4b;
   --color-primary-dark: #6bbe4e;
@@ -1260,6 +1285,7 @@
 /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C themes */
 
 [data-theme='izakaya-light'] {
+  color-scheme: light;
   /* Primary */
   --color-primary: #41baae;
   --color-primary-dark: #369c92;
@@ -1328,6 +1354,7 @@
 /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C dark themes */
 
 [data-theme='izakaya-dark'] {
+  color-scheme: dark only;
   /* Primary */
   --color-primary: #41baae;
   --color-primary-dark: #2c877d;
