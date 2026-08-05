@@ -66,9 +66,43 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
           # -r so themes/ + task-ui-components/ workspace subpackages
-          # also pick up any external @wolffm/* dep updates. workspace:*
-          # self-refs are unaffected.
+          # also pick up any external @wolffm/* dep updates.
           pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store update -r --latest "@wolffm/*"
+
+      # `pnpm update --latest "@wolffm/*"` matches WORKSPACE members too and
+      # rewrites their `workspace:*` ranges to registry carets. That is not a
+      # cosmetic diff: with a registry range, CI's fresh install nests a
+      # published tarball under the depending package, vite bundles TWO copies
+      # of the theme context module, and every mount dies with "No
+      # <HadokuThemeRoot> above this component" — the 2026-08-05 prod outage
+      # (docs/incident-2026-08-04-ci-failures.md). The bot reintroduced the bad
+      # range twice in one day (e73bcab, cea426e), so the restore lives HERE,
+      # in the only actor that rewrites it.
+      - name: Restore workspace:* for in-repo packages
+        run: |
+          node -e '
+            const {execSync}=require("child_process"), fs=require("fs");
+            const manifests=execSync("git ls-files \"*package.json\"").toString().trim().split("\n")
+              .filter(m => m && !m.includes("node_modules"));
+            const members=new Set(manifests.map(m => { try { return JSON.parse(fs.readFileSync(m,"utf8")).name } catch { return null } }).filter(Boolean));
+            let fixed=0;
+            for (const m of manifests) {
+              let pkg; try { pkg=JSON.parse(fs.readFileSync(m,"utf8")); } catch { continue; }
+              let changed=false;
+              for (const field of ["dependencies","devDependencies"]) {
+                for (const [name,range] of Object.entries(pkg[field]||{})) {
+                  if (members.has(name) && !String(range).startsWith("workspace:")) {
+                    console.log(`${m}: ${name} ${range} -> workspace:* (in-repo package)`);
+                    pkg[field][name]="workspace:*"; changed=true; fixed++;
+                  }
+                }
+              }
+              if (changed) fs.writeFileSync(m, JSON.stringify(pkg,null,2)+"\n");
+            }
+            process.exit(0);
+          '
+          # Resync the lockfile if anything was restored; harmless no-op otherwise.
+          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
 
 
       # Always-latest is the policy, so "not at latest" is a failure, not a note.
