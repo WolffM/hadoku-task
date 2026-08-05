@@ -28,6 +28,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader, useHadokuTheme } from '@wolffm/task-ui-components'
 import { HadokuThemeRoot } from '@wolffm/themes'
 import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
+import { useThemePrefsMigration } from '../hooks/useThemePrefsMigration'
 import type { ViewType } from './types'
 import { loadViewPreference, saveViewPreference } from './viewPreference'
 import { BoardsSection } from '../components/BoardsSection'
@@ -127,6 +128,11 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   // Theme comes from the provider above — same hook, same persistence, same
   // picker as every other app in the ecosystem.
   const { isThemeReady, isInitialThemeLoad } = useHadokuTheme()
+
+  // This app used to persist theme / themeMode / experimentalThemes in its OWN
+  // prefs row; the shared hook reads the platform row. Carries them across once,
+  // so adopting the shared picker does not silently reset anyone's theme.
+  useThemePrefsMigration(preferences, preferencesLoaded)
 
   // Compute mobile layout
   const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false
