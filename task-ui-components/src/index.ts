@@ -14,6 +14,10 @@
 // let an app hand-roll its own (with its own open-state and a debug logger in
 // the icon resolver) — a compile error is the only enforcement that actually
 // holds. If you need theme state, use `useTheme()` from @wolffm/themes.
+// The picker itself, for an app with no header row to put it in (watchpart2's
+// UI is a video overlay). It takes NO props — placement is free, configuration
+// is not, which is the property that keeps it identical everywhere.
+export { HadokuThemePicker } from './components/HadokuThemePicker'
 export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
 // The seam @wolffm/themes plugs into. Apps use <HadokuThemeRoot> (which wraps

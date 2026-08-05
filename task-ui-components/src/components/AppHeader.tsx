@@ -37,8 +37,7 @@
  */
 import React from 'react'
 import { ConnectedSettings, type ConnectedSettingsProps } from './ConnectedSettings'
-import { ConnectedThemePicker } from './ConnectedThemePicker'
-import { useHadokuTheme } from '../lib/themeContext'
+import { HadokuThemePicker } from './HadokuThemePicker'
 
 export interface AppHeaderProps {
   /** Left-aligned header title. A string is wrapped in an <h1>; pass a node for
@@ -68,9 +67,9 @@ export function AppHeader({
   children,
   className = ''
 }: AppHeaderProps) {
-  // Throws with an actionable message when the app root was never wrapped.
-  const t = useHadokuTheme()
-
+  // No useHadokuTheme() call here: <HadokuThemePicker> reads the context and
+  // throws its own actionable error when the app root was never wrapped, so a
+  // second read would only duplicate that.
   return (
     <header className={`app-header ${className}`.trim()}>
       {typeof title === 'string' ? (
@@ -80,15 +79,7 @@ export function AppHeader({
       )}
       <div className="app-header__actions">
         {status}
-        <ConnectedThemePicker
-          themeFamilies={t.themeFamilies}
-          currentTheme={t.theme}
-          onThemeChange={t.setTheme}
-          getThemeIcon={t.getThemeIcon}
-          themeMode={t.themeMode}
-          onThemeModeChange={t.setThemeMode}
-          hasAdvanced={t.hasAdvanced}
-        />
+        <HadokuThemePicker />
         <ConnectedSettings {...settingsProps}>{children}</ConnectedSettings>
       </div>
     </header>
