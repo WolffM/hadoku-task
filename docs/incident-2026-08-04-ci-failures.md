@@ -17,12 +17,11 @@ dispatched to both repos, and both broke the same way.
 - Each failed run had a real payload to push and died on
   `GH006: Protected branch update failed for refs/heads/main` /
   `required status checks are expected`. The bot pushed with the default
-  `GITHUB_TOKEN`, which cannot bypass required checks. Sample failed run:
-  30956524388.
+  `GITHUB_TOKEN`, which cannot bypass required checks. Sample failed run: 30956524388.
 - The push-retry loop (fetch → rebase → push ×3) rebased onto an up-to-date
   main every time — the rejection was deterministic, not a race.
 - 2026-08-04 22:32, `4276cf2e` — `fix(ci): let the auto-update bot push to a
-  protected main` — set `token: ${{ secrets.HADOKU_SITE_TOKEN }}` on checkout
+protected main` — set `token: ${{ secrets.HADOKU_SITE_TOKEN }}` on checkout
   in the update workflow. The next run (22:33) landed `e60703e9`
   (`chore: auto-update @wolffm/* to latest`) on main, so the recovery is real,
   not an empty-payload success.
@@ -54,3 +53,52 @@ green for weeks between publish bursts.
 
 If your investigation contradicts anything above, trust your evidence, not
 this document — and correct this file so the record is right.
+
+---
+
+## Verification & resolution (2026-08-05, run from this repo)
+
+Every claim above checked out against primary evidence:
+
+- **Branch protection** (`gh api .../branches/main/protection`): required checks
+  `typecheck`, `lint`, `worker-tests` (strict=false), `enforce_admins` **off** —
+  which is exactly why the admin PAT bypasses them.
+- **Token fix is live**: `update-wolffm.yml` on main checks out with
+  `token: HADOKU_SITE_TOKEN` (landed in `4276cf2e`), and post-fix bot commits
+  `e60703e9` / `2a004309` are both on main.
+- **Required checks on bot commits are absent — structurally, not silently.**
+  Only `publish` ran on those commits. `ci.yml` (the workflow behind all three
+  required contexts) triggers on `pull_request` only, so NO direct-to-main
+  push — bot or human — ever runs them. That predates the incident and is the
+  repo's design: PR gates for reviewed work, publish build as the backstop for
+  direct pushes.
+
+### New regression found during verification: double publish
+
+The token fix introduced a second bug the outside investigation couldn't see.
+The explicit `publish.yml` dispatch in the push step existed because
+GITHUB_TOKEN pushes don't trigger `on: push` workflows. A PAT push **does** —
+so after `4276cf2e`, every auto-update push ran publish.yml twice (push event +
+dispatch, same second: runs on `e60703e9`, `2a004309`, `e73bcabd`). On
+2026-08-05 the pair raced past publish.yml's tolerate-concurrent-runs logic and
+published **two versions for one dep bump** — `@wolffm/themes`/`task` 4.0.1
+(13:14:23) and 4.0.2 (13:14:32) — each dispatching `packages_updated` to
+hadoku_site.
+
+### Fixes applied (this commit)
+
+1. **Removed the explicit publish dispatch** (and the now-unneeded
+   `actions: write` permission) — the PAT push triggers publish.yml natively.
+2. **Retry loop distinguishes rejection classes**: GH006 / "protected branch
+   hook declined" fails fast on the first attempt with a message naming the
+   token fix; only non-fast-forward rejections rebase and retry.
+3. **Failure streaks now alert**: an `if: always()` step reports the outcome to
+   `POST /health/api/jobs` (`job_name: hadoku-task:update-wolffm`), the fleet's
+   alerting path — Discord on break, 24h-throttled reminders, recovery notice.
+   Uses the `KEY_SERVICE_HADOKU_TASK` Actions secret (this repo's service-tier
+   key). Runner-death mid-run still can't self-report; the daily digest covers
+   that class.
+
+**hadoku-resume-bot has the same double-publish + no-alerting gaps** (same
+workflows, same token fix applied) and was not touched here — this incident is
+scoped to hadoku-task.
