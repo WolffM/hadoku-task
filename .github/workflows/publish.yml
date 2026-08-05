@@ -299,7 +299,9 @@ jobs:
             local maj=$(echo "$v" | cut -d. -f1)
             local min=$(echo "$v" | cut -d. -f2)
             local pat=$(echo "$v" | cut -d. -f3)
-            if [[ $pat -eq 20 ]]; then
+            # -ge, not -eq: an exact match leaves anything that lands past
+            # .20 incrementing forever (.21, .22, ...) instead of rolling over.
+            if [[ $pat -ge 20 ]]; then
               echo "$maj.$((min + 1)).0"
             else
               echo "$maj.$min.$((pat + 1))"
@@ -316,15 +318,48 @@ jobs:
             local pkg_name=$2
 
             local current_version=$(node -p "require('${pkg_path}/package.json').version")
-            local new_version=$(next_version "$current_version")
 
-            local max_attempts=50
+            # START FROM THE REGISTRY, NOT FROM package.json.
+            #
+            # The bump below is written into the runner's workspace and
+            # published, but never committed back to main. So package.json
+            # stays frozen while the registry marches on, and this loop used to
+            # re-walk the whole gap one patch at a time, from scratch, on every
+            # run.
+            #
+            # tenhands hit the wall first, on 2026-08-05: its package.json said
+            # 1.14.5, the registry was past 1.18.20, and walking that gap is 99
+            # steps. It exhausted a 100-attempt cap and published nothing. The
+            # loop was never retrying, it was counting. This one has a cap of
+            # 50, so it fails at half the drift.
+            local latest_published=$(npm view "$pkg_name" version 2>/dev/null || echo "")
+            local base_version="$current_version"
+            if [ -n "$latest_published" ]; then
+              # Whichever is higher: usually the registry, but a pre-commit
+              # bump that already moved past it must not be dragged backwards.
+              base_version=$(printf '%s\n%s\n' "$current_version" "$latest_published" \
+                               | sort -V | tail -1)
+              echo "ℹ️  $pkg_name: package.json $current_version, registry $latest_published, starting from $base_version"
+            else
+              echo "ℹ️  $pkg_name: no published version found; starting from $current_version"
+            fi
+            local new_version=$(next_version "$base_version")
+
+            # Genuinely a retry now rather than a catch-up, so 10 is generous:
+            # from the true latest the first candidate is essentially always
+            # free. Ten still absorbs a real race between concurrent publishes.
+            local max_attempts=10
             local attempts=0
             while npm view "$pkg_name@$new_version" version 2>/dev/null | grep -q "$new_version"; do
               echo "⚠️  $pkg_name: $new_version already published, trying next..."
               attempts=$((attempts + 1))
               if [ $attempts -ge $max_attempts ]; then
-                echo "❌ $pkg_name: reached max bump attempts ($max_attempts)"
+                echo "❌ $pkg_name: reached max bump attempts ($max_attempts)."
+                echo "   Started from $base_version (package.json: $current_version," \
+                     "registry: ${latest_published:-<unreadable>})."
+                echo "   From the registry's latest this should take one step, so"
+                echo "   this many collisions means the lookup failed and it fell"
+                echo "   back to the stale committed version."
                 exit 1
               fi
               new_version=$(next_version "$new_version")
