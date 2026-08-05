@@ -141,8 +141,8 @@ importers:
         specifier: ^19.2.16
         version: 19.2.16
       '@wolffm/task-ui-components':
-        specifier: workspace:*
-        version: link:../task-ui-components
+        specifier: ^3.0.0
+        version: 3.0.0(react@19.2.7)
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -946,6 +946,11 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       zod: ^4.0.0
+
+  '@wolffm/task-ui-components@3.0.0':
+    resolution: {integrity: sha512-+8C067J9poe3DM9xpmWwkxxR9uZjtMYuOR63PCiIZwzcqvlgwqiHOSxvZE+t69Mn1Tvxmw7jzdPq3neYQumXVw==, tarball: https://npm.pkg.github.com/download/@wolffm/task-ui-components/3.0.0/e6a5ef516a6edf54eae0d7f7f2f6b2b8ad01b377}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   '@wolffm/worker-utils@1.4.0':
     resolution: {integrity: sha512-q2ElbadBa63oDuLhgxeO4xM+OBkx/aKy+PH+bCUulpYJOipsgMsXqrt595zQzXuq4U/g6ku+9QFDgm3krszvPw==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.4.0/17ef297f18d910e82a0bacc74cf6b37d6541b821}
@@ -3133,6 +3138,10 @@ snapshots:
     dependencies:
       react: 19.2.7
       zod: 4.1.12
+
+  '@wolffm/task-ui-components@3.0.0(react@19.2.7)':
+    dependencies:
+      react: 19.2.7
 
   '@wolffm/worker-utils@1.4.0(zod@4.1.12)':
     dependencies:
