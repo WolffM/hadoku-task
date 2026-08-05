@@ -76,7 +76,6 @@ export function ConnectedSettings({
   // Identity — from props if supplied, else resolved lazily via whoami().
   const [userType, setUserType] = useState<Tier>(userTypeProp ?? 'public')
   const [resolvedName, setResolvedName] = useState<string | null>(nameProp ?? null)
-  const identityLoaded = useRef(userTypeProp !== undefined)
 
   // Name editing
   const [nameDraft, setNameDraft] = useState(resolvedName ?? '')
@@ -93,7 +92,11 @@ export function ConnectedSettings({
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
   const [levelSaving, setLevelSaving] = useState(false)
-  const contentLoaded = useRef(false)
+
+  // One flag for the whole first-open fetch, not one per request — the panel
+  // body reveals when BOTH have settled, so nothing pops in a beat late.
+  const [resolving, setResolving] = useState(false)
+  const fetched = useRef(false)
 
   // Everyone who is SIGNED IN, expressed as "not public" rather than as a list
   // of tiers. The list form (`=== 'admin' || === 'friend' || === 'service'`)
@@ -114,31 +117,45 @@ export function ConnectedSettings({
     }
   }, [nameProp])
 
-  // Lazy-resolve identity the first time the popout opens (only if the host
-  // did not supply userType — otherwise props are the source of truth).
+  // Resolve everything the panel shows, the first time it opens, in ONE
+  // concurrent pass.
+  //
+  // These used to be two effects, and gating the content fetch on
+  // `showContentPill` made them SERIAL rather than lazy: userType starts at
+  // 'public', so the pill is hidden and getContentLevel() is never issued;
+  // only once whoami() lands and flips the tier does the second effect fire.
+  // Two round trips end to end, the second one visible as the content row
+  // appearing blank and filling in afterwards.
+  //
+  // Tier gates the RENDER, not the FETCH. When the host supplies userType we
+  // know up front whether the pill exists and can skip the request for public
+  // callers; when it doesn't, one speculative fetch is the price of not
+  // serialising (it 4xx's to null for a public caller, which renders nothing).
   useEffect(() => {
-    if (!open || identityLoaded.current) return
-    identityLoaded.current = true
-    whoami()
-      .then(id => {
-        setUserType(id.userType)
-        setResolvedName(id.name)
-        setLocalName(id.name)
-        setNameDraft(id.name ?? '')
-      })
-      .catch(reportErr)
-  }, [open])
+    if (!open || fetched.current) return
+    fetched.current = true
 
-  // Lazy-load the content level the first time the popout opens.
-  useEffect(() => {
-    if (!open || contentLoaded.current || !showContentPill) return
-    contentLoaded.current = true
-    getContentLevel()
-      .then(state => {
+    const wantIdentity = userTypeProp === undefined
+    const wantContent = wantIdentity || userTypeProp !== 'public'
+    if (!wantIdentity && !wantContent) return
+
+    setResolving(true)
+    Promise.all([
+      wantIdentity ? whoami() : Promise.resolve(null),
+      wantContent ? getContentLevel() : Promise.resolve(null)
+    ])
+      .then(([id, state]) => {
+        if (id) {
+          setUserType(id.userType)
+          setResolvedName(id.name)
+          setLocalName(id.name)
+          setNameDraft(id.name ?? '')
+        }
         if (state) setContent(state)
       })
       .catch(reportErr)
-  }, [open, showContentPill])
+      .finally(() => setResolving(false))
+  }, [open, userTypeProp])
 
   // Escape closes.
   useEffect(() => {
@@ -213,18 +230,27 @@ export function ConnectedSettings({
         <div className="settings-popout__panel" role="dialog" aria-label="User settings">
           <div className="settings-popout__header">Settings</div>
 
-          {/* Access tier */}
+          {/* Access tier. While resolving, the state still says 'public' —
+              rendering "Guest" there would be a wrong answer that corrects
+              itself a moment later, which reads exactly like the lag this
+              placeholder exists to remove. */}
           <section className="settings-popout__row">
             <span className="settings-popout__label">Access tier</span>
-            <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
-              {TIER_LABEL[userType]}
-            </span>
+            {resolving ? (
+              <span className="settings-popout__value">…</span>
+            ) : (
+              <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
+                {TIER_LABEL[userType]}
+              </span>
+            )}
           </section>
 
           {/* Display name */}
           <section className="settings-popout__row">
             <span className="settings-popout__label">Display name</span>
-            {editingName ? (
+            {resolving ? (
+              <span className="settings-popout__value">…</span>
+            ) : editingName ? (
               <span className="settings-popout__inline">
                 <input
                   className="settings-popout__input"
@@ -271,8 +297,11 @@ export function ConnectedSettings({
             )}
           </section>
 
-          {/* Content visibility level */}
-          {showContentPill && (
+          {/* Content visibility level. Held back until the first-open fetch
+              settles, so it lands in the same paint as the tier and name
+              rather than a round trip behind them. `content` is fetched
+              concurrently with whoami(), so by then it is already here. */}
+          {!resolving && showContentPill && (
             <section className="settings-popout__row settings-popout__row--stack">
               <span className="settings-popout__label">Content visibility</span>
               {content ? (
@@ -307,7 +336,9 @@ export function ConnectedSettings({
                   </span>
                 </>
               ) : (
-                <span className="settings-popout__hint">Loading…</span>
+                // Not "Loading…" — the fetch has already settled by the time
+                // this section renders at all, so a null here means it failed.
+                <span className="settings-popout__hint">Currently unavailable.</span>
               )}
             </section>
           )}
