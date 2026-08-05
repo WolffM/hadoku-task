@@ -77,12 +77,28 @@ export function HadokuThemeProvider({ value, children }: HadokuThemeProviderProp
 export function useHadokuTheme(): HadokuThemeValue {
   const value = React.useContext(HadokuThemeContext)
   if (!value) {
+    // State the OBSERVATION, then both causes — do not assert one.
+    //
+    // The old message said "No <HadokuThemeRoot> above this component", which is
+    // only one of the two ways this reads empty, and on 2026-08-05 it was the
+    // wrong one: three apps had the provider plainly mounted and still threw,
+    // because a duplicated @wolffm/themes module meant the provider filled a
+    // DIFFERENT context object than the consumer read. Everyone who saw that
+    // message went looking for a missing provider that was never missing.
     throw new Error(
-      '[hadoku] No <HadokuThemeRoot> above this component. Every hadoku app must ' +
-        "wrap its root once:\n\n  import { HadokuThemeRoot } from '@wolffm/themes'\n\n" +
-        '  <HadokuThemeRoot>\n    <App />\n  </HadokuThemeRoot>\n\n' +
-        'AppHeader renders the shared theme picker from that context — it is not ' +
-        'a prop, so that every app gets the same control.'
+      '[hadoku] useHadokuTheme() read an empty theme context.\n\n' +
+        'Two things cause this:\n\n' +
+        '1. No <HadokuThemeRoot> above this component. Wrap the app root once:\n' +
+        "     import { HadokuThemeRoot } from '@wolffm/themes'\n" +
+        '     <HadokuThemeRoot>\n       <App />\n     </HadokuThemeRoot>\n\n' +
+        '2. TWO COPIES of @wolffm/themes are loaded, so the provider filled a\n' +
+        '   different context object than this consumer is reading. The provider\n' +
+        '   looks correctly mounted in this case — check it before assuming (1).\n' +
+        '   Usually a bundle inlined @wolffm/themes instead of externalizing it,\n' +
+        "   while the provider came from the parent page's import map.\n" +
+        '   Confirm by counting createContext( in the shipped bundles; there must\n' +
+        "   be exactly one. hadoku_site's `pnpm run check:mf-externals` and\n" +
+        "   hadoku-task's `pnpm run check:single-context` both assert this."
     )
   }
   return value
