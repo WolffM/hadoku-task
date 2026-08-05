@@ -1,9 +1,19 @@
 /* AppHeader + ConnectedSettings styles for @wolffm/task-ui-components.
  *
  * All colors come from @wolffm/themes semantic tokens so the header themes with
- * everything else. Import alongside theme-picker.css:
+ * everything else. One import is all an app needs:
  *   import '@wolffm/task-ui-components/app-header.css'
- */
+ *
+ * This used to say "import alongside theme-picker.css", and that convention
+ * failed exactly the way conventions do. AppHeader renders the theme picker
+ * unconditionally now — it is not a prop — so an app that loads this file
+ * without the picker's gets the right component with none of its styling. The
+ * command station shipped like that after its old wrapper (the only importer of
+ * theme-picker.css on that site) was deleted: correct markup, no CSS.
+ *
+ * Pulling it in here makes the pair inseparable, which is the same reason the
+ * component itself stopped being a prop. */
+@import './theme-picker.css';
 
 /* ── Header layout ─────────────────────────────────────────────────────────
  * Title left, action bar right, vertically centered. Full width of whatever
