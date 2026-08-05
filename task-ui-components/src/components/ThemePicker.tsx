@@ -6,7 +6,9 @@
 
 import React, { useRef, useLayoutEffect, useState } from 'react'
 import type { ThemePickerProps } from '../types'
-import { SettingsIcon, MoonIcon, getFallbackIcon } from './ThemeIcons'
+import { SettingsIcon, getFallbackIcon } from './ThemeIcons'
+// MoonIcon is a theme-family icon and lives with the theme model now.
+import { MoonIcon } from '@wolffm/themes'
 import '../theme-picker.css'
 
 /**

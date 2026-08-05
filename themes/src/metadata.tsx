@@ -1,10 +1,10 @@
 /**
  * Theme metadata - icon mappings and theme family configurations
- * This file imports icons from @wolffm/task-ui-components
+ * Icons and the ThemeFamily type are local to this package (see ThemeIcons.tsx).
  */
 
 import React from 'react'
-import type { ThemeFamily } from '@wolffm/task-ui-components'
+import type { ThemeFamily } from './theme-types'
 import {
   SunIcon,
   MoonIcon,
@@ -16,7 +16,7 @@ import {
   HeartIcon,
   LeafIcon,
   SpaIcon
-} from '@wolffm/task-ui-components'
+} from './ThemeIcons'
 
 /**
  * Theme families configuration for all 9 theme pairs

@@ -28,7 +28,10 @@ export const THEMES = [
 
 export type Theme = (typeof THEMES)[number]
 
-export type ThemeMode = 'simple' | 'advanced'
+// Single definition, in theme-types alongside ThemeFamily — it used to be
+// declared both here and in task-ui-components' types.
+export type { ThemeMode } from './theme-types'
+import type { ThemeMode } from './theme-types'
 
 const THEME_MODE_STORAGE_KEY = 'hadoku-theme-mode'
 
@@ -190,9 +193,26 @@ export function loadThemeMode(): ThemeMode {
 export { THEME_FAMILIES, THEME_ICON_MAP } from './metadata'
 export { useTheme } from './useTheme'
 export type { UseThemeOptions } from './useTheme'
-// The one thing a child app mounts. See HadokuThemeRoot.tsx for why the
-// provider lives here and the context lives in task-ui-components.
+// The one thing a child app mounts, and the context it fills — deliberately in
+// the same package now (see HadokuThemeRoot.tsx).
 export { HadokuThemeRoot } from './HadokuThemeRoot'
+export { HadokuThemeProvider, useHadokuTheme, useHadokuThemeOptional } from './themeContext'
+export type { HadokuThemeValue, HadokuThemeProviderProps } from './themeContext'
+// Theme-family icons — moved here from task-ui-components so this package
+// depends on nothing of ours.
+export {
+  SunIcon,
+  MoonIcon,
+  StrawberryIcon,
+  WaveIcon,
+  ZapIcon,
+  CoffeeIcon,
+  FlowerIcon,
+  HeartIcon,
+  LeafIcon,
+  SpaIcon
+} from './ThemeIcons'
+export type { ThemeName, ThemeFamily } from './theme-types'
 export type { HadokuThemeRootProps } from './HadokuThemeRoot'
 // Canonical theme prefs client — was copy-pasted into every child app.
 export { themePrefs, ThemePrefsSchema } from './themePrefs'

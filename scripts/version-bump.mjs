@@ -74,11 +74,13 @@ export function classify(files) {
       changed.add('task')
     }
   }
-  // Dependency chain: `task` bundles themes + task-ui-components, and themes
-  // depends on task-ui-components. A dependency change must republish its
-  // dependents so their bundled copy AND pinned version stay in sync.
-  if (changed.has('ui')) changed.add('themes').add('task')
-  if (changed.has('themes')) changed.add('task')
+  // Dependency chain: `task` bundles themes + task-ui-components, and
+  // task-ui-components depends on THEMES (the arrow reversed when the theme
+  // icons moved into themes — see themes/src/ThemeIcons.tsx). A dependency
+  // change must republish its dependents so their bundled copy AND pinned
+  // version stay in sync.
+  if (changed.has('themes')) changed.add('ui').add('task')
+  if (changed.has('ui')) changed.add('task')
   return changed
 }
 

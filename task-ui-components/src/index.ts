@@ -20,10 +20,14 @@
 export { HadokuThemePicker } from './components/HadokuThemePicker'
 export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
-// The seam @wolffm/themes plugs into. Apps use <HadokuThemeRoot> (which wraps
-// this); the raw provider is exported for the package that builds the value.
-export { HadokuThemeProvider, useHadokuTheme, useHadokuThemeOptional } from './lib/themeContext'
-export type { HadokuThemeValue, HadokuThemeProviderProps } from './lib/themeContext'
+// Re-exported from @wolffm/themes, which now owns the context AND the provider
+// that fills it. These are RE-EXPORTS, not re-declarations: every consumer gets
+// the one context object from themes, which is what makes a duplicated copy of
+// THIS package harmless. Kept here so existing
+// `import { useHadokuTheme } from '@wolffm/task-ui-components'` call sites
+// across the fleet keep working unchanged.
+export { HadokuThemeProvider, useHadokuTheme, useHadokuThemeOptional } from '@wolffm/themes'
+export type { HadokuThemeValue, HadokuThemeProviderProps } from '@wolffm/themes'
 export { Toast } from './components/Toast'
 export { Toaster } from './components/Toaster'
 export { Modal } from './components/Modal'
@@ -41,18 +45,8 @@ export { useReducedMotion } from './hooks/useReducedMotion'
 
 // Theme icons - export individually for flexibility
 export {
-  SunIcon,
-  MoonIcon,
-  StrawberryIcon,
-  WaveIcon,
-  ZapIcon,
-  CoffeeIcon,
-  FlowerIcon,
-  HeartIcon,
-  LeafIcon,
   SettingsIcon,
   TagIcon,
-  SpaIcon,
   // Generic/Fallback icons
   CircleIcon,
   SquareIcon,
@@ -65,6 +59,20 @@ export {
   FALLBACK_ICONS,
   getFallbackIcon
 } from './components/ThemeIcons'
+// Theme-family icons moved to @wolffm/themes with the rest of the theme model.
+// Re-exported so existing imports from this package keep resolving.
+export {
+  SunIcon,
+  MoonIcon,
+  StrawberryIcon,
+  WaveIcon,
+  ZapIcon,
+  CoffeeIcon,
+  FlowerIcon,
+  HeartIcon,
+  LeafIcon,
+  SpaIcon
+} from '@wolffm/themes'
 
 // Types
 // ThemeFamily stays — @wolffm/themes builds THEME_FAMILIES against it.

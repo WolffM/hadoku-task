@@ -10,7 +10,20 @@ export default defineConfig({
       formats: ['es']
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      // @wolffm/themes MUST be external. This package imports the theme
+      // context from it, and the context only works while exactly ONE copy of
+      // the defining module exists at runtime. Bundling themes in here would
+      // ship a second createContext() inside this package — the precise shape
+      // of the 2026-08-05 outage, reintroduced one level down. Verified by
+      // scripts/verify-single-context.mjs.
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        '@wolffm/themes',
+        '@wolffm/prefs-client',
+        '@wolffm/prefs-client/react'
+      ],
       output: {
         preserveModules: true,
         preserveModulesRoot: 'src',

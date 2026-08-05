@@ -3,27 +3,12 @@
  */
 
 import type { ReactNode } from 'react'
-
-/**
- * Theme name - can be any string that matches your theme system
- */
-export type ThemeName = string
-
-/**
- * Theme family configuration
- * Represents a light/dark theme pair with icons and labels
- *
- * Icons are optional - if not provided, the ThemePicker will use fallback icons
- * based on the theme's position in the array
- */
-export interface ThemeFamily {
-  lightIcon?: ReactNode
-  darkIcon?: ReactNode
-  lightTheme: ThemeName
-  darkTheme: ThemeName
-  lightLabel: string
-  darkLabel: string
-}
+// The theme MODEL lives in @wolffm/themes now; this file keeps only the types
+// that describe THIS package's components. Re-exported so existing imports of
+// ThemeName/ThemeFamily/ThemeMode from here keep resolving — to the same
+// declarations, not copies.
+export type { ThemeName, ThemeFamily, ThemeMode } from '@wolffm/themes'
+import type { ThemeName, ThemeFamily, ThemeMode } from '@wolffm/themes'
 
 /**
  * Dropdown placement direction
@@ -32,12 +17,6 @@ export interface ThemeFamily {
  * - 'auto': Automatically detects edge collisions and flips direction
  */
 export type DropdownPlacement = 'left' | 'right' | 'auto'
-
-/**
- * Theme mode — Simple flattens advanced visuals (gradients, effects)
- * to their solid color fallback. Used together with @wolffm/themes.
- */
-export type ThemeMode = 'simple' | 'advanced'
 
 /**
  * Theme picker component props

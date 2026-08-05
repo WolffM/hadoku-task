@@ -24,7 +24,7 @@
  */
 import React from 'react'
 import { ConnectedThemePicker } from './ConnectedThemePicker'
-import { useHadokuTheme } from '../lib/themeContext'
+import { useHadokuTheme } from '@wolffm/themes'
 
 export function HadokuThemePicker() {
   const t = useHadokuTheme()

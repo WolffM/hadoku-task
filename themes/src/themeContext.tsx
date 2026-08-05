@@ -22,7 +22,7 @@
  * identical everywhere by construction rather than by convention.
  */
 import React from 'react'
-import type { ThemeFamily, ThemeMode } from '../types'
+import type { ThemeFamily, ThemeMode } from './theme-types'
 
 export interface HadokuThemeValue {
   /** Active theme name, e.g. 'coffee-dark'. */

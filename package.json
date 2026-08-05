@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "4.1.5",
+  "version": "5.0.0",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "repository": {
@@ -37,7 +37,8 @@
     "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "build:worker": "tsup --config tsup.worker.config.ts",
-    "build:packages": "pnpm --filter @wolffm/task-ui-components run build && pnpm --filter @wolffm/themes run build",
+    "build:packages": "pnpm --filter @wolffm/themes run build && pnpm --filter @wolffm/task-ui-components run build && node scripts/verify-single-context.mjs",
+    "check:single-context": "node scripts/verify-single-context.mjs",
     "build:all": "pnpm run build:packages && pnpm run build && pnpm run build:server && pnpm run build:worker && node scripts/verify-dist.mjs",
     "preview": "vite preview",
     "typecheck": "pnpm --filter @wolffm/task-ui-components --filter @wolffm/themes --parallel run typecheck && tsc --noEmit && pnpm run typecheck:worker",

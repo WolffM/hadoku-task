@@ -183,11 +183,14 @@ jobs:
           echo "✅ All required source files present"
 
       # Build in dependency order: UI Components → Themes → Task
-      - name: Build UI Components package
-        run: pnpm --filter @wolffm/task-ui-components run build
-
+      # themes FIRST: task-ui-components imports the theme model (context,
+      # icons, types) from it now, so its build needs themes/dist present.
+      # This order was the other way round until the icons moved.
       - name: Build Themes package
         run: pnpm --filter @wolffm/themes run build
+
+      - name: Build UI Components package
+        run: pnpm --filter @wolffm/task-ui-components run build
 
       - name: Build Task package
         run: pnpm run build:all

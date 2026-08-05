@@ -21,17 +21,27 @@
  * them, cannot substitute them, and no longer needs a local `useTheme`,
  * `themePrefs` or `themeConfig` module.
  *
- * WHY THIS LIVES IN @wolffm/themes AND NOT IN task-ui-components
- * -------------------------------------------------------------
- * The context is DEFINED in task-ui-components (that is where AppHeader reads
- * it) but can only be FILLED here. This package already peer-depends on
- * task-ui-components and imports `ThemeFamily` plus every icon from it; the
- * reverse edge would be a cycle. Providing the value from this side keeps the
- * dependency arrow pointing one way — themes -> task-ui-components — while
- * still letting the header own its controls.
+ * WHY THE CONTEXT LIVES HERE TOO
+ * -------------------------------
+ * It did not always. The context was defined in task-ui-components (where
+ * AppHeader consumes it) and only FILLED here, because this package used to
+ * import the theme icons from there and the reverse import would have closed a
+ * cycle.
+ *
+ * A context defined in one package and provided from another only works while
+ * exactly one copy of the defining module exists across every install tree,
+ * bundle and import map that touches it. That held until it didn't: on
+ * 2026-08-05 three apps threw "No <HadokuThemeRoot> above this component" with
+ * the provider plainly mounted, because a second copy of task-ui-components
+ * meant a second createContext() — provider filling one, consumer reading the
+ * other.
+ *
+ * Moving the icons here reversed the arrow, so the context now ships beside the
+ * provider that fills it, in the package every app already resolves through the
+ * parent's import map.
  */
 import React, { useMemo, type RefObject } from 'react'
-import { HadokuThemeProvider, type HadokuThemeValue } from '@wolffm/task-ui-components'
+import { HadokuThemeProvider, type HadokuThemeValue } from './themeContext'
 import { useTheme } from './useTheme'
 import { THEME_ICON_MAP } from './metadata'
 
