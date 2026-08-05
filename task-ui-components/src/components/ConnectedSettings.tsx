@@ -33,17 +33,25 @@ import {
 import '../app-header.css'
 
 export interface ConnectedSettingsProps {
-  /** Caller's tier. Omit to self-resolve via whoami(). */
+  /** Caller's tier. Omit to self-resolve via whoami().
+   *
+   *  This exists for apps that CANNOT reach `/session/whoami` — conjure sits
+   *  behind a path-prefixed shim that serves nothing outside `/conjure`, so
+   *  whoami 404s and the tier would fall back to guest. It is an identity
+   *  hint, not a way to present a different tier than the edge assigns: every
+   *  gate that matters is enforced server-side off the edge-stamped tier. */
   userType?: Tier
-  /** Display name. Omit to self-resolve via whoami(). */
+  /** Display name. Omit to self-resolve via whoami(). Same rationale. */
   name?: string | null
   /** Notify the host (e.g. a "Signed in as …" label) of a rename. */
   onNameChange?: (name: string | null) => void
-  /** Optional extra class on the root. */
-  className?: string
-  /** App-specific settings rendered as a final section in the same popout —
-   *  so an app with its own preferences keeps ONE unified gear + modal instead
-   *  of a second control. Shown under an "App preferences" divider. */
+  /** App-specific settings rendered as a final section in the same popout, so
+   *  an app with its own preferences keeps ONE unified gear instead of a second
+   *  control. Shown under an "App preferences" divider.
+   *
+   *  This slot is deliberately unconstrained — put whatever the app needs in
+   *  it. The constraint is only that it lands AFTER the four canonical rows and
+   *  cannot change them. */
   children?: React.ReactNode
 }
 
@@ -67,7 +75,6 @@ export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
   onNameChange,
-  className = '',
   children
 }: ConnectedSettingsProps) {
   const [open, setOpen] = useState(false)
@@ -212,8 +219,12 @@ export function ConnectedSettings({
     window.location.reload()
   }, [keyDraft])
 
+  // No caller-supplied class on the root. The four rows below are the
+  // platform's, not the app's, and a className here is enough to restyle or
+  // hide any of them — which is the drift this component exists to prevent.
+  // Apps extend via `children`, never by reaching into this markup.
   return (
-    <div className={`settings-popout ${className}`.trim()} ref={rootRef}>
+    <div className="settings-popout" ref={rootRef}>
       <button
         type="button"
         className="settings-toggle-btn"

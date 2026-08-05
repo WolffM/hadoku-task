@@ -98,6 +98,23 @@ export const THEME_FAMILIES: ThemeFamily[] = [
 ]
 
 /**
+ * Theme families hidden unless the user opts into experimental themes.
+ *
+ * This set lived in the TASK app's `src/app/themeConfig.tsx`, which is why
+ * these themes existed for exactly one app in the ecosystem — a per-app fork of
+ * a control that is meant to be identical everywhere. It belongs next to the
+ * families it filters, and the opt-in is a shared theme pref (see themePrefs).
+ */
+export const EXPERIMENTAL_THEMES = new Set<string>([
+  'cyberpunk-light',
+  'cyberpunk-dark',
+  'pink-light',
+  'pink-dark',
+  'izakaya-light',
+  'izakaya-dark'
+])
+
+/**
  * Theme icon mapping - maps each theme name to its icon component
  * Useful for getting the icon for a specific theme
  */

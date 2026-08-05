@@ -32,6 +32,18 @@ export type ThemeMode = 'simple' | 'advanced'
 
 const THEME_MODE_STORAGE_KEY = 'hadoku-theme-mode'
 
+/** Read the theme key from one storage, tolerating environments where the
+ *  storage object exists but throws on access (private mode, blocked cookies).
+ *  Returns null rather than throwing, so a blocked storage degrades to the
+ *  browser-preference fallback instead of breaking theme load entirely. */
+function readStored(which: 'sessionStorage' | 'localStorage'): string | null {
+  try {
+    return window[which].getItem('hadoku-theme')
+  } catch {
+    return null
+  }
+}
+
 /**
  * Set the active theme
  * @param theme - Theme name
@@ -54,21 +66,37 @@ export function getTheme(): Theme {
 }
 
 /**
- * Save theme to sessionStorage and apply it
- * @param theme - Theme name
+ * Persist the theme and apply it.
+ *
+ * BOTH storages, deliberately. sessionStorage is what the pre-paint inline
+ * `<head>` script reads within a tab, but it dies with the tab — so writing
+ * only there meant a browser restart came back with nothing persisted, the
+ * script fell through to the browser preference, and the app then swapped to
+ * the real theme once React mounted. A visible default-then-swap flash, and
+ * "my theme reset itself" for anyone whose theme wasn't the system default.
+ * localStorage is what survives, so it is what makes the next cold load paint
+ * correctly the first time.
  */
 export function saveTheme(theme: Theme): void {
-  sessionStorage.setItem('hadoku-theme', theme)
+  try {
+    localStorage.setItem('hadoku-theme', theme)
+    sessionStorage.setItem('hadoku-theme', theme)
+  } catch {
+    /* storage unavailable (private mode, blocked cookies) — the theme still
+       applies for this page, it just won't survive the navigation. */
+  }
   setTheme(theme)
 }
 
 /**
- * Load saved theme from sessionStorage
+ * Load the saved theme.
  * @returns Saved theme, or browser preference, or 'light' if none available
  */
 export function loadTheme(): Theme {
-  // First check sessionStorage
-  const saved = sessionStorage.getItem('hadoku-theme') as Theme
+  // sessionStorage first — within a tab it is the freshest value (the FOUC
+  // script and same-tab writes both go there). localStorage is the fallback
+  // that carries a theme across a browser restart.
+  const saved = (readStored('sessionStorage') ?? readStored('localStorage')) as Theme
   if (saved && THEMES.includes(saved)) {
     setTheme(saved)
     return saved
@@ -98,7 +126,14 @@ export function initTheme(): Theme {
  * Clear saved theme (reset to light)
  */
 export function clearTheme(): void {
-  sessionStorage.removeItem('hadoku-theme')
+  // Both, to match saveTheme — clearing only sessionStorage left the
+  // localStorage copy to resurrect the theme on the next cold load.
+  try {
+    sessionStorage.removeItem('hadoku-theme')
+    localStorage.removeItem('hadoku-theme')
+  } catch {
+    /* storage unavailable — nothing was persisted to clear */
+  }
   setTheme('light')
 }
 
@@ -154,5 +189,13 @@ export function loadThemeMode(): ThemeMode {
 // Theme metadata and React integration (optional peer dependencies)
 export { THEME_FAMILIES, THEME_ICON_MAP } from './metadata'
 export { useTheme } from './useTheme'
+export type { UseThemeOptions } from './useTheme'
+// The one thing a child app mounts. See HadokuThemeRoot.tsx for why the
+// provider lives here and the context lives in task-ui-components.
+export { HadokuThemeRoot } from './HadokuThemeRoot'
+export type { HadokuThemeRootProps } from './HadokuThemeRoot'
+// Canonical theme prefs client — was copy-pasted into every child app.
+export { themePrefs, ThemePrefsSchema } from './themePrefs'
+export type { ThemePrefs } from './themePrefs'
 export { THEME_EFFECTS, hasAdvanced, getThemeEffects } from './effects'
 export type { AdvancedEffect, ThemeEffectMap } from './effects'

@@ -12,8 +12,6 @@ import { useTasks } from '../hooks/useTasks'
 import { useDragAndDrop } from '../hooks/useDragAndDrop'
 import { useTaskSort } from '../hooks/useTaskSort'
 import { usePreferences } from '../hooks/usePreferences'
-import { useTheme } from '../hooks/useTheme'
-import { hasAdvanced } from '@wolffm/themes'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -27,10 +25,10 @@ import type { SyncErrorDetail } from '../api/client'
 import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
-import { AppHeader, ConnectedThemePicker } from '@wolffm/task-ui-components'
+import { AppHeader, useHadokuTheme } from '@wolffm/task-ui-components'
+import { HadokuThemeRoot } from '@wolffm/themes'
 import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
-import { getThemeIcon } from './themeConfig'
-import type { ThemeName, ViewType } from './types'
+import type { ViewType } from './types'
 import { loadViewPreference, saveViewPreference } from './viewPreference'
 import { BoardsSection } from '../components/BoardsSection'
 import { TagFiltersSection } from '../components/TagFiltersSection'
@@ -49,17 +47,35 @@ import { saveTaskPreferences } from '../prefs/taskPrefs'
 import type { UserPreferences } from '../domain/types'
 import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
 
+/**
+ * The provider boundary. Theme state lives in `<HadokuThemeRoot>` from
+ * @wolffm/themes now — one implementation shared by every app, instead of the
+ * `src/hooks/useTheme.ts` this app used to keep. AppHeader reads its picker
+ * from that context, so nothing here passes one.
+ *
+ * `containerRef` is created out here and handed down because the provider needs
+ * it (to mirror `data-theme` onto the mount subtree) while the div it points at
+ * is rendered by AppInner.
+ */
 export default function App(props: TaskAppProps = {}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  return (
+    <HadokuThemeRoot theme={props.theme} containerRef={containerRef}>
+      <AppInner {...props} containerRef={containerRef} />
+    </HadokuThemeRoot>
+  )
+}
+
+function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivElement | null> }) {
   const {
     userType = 'public',
     sessionId: propsSessionId = 'public',
     onKeyValidation: _onKeyValidation,
-    theme: initialTheme
+    containerRef
   } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   // Detect system color scheme preference for initial loading
   const [systemPrefersDark] = useState(() => {
@@ -100,19 +116,17 @@ export default function App(props: TaskAppProps = {}) {
   // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
   const {
     preferences,
-    savePreferences,
+    // `savePreferences` from this hook is intentionally not taken: its only
+    // caller was the theme-mode write, which now goes through the shared theme
+    // prefs. Everything else saves via handleSavePreferences below.
     preferencesLoaded,
     isDarkTheme,
     setPreferences,
     setPreferencesLoaded
   } = usePreferences(userType, effectiveSessionId, true)
-  const { theme, THEME_FAMILIES, setTheme, isThemeReady, isInitialThemeLoad } = useTheme(
-    preferences,
-    savePreferences,
-    containerRef,
-    preferencesLoaded,
-    initialTheme
-  )
+  // Theme comes from the provider above — same hook, same persistence, same
+  // picker as every other app in the ecosystem.
+  const { isThemeReady, isInitialThemeLoad } = useHadokuTheme()
 
   // Compute mobile layout
   const isMobile = isMobileDevice || preferences.alwaysVerticalLayout || false
@@ -383,32 +397,16 @@ export default function App(props: TaskAppProps = {}) {
         />
       )}
       <div className="task-app">
-        <AppHeader
-          title="Tasks"
-          themePicker={
-            <ConnectedThemePicker
-              themeFamilies={THEME_FAMILIES}
-              currentTheme={theme}
-              onThemeChange={t => setTheme(t as ThemeName)}
-              getThemeIcon={t =>
-                getThemeIcon(t as ThemeName, preferences.experimentalThemes || false)
-              }
-              themeMode={preferences.themeMode ?? 'simple'}
-              onThemeModeChange={mode => {
-                void savePreferences({ themeMode: mode })
-              }}
-              hasAdvanced={hasAdvanced(theme)}
-            />
-          }
-          settingsProps={{
-            children: (
-              <TaskPreferencesSection
-                preferences={preferences}
-                onSavePreferences={handleSavePreferences}
-              />
-            )
-          }}
-        />
+        {/* The theme picker is no longer passed in — AppHeader renders the
+            platform's from HadokuThemeRoot's context. What this app still owns
+            is its own preferences, which go in the children slot below the
+            four canonical rows. */}
+        <AppHeader title="Tasks">
+          <TaskPreferencesSection
+            preferences={preferences}
+            onSavePreferences={handleSavePreferences}
+          />
+        </AppHeader>
 
         <BoardsSection
           boards={boards}

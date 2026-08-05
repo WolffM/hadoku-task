@@ -7,10 +7,19 @@
  */
 
 // Main components
-export { ThemePicker } from './components/ThemePicker'
-export { ConnectedThemePicker } from './components/ConnectedThemePicker'
+//
+// NOTE: `ThemePicker` and `ConnectedThemePicker` are intentionally NOT exported.
+// AppHeader renders the theme picker itself from the HadokuThemeRoot context,
+// so every app gets the same control by construction. Exporting them is what
+// let an app hand-roll its own (with its own open-state and a debug logger in
+// the icon resolver) — a compile error is the only enforcement that actually
+// holds. If you need theme state, use `useTheme()` from @wolffm/themes.
 export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
+// The seam @wolffm/themes plugs into. Apps use <HadokuThemeRoot> (which wraps
+// this); the raw provider is exported for the package that builds the value.
+export { HadokuThemeProvider, useHadokuTheme, useHadokuThemeOptional } from './lib/themeContext'
+export type { HadokuThemeValue, HadokuThemeProviderProps } from './lib/themeContext'
 export { Toast } from './components/Toast'
 export { Toaster } from './components/Toaster'
 export { Modal } from './components/Modal'
@@ -54,8 +63,10 @@ export {
 } from './components/ThemeIcons'
 
 // Types
-export type { ThemeName, ThemeFamily, ThemePickerProps, DropdownPlacement } from './types'
-export type { ConnectedThemePickerProps } from './components/ConnectedThemePicker'
+// ThemeFamily stays — @wolffm/themes builds THEME_FAMILIES against it.
+// ThemePickerProps / ConnectedThemePickerProps are gone with the components:
+// a prop type you cannot render is only useful for reimplementing the control.
+export type { ThemeName, ThemeFamily, DropdownPlacement, ThemeMode } from './types'
 export type { AppHeaderProps } from './components/AppHeader'
 export type { ConnectedSettingsProps } from './components/ConnectedSettings'
 export type { ContentLevelState, Identity, KeySwapResult, Tier } from './lib/settingsClient'
