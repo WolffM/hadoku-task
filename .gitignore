@@ -65,3 +65,7 @@ test-results/
 
 # Cold-load profiler run logs (scripts/profile-cold-load.mjs)
 .profiler/
+
+# vibeCheck audit working artifacts (regenerable; ledger + trends stay tracked)
+.vibecheck/audit.md
+.vibecheck/out/
