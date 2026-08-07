@@ -137,6 +137,53 @@ test.describe('settings prefetch', () => {
     expect(counts.whoami, 'whoami resolved more than once per page load').toBeLessThanOrEqual(1)
   })
 
+  test('takes the content level off whoami when edge-router reports it', async ({ page }) => {
+    // The current edge-router carries contentLevel/maxContentLevel on whoami —
+    // authGate already resolved the level to stamp X-Hadoku-Content-Level, so
+    // reporting it is free and the proxied prefs-api round trip disappears.
+    const counts = countRequests(page)
+    await stubBoot(page)
+    await signedIn(page)
+    await page.route(`**${WHOAMI_PATH}`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...IDENTITY, contentLevel: 3, maxContentLevel: 4 })
+      })
+    )
+
+    await bootApp(page)
+    await page.getByRole('button', { name: 'User settings' }).click()
+    await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+
+    // Rendered from the whoami body — note maxLevel 4, which the CONTENT stub
+    // does not serve, so this can only have come from whoami.
+    await expect(page.locator('.settings-popout__seg')).toHaveCount(4)
+    await expect(page.locator('.settings-popout__seg--filled')).toHaveCount(3)
+
+    await page.waitForTimeout(1500)
+    expect(counts.content, 'fetched content-level that whoami already carried').toBe(0)
+  })
+
+  test('falls back to the GET when whoami does not carry the level', async ({ page }) => {
+    // An older edge-router, or a host not behind one at all. The popout must
+    // still fill in — the fallback is what keeps this bundle deployable ahead
+    // of the edge change, and usable from Capacitor/Storybook.
+    const counts = countRequests(page)
+    await stubBoot(page) // IDENTITY has no contentLevel fields
+    await signedIn(page)
+    await bootApp(page)
+
+    await expect
+      .poll(() => counts.content, { timeout: 10000, message: 'fallback GET never issued' })
+      .toBe(1)
+
+    await page.getByRole('button', { name: 'User settings' }).click()
+    await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+    await expect(page.locator('.settings-popout__seg')).toHaveCount(CONTENT.maxLevel)
+    await expect(page.locator('.settings-popout__seg--filled')).toHaveCount(CONTENT.level)
+  })
+
   test('reuses the shell’s boot whoami instead of issuing its own', async ({ page }) => {
     const counts = countRequests(page)
     await stubBoot(page)
