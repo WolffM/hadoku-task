@@ -22,6 +22,12 @@
  *   node scripts/new-worktree.mjs <name> --branch x   # explicit branch name
  *   node scripts/new-worktree.mjs <name> --no-install # skip bootstrap (hook will be inert)
  *
+ * Bootstrap also BUILDS the workspace packages. dist/ is gitignored, so a fresh
+ * worktree has none, and the pre-commit typecheck resolves @wolffm/themes and
+ * @wolffm/task-ui-components through their built entrypoints — leaving it out
+ * means the very first commit from a new worktree fails the gate on a missing
+ * export that is actually present in source.
+ *
  * Run from the repo root of any existing checkout.
  */
 import { execFileSync } from 'node:child_process'
@@ -105,5 +111,16 @@ if (existsSync(hookFile)) {
   console.error('  check that husky ran: pnpm install output should mention "husky"')
   process.exit(1)
 }
+
+// Build the workspace packages, or the hook you just verified fails on its
+// first use. dist/ is gitignored, so a fresh worktree has none — and the app
+// resolves @wolffm/themes and @wolffm/task-ui-components through their BUILT
+// entrypoints. The pre-commit typecheck therefore dies on
+// "Module '@wolffm/themes' has no exported member ..." for anything added
+// since the last published build, which reads as a broken commit rather than
+// an unbuilt worktree. Bootstrapping a worktree that cannot pass its own gate
+// is not bootstrapping it.
+console.log('→ pnpm run build:packages (dist/ is gitignored; the hook typechecks against it)')
+run('pnpm', ['run', 'build:packages'], { cwd: dir })
 
 console.log(`\n✓ ready:  cd ${dir}`)
