@@ -30,6 +30,7 @@ import { createPrefsClient, type PrefsClient } from '@wolffm/prefs-client'
 import type { UserPreferences } from '../domain/types'
 import { logger } from '@wolffm/logger/client'
 import { readStoredTheme } from '../utils/theme'
+import { resolvePrefsApiBase } from '@wolffm/themes'
 
 // Zod schema mirroring the FLAT UserPreferences shape (src/domain/types.ts).
 // version + updatedAt are NOT persisted as prefs fields — the SDK manages
@@ -79,6 +80,11 @@ function getClient(): PrefsClient<TaskPrefs> {
   cachedClient = createPrefsClient({
     appId: 'task',
     schema: TaskPrefsSchema,
+    // Undefined in production. A dev/E2E stack sets the global so BOTH rows —
+    // this one and the shared 'portfolio' row useTheme reads — resolve to the
+    // local prefs-api. Overriding only one would leave the other reaching
+    // hadoku.me, which is exactly the split that hid the migration bug.
+    apiBase: resolvePrefsApiBase(),
     defaults: {
       theme: getDefaultTheme(),
       themeMode: 'simple',

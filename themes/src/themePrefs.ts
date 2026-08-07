@@ -16,6 +16,7 @@
  */
 import { z } from 'zod'
 import { createPrefsClient } from '@wolffm/prefs-client'
+import { resolvePrefsApiBase } from './prefsApiBase'
 
 export const ThemePrefsSchema = z.object({
   theme: z.string().optional(),
@@ -33,6 +34,10 @@ export type ThemePrefs = z.infer<typeof ThemePrefsSchema>
 export const themePrefs = createPrefsClient({
   appId: 'portfolio',
   schema: ThemePrefsSchema,
+  // Undefined in production, so the SDK's own default applies. Set only by a
+  // local dev/E2E stack pointing at the real prefs-api on localhost — see
+  // ./prefsApiBase.
+  apiBase: resolvePrefsApiBase(),
   // No default theme on purpose: an absent `theme` means "nothing persisted",
   // so a fresh read never overrides the inline FOUC script's browser-preference
   // fallback. We adopt the SDK theme only when it's actually present.

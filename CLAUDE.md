@@ -70,8 +70,24 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 ## Dev Server
 
 - `pnpm run dev:api` runs the REAL worker on :3001 (what vite proxies `/task/api` to) behind an
-  edge-router shim, plus a stub automation-preset provider on :3002. Needed by any e2e spec that
-  exercises the server path — those specs skip themselves when it isn't up.
+  edge-router shim, a stub automation-preset provider on :3002, and the REAL prefs-api worker on
+  :3003 against a real sqlite D1. Needed by any e2e spec that exercises the server path — those
+  specs skip themselves when it isn't up.
+
+- **Prefs are not mocked.** `@wolffm/prefs-client` defaults to `https://hadoku.me/prefs`; specs
+  point it at :3003 via `useLocalPrefs()` (`e2e/helpers/prefs.ts`), which sets the
+  `__HADOKU_PREFS_API_BASE__` global that `resolvePrefsApiBase()` in @wolffm/themes reads. Route
+  mocking `/prefs/api/v1/*` is what hid the `useThemePrefsMigration` bug for months — the mock
+  answered 404 for an unset row where the real worker answers 200 with `merged:{}`, and only the
+  `task` row was ever mocked, so the `portfolio` row escaped to production. Don't reintroduce it.
+
+- :3003 comes from `../hadoku_site/workers/prefs-api` (imported across the repo boundary on
+  purpose — a vendored copy would drift). Without that sibling checkout the prefs server is
+  skipped with a warning and prefs-backed specs skip themselves.
+
+- Test isolation is per-DEVICE: the SDK mints `hadoku_device_id` into localStorage, and each
+  Playwright context is a fresh browser, so device-scoped prefs (theme, themeMode) can't collide
+  across tests. USER-scoped values (experimentalThemes) are shared for the whole run.
 
 - Serve from correct root so relative paths resolve.
 - Use cache-busting query params when debugging.

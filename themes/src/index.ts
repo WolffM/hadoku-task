@@ -182,5 +182,8 @@ export type { HadokuThemeRootProps } from './HadokuThemeRoot'
 // Canonical theme prefs client — was copy-pasted into every child app.
 export { themePrefs, ThemePrefsSchema } from './themePrefs'
 export type { ThemePrefs } from './themePrefs'
+// Shared by every prefs client in the ecosystem, so a dev/E2E stack can point
+// them all at a local prefs-api with one global instead of mocking the network.
+export { resolvePrefsApiBase, PREFS_API_BASE_GLOBAL } from './prefsApiBase'
 export { THEME_EFFECTS, hasAdvanced, getThemeEffects } from './effects'
 export type { AdvancedEffect, ThemeEffectMap } from './effects'

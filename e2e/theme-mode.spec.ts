@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 
 /**
  * E2E tests for the theme mode attribute shipped from @wolffm/themes.
@@ -23,15 +24,22 @@ const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-test-session'
 const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 // @wolffm/prefs-client optimistic cache: `prefs-cache:{userId}:{appId}`.
-// The mocked whoami below resolves the anon user, so the key is stable.
-const SDK_CACHE_KEY = 'prefs-cache:anon:task'
+// The local stack's edge-router shim resolves /session/whoami to the dev user
+// it stamps on every request, so this is the real resolved identity rather
+// than a mock's idea of one.
+const DEV_USER_ID = 'dev-uid'
+const TASK_CACHE_KEY = `prefs-cache:${DEV_USER_ID}:task`
+const SHARED_CACHE_KEY = `prefs-cache:${DEV_USER_ID}:portfolio`
 
-/** Read the prefs-client cache envelope's blob from localStorage. */
-function readSdkCacheBlob(page: Page): Promise<Record<string, unknown> | null> {
-  return page.evaluate(key => {
-    const raw = window.localStorage.getItem(key)
+/** Read a prefs-client cache envelope's blob from localStorage. */
+function readSdkCacheBlob(
+  page: Page,
+  key = TASK_CACHE_KEY
+): Promise<Record<string, unknown> | null> {
+  return page.evaluate(k => {
+    const raw = window.localStorage.getItem(k)
     return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
-  }, SDK_CACHE_KEY)
+  }, key)
 }
 
 async function setupRoutes(page: Page) {
@@ -55,60 +63,11 @@ async function setupRoutes(page: Page) {
     })
   })
 
-  // Hermetic prefs backend for the @wolffm/prefs-client SDK — without it the
-  // tests depend on real hadoku.me network behavior (a successful GET after a
-  // debounced PUT would clobber the optimistic cache with live server state).
-  // The endpoints are cross-origin from the vite dev server, so every fulfill
-  // needs CORS headers and the PUT preflight must be answered.
-  const corsHeaders = (origin: string) => ({
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Content-Type, X-User-Key, X-Device-Id',
-    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
-  })
-
-  await page.route('**/session/whoami', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: corsHeaders(route.request().headers()['origin'] ?? '*'),
-      body: JSON.stringify({ userId: 'anon', userType: 'public' })
-    })
-  })
-
-  // PUTs are accepted (writes flush cleanly); GETs return 404 so the SDK's
-  // background refresh keeps the optimistic localStorage cache authoritative.
-  // A 200 GET would clobber not-yet-flushed patches from the other save scope
-  // (the SDK overwrites its optimistic state with the server's merged blob
-  // while patches are still debounce-pending) — asserting on the optimistic
-  // cache matches what the app actually renders from.
-  const versions = { user: 0, device: 0 }
-  const prefsRow = async (route: import('@playwright/test').Route) => {
-    const request = route.request()
-    const headers = corsHeaders(request.headers()['origin'] ?? '*')
-    if (request.method() === 'OPTIONS') {
-      await route.fulfill({ status: 204, headers })
-      return
-    }
-    if (request.method() === 'PUT') {
-      const { scope } = request.postDataJSON() as { scope: 'user' | 'device' }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        headers,
-        body: JSON.stringify({ scope, version: ++versions[scope] })
-      })
-      return
-    }
-    await route.fulfill({ status: 404, headers })
-  }
-  await page.route('**/prefs/api/v1/task', prefsRow)
-  // The SHARED platform row (appId 'portfolio'), which is what useTheme
-  // actually reads. Leaving it unrouted is not "no opinion": the request
-  // escapes to the real hadoku.me, so the theme the app renders depends on
-  // live network behaviour, and a row that fails to resolve looks exactly
-  // like an empty one. Both are mocked so the migration path is hermetic.
-  await page.route('**/prefs/api/v1/portfolio', prefsRow)
+  // No prefs routing here on purpose. Both rows and /session/whoami are served
+  // by the REAL prefs-api worker on :3003 (scripts/dev-api.mjs), against a real
+  // sqlite D1 — see helpers/prefs.ts for why the mocks were removed and what
+  // they were hiding.
+  await pointPrefsAtLocalStack(page)
 }
 
 /**
@@ -152,7 +111,13 @@ async function waitForApp(page: Page) {
 }
 
 test.describe('Theme Mode', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    // Prefs are served by the real worker now, so these specs need the local
+    // stack up — same contract as every other server-backed spec here.
+    test.skip(
+      !(await prefsUp(request)),
+      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
+    )
     await setupRoutes(page)
   })
 
@@ -198,16 +163,9 @@ test.describe('Theme Mode', () => {
     // And it landed in the SHARED row, so every other hadoku app sees it too —
     // not just re-read from the task row this app is migrating away from.
     await expect
-      .poll(
-        async () =>
-          (
-            await page.evaluate(() => {
-              const raw = window.localStorage.getItem('prefs-cache:anon:portfolio')
-              return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
-            })
-          )?.theme ?? null,
-        { timeout: 10000 }
-      )
+      .poll(async () => (await readSdkCacheBlob(page, SHARED_CACHE_KEY))?.theme ?? null, {
+        timeout: 10000
+      })
       .toBe('coffee-dark')
   })
 

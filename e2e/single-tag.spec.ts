@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 
 /**
  * A task carries AT MOST ONE tag.
@@ -47,49 +48,14 @@ const storedTag = async (page: Page, title: string) =>
   (await readStoredTasks(page)).find(t => t.title === title)?.tag ?? ''
 
 /**
- * Hermetic prefs backend, borrowed from task-button-prefs.spec.ts: the seeded
- * legacy blob is migrated through the prefs SDK on load, and without these
- * routes that migration fails and every pref falls back to its default — which
- * would silently drop `showTagButton` and hide the modal under test. GET 404s
- * on purpose, keeping the optimistic localStorage cache authoritative.
+ * Point prefs at the local stack. The seeded legacy blob is migrated through
+ * the prefs SDK on load, and if that migration can't reach a prefs backend
+ * every pref falls back to its default — silently dropping `showTagButton`
+ * and hiding the modal under test. This used to be a route stub; it is now the
+ * REAL prefs-api on :3003 against a real sqlite D1. See helpers/prefs.ts.
  */
-async function stubPrefsBackend(page: Page) {
-  const corsHeaders = (origin: string) => ({
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Content-Type, X-User-Key, X-Device-Id',
-    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
-  })
-
-  await page.route('**/session/whoami', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: corsHeaders(route.request().headers()['origin'] ?? '*'),
-      body: JSON.stringify({ userId: 'anon', userType: 'public' })
-    })
-  })
-
-  const versions = { user: 0, device: 0 }
-  await page.route('**/prefs/api/v1/task', async route => {
-    const request = route.request()
-    const headers = corsHeaders(request.headers()['origin'] ?? '*')
-    if (request.method() === 'OPTIONS') {
-      await route.fulfill({ status: 204, headers })
-      return
-    }
-    if (request.method() === 'PUT') {
-      const { scope } = request.postDataJSON() as { scope: 'user' | 'device' }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        headers,
-        body: JSON.stringify({ scope, version: ++versions[scope] })
-      })
-      return
-    }
-    await route.fulfill({ status: 404, headers })
-  })
+async function usePrefsBackend(page: Page) {
+  await pointPrefsAtLocalStack(page)
 }
 
 /** Seed a public session; a public sessionId comes from `task_anon_session_id`. */
@@ -216,8 +182,12 @@ test.describe('One tag per task', () => {
 test.describe('One tag per task: the edit-tag modal', () => {
   // The pill grid is only reachable with the tag button pref turned on, and
   // that pref only survives load with the prefs backend stubbed.
-  test.beforeEach(async ({ page }) => {
-    await stubPrefsBackend(page)
+  test.beforeEach(async ({ page, request }) => {
+    test.skip(
+      !(await prefsUp(request)),
+      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
+    )
+    await usePrefsBackend(page)
     await seedPublicSession(page, { showTagButton: true })
     await page.goto('/?userType=public')
     await expect(page.locator('.task-app__input')).toBeVisible()

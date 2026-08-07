@@ -185,7 +185,7 @@ export default [
   // it bundles the worker and serves it over node:http, so it gets node globals
   // on top of the workerd ones above.
   {
-    files: ['worker/test/dev-server.ts'],
+    files: ['worker/test/dev-server.ts', 'worker/test/prefs-dev-server.ts'],
     languageOptions: {
       globals: {
         Buffer: 'readonly',
