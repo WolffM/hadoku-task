@@ -75,7 +75,7 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
   specs skip themselves when it isn't up.
 
 - **Prefs are not mocked.** `@wolffm/prefs-client` defaults to `https://hadoku.me/prefs`; specs
-  point it at :3003 via `useLocalPrefs()` (`e2e/helpers/prefs.ts`), which sets the
+  point it at :3003 via `pointPrefsAtLocalStack()` (`e2e/helpers/prefs.ts`), which sets the
   `__HADOKU_PREFS_API_BASE__` global that `resolvePrefsApiBase()` in @wolffm/themes reads. Route
   mocking `/prefs/api/v1/*` is what hid the `useThemePrefsMigration` bug for months — the mock
   answered 404 for an unset row where the real worker answers 200 with `merged:{}`, and only the
