@@ -15,8 +15,27 @@ name: CI
 # verified) and FATAL on others (they wait forever). Scoping lives in the jobs'
 # scope steps below, which always report. See tenhands
 # docs/hadoku-task-automation/pr-gate-invariant.md.
+#
+# ALSO ON PUSH TO MAIN, because a PR-only trigger verifies a path this repo
+# largely does not use. Pushing straight to main is the normal, sanctioned way
+# work lands here (10 of the last 25 commits arrived with no PR), so a
+# pull_request-only CI meant those commits were checked by NOTHING — on
+# 2026-08-06 four consecutive commits shipped and published without a single
+# CI run between them.
+#
+# This is DETECTION, not prevention: the push has already landed by the time
+# these jobs run, so a failure is a red main to fix forward, not a blocked
+# merge. That is the honest ceiling for a direct-push workflow, and it is still
+# the difference between a visible red X and total silence — which is what the
+# theme-inheritance specs had while they sat broken.
+#
+# The scope steps below short-circuit to run=true for any non-pull_request
+# event, so a push runs all three jobs unfiltered. That is intended: on main
+# there is no base sha to diff against and nothing worth skipping.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
