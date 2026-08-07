@@ -44,11 +44,21 @@ const SESSION_WHOAMI = '/session/whoami'
  */
 const WHOAMI_GLOBAL = '__hadokuWhoami'
 
-/** Raw whoami body, as both mf-loader and this module see it off the wire. */
+/**
+ * Raw whoami body, as both mf-loader and this module see it off the wire.
+ *
+ * `contentLevel` / `maxContentLevel` are OPTIONAL because the shape is
+ * versioned by whatever edge-router is deployed, not by this bundle. They
+ * arrive from edge-router ≥ the 2026-08-07 change, which reports the level
+ * `authGate` had already resolved to stamp X-Hadoku-Content-Level. When they
+ * are absent we fall back to the standalone GET — see resolveSettings.
+ */
 interface WhoamiBody {
   valid?: boolean
   userType?: Tier
   name?: string | null
+  contentLevel?: number
+  maxContentLevel?: number
 }
 
 // Hard timeout on every settings request. Without it, a request throttled by
@@ -142,31 +152,37 @@ export interface Identity {
 }
 
 /**
+ * The page's one whoami body, resolved at most once no matter how many callers.
+ *
+ * Under the hadoku.me shell this costs NO request: mf-loader kicks whoami in
+ * parallel with the micro-frontend's module import and parks the promise on
+ * WHOAMI_GLOBAL for exactly this reason (@wolffm/prefs-client reads the same
+ * key). Elsewhere — standalone vite, Capacitor, Storybook — we fetch once and
+ * publish under the same key so the next reader is free too.
+ *
+ * Resolves to null rather than throwing on any failure.
+ */
+function sharedWhoami(): Promise<WhoamiBody | null> {
+  const g = globalThis as { [WHOAMI_GLOBAL]?: Promise<WhoamiBody | null> }
+  g[WHOAMI_GLOBAL] ??= fetch(SESSION_WHOAMI, {
+    credentials: 'same-origin',
+    headers: sessionHeaders(),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  })
+    .then(res => (res.ok ? (res.json() as Promise<WhoamiBody>) : null))
+    .catch(() => null)
+  return g[WHOAMI_GLOBAL]
+}
+
+/**
  * Resolve the signed-in caller's tier + display name from the edge-router.
  * Returns { userType: 'public', name: null } for anonymous / off-origin / any
  * failure — never throws, so ConnectedSettings can render unconditionally.
- *
- * Costs no request under the hadoku.me shell: it awaits the boot whoami the
- * loader already has in flight (see WHOAMI_GLOBAL). Elsewhere it fetches once
- * and publishes the promise, so this is at most one whoami per page load no
- * matter how many callers there are.
  */
 export async function whoami(): Promise<Identity> {
   if (typeof window === 'undefined') return { userType: 'public', name: null }
-  const g = globalThis as { [WHOAMI_GLOBAL]?: Promise<WhoamiBody | null> }
-  let shared = g[WHOAMI_GLOBAL]
-  if (!shared) {
-    shared = fetch(SESSION_WHOAMI, {
-      credentials: 'same-origin',
-      headers: sessionHeaders(),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-    })
-      .then(res => (res.ok ? (res.json() as Promise<WhoamiBody>) : null))
-      .catch(() => null)
-    g[WHOAMI_GLOBAL] = shared
-  }
   try {
-    const body = await shared
+    const body = await sharedWhoami()
     if (!body?.valid) return { userType: 'public', name: null }
     return { userType: body.userType ?? 'public', name: body.name ?? null }
   } catch {
@@ -242,9 +258,13 @@ let snapshot: Promise<SettingsSnapshot> | null = null
  * the app's own boot traffic and the click costs nothing.
  *
  * Idempotent and shared: every caller after the first gets the same promise, so
- * N mounted consumers still produce at most one whoami and one content-level
- * for the whole page. Mutations below write through to it rather than
- * invalidating, so a remount never shows a value the user just changed.
+ * N mounted consumers still produce at most one whoami for the whole page.
+ * Mutations below write through to it rather than invalidating, so a remount
+ * never shows a value the user just changed.
+ *
+ * Against a current edge-router this issues NO requests of its own at all — the
+ * level rides on the whoami the shell already had in flight. See
+ * resolveSettings for the fallback when it doesn't.
  */
 export function prefetchSettings(hints: SettingsPrefetchHints = {}): Promise<SettingsSnapshot> {
   snapshot ??= resolveSettings(hints)
@@ -252,24 +272,61 @@ export function prefetchSettings(hints: SettingsPrefetchHints = {}): Promise<Set
 }
 
 async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSnapshot> {
+  // The whoami body, not just the adapted identity — edge-router carries the
+  // content level on it (see below), and reading the raw body is how we get at
+  // it without a second request.
+  //
+  // Skipped entirely when the host supplied identity: that prop exists for apps
+  // that CANNOT reach /session/whoami (conjure sits behind a path-prefixed shim
+  // where it 404s), so asking anyway would spend a request to learn nothing.
+  const selfResolving = hints.userType === undefined && typeof window !== 'undefined'
+  const bodyPromise = selfResolving ? sharedWhoami() : Promise.resolve(null)
+
   const identityPromise: Promise<Identity> =
     hints.userType !== undefined
       ? Promise.resolve({ userType: hints.userType, name: hints.name ?? null })
       : whoami()
 
-  // Identity decides whether a content request is warranted at all — the pill
-  // is hidden for public callers, so fetching an anonymous visitor's level is a
-  // guaranteed-wasted request on every page view. Where we can tell up front
-  // that the caller is signed in, the two go out together instead; the cached
-  // `hadoku_user_type` is written by hadoku_site's loader before anything
-  // mounts, which covers the only case that would otherwise serialise two real
-  // round trips.
-  const contentPromise = looksSignedIn(hints.userType)
-    ? getContentLevel()
-    : identityPromise.then(id => (id.userType === 'public' ? null : getContentLevel()))
+  // PREFERRED PATH: take the level straight off whoami.
+  //
+  // edge-router's authGate has already resolved it (registry key → userId →
+  // prefs D1) to stamp X-Hadoku-Content-Level, so reporting it on whoami costs
+  // it nothing — and it saves us a proxied round trip to prefs-api that
+  // measured 132-420ms against prod. Better still, whoami is in flight before
+  // this bundle has even loaded, so the value is here the moment we ask.
+  //
+  // FALLBACK: the standalone GET, for any edge-router older than the
+  // 2026-08-07 change, and for callers not behind it at all (Capacitor,
+  // Storybook, a non-hadoku host). Gated on identity because the pill is
+  // hidden for public callers — fetching an anonymous visitor's level is a
+  // guaranteed-wasted request on every page view. `hadoku_user_type` is
+  // written by the loader before anything mounts, so where it already says
+  // "signed in" the fallback goes out concurrently rather than behind whoami.
+  const contentPromise = bodyPromise.then(body => {
+    const carried = contentFromWhoami(body)
+    if (carried) return carried
+    if (looksSignedIn(hints.userType)) return getContentLevel()
+    return identityPromise.then(id => (id.userType === 'public' ? null : getContentLevel()))
+  })
 
   const [identity, content] = await Promise.all([identityPromise, contentPromise])
   return { identity, content }
+}
+
+/**
+ * Adapt the content level off a whoami body, or null if that edge-router
+ * doesn't report it.
+ *
+ * Both fields are required, and both must be numbers: a body carrying a level
+ * without its ceiling would render a pill with zero segments — worse than the
+ * fallback fetch, because it looks like a working control that offers nothing.
+ */
+function contentFromWhoami(body: WhoamiBody | null): ContentLevelState | null {
+  if (!body?.valid) return null
+  const { contentLevel, maxContentLevel } = body
+  if (typeof contentLevel !== 'number' || typeof maxContentLevel !== 'number') return null
+  if (maxContentLevel < 1) return null
+  return { level: contentLevel, maxLevel: maxContentLevel }
 }
 
 /** Best-effort "is this caller signed in?" from state available synchronously. */
