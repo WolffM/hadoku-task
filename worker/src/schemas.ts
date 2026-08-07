@@ -495,3 +495,26 @@ export const ValidateKeyResponseSchema = z
     userId: z.string().optional().openapi({ example: '3f2a9c7e-1b4d-4c8a-9e2f-7a6b5c4d3e2f' })
   })
   .openapi('ValidateKeyResponse')
+
+/**
+ * Client telemetry relay payload (`POST /task/api/telemetry`).
+ *
+ * Narrow on purpose — this carries silent-degradation events, not general logs.
+ * `warn`/`error` only, matching the client sink's threshold; `type` mirrors
+ * monitoring-api's TelemetryType enum so the relay never has to translate.
+ */
+export const TelemetryEventSchema = z.object({
+  level: z.enum(['warn', 'error']).openapi({ example: 'warn' }),
+  type: z
+    .enum(['log', 'component', 'api', 'theme', 'error'])
+    .optional()
+    .openapi({ example: 'theme' }),
+  message: z.string().min(1).max(300).openapi({ example: '[theme] inherited theme discarded' }),
+  context: z.record(z.string(), z.unknown()).optional()
+})
+
+export const TelemetryIngestSchema = z
+  .object({
+    events: z.array(TelemetryEventSchema).min(1).max(20)
+  })
+  .openapi('TelemetryIngest')

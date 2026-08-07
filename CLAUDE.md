@@ -54,6 +54,28 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 - Tools wrap the in-process `TaskHandlers`; scoped by `X-User-Key` (same auth as `/task/api/*`). Add a tool = add to `TOOLS` in `tools.ts`.
 - Full docs: `docs/MCP.md`.
 
+## Telemetry (silent-degradation reporting)
+
+- **What it is for.** Catching the class of bug where a value is resolved and then quietly
+  discarded for a default. Nothing throws, nothing 500s, and no test catches it because you
+  must imagine the failure to write the assertion. Both 2026-08 theme bugs were this shape.
+- **Emit degradations at `warn`** through `@wolffm/logger`. `sinkMinLevel` is `warn`, so
+  info/debug never leave the browser. Include what was requested vs what was applied.
+- **Path**: browser → `POST /task/api/telemetry` (this app's worker, session-authed) →
+  monitoring-api's service-tier ingest. The browser CANNOT post to monitoring-api directly:
+  `/health/api/telemetry` is service tier, `/batch` is admin, and anonymous is 403 — a browser
+  is `friend` at best. The relay holds the credential so no public write surface is opened.
+- **`MONITORING_INGEST_KEY`** is the worker's service key binding (mapped in `.devvault.json`).
+  Absent is a NORMAL state — local dev and E2E drop events silently. Never treat it as an error.
+- **The relay always answers 204**, including malformed bodies, schema failures and upstream
+  errors. Enforced at the framework edge (`defaultHook` + `onError`), not just in the handler:
+  zod-openapi answers 400 before the handler runs, and a 400 can feed a post → fail → log →
+  post loop out of the component that reports problems.
+- `@wolffm/themes` carries NO logger dependency by design. It reports degradations through the
+  `onThemeDegraded` callback on `HadokuThemeRoot`/`useTheme`; the app wires that to the logger.
+- Contract is pinned by `worker/test/telemetry-relay-verify.ts` (`pnpm run test:worker`, which
+  CI runs on every push).
+
 ## Cross-Repo
 
 - Publishes trigger `packages_updated` dispatch to WolffM/hadoku_site

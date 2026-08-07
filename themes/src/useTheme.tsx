@@ -41,6 +41,20 @@ export interface UseThemeOptions {
   /** Mirror `data-theme` onto a container element as well as <html>, for
    *  micro-frontend mounts that are styled within their own subtree. */
   containerRef?: RefObject<HTMLElement | null>
+  /**
+   * Called when a theme the app was ASKED for could not be honoured and a
+   * default was applied instead.
+   *
+   * A callback rather than a log call because this package deliberately carries
+   * no logger dependency — everything downstream installs it, and a duplicated
+   * logger is its own class of bug. The host wires this to whatever it reports
+   * with; hadoku-task sends it to the telemetry sink.
+   *
+   * This is the signal that was missing when bare family tokens stopped
+   * normalizing: the app silently rendered `light` for anyone whose host page
+   * shared 'coffee', and nothing anywhere said so.
+   */
+  onThemeDegraded?: (info: { requested: string; applied: string; reason: string }) => void
 }
 
 /** Bare family token → its light/dark pair, e.g. 'coffee' → coffee-light /
@@ -104,7 +118,7 @@ function seedTheme(propsTheme?: string): string {
 }
 
 export function useTheme(options: UseThemeOptions = {}) {
-  const { propsTheme, containerRef } = options
+  const { propsTheme, containerRef, onThemeDegraded } = options
 
   const [theme, setThemeState] = useState<string>(() => seedTheme(propsTheme))
   const [isThemeReady, setIsThemeReady] = useState(false)
@@ -198,9 +212,25 @@ export function useTheme(options: UseThemeOptions = {}) {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
+  // Reported through a ref so the DOM effect below does not re-run (and
+  // re-report) every time the host passes a fresh callback identity.
+  const onDegradedRef = useRef(onThemeDegraded)
+  useEffect(() => {
+    onDegradedRef.current = onThemeDegraded
+  })
+
   // Apply to the DOM.
   useEffect(() => {
     const valid = isThemeAvailable(theme) ? theme : 'light'
+    if (valid !== theme) {
+      // The app was asked for a theme it cannot render and is about to show a
+      // different one. Silent until now — see onThemeDegraded.
+      onDegradedRef.current?.({
+        requested: theme,
+        applied: valid,
+        reason: 'unknown-theme'
+      })
+    }
 
     document.documentElement.setAttribute('data-theme', valid)
     // Micro-frontend mounts style within their own subtree.

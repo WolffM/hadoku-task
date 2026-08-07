@@ -71,7 +71,18 @@ export function useThemePrefsMigration(
     // A FAILED read is not an empty row. It is indistinguishable from one by
     // value alone, and treating it as empty would write this app's copy over a
     // server row we never managed to see. Retry on the next mount instead.
-    if (error) return
+    if (error) {
+      // WARN, not debug: this is the silent-degradation path. The user keeps
+      // whatever theme the app defaulted to and nothing tells them why, which
+      // is exactly how the original bug in this hook stayed invisible. At warn
+      // it reaches the telemetry sink (src/utils/telemetrySink.ts).
+      logger.warn('[themePrefsMigration] skipped — shared row unreadable', {
+        reason: 'read-error',
+        error: (error as Error)?.message ?? String(error),
+        hasLocalTheme: Boolean(preferences.theme)
+      })
+      return
+    }
     migrated.current = true
 
     // The rules live in planThemePrefsMigration and are pinned by

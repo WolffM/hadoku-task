@@ -29,6 +29,16 @@ export interface Env {
   // Optional. Absent ⇒ repo validation degrades to an unauthenticated probe
   // (public repos only) and no dispatch is sent; board writes are unaffected.
   GITHUB_READ_TOKEN?: string
+  // Service-tier key used ONLY to forward client degradation events to
+  // monitoring-api's ingest (see routes/telemetry.ts). It exists because a
+  // browser cannot reach that ingest itself — friend tier is blocked and
+  // anonymous is blocked — and the alternative was opening a write route on
+  // the shared monitoring worker for every app at once.
+  //
+  // Optional, and absence is a normal state rather than a misconfiguration:
+  // local dev and the E2E stack have no binding and simply drop events. The
+  // relay always answers 204 either way, so nothing observable changes.
+  MONITORING_INGEST_KEY?: string
   // Registry display name of the automation runner that gets `contributor` on a
   // board automatically when it's activated as an automation board (§5.4, §7).
   // Defaults to 'tenhands-service-key' — the app identity TenHands' worker
