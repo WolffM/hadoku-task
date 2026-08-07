@@ -83,7 +83,7 @@ async function setupRoutes(page: Page) {
   // while patches are still debounce-pending) — asserting on the optimistic
   // cache matches what the app actually renders from.
   const versions = { user: 0, device: 0 }
-  await page.route('**/prefs/api/v1/task', async route => {
+  const prefsRow = async (route: import('@playwright/test').Route) => {
     const request = route.request()
     const headers = corsHeaders(request.headers()['origin'] ?? '*')
     if (request.method() === 'OPTIONS') {
@@ -101,7 +101,14 @@ async function setupRoutes(page: Page) {
       return
     }
     await route.fulfill({ status: 404, headers })
-  })
+  }
+  await page.route('**/prefs/api/v1/task', prefsRow)
+  // The SHARED platform row (appId 'portfolio'), which is what useTheme
+  // actually reads. Leaving it unrouted is not "no opinion": the request
+  // escapes to the real hadoku.me, so the theme the app renders depends on
+  // live network behaviour, and a row that fails to resolve looks exactly
+  // like an empty one. Both are mocked so the migration path is hermetic.
+  await page.route('**/prefs/api/v1/portfolio', prefsRow)
 }
 
 /**
@@ -161,6 +168,47 @@ test.describe('Theme Mode', () => {
 
     const mode = await page.evaluate(() => document.documentElement.getAttribute('data-theme-mode'))
     expect(mode).toBe('simple')
+  })
+
+  test('a theme stranded in the task row migrates to the shared row and renders', async ({
+    page
+  }) => {
+    // Regression: useThemePrefsMigration bailed whenever the shared row read
+    // back as null, on the belief that null meant "not resolved yet". It does
+    // not — usePrefs clears `loading` when the read settles and leaves `prefs`
+    // null when the row is EMPTY. So the migration was disabled for exactly
+    // the people it exists for: anyone whose only hadoku app is this one has
+    // no shared row, so their theme stayed stranded in the task row and the
+    // app opened on the default forever.
+    await seedPublicSession(page, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      theme: 'coffee-dark'
+    })
+
+    await page.goto('/')
+    await waitForApp(page)
+
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')), {
+        timeout: 10000
+      })
+      .toBe('coffee-dark')
+
+    // And it landed in the SHARED row, so every other hadoku app sees it too —
+    // not just re-read from the task row this app is migrating away from.
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(() => {
+              const raw = window.localStorage.getItem('prefs-cache:anon:portfolio')
+              return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
+            })
+          )?.theme ?? null,
+        { timeout: 10000 }
+      )
+      .toBe('coffee-dark')
   })
 
   test('hdk-advanced-page class is applied to the task container', async ({ page }) => {

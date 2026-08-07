@@ -51,23 +51,38 @@ export function useThemePrefsMigration(
   preferences: UserPreferences,
   preferencesLoaded: boolean
 ): void {
-  const { prefs: shared, save: saveShared, loading } = usePrefs(themePrefs)
+  const { prefs: shared, save: saveShared, loading, error } = usePrefs(themePrefs)
   const migrated = useRef(false)
 
   useEffect(() => {
     if (migrated.current) return
-    // Both rows must have actually RESOLVED. `shared === null` is the
-    // pre-resolve state, not an empty row — acting on it would read every
-    // field as absent and migrate this app's defaults over the top of
-    // whatever the server holds.
-    if (!preferencesLoaded || loading || shared === null) return
+    // Both rows must have actually RESOLVED — and `loading` is the ONLY signal
+    // for that. This used to also bail on `shared === null`, calling it "the
+    // pre-resolve state, not an empty row", which is backwards and disabled
+    // the migration for exactly the people it was written for.
+    //
+    // usePrefs sets loading=false once client.read() settles, while `prefs`
+    // stays null until the store is actually handed a value. So null AFTER
+    // loading means the shared row is EMPTY — the state where every field is
+    // genuinely absent and the whole migration should fire. A user whose only
+    // hadoku app is this one has no shared row at all, so the old guard held
+    // forever and their theme stayed stranded in the task row.
+    if (!preferencesLoaded || loading) return
+    // A FAILED read is not an empty row. It is indistinguishable from one by
+    // value alone, and treating it as empty would write this app's copy over a
+    // server row we never managed to see. Retry on the next mount instead.
+    if (error) return
     migrated.current = true
 
     // The rules live in planThemePrefsMigration and are pinned by
     // src/test/theme-prefs-migration-verify.ts — they are subtle enough
     // (shared-wins, default-means-unset, split scopes) to be worth asserting
     // rather than re-deriving here.
-    const { device, user } = planThemePrefsMigration(shared, preferences, DEFAULT_TASK_PREFERENCES)
+    const { device, user } = planThemePrefsMigration(
+      shared ?? {},
+      preferences,
+      DEFAULT_TASK_PREFERENCES
+    )
     if (isEmptyPlan({ device, user })) return
 
     const writes: Promise<void>[] = []
@@ -94,5 +109,5 @@ export function useThemePrefsMigration(
         error: (err as Error)?.message ?? String(err)
       })
     })
-  }, [preferences, preferencesLoaded, shared, loading, saveShared])
+  }, [preferences, preferencesLoaded, shared, loading, error, saveShared])
 }
