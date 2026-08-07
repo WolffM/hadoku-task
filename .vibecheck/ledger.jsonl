@@ -1,1 +1,24 @@
 {"id":"01KZCZ5PFT1F1TF07AXEMTBTD2","at":"2026-08-07T01:59:59.226Z","verdict":"noise","fingerprint":"deadcode:src/server/index.ts","reason":"published package entry via dist exports — knip cannot see the mapping"}
+{"id":"01KZEHBVQGT016QB2EDN8X5EPV","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:src/api/client.ts","score":1.532,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EPW","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:src/components/modals/EditBoardsModal.tsx","score":1.868,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EPX","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:src/domain/handlers/handlers.ts","score":1.116,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EPY","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:src/styles/main.css","score":1.094,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EPZ","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:src/styles/modal.css","score":1.53,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ0","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:themes/dev/editor.css","score":2.088,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ1","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:themes/dev/editor.js","score":1.262,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ2","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:themes/src/style.css","score":2.006,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ3","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:worker/src/mcp/tools.ts","score":1.324,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ4","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:worker/src/routes/shares.ts","score":1.018,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ5","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:worker/src/schemas-agent.ts","score":1.05,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ6","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:worker/test/agent-claim-verify.ts","score":1.28,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ7","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"size:worker/test/automation-verify.ts","score":2.212,"threshold":1}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ8","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:src/domain/utils/lifecycle.ts","score":0.5,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQ9","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:src/utils/platform.ts","score":0.5,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQA","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:src/utils/theme.ts","score":0.75,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQB","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:themes/scripts/lib/derive.mjs","score":0.8571428571428571,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQC","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:themes/scripts/lib/parse-themes.mjs","score":0.5,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQD","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:worker/src/constants.ts","score":0.5,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQE","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"deadcode:worker/src/request-utils.ts","score":0.625,"threshold":0.5}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQF","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"duplication:e2e/theme-picker.spec.ts","score":0.4639175257731959,"threshold":0.3}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQG","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"consistency:themes/dev/build.js","score":0.8,"threshold":0.7}
+{"id":"01KZEHBVQGT016QB2EDN8X5EQH","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"consistency:themes/dev/editor.js","score":0.8,"threshold":0.7}
