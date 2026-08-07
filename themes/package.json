@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
