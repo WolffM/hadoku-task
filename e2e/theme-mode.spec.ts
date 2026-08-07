@@ -1,18 +1,22 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * E2E tests for the Simple/Advanced theme mode system shipped from
- * @wolffm/themes. Verifies that:
+ * E2E tests for the theme mode attribute shipped from @wolffm/themes.
  *
- *   1. data-theme-mode='advanced' is the default attribute on documentElement
- *   2. .hdk-advanced-page is on the task container so the gradient renders
- *   3. The Simple/Advanced toggle is visible only when the active theme has
- *      an advanced visual contract (light, cyberpunk-dark) and hidden
- *      otherwise (e.g. coffee-light)
- *   4. Clicking the toggle flips data-theme-mode and persists to the
- *      prefs-client cache (unified prefs store)
- *   5. Legacy `simpleMode` saved preferences are migrated to `themeMode`
- *      on first load and the legacy localStorage key is dropped
+ * Advanced visuals are switched off platform-wide: the Simple/Advanced toggle
+ * is gone from the picker and `useTheme` pins data-theme-mode='simple' on
+ * every theme apply. The advanced kit (advanced.css, the hdk-advanced-*
+ * class hooks) still ships and still keys off the attribute, so these tests
+ * guard that nothing can turn it back on by accident. Verifies that:
+ *
+ *   1. data-theme-mode is 'simple' on documentElement, on every theme
+ *   2. .hdk-advanced-page is still on the task container, rendering flat
+ *   3. The picker exposes NO mode toggle
+ *   4. A previously persisted themeMode='advanced' does not resurrect the
+ *      advanced visuals
+ *   5. Legacy `simpleMode` saved preferences are still migrated to `themeMode`
+ *      on first load and the legacy localStorage key is dropped — the value is
+ *      recorded but no longer drives rendering
  */
 
 const PUBLIC_USER_TYPE = 'public'
@@ -172,7 +176,11 @@ test.describe('Theme Mode', () => {
     await expect(page.locator('.task-app-container.hdk-advanced-page')).toBeVisible()
   })
 
-  test('mode toggle is visible on light theme', async ({ page }) => {
+  test('the picker has no mode toggle, even on a theme with an advanced contract', async ({
+    page
+  }) => {
+    // `light` is one of the two themes that ship an advanced contract (see
+    // THEME_EFFECTS), so it is where a toggle would show up if one survived.
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -183,29 +191,9 @@ test.describe('Theme Mode', () => {
     await waitForApp(page)
 
     await page.locator('.theme-toggle-btn').click()
-    await expect(page.locator('.theme-picker__mode-toggle')).toBeVisible()
-
-    const buttons = page.locator('.theme-picker__mode-btn')
-    await expect(buttons).toHaveCount(2)
-    await expect(buttons.nth(0)).toHaveText('Simple')
-    await expect(buttons.nth(1)).toHaveText('Advanced')
-    // Simple is the default when no themeMode pref is saved
-    await expect(buttons.nth(0)).toHaveClass(/active/)
-  })
-
-  test('mode toggle is hidden on a theme without an advanced contract', async ({ page }) => {
-    await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      theme: 'coffee-light'
-    })
-
-    await page.goto('/')
-    await waitForApp(page)
-
-    await page.locator('.theme-toggle-btn').click()
     await expect(page.locator('.theme-picker__dropdown')).toBeVisible()
     await expect(page.locator('.theme-picker__mode-toggle')).toHaveCount(0)
+    await expect(page.locator('.theme-picker__mode-btn')).toHaveCount(0)
   })
 
   test('--advanced-gradient does not leak from light into other themes', async ({ page }) => {
@@ -213,7 +201,9 @@ test.describe('Theme Mode', () => {
     // `:root, [data-theme='light']` which cascaded to every element,
     // so a user on (e.g.) coffee-light with themeMode='advanced'
     // would see the light theme's beach-day gradient. The advanced
-    // contract is now scoped to [data-theme='light'] only.
+    // contract is now scoped to [data-theme='light'] only. The mode
+    // seeded below is inert now, but the token scoping this guards is
+    // what would break first if the advanced kit is ever switched back on.
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -240,52 +230,32 @@ test.describe('Theme Mode', () => {
     expect(surfaceBg).not.toMatch(/linear-gradient/)
   })
 
-  test('mode toggle is visible on cyberpunk-dark', async ({ page }) => {
-    // cyberpunk is experimental — must be enabled or the theme falls back
-    await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      theme: 'cyberpunk-dark',
-      experimentalThemes: true
-    })
-
-    await page.goto('/')
-    await waitForApp(page)
-
-    await page.locator('.theme-toggle-btn').click()
-    await expect(page.locator('.theme-picker__mode-toggle')).toBeVisible()
-    // Simple is the default when no themeMode pref is saved
-    await expect(page.locator('.theme-picker__mode-btn').nth(0)).toHaveClass(/active/)
-  })
-
-  test('clicking Advanced flips data-theme-mode and persists to the prefs cache', async ({
+  test('a persisted themeMode=advanced does not resurrect the advanced visuals', async ({
     page
   }) => {
+    // Someone who used the toggle before it was removed still has
+    // themeMode='advanced' in their prefs row. It must not render.
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
-      theme: 'light'
+      theme: 'light',
+      themeMode: 'advanced'
     })
 
     await page.goto('/')
     await waitForApp(page)
-
-    expect(
-      await page.evaluate(() => document.documentElement.getAttribute('data-theme-mode'))
-    ).toBe('simple')
-
-    await page.locator('.theme-toggle-btn').click()
-    await page.locator('.theme-picker__mode-btn').filter({ hasText: 'Advanced' }).click()
 
     await expect
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
-      .toBe('advanced')
+      .toBe('simple')
 
-    // Persistence: the prefs-client cache (unified store) should now have
-    // themeMode='advanced' — the legacy PREFS_KEY blob is gone post-migration.
-    await expect
-      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null)
-      .toBe('advanced')
+    // The page surface falls back to the flat color, not the light theme's
+    // beach-day gradient.
+    const surfaceBg = await page.evaluate(() => {
+      const el = document.querySelector('.task-app-container.hdk-advanced-page')
+      return el ? getComputedStyle(el).backgroundImage : null
+    })
+    expect(surfaceBg).not.toMatch(/linear-gradient/)
   })
 
   test('legacy simpleMode=true is migrated to themeMode=simple on load', async ({ page }) => {
@@ -317,7 +287,9 @@ test.describe('Theme Mode', () => {
     expect('simpleMode' in ((await readSdkCacheBlob(page)) ?? {})).toBe(false)
   })
 
-  test('legacy simpleMode=false migrates to themeMode=advanced', async ({ page }) => {
+  test('legacy simpleMode=false migrates to themeMode=advanced but still renders simple', async ({
+    page
+  }) => {
     await seedPublicSession(page, {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -328,9 +300,10 @@ test.describe('Theme Mode', () => {
     await page.goto('/')
     await waitForApp(page)
 
+    // The migration still records the old value; rendering ignores it.
     await expect
       .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
-      .toBe('advanced')
+      .toBe('simple')
 
     await expect
       .poll(() => page.evaluate(key => window.localStorage.getItem(key), PREFS_KEY))

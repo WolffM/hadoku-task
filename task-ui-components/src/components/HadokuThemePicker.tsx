@@ -34,9 +34,6 @@ export function HadokuThemePicker() {
       currentTheme={t.theme}
       onThemeChange={t.setTheme}
       getThemeIcon={t.getThemeIcon}
-      themeMode={t.themeMode}
-      onThemeModeChange={t.setThemeMode}
-      hasAdvanced={t.hasAdvanced}
     />
   )
 }

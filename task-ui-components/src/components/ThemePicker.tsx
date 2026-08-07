@@ -38,10 +38,7 @@ export function ThemePicker({
   onSettingsClick,
   getThemeIcon,
   className = '',
-  dropdownPlacement = 'auto',
-  themeMode,
-  onThemeModeChange,
-  hasAdvanced
+  dropdownPlacement = 'auto'
 }: ThemePickerProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [resolvedPlacement, setResolvedPlacement] = useState<'left' | 'right'>('right')
@@ -92,26 +89,6 @@ export function ThemePicker({
           className="theme-picker__dropdown"
           onClick={e => e.stopPropagation()}
         >
-          {hasAdvanced && themeMode && onThemeModeChange && (
-            <div className="theme-picker__mode-toggle" role="group" aria-label="Theme mode">
-              <button
-                type="button"
-                className={`theme-picker__mode-btn ${themeMode === 'simple' ? 'active' : ''}`}
-                onClick={() => onThemeModeChange('simple')}
-                aria-pressed={themeMode === 'simple'}
-              >
-                Simple
-              </button>
-              <button
-                type="button"
-                className={`theme-picker__mode-btn ${themeMode === 'advanced' ? 'active' : ''}`}
-                onClick={() => onThemeModeChange('advanced')}
-                aria-pressed={themeMode === 'advanced'}
-              >
-                Advanced
-              </button>
-            </div>
-          )}
           <div className="theme-picker__main">
             <div className="theme-picker__pills">
               {themeFamilies.map((family, idx) => {

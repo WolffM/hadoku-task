@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 // ThemeName/ThemeFamily/ThemeMode from here keep resolving — to the same
 // declarations, not copies.
 export type { ThemeName, ThemeFamily, ThemeMode } from '@wolffm/themes'
-import type { ThemeName, ThemeFamily, ThemeMode } from '@wolffm/themes'
+import type { ThemeName, ThemeFamily } from '@wolffm/themes'
 
 /**
  * Dropdown placement direction
@@ -40,11 +40,4 @@ export interface ThemePickerProps {
   className?: string
   /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
   dropdownPlacement?: DropdownPlacement
-  /** Optional: Active theme mode. Required to render the Simple/Advanced toggle. */
-  themeMode?: ThemeMode
-  /** Optional: Callback when theme mode is changed. Required to render the toggle. */
-  onThemeModeChange?: (mode: ThemeMode) => void
-  /** Optional: True when the active theme has an advanced visual contract.
-   *  Toggle is hidden when false. */
-  hasAdvanced?: boolean
 }

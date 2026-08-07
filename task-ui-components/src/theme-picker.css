@@ -98,43 +98,6 @@
   flex-direction: row-reverse;
 }
 
-/* Simple / Advanced mode toggle */
-.theme-picker__mode-toggle {
-  display: inline-flex;
-  align-self: flex-start;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 2px;
-  gap: 2px;
-  box-shadow: var(--hdk-shadow-sm);
-}
-
-.theme-picker__mode-btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: var(--hdk-text-xs);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 4px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.theme-picker__mode-btn:hover {
-  color: var(--color-text);
-}
-
-.theme-picker__mode-btn.active {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-
 /* Theme pill tower - has the shadow */
 .theme-picker__pills {
   display: flex;

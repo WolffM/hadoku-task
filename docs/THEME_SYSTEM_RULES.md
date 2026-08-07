@@ -209,17 +209,17 @@ When designing a system that supports user-created themes:
 
 ## 10. Summary: What We Must Fix
 
-| Priority     | Issue                                                     | Status                                                               |
-| ------------ | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| **Done**     | `--color-*-text` renamed to `--color-on-*`                | ✅ Completed — all 107 values fixed                                  |
-| **Done**     | Light theme button text inconsistent (mix of black/white) | ✅ v3.0.0 — `on-*` derived per colour by measured WCAG ratio         |
-| **Done**     | Button hover effects inconsistent                         | ✅ Unified to `color-mix(in oklch, ..., black)`                      |
-| **Accepted** | Success is not green in some themes                       | By design — themes express personality (see THEME_CREATION_GUIDE.md) |
-| **Done**     | No `--color-on-X-container` variables                     | ✅ v3.0.0 — added `--color-on-<f>-bg` for all 5 families             |
-| **Done**     | Auto-calculated `on-X` is not verified                    | ✅ v3.0.0 — check-contrast.mjs gates all 324 pairs in CI             |
-| **P2**       | Some dark themes use pure white text                      | Consider `#e2e8f0` or similar off-white                              |
-| **P2**       | Advanced surface mode incomplete                          | Simple/Advanced toggle exists but needs comprehensive design plan    |
-| **P3**       | Theme editor doesn't show contrast ratios                 | Add live contrast ratio display in the editor panel                  |
+| Priority     | Issue                                                     | Status                                                                                                                         |
+| ------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Done**     | `--color-*-text` renamed to `--color-on-*`                | ✅ Completed — all 107 values fixed                                                                                            |
+| **Done**     | Light theme button text inconsistent (mix of black/white) | ✅ v3.0.0 — `on-*` derived per colour by measured WCAG ratio                                                                   |
+| **Done**     | Button hover effects inconsistent                         | ✅ Unified to `color-mix(in oklch, ..., black)`                                                                                |
+| **Accepted** | Success is not green in some themes                       | By design — themes express personality (see THEME_CREATION_GUIDE.md)                                                           |
+| **Done**     | No `--color-on-X-container` variables                     | ✅ v3.0.0 — added `--color-on-<f>-bg` for all 5 families                                                                       |
+| **Done**     | Auto-calculated `on-X` is not verified                    | ✅ v3.0.0 — check-contrast.mjs gates all 324 pairs in CI                                                                       |
+| **P2**       | Some dark themes use pure white text                      | Consider `#e2e8f0` or similar off-white                                                                                        |
+| **Shelved**  | Advanced surface mode incomplete                          | Toggle removed from the picker; `data-theme-mode` is pinned to `simple`. The kit still ships — restore the toggle to revive it |
+| **P3**       | Theme editor doesn't show contrast ratios                 | Add live contrast ratio display in the editor panel                                                                            |
 
 > **How this table caused a bug.** The second row previously read \_"All
 > `--color-on-*` set to white in light theme" — a blanket change that

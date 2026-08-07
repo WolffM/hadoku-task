@@ -4,8 +4,7 @@
  * ONE unified gear + modal, with app-specific prefs under the divider).
  *
  * Identity (tier / display name / content level / auth key) is handled by the
- * shared ConnectedSettings, and Simple/Advanced theme mode lives in the
- * ThemePicker — only genuinely task-specific prefs live here.
+ * shared ConnectedSettings — only genuinely task-specific prefs live here.
  *
  * The action-button block covers all three card controls (notes / complete /
  * delete). It used to expose only "Disable Complete Button", which left anyone

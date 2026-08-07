@@ -33,8 +33,6 @@ export type Theme = (typeof THEMES)[number]
 export type { ThemeMode } from './theme-types'
 import type { ThemeMode } from './theme-types'
 
-const THEME_MODE_STORAGE_KEY = 'hadoku-theme-mode'
-
 /** Read the theme key from one storage, tolerating environments where the
  *  storage object exists but throws on access (private mode, blocked cookies).
  *  Returns null rather than throwing, so a blocked storage degrades to the
@@ -143,50 +141,17 @@ export function clearTheme(): void {
 /**
  * Set the active theme mode (writes data-theme-mode on documentElement).
  * 'advanced' renders the gradient + effects; 'simple' uses flat colors.
+ *
+ * Nothing calls this with 'advanced' any more: the Simple/Advanced toggle was
+ * removed from the picker, and `useTheme` pins the attribute to 'simple' on
+ * every theme apply. The mode is not persisted or read back for the same
+ * reason — there is no user choice left to remember. The advanced kit itself
+ * (advanced.css, THEME_EFFECTS, the hdk-advanced-* class hooks) is untouched
+ * and still keys off this attribute, so bringing advanced back means restoring
+ * the toggle, not rebuilding the visuals.
  */
 export function setThemeMode(mode: ThemeMode): void {
   document.documentElement.setAttribute('data-theme-mode', mode)
-}
-
-/**
- * Get the currently active theme mode from the DOM.
- * Defaults to 'simple' when the attribute is unset — advanced visuals
- * are opt-in (users see flat colors until they explicitly turn the
- * gradient/effects on via the picker toggle).
- */
-export function getThemeMode(): ThemeMode {
-  const attr = document.documentElement.getAttribute('data-theme-mode')
-  return attr === 'advanced' ? 'advanced' : 'simple'
-}
-
-/**
- * Persist theme mode to localStorage and apply it.
- */
-export function saveThemeMode(mode: ThemeMode): void {
-  try {
-    localStorage.setItem(THEME_MODE_STORAGE_KEY, mode)
-  } catch {
-    /* localStorage may be unavailable in some environments */
-  }
-  setThemeMode(mode)
-}
-
-/**
- * Load saved theme mode from localStorage.
- * Falls back to 'simple' when no preference exists — see getThemeMode.
- */
-export function loadThemeMode(): ThemeMode {
-  try {
-    const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY)
-    if (saved === 'simple' || saved === 'advanced') {
-      setThemeMode(saved)
-      return saved
-    }
-  } catch {
-    /* localStorage may be unavailable */
-  }
-  setThemeMode('simple')
-  return 'simple'
 }
 
 // Theme metadata and React integration (optional peer dependencies)

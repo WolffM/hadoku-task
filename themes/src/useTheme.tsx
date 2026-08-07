@@ -29,15 +29,8 @@
  */
 import { useState, useEffect, useRef, useMemo, useCallback, type RefObject } from 'react'
 import { usePrefs } from '@wolffm/prefs-client/react'
-import {
-  setTheme as applyTheme,
-  saveTheme,
-  getThemeMode,
-  saveThemeMode,
-  loadThemeMode
-} from './index'
-import type { Theme, ThemeMode } from './index'
-import { hasAdvanced as themeHasAdvanced } from './effects'
+import { setTheme as applyTheme, saveTheme, setThemeMode } from './index'
+import type { Theme } from './index'
 import { THEME_FAMILIES, EXPERIMENTAL_THEMES } from './metadata'
 import { themePrefs } from './themePrefs'
 
@@ -50,6 +43,43 @@ export interface UseThemeOptions {
   containerRef?: RefObject<HTMLElement | null>
 }
 
+/** Bare family token → its light/dark pair, e.g. 'coffee' → coffee-light /
+ *  coffee-dark. Base 'light'/'dark' are already fully qualified and are matched
+ *  before this map is consulted. */
+const FAMILY_VARIANTS = new Map<string, { light: string; dark: string }>(
+  THEME_FAMILIES.map(f => [
+    f.lightTheme.replace(/-light$/, ''),
+    { light: f.lightTheme, dark: f.darkTheme }
+  ])
+)
+
+function prefersDark(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+    : false
+}
+
+/**
+ * Normalize a raw theme value from the shared 'hadoku-theme' key (or a
+ * push-down StorageEvent) to a fully-qualified theme name.
+ *
+ * The hadoku.me host page may store a BARE FAMILY TOKEN — 'coffee', not
+ * 'coffee-light' — leaving the variant to the embedding app's colour scheme.
+ * Without this expansion such a value is not a real theme, so the validity
+ * check downstream discards it and the app silently lands on 'light',
+ * ignoring the theme the host asked for. Returns null for anything
+ * unrecognized so callers fall back to their own default rather than to a
+ * value that just happens to be in storage.
+ */
+function normalizeThemeName(value: string | null | undefined): string | null {
+  const raw = value?.trim()
+  if (!raw) return null
+  if (THEME_FAMILIES.some(f => f.lightTheme === raw || f.darkTheme === raw)) return raw
+  const variants = FAMILY_VARIANTS.get(raw)
+  if (variants) return prefersDark() ? variants.dark : variants.light
+  return null
+}
+
 /** Seed the theme before any async source resolves. Order matters: whatever the
  *  pre-paint script already put on <html> beats storage, because that is what
  *  the user is currently LOOKING at — re-deriving it from storage risks a swap
@@ -58,27 +88,25 @@ function seedTheme(propsTheme?: string): string {
   if (propsTheme) return propsTheme
   if (typeof document === 'undefined') return 'light'
 
-  const painted = document.documentElement.getAttribute('data-theme')
+  const painted = normalizeThemeName(document.documentElement.getAttribute('data-theme'))
   if (painted) return painted
 
   try {
-    const stored = sessionStorage.getItem('hadoku-theme') ?? localStorage.getItem('hadoku-theme')
+    const stored = normalizeThemeName(
+      sessionStorage.getItem('hadoku-theme') ?? localStorage.getItem('hadoku-theme')
+    )
     if (stored) return stored
   } catch {
     /* storage blocked — fall through to the browser preference */
   }
 
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  }
-  return 'light'
+  return prefersDark() ? 'dark' : 'light'
 }
 
 export function useTheme(options: UseThemeOptions = {}) {
   const { propsTheme, containerRef } = options
 
   const [theme, setThemeState] = useState<string>(() => seedTheme(propsTheme))
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('simple')
   const [isThemeReady, setIsThemeReady] = useState(false)
   const [isInitialThemeLoad, setIsInitialThemeLoad] = useState(true)
 
@@ -156,29 +184,15 @@ export function useTheme(options: UseThemeOptions = {}) {
     })
   }, [])
 
-  const setThemeMode = useCallback((mode: ThemeMode) => {
-    setThemeModeState(mode)
-    saveThemeMode(mode)
-    savePrefsRef.current({ themeMode: mode }, { scope: 'device' }).catch((err: unknown) => {
-      console.error('[useTheme] prefs save failed', {
-        error: (err as Error)?.message ?? String(err),
-        themeMode: mode
-      })
-    })
-  }, [])
-
-  // Seed theme mode from storage once mounted (it is not part of the pre-paint
-  // script, so there is nothing on <html> to read).
+  // Another tab changing the theme should be reflected here.
   useEffect(() => {
-    setThemeModeState(loadThemeMode())
-
-    // Another tab changing the theme should be reflected here.
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'hadoku-theme' && e.newValue && !userOverrodeRef.current) {
-        setThemeState(e.newValue)
-      } else if (e.key === 'hadoku-theme-mode') {
-        setThemeModeState(getThemeMode())
-      }
+      if (e.key !== 'hadoku-theme' || userOverrodeRef.current) return
+      // Same normalization as the seed: the host pushes down bare family
+      // tokens too, and an unrecognized value must leave the current theme
+      // alone rather than knock it back to the default.
+      const next = normalizeThemeName(e.newValue)
+      if (next) setThemeState(next)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -194,6 +208,13 @@ export function useTheme(options: UseThemeOptions = {}) {
       containerRef.current.setAttribute('data-theme', valid)
     }
     applyTheme(valid as Theme)
+    // Advanced visuals are switched off platform-wide: the Simple/Advanced
+    // toggle is gone from the picker, so nothing can turn them on. The kit
+    // (advanced.css, THEME_EFFECTS, the hdk-advanced-* classes in JSX) is
+    // still shipped and still keyed off this attribute — pinning it to
+    // 'simple' is what keeps every surface flat. Restoring the toggle is the
+    // only thing needed to bring advanced back.
+    setThemeMode('simple')
 
     // Delay "ready" on the very first pass so consumers can gate a fade-in
     // and avoid a flash of unstyled content.
@@ -221,12 +242,6 @@ export function useTheme(options: UseThemeOptions = {}) {
     }
   }, [persisted?.theme, propsTheme, theme, isThemeAvailable])
 
-  useEffect(() => {
-    if (propsTheme) return
-    const remoteMode = persisted?.themeMode
-    if (remoteMode && remoteMode !== themeMode) setThemeModeState(remoteMode)
-  }, [persisted?.themeMode, propsTheme, themeMode])
-
   // Follow the OS light/dark switch WITHIN the active family, so someone on
   // `coffee-light` moves to `coffee-dark` at sunset rather than to plain dark.
   // Base light/dark are left alone — those are explicit choices, not families.
@@ -249,13 +264,10 @@ export function useTheme(options: UseThemeOptions = {}) {
   return {
     theme,
     setTheme,
-    themeMode,
-    setThemeMode,
     themeFamilies,
     experimentalThemes: experimentalEnabled,
     setExperimentalThemes,
     isDarkTheme: theme.endsWith('-dark') || theme === 'dark',
-    hasAdvanced: themeHasAdvanced(theme as Theme),
     isThemeReady,
     isInitialThemeLoad
   }

@@ -22,7 +22,7 @@
  * identical everywhere by construction rather than by convention.
  */
 import React from 'react'
-import type { ThemeFamily, ThemeMode } from './theme-types'
+import type { ThemeFamily } from './theme-types'
 
 export interface HadokuThemeValue {
   /** Active theme name, e.g. 'coffee-dark'. */
@@ -35,12 +35,6 @@ export interface HadokuThemeValue {
   getThemeIcon: (theme: string) => React.ReactNode
   /** True when the active theme is a dark variant. */
   isDarkTheme: boolean
-  /** Simple/Advanced mode — only meaningful for themes with an advanced
-   *  visual contract. Omitted ⇒ the picker hides the toggle. */
-  themeMode?: ThemeMode
-  setThemeMode?: (mode: ThemeMode) => void
-  /** True when the ACTIVE theme ships an advanced contract. */
-  hasAdvanced?: boolean
   /** Whether the experimental theme families are unlocked for this person.
    *  A shared preference, not an app setting — see @wolffm/themes themePrefs. */
   experimentalThemes?: boolean
