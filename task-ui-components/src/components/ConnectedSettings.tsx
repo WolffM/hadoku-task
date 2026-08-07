@@ -13,6 +13,11 @@
  * props. Identity is resolved via whoami() unless the host passes `userType` /
  * `name` (avoids a redundant fetch when the app already knows).
  *
+ * All of that is resolved AT MOUNT via `prefetchSettings()`, never on
+ * gear-click — opening the popout must cost zero requests. See the effect
+ * below, and `e2e/settings-prefetch.spec.ts` in hadoku-task, which fails if the
+ * fetch moves back behind the click.
+ *
  * Mirrors ThemePicker's controlled-popout pattern: owns its own `open` state +
  * a full-viewport overlay for click-outside dismiss. The content pill renders
  * `maxLevel` segments (friend ⇒ 3, admin ⇒ 4) and is hidden for public callers.
@@ -22,11 +27,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SettingsIcon } from './ThemeIcons'
 import {
-  getContentLevel,
+  prefetchSettings,
   setContentLevel,
   setDisplayName,
   swapAuthKey,
-  whoami,
   type ContentLevelState,
   type Tier
 } from '../lib/settingsClient'
@@ -100,10 +104,12 @@ export function ConnectedSettings({
   const [content, setContent] = useState<ContentLevelState | null>(null)
   const [levelSaving, setLevelSaving] = useState(false)
 
-  // One flag for the whole first-open fetch, not one per request — the panel
-  // body reveals when BOTH have settled, so nothing pops in a beat late.
-  const [resolving, setResolving] = useState(false)
-  const fetched = useRef(false)
+  // One flag for the whole prefetch, not one per request — the panel body
+  // reveals when everything has settled, so nothing pops in a beat late. In
+  // practice the user never sees it: the prefetch starts at mount and is long
+  // done by the time the gear is clicked. It only shows if they click within
+  // the first moments of the page.
+  const [resolving, setResolving] = useState(true)
 
   // Everyone who is SIGNED IN, expressed as "not public" rather than as a list
   // of tiers. The list form (`=== 'admin' || === 'friend' || === 'service'`)
@@ -124,45 +130,47 @@ export function ConnectedSettings({
     }
   }, [nameProp])
 
-  // Resolve everything the panel shows, the first time it opens, in ONE
-  // concurrent pass.
+  // Resolve everything the panel shows AT MOUNT — not on open.
   //
-  // These used to be two effects, and gating the content fetch on
-  // `showContentPill` made them SERIAL rather than lazy: userType starts at
-  // 'public', so the pill is hidden and getContentLevel() is never issued;
-  // only once whoami() lands and flips the tier does the second effect fire.
-  // Two round trips end to end, the second one visible as the content row
-  // appearing blank and filling in afterwards.
+  // This used to be gated on `open`, which made the gear the trigger for
+  // whoami + content-level (167ms / 186ms on prod, concurrent) — a round trip
+  // the user waited out with the panel already on screen and blank. Nothing
+  // about that data depends on the click:
+  // it's the signed-in user's own identity, settled at boot and unchanged for
+  // the life of the page. So it rides along with the app's boot traffic, and
+  // clicking the gear costs zero requests. `e2e/settings-prefetch.spec.ts` in
+  // hadoku-task pins that.
   //
-  // Tier gates the RENDER, not the FETCH. When the host supplies userType we
-  // know up front whether the pill exists and can skip the request for public
-  // callers; when it doesn't, one speculative fetch is the price of not
-  // serialising (it 4xx's to null for a public caller, which renders nothing).
+  // The client memoises across callers, so mounting this in several places (or
+  // remounting it) does not multiply requests, and on hadoku.me the identity
+  // half is free — it awaits the whoami the shell already had in flight.
   useEffect(() => {
-    if (!open || fetched.current) return
-    fetched.current = true
-
-    const wantIdentity = userTypeProp === undefined
-    const wantContent = wantIdentity || userTypeProp !== 'public'
-    if (!wantIdentity && !wantContent) return
-
-    setResolving(true)
-    Promise.all([
-      wantIdentity ? whoami() : Promise.resolve(null),
-      wantContent ? getContentLevel() : Promise.resolve(null)
-    ])
-      .then(([id, state]) => {
-        if (id) {
-          setUserType(id.userType)
-          setResolvedName(id.name)
-          setLocalName(id.name)
-          setNameDraft(id.name ?? '')
+    let live = true
+    prefetchSettings({ userType: userTypeProp, name: nameProp })
+      .then(({ identity, content: state }) => {
+        if (!live) return
+        // Props stay authoritative: the host passed them because it can see an
+        // identity this component can't resolve for itself.
+        if (userTypeProp === undefined) {
+          setUserType(identity.userType)
+          setResolvedName(identity.name)
+          setLocalName(identity.name)
+          setNameDraft(identity.name ?? '')
         }
         if (state) setContent(state)
       })
       .catch(reportErr)
-      .finally(() => setResolving(false))
-  }, [open, userTypeProp])
+      .finally(() => {
+        if (live) setResolving(false)
+      })
+    return () => {
+      live = false
+    }
+    // Hints are read once, on the first mount that gets there — the prefetch is
+    // page-scoped and a later prop change cannot un-issue it. Identity changes
+    // arrive through the sync effects above, and a key swap reloads the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Escape closes.
   useEffect(() => {

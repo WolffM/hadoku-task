@@ -17,6 +17,12 @@
  * it), so name + content-level changes go through session identity, not a key
  * header. Only an explicit key SWAP re-presents a key — the new one the user
  * types.
+ *
+ * WHEN THESE RUN
+ * --------------
+ * Everything the popout displays is resolved at PAGE LOAD, not on gear-click —
+ * see `prefetchSettings()`. Opening settings must cost zero requests. Pinned by
+ * `e2e/settings-prefetch.spec.ts` in hadoku-task.
  */
 
 /** Edge-router / prefs-api endpoints (same-origin relative). */
@@ -24,6 +30,26 @@ const CONTENT_LEVEL_PATH = '/prefs/api/v1/content-level'
 const SESSION_NAME = '/session/name'
 const SESSION_CREATE = '/session/create'
 const SESSION_WHOAMI = '/session/whoami'
+
+/**
+ * The ecosystem's shared boot-whoami promise. hadoku_site's `mf-loader.js`
+ * kicks `GET /session/whoami` in parallel with the micro-frontend's module
+ * import and parks the promise here precisely so the app it loads doesn't
+ * resolve identity a second time; @wolffm/prefs-client already consumes it
+ * under the same name. Reading it is what makes settings' identity free.
+ *
+ * Absent outside that shell (standalone vite, Capacitor, Storybook) — there we
+ * fetch, and publish the result under the same key so the next reader is free
+ * too.
+ */
+const WHOAMI_GLOBAL = '__hadokuWhoami'
+
+/** Raw whoami body, as both mf-loader and this module see it off the wire. */
+interface WhoamiBody {
+  valid?: boolean
+  userType?: Tier
+  name?: string | null
+}
 
 // Hard timeout on every settings request. Without it, a request throttled by
 // the browser (e.g. the tab going to the background) leaves the caller's
@@ -73,7 +99,9 @@ export async function setContentLevel(level: number): Promise<ContentLevelState 
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     })
     if (!res.ok) return null
-    return (await res.json()) as ContentLevelState
+    const stored = (await res.json()) as ContentLevelState
+    patchSnapshot(prev => ({ ...prev, content: stored }))
+    return stored
   } catch {
     return null
   }
@@ -92,6 +120,7 @@ export async function setDisplayName(name: string): Promise<string | null> {
     })
     if (!res.ok) return null
     const body = (await res.json()) as { ok: boolean; name: string | null }
+    patchSnapshot(prev => ({ ...prev, identity: { ...prev.identity, name: body.name } }))
     return body.name
   } catch {
     return null
@@ -116,18 +145,29 @@ export interface Identity {
  * Resolve the signed-in caller's tier + display name from the edge-router.
  * Returns { userType: 'public', name: null } for anonymous / off-origin / any
  * failure — never throws, so ConnectedSettings can render unconditionally.
+ *
+ * Costs no request under the hadoku.me shell: it awaits the boot whoami the
+ * loader already has in flight (see WHOAMI_GLOBAL). Elsewhere it fetches once
+ * and publishes the promise, so this is at most one whoami per page load no
+ * matter how many callers there are.
  */
 export async function whoami(): Promise<Identity> {
   if (typeof window === 'undefined') return { userType: 'public', name: null }
-  try {
-    const res = await fetch(SESSION_WHOAMI, {
+  const g = globalThis as { [WHOAMI_GLOBAL]?: Promise<WhoamiBody | null> }
+  let shared = g[WHOAMI_GLOBAL]
+  if (!shared) {
+    shared = fetch(SESSION_WHOAMI, {
       credentials: 'same-origin',
       headers: sessionHeaders(),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     })
-    if (!res.ok) return { userType: 'public', name: null }
-    const body = (await res.json()) as { valid?: boolean; userType?: Tier; name?: string | null }
-    if (!body.valid) return { userType: 'public', name: null }
+      .then(res => (res.ok ? (res.json() as Promise<WhoamiBody>) : null))
+      .catch(() => null)
+    g[WHOAMI_GLOBAL] = shared
+  }
+  try {
+    const body = await shared
+    if (!body?.valid) return { userType: 'public', name: null }
     return { userType: body.userType ?? 'public', name: body.name ?? null }
   } catch {
     return { userType: 'public', name: null }
@@ -168,4 +208,80 @@ export async function swapAuthKey(newKey: string): Promise<KeySwapResult | null>
   } catch {
     return null
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Prefetch
+ * ------------------------------------------------------------------ */
+
+/** Everything the settings popout displays, resolved together. */
+export interface SettingsSnapshot {
+  identity: Identity
+  /** null = public caller (no pill) or the request failed. */
+  content: ContentLevelState | null
+}
+
+/** Identity the host already knows, so we don't ask the server for it again. */
+export interface SettingsPrefetchHints {
+  /** Caller's tier. When supplied, whoami is skipped entirely. */
+  userType?: Tier
+  /** Caller's display name. Only meaningful alongside `userType`. */
+  name?: string | null
+}
+
+let snapshot: Promise<SettingsSnapshot> | null = null
+
+/**
+ * Resolve — once per page load — everything the settings popout shows.
+ *
+ * This is THE entry point, and it is called from ConnectedSettings' MOUNT, not
+ * from its open handler. Settings data is user identity: it is known at boot,
+ * it doesn't change while the page is up, and making the gear the trigger left
+ * the panel on screen but blank for a round trip (measured on prod: whoami
+ * 167ms and content-level 186ms, issued concurrently). It now rides along with
+ * the app's own boot traffic and the click costs nothing.
+ *
+ * Idempotent and shared: every caller after the first gets the same promise, so
+ * N mounted consumers still produce at most one whoami and one content-level
+ * for the whole page. Mutations below write through to it rather than
+ * invalidating, so a remount never shows a value the user just changed.
+ */
+export function prefetchSettings(hints: SettingsPrefetchHints = {}): Promise<SettingsSnapshot> {
+  snapshot ??= resolveSettings(hints)
+  return snapshot
+}
+
+async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSnapshot> {
+  const identityPromise: Promise<Identity> =
+    hints.userType !== undefined
+      ? Promise.resolve({ userType: hints.userType, name: hints.name ?? null })
+      : whoami()
+
+  // Identity decides whether a content request is warranted at all — the pill
+  // is hidden for public callers, so fetching an anonymous visitor's level is a
+  // guaranteed-wasted request on every page view. Where we can tell up front
+  // that the caller is signed in, the two go out together instead; the cached
+  // `hadoku_user_type` is written by hadoku_site's loader before anything
+  // mounts, which covers the only case that would otherwise serialise two real
+  // round trips.
+  const contentPromise = looksSignedIn(hints.userType)
+    ? getContentLevel()
+    : identityPromise.then(id => (id.userType === 'public' ? null : getContentLevel()))
+
+  const [identity, content] = await Promise.all([identityPromise, contentPromise])
+  return { identity, content }
+}
+
+/** Best-effort "is this caller signed in?" from state available synchronously. */
+function looksSignedIn(hinted?: Tier): boolean {
+  if (hinted !== undefined) return hinted !== 'public'
+  if (typeof window === 'undefined') return false
+  const cached = localStorage.getItem('hadoku_user_type')
+  return cached !== null && cached !== 'public'
+}
+
+/** Keep the prefetched snapshot in step with a successful mutation. */
+function patchSnapshot(patch: (prev: SettingsSnapshot) => SettingsSnapshot) {
+  if (!snapshot) return
+  snapshot = snapshot.then(patch)
 }

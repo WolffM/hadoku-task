@@ -78,6 +78,21 @@ stubbed prod-median latencies and run in the normal suite:
 - [`e2e/prod-cold-load.spec.ts`](../e2e/prod-cold-load.spec.ts) — opt-in
   (`RUN_PROD_PERF=1`), asserts median skeleton < 400ms and app < 1500ms against
   live prod, and that the inline skeleton still ships in the HTML.
+- [`e2e/settings-prefetch.spec.ts`](../e2e/settings-prefetch.spec.ts) — asserts
+  the settings popout's data (`/session/whoami` + `/prefs/api/v1/content-level`)
+  is resolved at page load and that opening the gear issues **zero** requests,
+  plus that whoami is fetched at most once per page load and not at all when
+  the shell already parked one on `window.__hadokuWhoami`.
+
+### The rule these encode
+
+**Anything that is a property of the signed-in user is boot data, not
+click data.** It is known before first paint and cannot change while the page
+is up, so resolving it lazily buys nothing and spends a round trip in front of
+a UI the user is already looking at. Prefetch it alongside the app's own boot
+traffic, memoise it page-wide, and write through on mutation. If a new panel
+needs user-scoped data, it goes in `prefetchSettings()`
+(`task-ui-components/src/lib/settingsClient.ts`) — not in an open handler.
 
 ## Baseline (2026-07, authenticated cold load vs hadoku.me)
 
@@ -94,3 +109,9 @@ three concurrent, and parallelised the handshake's KV ops server-side.
 (`mf-loader`) and `@wolffm/prefs-client` each resolve it. Fixed by
 [hadoku_site #194](https://github.com/WolffM/hadoku_site/pull/194); the profiler
 flags it under "duplicate requests" until that ships everywhere.
+
+`ConnectedSettings` was a third resolver of the same call, deferred to
+gear-click (whoami 167ms + content-level 186ms, both paid after the panel was
+already open). It now consumes `window.__hadokuWhoami` like prefs-client does
+and prefetches at mount, so it adds nothing to boot beyond the one
+content-level request and nothing at all to the click.
