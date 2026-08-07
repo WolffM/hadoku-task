@@ -1,0 +1,90 @@
+[
+  {
+    "at": "2026-08-06T19:03:31-07:00",
+    "sha": "812a3ea1e42126345c51da6f69fcab6ad3c41d1e",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": [
+      "arrival"
+    ],
+    "aggregates": {
+      "candidateFiles": 313,
+      "perLane": {
+        "size": {
+          "measured": 250,
+          "firing": 13
+        },
+        "arrival": {
+          "measured": 113,
+          "firing": 0
+        },
+        "deadcode": {
+          "measured": 208,
+          "firing": 7
+        },
+        "duplication": {
+          "measured": 250,
+          "firing": 2
+        },
+        "smells": {
+          "measured": 0,
+          "firing": 0
+        },
+        "consistency": {
+          "measured": 178,
+          "firing": 2
+        }
+      },
+      "gatePassing": 1,
+      "offenders": 1,
+      "suppressedByFloor": 0
+    }
+  },
+  {
+    "at": "2026-08-07T11:27:15-07:00",
+    "sha": "4385e57dd6da1062004792c667b60a49aa4766f0",
+    "dirty": true,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": [
+      "arrival"
+    ],
+    "aggregates": {
+      "candidateFiles": 317,
+      "perLane": {
+        "size": {
+          "measured": 254,
+          "firing": 13
+        },
+        "arrival": {
+          "measured": 114,
+          "firing": 0
+        },
+        "deadcode": {
+          "measured": 212,
+          "firing": 7
+        },
+        "duplication": {
+          "measured": 254,
+          "firing": 1
+        },
+        "smells": {
+          "measured": 0,
+          "firing": 0
+        },
+        "consistency": {
+          "measured": 180,
+          "firing": 2
+        }
+      },
+      "gatePassing": 1,
+      "offenders": 1,
+      "suppressedByFloor": 0
+    }
+  }
+]
