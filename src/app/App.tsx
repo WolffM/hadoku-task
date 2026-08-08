@@ -58,25 +58,10 @@ import { MARQUEE_CLICK_GRACE_PERIOD } from './constants'
  * it (to mirror `data-theme` onto the mount subtree) while the div it points at
  * is rendered by AppInner.
  */
-/**
- * The theme package reports degradations through a callback rather than logging
- * them itself (it carries no logger dependency on purpose), so this is where
- * they join the one logging pipeline. WARN, so it reaches the telemetry sink:
- * a theme the user asked for and did not get is exactly the silent failure
- * that went unnoticed for months.
- */
-function reportThemeDegraded(info: { requested: string; applied: string; reason: string }): void {
-  logger.warn('[theme] requested theme could not be applied', info)
-}
-
 export default function App(props: TaskAppProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   return (
-    <HadokuThemeRoot
-      theme={props.theme}
-      containerRef={containerRef}
-      onThemeDegraded={reportThemeDegraded}
-    >
+    <HadokuThemeRoot theme={props.theme} containerRef={containerRef}>
       <AppInner {...props} containerRef={containerRef} />
     </HadokuThemeRoot>
   )

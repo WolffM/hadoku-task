@@ -62,7 +62,6 @@ import { handleMcp } from './mcp/handler'
 import { createTagsBatchRoutes } from './routes/tags-batch'
 import { createAdminRoutes } from './routes/admin'
 import { createMiscRoutes } from './routes/misc'
-import { createTelemetryRoutes } from './routes/telemetry'
 
 /**
  * Create the Task API Hono app.
@@ -260,11 +259,6 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
   // Misc routes (health, validate-key, deprecated endpoints, legacy root)
   app.route('/task/api', createMiscRoutes())
-
-  // Client degradation-event relay. Mounted with the other /task/api routes so
-  // it inherits the same edge auth; see routes/telemetry.ts for why the browser
-  // cannot post to the monitoring ingest directly.
-  app.route('/task/api', createTelemetryRoutes())
 
   // Session management
   app.route('/task/api', createSessionRoutes())

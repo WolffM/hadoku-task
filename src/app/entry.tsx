@@ -7,7 +7,6 @@ import '@wolffm/themes/style.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/logger/client'
 import { installDevLogSink } from '../utils/devLogSink'
-import { installTelemetrySink } from '../utils/telemetrySink'
 import { getStoredSessionId, getStoredUserType, getAnonSessionId } from '../api/session'
 import { isMobileApp } from '../utils/platform'
 import type { UserType } from '../domain/types'
@@ -55,9 +54,6 @@ interface TaskElement extends HTMLElement {
 
 export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   installDevLogSink()
-  // The production counterpart: devLogSink is DEV-gated, so without this the
-  // warn/error stream dies in the user's console. See utils/telemetrySink.ts.
-  installTelemetrySink()
   ensureSafeAreaViewport()
 
   // Priority for userType and sessionId:

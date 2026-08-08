@@ -59,9 +59,6 @@ export default [
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
-        // sendBeacon's payload type — the only way to flush telemetry from
-        // pagehide without a fetch being cancelled mid-flight.
-        Blob: 'readonly',
         performance: 'readonly',
         PerformanceNavigationTiming: 'readonly',
         PerformanceResourceTiming: 'readonly',

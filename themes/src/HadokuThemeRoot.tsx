@@ -53,11 +53,6 @@ export interface HadokuThemeRootProps {
   /** Mirror `data-theme` onto this container as well as <html> — needed when
    *  the app mounts into a subtree rather than owning the document. */
   containerRef?: RefObject<HTMLElement | null>
-  /** Reported when a requested theme could not be honoured and a default was
-   *  applied instead. Passed straight through to useTheme — see the rationale
-   *  on UseThemeOptions.onThemeDegraded for why this is a callback and not a
-   *  log call inside this package. */
-  onThemeDegraded?: (info: { requested: string; applied: string; reason: string }) => void
 }
 
 /** Resolve a theme name to its icon. Central so the picker's toggle button
@@ -71,10 +66,9 @@ function getThemeIcon(theme: string): React.ReactNode {
 export function HadokuThemeRoot({
   children,
   theme: propsTheme,
-  containerRef,
-  onThemeDegraded
+  containerRef
 }: HadokuThemeRootProps) {
-  const t = useTheme({ propsTheme, containerRef, onThemeDegraded })
+  const t = useTheme({ propsTheme, containerRef })
 
   const value = useMemo<HadokuThemeValue>(
     () => ({
