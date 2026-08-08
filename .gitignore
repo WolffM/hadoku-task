@@ -44,6 +44,21 @@ src/**/*.d.ts.map
 *.backup.*
 .husky/*.backup
 
+# Scratch / temp files — the debugging screenshot or throwaway note that gets
+# dropped at the repo root and then lives there for weeks (a temp.png sat here
+# from 2026-07-21 to 2026-08-08 purely because nothing ignored it).
+#
+# Matched on NAME, never on extension. `*.png` would be the obvious rule and it
+# would be wrong: calendar-mockups/*.png are committed assets, so that rule
+# would quietly hide the next real mockup someone adds.
+temp.*
+tmp.*
+*.tmp
+temp/
+tmp/
+scratch.*
+scratch/
+
 # Note: task/data is intentionally committed for personal backup/sync
 package-lock.json
 
