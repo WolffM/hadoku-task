@@ -323,6 +323,17 @@
   background: none;
 }
 
+/* The Capacitor WebView draws edge-to-edge, and `position: fixed` escapes the
+   safe-area padding `.task-app-container` carries — so the panel's top rendered
+   underneath the status bar, hiding the first lines of the title with no way to
+   scroll them out. Same `max(env(), 28px)` floor as the container uses: Android
+   WebView will not expose a non-zero env() retroactively when JS patches the
+   viewport meta after parse, so without the floor this is 0px on first load.
+   Scoped to the mobile app, since a browser's own chrome already offsets it. */
+.task-app-container[data-mobile-app='true'] .notes-popout__header {
+  padding-top: calc(var(--hdk-space-xl) + max(env(safe-area-inset-top, 0px), 28px));
+}
+
 /* Phones get the whole screen — a plan has no business being letterboxed. */
 @media (max-width: 640px) {
   /* `position: fixed` + `inset: 0` resolves against the LARGE viewport on
@@ -355,6 +366,17 @@
   .notes-popout__header {
     padding-top: var(--hdk-space-lg);
     padding-bottom: var(--hdk-space-lg);
+  }
+
+  /* A "title" is sometimes a whole paragraph — agents write the entire ask into
+     it. The header is flex-shrink: 0 and does not scroll, so an unbounded title
+     took 463px of a 727px panel, left the plan a 195px slit, and put its own
+     first lines somewhere no drag could reach. Bounding the HEADING rather than
+     the header keeps the close button pinned while the title scrolls. */
+  .notes-popout__heading {
+    max-height: 30dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* The type scale jumps 16px → 24px with nothing in between, and 24px is a

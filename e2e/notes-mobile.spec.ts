@@ -357,3 +357,147 @@ test.describe('notes popout on a phone', () => {
     expect(overflow).toEqual({ escapes: [], bodyScrolls: false })
   })
 })
+
+/**
+ * A "title" is sometimes a whole paragraph — agents write the entire ask into
+ * it. The header does not scroll and is flex-shrink: 0, so an unbounded title
+ * took 463px of a 727px panel, squeezed the plan into a 195px slit, and pushed
+ * its own opening lines off the top where no drag could reach them. That is the
+ * shape of "I can see the questions but cannot scroll up to the rest".
+ */
+test.describe('a paragraph-length task title', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
+
+  /** Verbatim length of a real one seen in the wild: ~700 characters. */
+  const LONG_TITLE =
+    'I need the director to respect when the mainline text is edited. Generally, ' +
+    "it's been doing a good job, but if the text is manually edited or undo/redo " +
+    'then the user is clearly not convinced with the direction and the director ' +
+    'needs to pivot. Ideally the direction is recalibrated when this happens. To a ' +
+    'lesser degree, this should also happen if the user chooses custom continuation. ' +
+    "It's not necessarily that custom continuation means the direction is wrong, but " +
+    'that the user has a sharper idea of what happens next. We should generally ' +
+    'respect this in a sort of improv "yes, and" way. We still want the director to ' +
+    'drive the story forward but with more alteration. There are two distinct asks here.'
+
+  test.beforeEach(async ({ page, request }) => {
+    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    await createAutomationBoard(request, BOARD_ID)
+    // Unique per test. The dev stack keeps one in-memory DB for the whole run
+    // and a POST to an existing id does not rewrite its title, so a fixed id
+    // silently measures whatever an earlier run seeded.
+    const marker = `LT${test.info().testId.replace(/[^a-z0-9]/gi, '').slice(0, 10)}`
+    await request.post(API, {
+      data: {
+        boardId: BOARD_ID,
+        tag: 'plan-review',
+        id: `${BOARD_ID}-long-${marker}`,
+        title: `${marker} ${LONG_TITLE}`,
+        notes: '## Questions\n\nNo open questions.\n\n— pass 1\n'
+      }
+    })
+    await signIn(page)
+    await page.goto('/')
+    await page.getByRole('button', { name: BOARD_ID, exact: true }).dispatchEvent('click')
+    await page.locator('.task-app__item').first().waitFor({ state: 'visible', timeout: 15000 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page
+      .locator('.task-app__item')
+      .filter({ hasText: marker })
+      .getByRole('button', { name: 'Open notes' })
+      .dispatchEvent('click')
+    await expect(page.locator('.notes-popout')).toBeVisible()
+  })
+
+  test('the title cannot eat the panel', async ({ page }) => {
+    const { headerH, bodyH, panelH } = await page.evaluate(() => {
+      const h = (s: string) =>
+        Math.round((document.querySelector(s) as HTMLElement).getBoundingClientRect().height)
+      return {
+        headerH: h('.notes-popout__header'),
+        bodyH: h('.notes-popout__body'),
+        panelH: h('.notes-popout')
+      }
+    })
+    // It took 64% of the panel before; the plan is the point of the surface.
+    expect(headerH).toBeLessThan(panelH * 0.45)
+    expect(bodyH).toBeGreaterThan(panelH * 0.4)
+  })
+
+  test('the title is bounded, and scrolls rather than being clipped', async ({ page }) => {
+    const reach = await page.evaluate(() => {
+      const heading = document.querySelector('.notes-popout__heading') as HTMLElement
+      const panel = document.querySelector('.notes-popout') as HTMLElement
+      const close = document.querySelector('.notes-popout__close') as HTMLElement
+      const closeBefore = close.getBoundingClientRect().top
+      const panelH = panel.getBoundingClientRect().height
+      heading.scrollTop = heading.scrollHeight
+      return {
+        // Bounded: unfixed this grows to whatever the title needs, and the plan
+        // below it starves.
+        bounded: heading.clientHeight <= panelH * 0.35,
+        // And what does not fit is scrollable, so no line is stranded.
+        scrolledToEnd: heading.scrollTop >= heading.scrollHeight - heading.clientHeight - 1,
+        overflows: heading.scrollHeight > heading.clientHeight,
+        closePinned: Math.abs(close.getBoundingClientRect().top - closeBefore) < 1
+      }
+    })
+    expect(reach).toEqual({
+      bounded: true,
+      scrolledToEnd: true,
+      overflows: true,
+      closePinned: true
+    })
+  })
+})
+
+/**
+ * The Capacitor WebView draws edge-to-edge and `position: fixed` escapes the
+ * safe-area padding `.task-app-container` carries, so the panel's top rendered
+ * under the status bar — which is where the opening lines of the title went.
+ */
+test.describe('the popout inside the mobile app shell', () => {
+  test.use({
+    viewport: PHONE,
+    hasTouch: true,
+    isMobile: true,
+    userAgent:
+      'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile HadokuTaskApp/3.0'
+  })
+
+  test('the header clears the status bar', async ({ page, request }) => {
+    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    await createAutomationBoard(request, BOARD_ID)
+    await request.post(API, {
+      data: {
+        boardId: BOARD_ID,
+        tag: 'plan-review',
+        id: `${BOARD_ID}-shell`,
+        title: 'Shell padding',
+        notes: PLAN
+      }
+    })
+    await signIn(page)
+    await page.goto('/')
+    await page.getByRole('button', { name: BOARD_ID, exact: true }).dispatchEvent('click')
+    await page.locator('.task-app__item').first().waitFor({ state: 'visible', timeout: 15000 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page
+      .locator('.task-app__item')
+      .filter({ hasText: 'Shell padding' })
+      .getByRole('button', { name: 'Open notes' })
+      .dispatchEvent('click')
+    await expect(page.locator('.notes-popout')).toBeVisible()
+
+    expect(await page.evaluate(() => !!document.querySelector('[data-mobile-app="true"]'))).toBe(
+      true
+    )
+    // env() is 0 in a desktop browser, so the floor is what is asserted here —
+    // it is also what does the work on a WebView that reports 0 after a late
+    // viewport-meta patch.
+    const padTop = await page
+      .locator('.notes-popout__header')
+      .evaluate(el => parseFloat(getComputedStyle(el).paddingTop))
+    expect(padTop).toBeGreaterThanOrEqual(28)
+  })
+})
