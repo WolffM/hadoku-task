@@ -1,4 +1,10 @@
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import {
+  test,
+  expect,
+  type Page,
+  type APIRequestContext,
+  type CDPSession
+} from '@playwright/test'
 
 /**
  * The notes popout on a phone.
@@ -34,6 +40,8 @@ Ship the review surface so a plan stops being read through a keyhole.
 1. Move the body out of the card.
 2. Make Questions impossible to miss.
 
+${Array.from({ length: 14 }, (_, i) => `${i + 3}. Step ${i + 3}, so the plan is tall enough to scroll.`).join('\n')}
+
 ## Questions
 
 1. Should the reply append under Questions, or at the end of the doc?
@@ -59,7 +67,19 @@ async function apiUp(request: APIRequestContext): Promise<boolean> {
   }
 }
 
+/**
+ * One board for the whole file, not one per test. The dev stack shares a single
+ * in-memory DB and automation activation is permanent, so a board per test piles
+ * them into the board row — which at 393px wide overflows until the pills
+ * overlap each other and the one you want stops being clickable.
+ */
+const BOARD_ID = 'notesmobile'
+
 async function createAutomationBoard(request: APIRequestContext, id: string) {
+  const existing = await (await request.get(`${API}/boards`)).json()
+  const boards = existing.boards ?? existing
+  if (Array.isArray(boards) && boards.some((b: { id: string }) => b.id === id)) return
+
   await request.post(`${API}/boards`, { data: { id, name: id } })
 
   const presets = await (await request.get(`${API}/automation/presets`)).json()
@@ -87,31 +107,85 @@ async function boxOf(locator: ReturnType<Page['locator']>) {
   return box ?? { x: 0, y: 0, width: 0, height: 0 }
 }
 
-test.describe('notes popout on a phone', () => {
-  test.use({ viewport: PHONE })
+/**
+ * A real finger drag, through the browser's input pipeline, so a non-passive
+ * touchmove listener calling preventDefault() actually suppresses it.
+ *
+ * `Input.synthesizeScrollGesture` with gestureSourceType 'touch' is NOT usable
+ * here: it silently no-ops in this headless mode, and reports a dead scroller
+ * even for a bare `overflow-y: auto` div with no application code on the page.
+ * Verify any change to this helper against such a div before trusting a result.
+ */
+async function fingerDrag(c: CDPSession, x: number, fromY: number, toY: number) {
+  const at = (y: number) => [{ x, y, radiusX: 12, radiusY: 12, force: 1 }]
+  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(fromY) })
+  const step = fromY > toY ? -20 : 20
+  for (let y = fromY + step; step < 0 ? y >= toY : y <= toY; y += step) {
+    await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(y) })
+  }
+  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+}
 
-  let boardId: string
+/**
+ * Guards the guard. `fingerDrag` is only evidence of anything if it can move a
+ * scroller with no application code involved at all — a previous version of this
+ * helper reported every scroller dead, which reads exactly like the bug it is
+ * supposed to detect.
+ */
+test.describe('touch harness', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
+
+  test('a finger drag scrolls a plain overflow container', async ({ page }) => {
+    await page.setContent(
+      `<body style="margin:0"><div id="c" style="position:fixed;inset:0;overflow-y:auto">
+         <div style="height:3000px"></div></div></body>`
+    )
+    await fingerDrag(await page.context().newCDPSession(page), PHONE.width / 2, 500, 200)
+    await page.waitForTimeout(400)
+    expect(
+      await page.evaluate(() => {
+        const el = document.getElementById('c')
+        return el ? Math.round(el.scrollTop) : -1
+      })
+    ).toBeGreaterThan(50)
+  })
+})
+
+test.describe('notes popout on a phone', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
 
   test.beforeEach(async ({ page, request }) => {
     test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
-    boardId = `mob${test.info().testId.replace(/[^a-z0-9]/gi, '')}`
-    await createAutomationBoard(request, boardId)
+    await createAutomationBoard(request, BOARD_ID)
+    // One task per test, so a test that edits notes can't disturb another's.
+    const taskTitle = `Plan ${test.info().testId.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`
     await request.post(API, {
       data: {
-        boardId,
+        boardId: BOARD_ID,
         tag: 'plan-review',
-        id: `${boardId}-a`,
-        title: 'Plan under review',
+        id: `${BOARD_ID}-${taskTitle.replace(/\s/g, '')}`,
+        title: taskTitle,
         notes: PLAN
       }
     })
     await signIn(page)
     await page.goto('/')
-    await page.getByRole('button', { name: boardId, exact: true }).click()
+    // dispatchEvent, not click(): the board row overflows horizontally at 393px
+    // once the rest of the suite has created its boards, so the pills overlap
+    // and actionability never settles. The picker is setup here, not the
+    // subject — everything under test lives inside the popout.
+    await page.getByRole('button', { name: BOARD_ID, exact: true }).dispatchEvent('click')
     await page.locator('.task-app__item').first().waitFor({ state: 'visible', timeout: 15000 })
+    // Park the page at its scroll origin first. The dev stack keeps ONE
+    // in-memory DB for the whole run, so by the time the full suite has seeded
+    // its boards the lane row is thousands of px wide and the document scrolls
+    // sideways — which drags the layout viewport around under a `position:
+    // fixed` overlay and makes every click inside it land somewhere else. That
+    // width is an artifact of the shared DB, not of a real board.
+    await page.evaluate(() => window.scrollTo(0, 0))
     await page
       .locator('.task-app__item')
-      .filter({ hasText: 'Plan under review' })
+      .filter({ hasText: taskTitle })
       .getByRole('button', { name: 'Open notes' })
       .click()
     await expect(page.locator('.notes-popout')).toBeVisible()
@@ -134,8 +208,29 @@ test.describe('notes popout on a phone', () => {
     )
     expect(footer.y + footer.height - (lastButton.y + lastButton.height)).toBeGreaterThan(0)
 
-    // And they actually take a click at that position.
-    await page.locator('.notes-popout__footer').getByRole('button', { name: 'Edit' }).click()
+    // Nothing is covering them: at its own centre, each button is the topmost
+    // element. Asserted by hit-test rather than a real click, because the shared
+    // dev DB can leave the page thousands of px wide, and the emulation zoom
+    // that provokes desynchronises Playwright's click coordinates from where the
+    // button is actually painted — a harness artifact that has nothing to say
+    // about whether a finger would land on it.
+    const topmost = await page.evaluate(() =>
+      [...document.querySelectorAll('.notes-popout__footer button')].map(b => {
+        const r = b.getBoundingClientRect()
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+        return { label: b.textContent?.trim(), coveredBy: hit === b ? null : hit?.className }
+      })
+    )
+    expect(topmost).toEqual([
+      { label: 'Close', coveredBy: null },
+      { label: 'Edit', coveredBy: null }
+    ])
+
+    // And the handler fires.
+    await page
+      .locator('.notes-popout__footer')
+      .getByRole('button', { name: 'Edit' })
+      .dispatchEvent('click')
     await expect(page.locator('.notes-popout__editor')).toBeVisible()
   })
 
@@ -191,11 +286,58 @@ test.describe('notes popout on a phone', () => {
       .evaluate(el => parseFloat(getComputedStyle(el).fontSize))
     expect(replyFont).toBeGreaterThanOrEqual(16)
 
-    await page.locator('.notes-popout__footer').getByRole('button', { name: 'Edit' }).click()
+    await page
+      .locator('.notes-popout__footer')
+      .getByRole('button', { name: 'Edit' })
+      .dispatchEvent('click')
     const editorFont = await page
       .locator('.notes-popout__editor')
       .evaluate(el => parseFloat(getComputedStyle(el).fontSize))
     expect(editorFont).toBeGreaterThanOrEqual(16)
+  })
+
+  test('a finger drag scrolls the plan in both directions', async ({ page }) => {
+    const c = await page.context().newCDPSession(page)
+    const scrollTop = () =>
+      page.evaluate(() =>
+        Math.round((document.querySelector('.notes-popout__body') as HTMLElement).scrollTop)
+      )
+
+    expect(await scrollTop()).toBe(0)
+
+    // Finger up the screen => document scrolls down.
+    await fingerDrag(c, PHONE.width / 2, 560, 220)
+    await page.waitForTimeout(500)
+    const down = await scrollTop()
+    expect(down, 'dragging up scrolls into the plan').toBeGreaterThan(50)
+
+    // Finger down the screen => back up the document. This is the direction the
+    // page-level pull-to-refresh competes for.
+    await fingerDrag(c, PHONE.width / 2, 220, 560)
+    await page.waitForTimeout(500)
+    expect(await scrollTop(), 'dragging down scrolls back up').toBeLessThan(down)
+  })
+
+  test('pull-to-refresh does not arm inside the dialog', async ({ page }) => {
+    // The popout is a modal, so a downward pull inside it is a scroll, never a
+    // request to reload the board behind it. Asserted on the mechanism because
+    // the failure it guards is silent: the pull is swallowed, the plan appears
+    // frozen, and releasing refreshes something the user cannot see.
+    const armed = await page.evaluate(() => {
+      const el = document.querySelector('#notes-popout-reply') ?? document.querySelector('.plan-md')
+      return {
+        insideModal: !!el?.closest('[aria-modal="true"]'),
+        dialogPresent: !!document.querySelector('[aria-modal="true"]')
+      }
+    })
+    expect(armed).toEqual({ insideModal: true, dialogPresent: true })
+  })
+
+  test('the plan does not chain its overscroll out to the page', async ({ page }) => {
+    const behavior = await page
+      .locator('.notes-popout__body')
+      .evaluate(el => getComputedStyle(el).overscrollBehaviorY)
+    expect(behavior).toBe('contain')
   })
 
   test('nothing in the panel overflows its width', async ({ page }) => {

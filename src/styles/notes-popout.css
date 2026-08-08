@@ -15,6 +15,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--hdk-space-xl);
+  overscroll-behavior: contain;
   z-index: 10000;
 }
 
@@ -110,6 +111,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Stop the scroll chaining out of the dialog when the plan hits either end.
+     Chained overscroll is what hands the gesture to whatever owns the page —
+     the app's pull-to-refresh, or the WebView's own overscroll — and on a touch
+     device that reads as the panel simply refusing to scroll. */
+  overscroll-behavior: contain;
   padding: var(--hdk-space-xl) var(--hdk-space-2xl);
 }
 
@@ -203,6 +209,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--hdk-text-sm);
   line-height: var(--line-height-relaxed);
+  overscroll-behavior: contain;
   resize: none;
 }
 

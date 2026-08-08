@@ -41,11 +41,18 @@ export function usePullToRefresh({
     const handleStart = (e: TouchEvent) => {
       if (refreshingRef.current) return
       if (e.touches.length !== 1) return
+      // Never arm underneath a modal. The ancestor walk below only bails once an
+      // inner container has ALREADY scrolled, so at the top of a dialog — a plan
+      // in the notes popout, say — this used to arm anyway: `handleMove` then
+      // preventDefault()s the downward drag, and releasing past the threshold
+      // refreshes the board the user cannot even see. Pulling inside a dialog is
+      // never a request to reload what is behind it.
+      const target = e.target as Element | null
+      if (target?.closest('[aria-modal="true"]')) return
       // Bail if the document OR any ancestor of the touch target has scrolled.
       // Without the ancestor walk, scrolled inner containers (modals, columns,
       // the body when html is height-locked) would still engage pull-to-refresh.
       if ((window.scrollY || 0) > 0) return
-      const target = e.target as Element | null
       let node: Element | null = target
       while (node && node !== document.body && node !== document.documentElement) {
         if (node.scrollTop > 0) return
