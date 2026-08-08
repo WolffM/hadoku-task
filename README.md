@@ -45,6 +45,18 @@ pnpm run dev
 # Open http://localhost:5173?userType=public
 ```
 
+### Test
+
+```bash
+pnpm run test:worker         # worker harnesses against a real SQLite D1
+pnpm run dev:api             # required by the server-backed e2e specs
+pnpm exec playwright test    # ~110 e2e specs
+```
+
+CI runs `typecheck`, `lint` and `test:worker` — **not** Playwright — so a green
+build is not evidence the e2e suite passes. Run it locally, with `dev:api` up,
+or ~33 specs skip themselves and the counts quietly look fine.
+
 ### Build for Production
 
 ```bash
@@ -53,7 +65,7 @@ pnpm run build:all
 
 **Output:**
 
-- Client: `dist/index.js` (~22KB gzipped), `dist/style.css` (~7KB gzipped)
+- Client: `dist/index.js` (~54KB gzipped), `dist/style.css` (~15KB gzipped)
 - Handlers: `dist/server/` (TypeScript compiled to JavaScript)
 
 ---

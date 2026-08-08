@@ -15,6 +15,12 @@ Package build order: task-ui-components -> themes -> task.
 
 Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate, then bumps the version of every publishable package whose files are staged (`scripts/version-bump.mjs`), so a push to main already carries a publishable version. CI's bump in `publish.yml` is only a backstop, for what a local hook can't cover: bot commits, `--no-verify`, and a version taken on the registry since.
 
+## CI — what it does and does NOT cover
+
+`ci.yml` runs **typecheck, lint and worker-tests** on `pull_request` AND on pushes to `main`. The push trigger exists because work here lands by direct push at least as often as by PR; before it, those commits were verified by nothing at all. On a push it is DETECTION, not prevention — the commit has already landed, so a failure is a red main to fix forward.
+
+**CI does not run Playwright.** The ~110 e2e specs execute only when someone runs them locally, so green CI is never evidence the suite passes. Three `theme-inheritance` specs sat red on `main` for weeks because of exactly this. Run `pnpm exec playwright test` (with `pnpm run dev:api` up) before trusting a change that touches the frontend.
+
 ## Worktrees — bootstrap them, or the hook silently does nothing
 
 Create one with **`node scripts/new-worktree.mjs <name>`**, never a bare `git worktree add`.
@@ -22,6 +28,8 @@ Create one with **`node scripts/new-worktree.mjs <name>`**, never a bare `git wo
 `core.hooksPath` is `.husky/_`, which husky generates during `pnpm install` and self-ignores (`.husky/_/.gitignore` is `*`). Only `.husky/pre-commit` is tracked, so a fresh worktree has no hook directory: git runs no hook and prints nothing. Every gate is skipped and no version is bumped, so CI's backstop writes the `chore(release)` commit on main that the hook exists to prevent.
 
 `pnpm install` in the worktree fixes both halves — husky's `prepare` regenerates `.husky/_`, and the gates get their `node_modules`. Symlinking or resolving up to the main checkout's `node_modules` is NOT enough; it produces no `.husky/_`. The script does the install and then verifies the hook is actually live.
+
+It also runs `build:packages`. `dist/` is gitignored, so a fresh worktree has none, and the pre-commit typecheck resolves `@wolffm/themes` and `@wolffm/task-ui-components` through their BUILT entrypoints — without the build the first commit dies on "has no exported member X" for an export sitting right there in source. A worktree that cannot pass its own gate is not bootstrapped.
 
 Known and deliberate: `git commit --amend` **with staged changes to a publishable path** bumps a second time (3.4.155 → 3.4.156). The guard in version-bump.mjs can't see an amend — HEAD is still the commit being amended, so its version already equals the working tree. A bare `--amend --no-edit` is safe, because nothing is staged and no package matches. A skipped patch number is harmless: CI rolls forward to a free version.
 

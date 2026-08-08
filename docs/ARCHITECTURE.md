@@ -359,7 +359,6 @@ src/
 ├── app/                      # Application entry and config
 │   ├── App.tsx              # Main orchestrator (~400 lines, refactored)
 │   ├── entry.tsx            # React mount point
-│   ├── themeConfig.tsx      # Theme configuration
 │   └── constants.ts         # App constants
 │
 ├── components/               # UI components
@@ -370,7 +369,6 @@ src/
 │   ├── BoardsSection.tsx    # Board navigation
 │   ├── TagFiltersSection.tsx # Tag filters
 │   └── modals/              # Modal components
-│       ├── SettingsModal.tsx
 │       ├── CreateBoardModal.tsx
 │       ├── CreateTagModal.tsx
 │       ├── EditTagModal.tsx
@@ -392,7 +390,7 @@ src/
 │   ├── useDragAndDrop/      # Drag and drop logic
 │   ├── useModalState.ts     # Modal state management
 │   ├── usePreferences.ts    # Settings persistence
-│   └── useTheme.ts          # Theme switching
+│   └── useThemePrefsMigration.ts # Carries legacy theme prefs to the shared row
 │
 ├── server/                   # Exported handlers for backend
 │   ├── index.ts             # Exports
@@ -408,7 +406,6 @@ src/
 │   └── task-layout.css     # Grid layouts
 │
 └── utils/                    # App utilities
-    ├── auth.ts              # Authentication helpers
     ├── broadcast.ts         # Cross-tab sync
     ├── dragDrop.ts          # Drag and drop utilities
     ├── formatters.ts        # Text formatting
@@ -513,12 +510,14 @@ src/styles/
 ├── modal.css          # Modal dialogs
 ├── task-items.css     # Task card styles
 ├── task-layout.css    # Grid/column layouts
-└── index.css          # Import orchestrator
+├── calendar.css       # Calendar view
+├── notes-popout.css   # Notes popout
+└── style.css          # Import orchestrator
 ```
 
 ### Theme System
 
-**9 theme families (18 themes with light/dark) with ~40 CSS variables each:**
+**9 theme families (18 themes with light/dark), 41 tokens each — the set is symmetric and gated by `pnpm run lint:css`:**
 
 ```css
 :root {

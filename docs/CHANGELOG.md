@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🎨 The Simple/Advanced theme toggle is gone
+
+Advanced visuals are switched off platform-wide. The toggle is removed from the
+picker, and `useTheme` pins `data-theme-mode='simple'` on every theme apply — so
+a mode persisted from before the removal cannot resurrect the gradients, which
+it otherwise would with no control left to turn them off.
+
+The kit itself still ships: `advanced.css`, `THEME_EFFECTS` and the
+`hdk-advanced-*` class hooks are untouched and still key off the attribute.
+Restoring the toggle is all that is needed to bring it back.
+
+**Breaking for consumers of `@wolffm/themes` / `@wolffm/task-ui-components`:**
+
+- `ThemePicker` / `ConnectedThemePicker` no longer accept `themeMode`,
+  `onThemeModeChange` or `hasAdvanced`
+- `HadokuThemeValue` and `useTheme()` no longer return `themeMode`,
+  `setThemeMode` or `hasAdvanced`
+- `getThemeMode`, `saveThemeMode` and `loadThemeMode` are removed from
+  `@wolffm/themes`. `setThemeMode` remains as the attribute writer
+- The `themeMode` **preference field is retained** — it is stored data with a
+  live legacy migration, and is simply no longer read
+
+### 🐛 Theme preferences that were stranded now arrive
+
+- **The theme migration ran for nobody who needed it.**
+  `useThemePrefsMigration` carries `theme` / `themeMode` / `experimentalThemes`
+  from this app's old private row (appId `task`) into the shared platform row
+  (appId `portfolio`) that `useTheme` reads. It bailed whenever the shared row
+  read back as `null`, on the belief that `null` meant "not resolved yet". It
+  does not: `usePrefs` clears `loading` once the read settles and leaves `prefs`
+  null when the row is **empty** — the one state where the migration must fire.
+  Anyone whose only hadoku app is this one had no shared row, so their theme
+  stayed stranded and the app opened on the platform default every time.
+- **Host-inherited themes are honoured again.** A bare family token (`coffee`
+  rather than `coffee-light`) stopped expanding when `useTheme` moved into
+  `@wolffm/themes`, so the app silently fell back to `light` for anyone whose
+  host page shared one. Normalization is restored, per `prefers-color-scheme`.
+
+### 🧪 The prefs E2E specs run against the real prefs-api
+
+`pnpm run dev:api` now also serves the **real** prefs-api worker on `:3003`
+against a real SQLite D1, and the specs mock nothing. The route mocks they
+replace were actively misleading: only the `task` row was ever mocked, so the
+`portfolio` row escaped to production, and the mock answered `404` for an unset
+row where the real worker answers `200` with `merged:{}`. That is what hid the
+migration bug above. Requires the sibling `../hadoku_site` checkout; without it
+the prefs server is skipped and those specs skip themselves.
+
 ### 📅 Calendars are a property of a board
 
 - **`board.calendar`** on every board read (`GET /boards`, MCP `list_boards` /
