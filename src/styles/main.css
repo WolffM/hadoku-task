@@ -389,14 +389,32 @@
 /* Main row: standard boards on the left, create/edit actions filling to the right. */
 .task-app__board-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--hdk-space-md);
   align-items: center;
 }
 
+/* Wraps, because the row is not scrollable and has no ellipsis: a pill pushed
+   past the right edge is simply unreachable, and the whole document scrolls
+   sideways underneath every `position: fixed` overlay. The bar holds up to
+   TOPBAR_BOARD_SLOTS pinned boards plus the active one, and six ordinary names
+   already exceed a 393px phone — so this is the designed case, not an edge. */
 .task-app__board-list {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--hdk-space-md);
   align-items: center;
+  min-width: 0;
+}
+
+/* Wrapping only bounds the ROW; one pill can still be wider than the phone if
+   its board is named at length. Board names are free text, so the label is
+   truncated rather than trusted. */
+.task-app__board-list .pill-btn {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .task-app__board-actions {
