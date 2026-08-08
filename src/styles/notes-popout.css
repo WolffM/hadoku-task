@@ -318,8 +318,16 @@
 
 /* Phones get the whole screen — a plan has no business being letterboxed. */
 @media (max-width: 640px) {
+  /* `position: fixed` + `inset: 0` resolves against the LARGE viewport on
+     Android Chrome — the one measured with the nav bar retracted — so the
+     panel's bottom edge, and the footer pinned to it, render underneath the nav
+     bar and cannot be tapped at all. `100dvh` is the viewport as displayed right
+     now. With `top` and `height` both set the box is over-constrained and
+     `bottom` is ignored, so this wins where dvh is supported and degrades to the
+     old `inset: 0` behaviour where it isn't. */
   .notes-popout__overlay {
     padding: 0;
+    height: 100dvh;
   }
 
   .notes-popout,
@@ -337,8 +345,57 @@
     padding-right: var(--hdk-space-lg);
   }
 
+  .notes-popout__header {
+    padding-top: var(--hdk-space-lg);
+    padding-bottom: var(--hdk-space-lg);
+  }
+
+  /* The type scale jumps 16px → 24px with nothing in between, and 24px is a
+     desktop dialog title: on a 393px screen it wraps the heading and shoves the
+     question badge onto its own row. Only the dialog title comes down — the
+     section headings stay at 16px, because 14px-bold against 14px body is too
+     weak to pick out while scrolling a plan on a phone. */
+  .notes-popout__title {
+    font-size: var(--hdk-text-base);
+  }
+
   .notes-popout__editor {
     margin-left: var(--hdk-space-lg);
     margin-right: var(--hdk-space-lg);
+  }
+
+  /* Under 16px, iOS Safari zooms the page when the field takes focus and does
+     not zoom back out on blur — the board is left scaled and off-centre. */
+  .notes-popout__editor,
+  .notes-popout__reply-input {
+    font-size: var(--hdk-text-base);
+  }
+
+  /* Touch targets. 26px-tall buttons crowded against the right edge were the
+     hardest thing here to hit; give them a real height and let them share the
+     row. The safe-area pad keeps them clear of the home indicator / nav bar. */
+  .notes-popout__footer {
+    gap: var(--hdk-space-lg);
+    padding-bottom: calc(var(--hdk-space-lg) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .notes-popout__footer .notes-popout__btn {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .notes-popout__reply-actions .notes-popout__btn {
+    min-height: 44px;
+  }
+
+  .notes-popout__close {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* There is no Cmd key on a phone, and the hint was eating the width the
+     buttons need. */
+  .notes-popout__hint {
+    display: none;
   }
 }
