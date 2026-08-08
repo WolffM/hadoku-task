@@ -1,6 +1,6 @@
 # themes/dev/editor.js
 
-Worst-offender rank 1 · firing: consistency + size · 4 lanes applicable · anchor `4385e57dd6da`
+Worst-offender rank 1 · firing: consistency + size · 4 lanes applicable · anchor `d8c5091269c5`
 
 ### consistency — orphaned (zero import fan-in)
 

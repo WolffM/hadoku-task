@@ -1,6 +1,6 @@
 # themes/dev/build.js
 
-Deletion candidate · orphaned — zero import fan-in, no declared entry point · anchor `4385e57dd6da`
+Deletion candidate · orphaned — zero import fan-in, no declared entry point · anchor `d8c5091269c5`
 
 ### Pre-run verification
 
