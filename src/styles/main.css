@@ -574,6 +574,7 @@
   gap: var(--hdk-space-md);
   margin-bottom: var(--hdk-space-lg);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 /* Calendar + refresh + share cluster, pushed to the far right of the filters bar.
