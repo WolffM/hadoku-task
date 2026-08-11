@@ -179,6 +179,16 @@
   opacity: 1;
 }
 
+/* A question that's been answered no longer needs the warning tint — that's
+   reserved for "still waiting on you" — but it stays visually distinct from a
+   plain notes toggle so a reviewer can tell "answered" apart from "nothing to
+   answer" at a glance. */
+.task-app__notes-toggle.has-answered-questions {
+  background-color: var(--color-success-bg);
+  color: var(--color-on-success-bg);
+  opacity: 1;
+}
+
 .task-app__item-questions {
   margin-top: var(--hdk-space-xs);
   align-self: flex-start;
@@ -189,6 +199,11 @@
   font-size: var(--hdk-text-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
+}
+
+.task-app__item-questions--answered {
+  background-color: var(--color-success-bg);
+  color: var(--color-on-success-bg);
 }
 
 /* --------------------------------------------------------------------------
