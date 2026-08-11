@@ -300,8 +300,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 50vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--edit-boards-gap);
@@ -743,21 +741,16 @@
   border-radius: var(--hdk-radius-sm);
   background: var(--color-bg-card);
   color: var(--color-text);
+  /* Grow with content instead of scrolling internally — the modal card is the
+     only scrollbar this dialog needs. `resize: vertical` stays as a fallback
+     for browsers without field-sizing support. */
+  field-sizing: content;
   resize: vertical;
 }
 .automation-panel__actions {
   display: flex;
   gap: var(--hdk-space-sm);
   justify-content: flex-end;
-}
-.automation-panel__preview-btn {
-  padding: var(--hdk-space-xs) var(--hdk-space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius-sm);
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  cursor: pointer;
-  font-size: var(--hdk-text-sm);
 }
 .automation-panel__activate-btn,
 .automation-panel__deactivate {
@@ -776,7 +769,7 @@
   background: var(--color-danger-bg);
   color: var(--color-on-danger-bg);
 }
-.automation-panel__preview-btn:disabled,
+.automation-panel__preset:disabled,
 .automation-panel__activate-btn:disabled,
 .automation-panel__deactivate:disabled {
   opacity: 0.4;

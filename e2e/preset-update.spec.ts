@@ -169,7 +169,7 @@ test.describe('Preset update detection', () => {
     expect(other.board.presetUpdate).toBeUndefined()
   })
 
-  test('offers the update in the panel, behind the same destructive preview', async ({
+  test('offers the update in the panel and applies it in one click', async ({
     page,
     request
   }) => {
@@ -192,25 +192,10 @@ test.describe('Preset update detection', () => {
     await expect(banner).toContainText('no task moves')
     await expect(banner).not.toHaveClass(/is-unsafe/)
 
-    // Applying is NOT one click: it drops into the same convert view, with the
-    // new contract loaded and the preview still mandatory.
-    await page.getByRole('button', { name: 'Review update' }).click()
-    const json = page.locator('.automation-panel__json')
-    await expect(json).toBeVisible({ timeout: 10000 })
-    const parsed = JSON.parse(await json.inputValue()) as {
-      schemaId: string
-      schemaVersion: number
-      lanes: unknown[]
-    }
-    expect(parsed.schemaId).toBe('tenhands')
-    expect(parsed.schemaVersion).toBe(1)
-    expect(parsed.lanes).toHaveLength(10)
-
-    await page.getByRole('button', { name: 'Preview', exact: true }).click()
-    await expect(page.locator('.automation-panel__preview-head')).toBeVisible({ timeout: 10000 })
-
-    await page.getByRole('button', { name: 'Activate', exact: true }).click()
-    await expect(page.locator('.automation-panel__hint')).toBeHidden({ timeout: 10000 })
+    // Applying IS one click: it fetches the newer contract and commits it
+    // immediately, same as picking a preset on a fresh board.
+    await page.getByRole('button', { name: 'Apply update' }).click()
+    await expect(page.locator('.automation-panel__update')).toBeHidden({ timeout: 10000 })
 
     // The board is on v1 now, so the banner has nothing left to say.
     const { board } = await readBoard(request, id)
