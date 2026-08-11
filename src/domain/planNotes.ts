@@ -105,16 +105,45 @@ export function questionsSection(sections: PlanSection[]): PlanSection | undefin
 
 /**
  * Group a section body into list items, folding each item's wrapped
- * continuation lines back into it. Text before the first marker is its own
- * item, so a prose-only section still counts as something.
+ * continuation lines back into it, and pull out a trailing reply paragraph if
+ * one follows the list after a blank line.
+ *
+ * `appendAnswerToNotes` always inserts a human's reply as its own
+ * blank-line-separated paragraph after the question list — never as another
+ * list item, never glued onto one with a wrapped-line continuation. So a
+ * non-list line immediately following an item (no blank line between) is a
+ * wrapped continuation of that item, same as before; but once a blank line has
+ * been seen after the list, a non-list line starts (or continues) the reply
+ * block instead of merging into the last item. Text before the first marker is
+ * still its own item, so a prose-only section counts as something.
  */
-function listItems(body: string): string[] {
+function parseQuestionsBody(body: string): { items: string[]; reply: string | undefined } {
   const items: string[] = []
+  let reply: string[] | undefined
+  let blankSinceLastItem = false
+
   for (const line of body.split('\n')) {
-    if (LIST_ITEM.test(line) || !items.length) items.push(line.trim())
-    else if (line.trim()) items[items.length - 1] += ` ${line.trim()}`
+    const trimmed = line.trim()
+    if (!trimmed) {
+      if (items.length) blankSinceLastItem = true
+      continue
+    }
+    if (LIST_ITEM.test(line)) {
+      items.push(trimmed)
+      blankSinceLastItem = false
+      reply = undefined
+      continue
+    }
+    if (items.length && blankSinceLastItem) {
+      ;(reply ??= []).push(trimmed)
+    } else if (items.length) {
+      items[items.length - 1] += ` ${trimmed}`
+    } else {
+      items.push(trimmed)
+    }
   }
-  return items.filter(Boolean)
+
+  return { items: items.filter(Boolean), reply: reply?.join(' ') }
 }
 
 /**
@@ -132,6 +161,10 @@ function listItems(body: string): string[] {
  * section has a `?` at all, the questions are phrased imperatively ("Confirm the
  * repo.") and every item counts. The "No open questions." sentinel is 0.
  *
+ * Once a reply paragraph trails the list (see `parseQuestionsBody`), the
+ * question(s) it answers are done — the count goes to 0 rather than nagging
+ * forever. `questionsAnswered` is the signal for what to show instead.
+ *
  * It cannot be exact — free text is the point — but it errs toward the count
  * going quiet once you have answered rather than nagging forever.
  */
@@ -142,9 +175,28 @@ export function openQuestionCount(sections: PlanSection[]): number {
   const body = section.body.trim()
   if (!body || NO_QUESTIONS.test(stripSentinelMarkup(body))) return 0
 
-  const items = listItems(body)
-  if (!body.includes('?')) return items.length
+  const { items, reply } = parseQuestionsBody(body)
+  if (reply !== undefined) return 0
+
+  if (!items.some(item => item.includes('?'))) return items.length
   return items.filter(item => item.includes('?')).length
+}
+
+/**
+ * True once a human has replied to a Questions section that actually asked
+ * something — the signal behind the "Answered questions" badge, which takes
+ * over from "N open questions" the moment a reply lands and reverts the moment
+ * a replan rewrites the section with a fresh, un-replied list.
+ */
+export function questionsAnswered(sections: PlanSection[]): boolean {
+  const section = questionsSection(sections)
+  if (!section) return false
+
+  const body = section.body.trim()
+  if (!body || NO_QUESTIONS.test(stripSentinelMarkup(body))) return false
+
+  const { items, reply } = parseQuestionsBody(body)
+  return items.length > 0 && reply !== undefined
 }
 
 /**

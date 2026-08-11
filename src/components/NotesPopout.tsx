@@ -29,6 +29,7 @@ import {
   appendAnswerToNotes,
   openQuestionCount,
   parsePlanNotes,
+  questionsAnswered,
   type PlanSection
 } from '../domain/planNotes'
 import { PlanMarkdown } from './PlanMarkdown'
@@ -60,6 +61,7 @@ export function NotesPopout({
 
   const sections = useMemo(() => parsePlanNotes(notes), [notes])
   const questionCount = useMemo(() => openQuestionCount(sections), [sections])
+  const answered = useMemo(() => questionsAnswered(sections), [sections])
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Keep focus inside the dialog: on open, and again whenever the mode flips.
@@ -135,11 +137,18 @@ export function NotesPopout({
         <header className="notes-popout__header">
           <div className="notes-popout__heading">
             <h2 className="notes-popout__title">{title}</h2>
-            {questionCount > 0 && !editing && (
-              <span className="notes-popout__question-count">
-                {questionCount} open {questionCount === 1 ? 'question' : 'questions'}
-              </span>
-            )}
+            {!editing &&
+              (questionCount > 0 ? (
+                <span className="notes-popout__question-count">
+                  {questionCount} open {questionCount === 1 ? 'question' : 'questions'}
+                </span>
+              ) : (
+                answered && (
+                  <span className="notes-popout__question-count notes-popout__question-count--answered">
+                    Answered questions
+                  </span>
+                )
+              ))}
           </div>
           <button className="notes-popout__close" onClick={onClose} aria-label="Close notes">
             ×

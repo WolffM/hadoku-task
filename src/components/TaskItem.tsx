@@ -6,7 +6,7 @@ import React, { useMemo, useRef, useState } from 'react'
 import type { Task } from '../domain/types'
 import { formatAge } from '../utils/formatters'
 import { formatTagsForDisplay } from '../domain/utils/tags'
-import { openQuestionCount, parsePlanNotes } from '../domain/planNotes'
+import { openQuestionCount, parsePlanNotes, questionsAnswered } from '../domain/planNotes'
 import { NotesPopout } from './NotesPopout'
 import { TagIcon } from '@wolffm/task-ui-components'
 
@@ -60,7 +60,14 @@ export function TaskItem({
   // a reviewer can see which of a lane's tasks need them without opening each
   // one — Questions is the only section that asks anything, so it's the only
   // thing worth counting here.
-  const openQuestions = useMemo(() => openQuestionCount(parsePlanNotes(task.notes)), [task.notes])
+  const planSections = useMemo(() => parsePlanNotes(task.notes), [task.notes])
+  const openQuestions = useMemo(() => openQuestionCount(planSections), [planSections])
+  // Once a reply has landed and no new questions replaced it, the row goes
+  // quiet on "open" and says so was answered instead — distinct from just
+  // having no badge, so a reviewer can tell "never asked" apart from
+  // "asked and answered". A replan that rewrites Questions with a fresh,
+  // un-replied list flips this back to `openQuestions > 0` automatically.
+  const answered = useMemo(() => questionsAnswered(planSections), [planSections])
 
   // The popout portals to the app root: out of this card (which clips and
   // drags), but not out of `.task-app-container`, which is where every theme
@@ -201,18 +208,26 @@ export function TaskItem({
           </div>
         </div>
 
-        {openQuestions > 0 && (
+        {openQuestions > 0 ? (
           <div className="task-app__item-questions">
             <span className="task-app__item-text" onMouseDown={suppressDragForText}>
               {openQuestions} open {openQuestions === 1 ? 'question' : 'questions'}
             </span>
           </div>
+        ) : (
+          answered && (
+            <div className="task-app__item-questions task-app__item-questions--answered">
+              <span className="task-app__item-text" onMouseDown={suppressDragForText}>
+                Answered questions
+              </span>
+            </div>
+          )
         )}
       </div>
       <div className="task-app__item-actions">
         {onSetNotes && showNotesButton && (
           <button
-            className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''}`}
+            className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''} ${openQuestions === 0 && answered ? 'has-answered-questions' : ''}`}
             onClick={() => setNotesOpen(true)}
             title={hasNotes ? 'Open notes' : 'Add notes'}
             aria-label={hasNotes ? 'Open notes' : 'Add notes'}
