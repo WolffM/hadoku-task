@@ -28,20 +28,6 @@ export interface ShareRow {
   createdAt: string
 }
 
-/** A preview row from an activation dryRun (tag → where it lands). */
-export interface ActivationMappingRow {
-  tag: string
-  count: number
-  lands: 'lane' | 'inbox'
-}
-export interface ActivationPreview {
-  digest: string
-  lanes: Array<Record<string, unknown>>
-  mapping: ActivationMappingRow[]
-  toInbox: number
-  collisions: string[]
-}
-
 /** Server-only owner board operations (share + automation), injected from the client. */
 export interface ShareApi {
   searchUsers: (q: string) => Promise<Array<{ name: string; tier?: string }>>
@@ -644,9 +630,9 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
 
 /**
  * Convert a board to (or off) an automation board (§5.4). Activation is a
- * DESTRUCTIVE migration: pick a provider's published lane contract (or paste one),
- * preview the tag→lane mapping via a dryRun, then commit by echoing the digest.
- * An automation board shows its lanes + a Deactivate action.
+ * DESTRUCTIVE migration: pick a provider's published lane contract (or paste
+ * one) and it commits immediately — there is no separate preview-then-confirm
+ * step. An automation board shows its lanes + a Deactivate action.
  */
 function AutomationPanel({
   board,
@@ -660,7 +646,6 @@ function AutomationPanel({
   const ref = boardRef(board)
   const isAutomation = board.mode === 'automation'
   const [raw, setRaw] = useState('')
-  const [preview, setPreview] = useState<ActivationPreview | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [presets, setPresets] = useState<AutomationPreset[] | null>(null)
@@ -668,12 +653,7 @@ function AutomationPanel({
   const [chosen, setChosen] = useState<string | null>(null)
   const [presetUpdate, setPresetUpdate] = useState<PresetUpdate | null>(null)
 
-  /** An already-automated board being moved to a NEWER contract. It reuses the
-   * convert view wholesale — same JSON box, same mandatory preview, same commit
-   * — because re-activation is exactly as destructive as the first activation
-   * and deserves the same confirmation, not a one-click shortcut. */
-  const [reactivating, setReactivating] = useState(false)
-  const showConvert = !isAutomation || reactivating
+  const showConvert = !isAutomation
 
   // Load the providers' live lane contracts once, when the convert view opens.
   // shareApi is memoized upstream, so this doesn't re-fire per render.
@@ -704,34 +684,50 @@ function AutomationPanel({
     }
   }, [isAutomation, ref, shareApi])
 
-  /** Load the newer contract into the convert view, ready to preview + commit. */
-  const startReactivate = () => {
-    if (!presetUpdate) return
-    setErr(null)
+  /** Commit an activation payload straight away. Picking a preset and pasting
+   * JSON both land here — there is no dry-run gate in between; the digest echo
+   * that guards a commit is optional, so omitting it just applies the payload. */
+  const activate = (payload: {
+    lanes: unknown
+    schemaId?: string
+    schemaVersion?: number
+    repo?: string
+  }) => {
     setBusy(true)
+    setErr(null)
     void shareApi
-      .listAutomationPresets()
-      .then(res => {
-        const p = res.presets.find(x => x.schemaId === presetUpdate.schemaId)
-        if (!p) {
-          setErr('That contract is no longer being served by the provider.')
-          return
-        }
-        setPresets(res.presets)
-        setPresetSources(res.sources)
-        choosePreset(p)
-        setReactivating(true)
+      .activateAutomation(ref, payload)
+      .then(async res => {
+        if (res.ok) await onDone()
+        else setErr(res.error ?? 'Activation failed')
       })
       .finally(() => setBusy(false))
   }
 
-  /** Selecting a preset fills the JSON box rather than hiding it: activation is
-   * destructive, so the human sees the exact payload they're about to commit —
-   * and can still tweak it. One code path to preview/commit, no hidden state. */
+  /** Fetch the newer contract and apply it immediately — reactivation is the
+   * same one-click commit as a first-time activation. */
+  const startReactivate = () => {
+    if (!presetUpdate) return
+    setErr(null)
+    setBusy(true)
+    void shareApi.listAutomationPresets().then(res => {
+      const p = res.presets.find(x => x.schemaId === presetUpdate.schemaId)
+      if (!p) {
+        setErr('That contract is no longer being served by the provider.')
+        setBusy(false)
+        return
+      }
+      setPresets(res.presets)
+      setPresetSources(res.sources)
+      choosePreset(p)
+    })
+  }
+
+  /** Selecting a preset fills the JSON box for reference and commits it right
+   * away — no separate preview/confirm click. */
   const choosePreset = (p: AutomationPreset) => {
     const key = `${p.providerId}:${p.schemaId}:${p.schemaVersion ?? '-'}`
     setChosen(key)
-    setPreview(null)
     setErr(null)
     setRaw(
       JSON.stringify(
@@ -744,6 +740,12 @@ function AutomationPanel({
         2
       )
     )
+    activate({
+      lanes: p.lanes,
+      schemaId: p.schemaId,
+      schemaVersion: p.schemaVersion ?? undefined,
+      repo: repo.trim() || undefined
+    })
   }
   const [repo, setRepo] = useState((board.repo as string | undefined) ?? '')
   const [repoStatus, setRepoStatus] = useState<{
@@ -799,33 +801,13 @@ function AutomationPanel({
     }
   }
 
-  const runPreview = () => {
-    setErr(null)
-    setPreview(null)
+  /** Commit whatever is in the paste box — the manual-entry counterpart to
+   * choosePreset. There's no preset "click" to hang the commit off, so this
+   * stays an explicit button, but it's a single click, not preview-then-commit. */
+  const applyManual = () => {
     const payload = parsePayload()
     if (!payload) return
-    setBusy(true)
-    void shareApi
-      .activateAutomation(ref, { ...payload, dryRun: true })
-      .then(res => {
-        if (res.ok) setPreview((res.result as { preview: ActivationPreview }).preview)
-        else setErr(res.error ?? 'Preview failed')
-      })
-      .finally(() => setBusy(false))
-  }
-
-  const commit = () => {
-    const payload = parsePayload()
-    if (!payload || !preview) return
-    setBusy(true)
-    setErr(null)
-    void shareApi
-      .activateAutomation(ref, { ...payload, digest: preview.digest })
-      .then(async res => {
-        if (res.ok) await onDone()
-        else setErr(res.error ?? 'Activation failed')
-      })
-      .finally(() => setBusy(false))
+    activate(payload)
   }
 
   const deactivate = () => {
@@ -910,7 +892,7 @@ function AutomationPanel({
               onClick={startReactivate}
               disabled={busy}
             >
-              Review update
+              Apply update
             </button>
           </div>
         )}
@@ -936,36 +918,11 @@ function AutomationPanel({
   return (
     <div className="share-panel automation-panel">
       <p className="automation-panel__hint">
-        {reactivating ? (
-          <>
-            Move this board to <strong>{presetUpdate?.providerLabel}</strong> v
-            {presetUpdate?.schemaVersion}. This is <strong>destructive</strong> — it replaces the
-            board&apos;s lanes, and any task whose lane the new contract drops is cleared to the
-            Inbox. Preview first.
-          </>
-        ) : (
-          <>
-            Convert this to an <strong>automation board</strong>: pick a provider&apos;s lane
-            contract below, or paste one. This is <strong>destructive</strong> — it replaces the
-            board&apos;s tags with the fixed lanes. Preview first.
-          </>
-        )}
+        Convert this to an <strong>automation board</strong>: pick a provider&apos;s lane contract
+        below and it applies immediately, or paste one and click Activate. This is{' '}
+        <strong>destructive</strong> — it replaces the board&apos;s tags with the fixed lanes, and
+        any task whose tag isn&apos;t one of them is cleared to the Inbox.
       </p>
-      {reactivating && (
-        <button
-          type="button"
-          className="automation-panel__update-cancel"
-          onClick={() => {
-            setReactivating(false)
-            setPreview(null)
-            setRaw('')
-            setChosen(null)
-            setErr(null)
-          }}
-        >
-          ← Back
-        </button>
-      )}
       {repoField}
 
       {presets === null && <p className="automation-panel__presets-msg">Loading presets…</p>}
@@ -983,6 +940,7 @@ function AutomationPanel({
                   onClick={() => choosePreset(p)}
                   title={p.description ?? undefined}
                   aria-pressed={chosen === key}
+                  disabled={busy}
                 >
                   <span className="automation-panel__preset-label">{p.label}</span>
                   <span className="automation-panel__preset-meta">
@@ -1019,7 +977,7 @@ function AutomationPanel({
         value={raw}
         onChange={e => {
           setRaw(e.target.value)
-          setPreview(null)
+          setChosen(null)
           setErr(null)
         }}
         rows={4}
@@ -1028,42 +986,12 @@ function AutomationPanel({
 
       {err && <p className="share-panel__msg is-err">{err}</p>}
 
-      {preview && (
-        <div className="automation-panel__preview">
-          <p className="automation-panel__preview-head">
-            {preview.lanes.length} lanes · {preview.toInbox} task{preview.toInbox === 1 ? '' : 's'}{' '}
-            → Inbox
-            {preview.collisions.length > 0 ? ` · collisions: ${preview.collisions.join(', ')}` : ''}
-          </p>
-          {preview.mapping.length > 0 && (
-            <ul className="automation-panel__mapping">
-              {preview.mapping.map(m => (
-                <li key={m.tag}>
-                  <span className="automation-panel__map-tag">{m.tag}</span>
-                  <span className="automation-panel__map-arrow">→</span>
-                  <span className={`automation-panel__map-dest is-${m.lands}`}>
-                    {m.lands === 'lane' ? m.tag : 'Inbox'} ({m.count})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       <div className="automation-panel__actions">
         <button
-          className="automation-panel__preview-btn"
-          onClick={runPreview}
-          disabled={busy || !raw.trim()}
-        >
-          Preview
-        </button>
-        <button
           className="automation-panel__activate-btn"
-          onClick={commit}
-          disabled={busy || !preview}
-          title={preview ? 'Activate (destructive)' : 'Preview first'}
+          onClick={applyManual}
+          disabled={busy || !raw.trim()}
+          title="Activate (destructive)"
         >
           Activate
         </button>

@@ -91,7 +91,7 @@ test.describe('Automation preset picker', () => {
     expect(presetBox?.y ?? 0).toBeLessThan(jsonBox?.y ?? 0)
   })
 
-  test('choosing a preset fills the payload the commit will send', async ({ page }) => {
+  test('choosing a preset fills the payload it commits', async ({ page }) => {
     await page.goto('/')
     await page.waitForSelector(APP_HEADER, { timeout: 15000 })
     const board = boardName('fills')
@@ -101,27 +101,21 @@ test.describe('Automation preset picker', () => {
     const json = page.locator('.automation-panel__json')
     await expect(json).toHaveValue('')
 
+    // Picking a preset applies it immediately — no separate Preview/Activate
+    // click — so the payload it filled and committed is only visible for the
+    // instant before the panel closes and the boards reload.
     await page.locator('.automation-panel__preset').first().click()
+    await expect(page.locator('.automation-panel__hint')).toBeHidden({ timeout: 10000 })
 
-    // Activation is destructive, so the exact payload stays visible and editable.
-    const filled = await json.inputValue()
-    const parsed = JSON.parse(filled) as {
-      schemaId: string
-      schemaVersion: number
-      lanes: Array<{ tag: string; editableBy: string }>
-    }
-    expect(parsed.schemaId).toBe('tenhands')
-    expect(parsed.schemaVersion).toBe(1)
-    expect(parsed.lanes).toHaveLength(10)
-    expect(parsed.lanes.filter(l => l.editableBy === 'agent').map(l => l.tag)).toEqual([
-      'planning',
-      'working',
-      'submitting'
-    ])
-    await expect(page.locator('.automation-panel__preset').first()).toHaveClass(/is-chosen/)
+    await page.getByRole('button', { name: `Automation for ${board}` }).click()
+    const status = page.locator('.automation-panel__status')
+    await expect(status).toBeVisible({ timeout: 10000 })
+    await expect(status).toContainText('tenhands v1')
+    await expect(page.locator('.automation-panel__lane')).toHaveCount(10)
+    await expect(page.locator('.automation-panel__lane-by.is-agent')).toHaveCount(3)
   })
 
-  test('previews and activates from the fetched contract', async ({ page }) => {
+  test('activates immediately from the fetched contract', async ({ page }) => {
     await page.goto('/')
     await page.waitForSelector(APP_HEADER, { timeout: 15000 })
     const board = boardName('commit')
@@ -129,15 +123,9 @@ test.describe('Automation preset picker', () => {
     await openAutomationPanel(page, board)
 
     await page.locator('.automation-panel__preset').nth(1).click() // Simple Work, 3 lanes
-    await page.getByRole('button', { name: 'Preview', exact: true }).click()
 
-    const preview = page.locator('.automation-panel__preview-head')
-    await expect(preview).toBeVisible({ timeout: 10000 })
-    await expect(preview).toContainText('3 lanes')
-
-    await page.getByRole('button', { name: 'Activate', exact: true }).click()
-
-    // A successful commit closes the panel and reloads the boards.
+    // A successful commit closes the panel and reloads the boards — no
+    // separate Preview/Activate click in between.
     await expect(page.locator('.automation-panel__hint')).toBeHidden({ timeout: 10000 })
 
     // Re-open it: the board is now an automation board carrying the PROVIDER's
