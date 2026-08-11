@@ -241,13 +241,45 @@ test.describe('plan review', () => {
     expect(notes).toContain('1. Should the reply append under Questions, or at the end of the doc?')
   })
 
-  test("a reviewer's own answer is not counted back as a question", async ({ page }) => {
+  test("a reviewer's own answer switches the badge to answered, not counted back as a question", async ({
+    page,
+    request
+  }) => {
     await card(page, 'Plan under review').getByRole('button', { name: 'Open notes' }).click()
     await page.locator('#notes-popout-reply').fill('Both answered.')
     await page.getByRole('button', { name: 'Add answer' }).click()
     await expect(page.locator('#notes-popout-reply')).toHaveValue('')
 
-    await expect(page.locator('.notes-popout__question-count')).toHaveText('2 open questions')
+    // The popout header goes quiet on "open" and reads "answered" instead —
+    // not silence, and not still nagging.
+    await expect(page.locator('.notes-popout__question-count')).toHaveText('Answered questions')
+    await expect(page.locator('.notes-popout__question-count')).toHaveClass(
+      /notes-popout__question-count--answered/
+    )
+    await page.locator('.notes-popout__close').click()
+
+    // Same tri-state on the card itself.
+    await expect(
+      card(page, 'Plan under review').locator('.task-app__item-questions')
+    ).toHaveText('Answered questions')
+    await expect(
+      card(page, 'Plan under review').locator('.task-app__item-questions')
+    ).toHaveClass(/task-app__item-questions--answered/)
+
+    // A replan rewrites notes wholesale with a fresh, un-replied Questions
+    // list — the badge has to flip straight back to "open", not stay stuck on
+    // "answered" from the reply that no longer applies to anything.
+    const patched = await request.patch(`${API}/${boardId}-a`, {
+      data: {
+        boardId,
+        notes: `## Questions\n\n1. Is the new plan good?\n2. Anything else to settle?\n`
+      }
+    })
+    expect(patched.ok()).toBe(true)
+    await openBoard(page, boardId)
+    await expect(
+      card(page, 'Plan under review').locator('.task-app__item-questions')
+    ).toHaveText('2 open questions')
   })
 
   test('Escape backs out of the editor first, then the dialog', async ({ page }) => {

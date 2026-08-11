@@ -84,6 +84,13 @@
   white-space: nowrap;
 }
 
+/* Answered is a different state from "still open" — the success family keeps
+   it from reading as another thing left for the reviewer to do. */
+.notes-popout__question-count--answered {
+  background-color: var(--color-success-bg);
+  color: var(--color-on-success-bg);
+}
+
 .notes-popout__close {
   flex-shrink: 0;
   width: 32px;
