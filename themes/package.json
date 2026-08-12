@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.2.1",
+  "version": "5.3.0",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -17,21 +17,29 @@
     "src/advanced.css",
     "src/tailwind-integration.css",
     "src/tailwind-colors.css",
+    "src/icons.css",
     "scripts",
     "README.md",
-    "THEME_USAGE_GUIDE.md"
+    "THEME_USAGE_GUIDE.md",
+    "LICENSE-lucide"
   ],
   "exports": {
     "./style.css": "./src/style.css",
     "./advanced.css": "./src/advanced.css",
     "./tailwind-integration.css": "./src/tailwind-integration.css",
     "./tailwind-colors.css": "./src/tailwind-colors.css",
+    "./icons.css": "./src/icons.css",
     "./THEME_USAGE_GUIDE.md": "./THEME_USAGE_GUIDE.md",
     "./check-usage": "./scripts/check-usage.mjs",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "default": "./dist/icons/index.js"
+    },
+    "./check-icons": "./scripts/check-icons.mjs"
   },
   "scripts": {
     "build": "tsc && node ../scripts/fix-imports.cjs dist",
@@ -44,7 +52,9 @@
     "check:tailwind": "node scripts/generate-tailwind-colors.mjs --check",
     "check:docs": "node scripts/check-docs.mjs",
     "generate:tailwind": "node scripts/generate-tailwind-colors.mjs",
-    "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:usage"
+    "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:icons && pnpm run check:usage",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "check:icons": "node scripts/generate-icons.mjs --check && node scripts/check-icons.mjs .."
   },
   "keywords": [
     "themes",
@@ -72,6 +82,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.16",
+    "lucide-static": "1.28.0",
     "typescript": "^5.6.3"
   }
 }

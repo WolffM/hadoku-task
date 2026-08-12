@@ -7,7 +7,8 @@ import React from 'react'
 import '../context-menu.css'
 
 export interface ContextMenuItem {
-  label: string
+  /** ReactNode, not string, so callers can put an <Icon> beside the text. */
+  label: React.ReactNode
   onClick: () => void | Promise<void>
   isDanger?: boolean
   disabled?: boolean

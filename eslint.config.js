@@ -92,6 +92,10 @@ export default [
         HTMLMetaElement: 'readonly',
         Element: 'readonly',
         Node: 'readonly',
+        // SVG + tree-walking, used by the icon specs to measure painted geometry
+        SVGSVGElement: 'readonly',
+        SVGGraphicsElement: 'readonly',
+        NodeFilter: 'readonly',
         Event: 'readonly',
         MouseEvent: 'readonly',
         KeyboardEvent: 'readonly',

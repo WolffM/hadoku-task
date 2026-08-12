@@ -1,0 +1,114 @@
+/**
+ * Hadoku icon module — presentation layer.
+ *
+ * Import alongside style.css, UNLAYERED (see THEME_USAGE_GUIDE.md — putting it in a
+ * cascade layer makes every colour resolve to nothing):
+ *
+ *   @import '@wolffm/themes/style.css';
+ *   @import '@wolffm/themes/icons.css';
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY THE GLYPH IS NOT TINTED WITH AN ACCENT BY DEFAULT
+ *
+ * The obvious design — paint the glyph `--color-warning` — is unshippable, and the
+ * numbers are unambiguous. Measured across all 18 themes on both `--color-bg-card`
+ * and `--color-bg`, a bare accent glyph misses the WCAG 1.4.11 non-text minimum of
+ * 3:1 in 8 of 36 combinations for `warning` alone (light 2.15, ocean-light 1.92,
+ * pink-light 1.67), and every other family fails somewhere too. `--color-<f>-dark`
+ * does not rescue it — that fails 3 more.
+ *
+ * This is precisely the accent-as-text anti-pattern `scripts/check-usage.mjs` rule 6
+ * already gates against, and it is NOT covered by `check:contrast`, which validates
+ * `on-<f>` over `<f>` and never looks at an accent over a surface.
+ *
+ * So the accent moves to the icon's CHROME, exactly as the planning doc's own escape
+ * hatch anticipated. Both tile treatments below pass 3:1 in 18/18 themes for all five
+ * families, because they reuse the token pairings the design system already
+ * guarantees: tint tile = `--color-<f>-bg` + `--color-on-<f>-bg`; filled tile =
+ * `--color-<f>` + `--color-on-<f>`.
+ *
+ * A bare icon inherits `currentColor`, so it is as legible as the text it sits with —
+ * safe by construction in every theme, with no contrast obligation of its own.
+ */
+
+/* ── the glyph ─────────────────────────────────────────────────────────────── */
+
+.hdk-icon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  /* Sit on the text baseline so `<Icon/> Label` lines up without extra layout. */
+  vertical-align: -0.14em;
+}
+
+/* `set:html` and dangerouslySetInnerHTML need a host element in the framework-free
+   path; it must not disturb inline layout. */
+span.hdk-icon {
+  display: inline-flex;
+}
+
+span.hdk-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── the accent chrome ─────────────────────────────────────────────────────── */
+
+.hdk-icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Square, and sized from the glyph so one font-size drives the whole thing. */
+  width: 2em;
+  height: 2em;
+  border-radius: var(--hdk-radius);
+  flex: 0 0 auto;
+}
+
+.hdk-icon-tile--round {
+  border-radius: 50%;
+}
+
+/* Tint: --color-<f>-bg + --color-on-<f>-bg. The documented badge pairing. */
+.hdk-icon-tile--tint.hdk-icon-tile--primary {
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.hdk-icon-tile--tint.hdk-icon-tile--success {
+  background: var(--color-success-bg);
+  color: var(--color-on-success-bg);
+}
+.hdk-icon-tile--tint.hdk-icon-tile--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+}
+.hdk-icon-tile--tint.hdk-icon-tile--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
+}
+.hdk-icon-tile--tint.hdk-icon-tile--neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-on-neutral-bg);
+}
+
+/* Filled: --color-<f> + --color-on-<f>. */
+.hdk-icon-tile--filled.hdk-icon-tile--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.hdk-icon-tile--filled.hdk-icon-tile--success {
+  background: var(--color-success);
+  color: var(--color-on-success);
+}
+.hdk-icon-tile--filled.hdk-icon-tile--warning {
+  background: var(--color-warning);
+  color: var(--color-on-warning);
+}
+.hdk-icon-tile--filled.hdk-icon-tile--danger {
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+}
+.hdk-icon-tile--filled.hdk-icon-tile--neutral {
+  background: var(--color-neutral);
+  color: var(--color-on-neutral);
+}

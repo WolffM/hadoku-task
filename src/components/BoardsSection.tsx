@@ -10,6 +10,7 @@ import type { BoardsFile } from '../domain/types'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 import { effectivePinnedIds } from '../domain/utils/boardPins'
+import { Icon } from '@wolffm/themes'
 
 export interface BoardsSectionProps {
   boards: BoardsFile | null
@@ -120,7 +121,7 @@ export function BoardsSection({
             title="Edit boards"
             aria-label="Edit boards"
           >
-            ⚙
+            <Icon name="gear" />
           </button>
         </div>
       </div>

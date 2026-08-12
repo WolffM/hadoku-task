@@ -15,6 +15,7 @@
 import React, { useMemo } from 'react'
 import type { Task, UserPreferences } from '../domain/types'
 import { TaskItem } from './TaskItem'
+import { Icon } from '@wolffm/themes'
 
 export interface TaskPreferencesSectionProps {
   preferences: UserPreferences
@@ -23,7 +24,7 @@ export interface TaskPreferencesSectionProps {
 
 /** The three card controls, in the order TaskItem renders them. */
 const ACTION_TOGGLES = [
-  { key: 'showNotesButton', label: 'Notes', glyph: '📝' },
+  { key: 'showNotesButton', label: 'Notes', glyph: <Icon name="note" /> },
   { key: 'showCompleteButton', label: 'Complete', glyph: '✓' },
   { key: 'showDeleteButton', label: 'Delete', glyph: '×' }
 ] as const

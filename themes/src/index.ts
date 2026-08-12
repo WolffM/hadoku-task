@@ -187,3 +187,20 @@ export type { ThemePrefs } from './themePrefs'
 export { resolvePrefsApiBase, PREFS_API_BASE_GLOBAL } from './prefsApiBase'
 export { THEME_EFFECTS, hasAdvanced, getThemeEffects } from './effects'
 export type { AdvancedEffect, ThemeEffectMap } from './effects'
+// Icon module — the enforced ecosystem icon set. Artwork is vendored from lucide
+// (ISC, see LICENSE-lucide) and generated into src/icons/registry.generated.ts, so
+// this package still ships with zero runtime dependencies and serves the Astro/Qwik
+// consumers that have no React at all.
+export { Icon } from './icons/Icon'
+export type { IconProps } from './icons/Icon'
+export {
+  ICON_MARKUP,
+  ICON_NAMES,
+  ICON_SOURCE_SLUGS,
+  ICON_FAMILIES,
+  LUCIDE_VERSION,
+  getIconSvg,
+  getIconTileClass,
+  isIconName
+} from './icons/index'
+export type { IconName, IconFamily, IconVariant, IconSvgOptions } from './icons/index'

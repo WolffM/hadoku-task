@@ -7,6 +7,7 @@ import React from 'react'
 import { ContextMenu } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { formatError } from '../../domain/utils/tags'
+import { Icon } from '@wolffm/themes'
 
 export interface TagContextMenuProps {
   isOpen: boolean
@@ -47,7 +48,11 @@ export function TagContextMenu({ isOpen, tag, x, y, onClose, onDeleteTag }: TagC
       className="tag-context-menu"
       items={[
         {
-          label: '🗑️ Delete Tag',
+          label: (
+            <>
+              <Icon name="trash" /> Delete Tag
+            </>
+          ),
           isDanger: true,
           onClick: handleDelete
         }

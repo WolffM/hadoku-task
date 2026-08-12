@@ -4,6 +4,9 @@ import { flushSync } from 'react-dom'
 import App from './App'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import '@wolffm/themes/style.css'
+// Sizing + accent-tile rules for <Icon>. Unlayered, like style.css — see the
+// import rule in THEME_USAGE_GUIDE.md.
+import '@wolffm/themes/icons.css'
 import '../styles/style.css'
 import { logger } from '@wolffm/logger/client'
 import { installDevLogSink } from '../utils/devLogSink'

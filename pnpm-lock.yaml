@@ -143,6 +143,9 @@ importers:
       '@types/react':
         specifier: ^19.2.16
         version: 19.2.16
+      lucide-static:
+        specifier: 1.28.0
+        version: 1.28.0
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -1810,6 +1813,9 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-static@1.28.0:
+    resolution: {integrity: sha512-dC3VJwRFsjEVX7Iaq4rY88pm7Fi2OmOb8P0WRzXsUMgbt7sCmFX8bLhaDBeNW6JdRjuele+jKqqFaam4yr+Ygg==}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -4160,6 +4166,8 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-static@1.28.0: {}
 
   magic-string@0.30.21:
     dependencies:

@@ -132,6 +132,101 @@ tokens, so the symmetric guess is always the right one.
 
 ---
 
+## Icons
+
+Icons are part of the theme contract, not each app's business. Raw emoji were the old
+answer and they are retired: the same codepoint renders differently on every platform,
+and no CSS can fix it. The package ships **78 vendored line icons** (artwork from
+[Lucide](https://lucide.dev), ISC — see `LICENSE-lucide`) behind an enforced allowlist.
+
+**Reference icons by name. Never inline your own SVG, and never add an emoji.**
+
+### Two consumption paths
+
+```tsx
+// React
+import { Icon } from '@wolffm/themes'
+;<Icon name="popcorn" />
+;<Icon name="popcorn" variant="tint" family="warning" />
+```
+
+```astro
+---
+// Astro / Qwik / plain HTML — no client JS, CSP-safe
+import { getIconSvg, getIconTileClass } from '@wolffm/themes/icons'
+---
+<span set:html={getIconSvg('popcorn')} />
+<span class={getIconTileClass('warning', 'tint')} set:html={getIconSvg('popcorn')} />
+```
+
+Both paths render byte-identical geometry — that is asserted in `e2e/icons.spec.ts`.
+
+Import the stylesheet **unlayered**, next to `style.css`:
+
+```css
+@import '@wolffm/themes/style.css';
+@import '@wolffm/themes/icons.css';
+```
+
+### Colour: bare glyphs inherit, accents go on the tile
+
+A bare icon inherits `currentColor`, so it is exactly as legible as the text beside it
+and carries no contrast obligation of its own. **That is the default, and usually the
+right answer.**
+
+Do **not** paint the glyph with an accent token. Measured across all 18 themes on both
+`--color-bg-card` and `--color-bg`, a bare `--color-warning` glyph misses the WCAG
+1.4.11 non-text minimum of 3:1 in 8 of 36 combinations (light 2.15, ocean-light 1.92,
+pink-light 1.67); every other family fails somewhere too, and `--color-<f>-dark` does
+not rescue it. This is the same accent-as-text anti-pattern listed above, and
+`check:contrast` does **not** cover it — it validates `on-<f>` over `<f>`, never an
+accent over a surface.
+
+When you want the accent, put it on the tile. Both treatments pass 3:1 in 18/18 themes
+for all five families, because they reuse pairings the system already guarantees:
+
+| Variant  | Background       | Glyph               |
+| -------- | ---------------- | ------------------- |
+| `bare`   | — (inherits)     | `currentColor`      |
+| `tint`   | `--color-<f>-bg` | `--color-on-<f>-bg` |
+| `filled` | `--color-<f>`    | `--color-on-<f>`    |
+
+### The set
+
+| Name           | Name          | Name         | Name          | Name         | Name           |
+| -------------- | ------------- | ------------ | ------------- | ------------ | -------------- |
+| `activity`     | `antenna`     | `arrow-left` | `arrow-right` | `book`       | `briefcase`    |
+| `broom`        | `calendar`    | `camera`     | `chat`        | `check`      | `chevron-down` |
+| `circle`       | `clapper`     | `clipboard`  | `clock`       | `close`      | `compass`      |
+| `crop`         | `crown`       | `desktop`    | `document`    | `download`   | `edit`         |
+| `error`        | `eye`         | `fire`       | `folder`      | `gear`       | `handshake`    |
+| `helping-hand` | `home`        | `hourglass`  | `image`       | `inbox`      | `info`         |
+| `link`         | `lock`        | `magnifier`  | `mail`        | `masks`      | `minus`        |
+| `music`        | `note`        | `package`    | `palette`     | `panel-left` | `panel-right`  |
+| `paste`        | `play`        | `plus`       | `popcorn`     | `printer`    | `redo`         |
+| `refresh`      | `robot`       | `scissors`   | `shuffle`     | `skull`      | `sleep`        |
+| `sparkles`     | `star`        | `stop`       | `thumbs-down` | `thumbs-up`  | `trash`        |
+| `trophy`       | `undo`        | `upload`     | `user`        | `videotape`  | `volume-high`  |
+| `volume-low`   | `volume-mute` | `wand`       | `warning`     | `wave`       | `wrench`       |
+
+### Adding an icon
+
+1. Add `"name": "lucide-slug"` to `themes/src/icons/sources.json`.
+2. `pnpm run generate:icons` — fails loudly if the slug is not in lucide.
+3. Commit the regenerated `registry.generated.ts`.
+
+### Verify it
+
+```sh
+node node_modules/@wolffm/themes/scripts/check-icons.mjs ./src
+```
+
+Fails on raw emoji in an icon position and on icon names not in the registry. The name
+check matters most outside TypeScript — Astro templates and JSON catalogues never see
+the `IconName` union, so a typo there renders nothing at all, silently.
+
+---
+
 ## Setup
 
 ```css

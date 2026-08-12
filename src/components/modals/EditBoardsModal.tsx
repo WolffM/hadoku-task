@@ -17,6 +17,7 @@ import type { Board, AutomationPreset, PresetSourceStatus, PresetUpdate } from '
 import { effectivePinnedIds } from '../../domain/utils/boardPins'
 import { TOPBAR_BOARD_SLOTS } from '../../app/constants'
 import { ShareIcon } from '../ShareIcon'
+import { Icon } from '@wolffm/themes'
 
 export type ShareLevel = 'readonly' | 'contributor'
 
@@ -312,7 +313,7 @@ export function EditBoardsModal({
                   aria-label={`Automation for ${b.name}`}
                   aria-expanded={automatingId === b.id}
                 >
-                  🤖
+                  <Icon name="robot" />
                 </button>
                 {!isMain && (
                   <button
@@ -326,7 +327,7 @@ export function EditBoardsModal({
                     title="Delete board"
                     aria-label={`Delete ${b.name}`}
                   >
-                    🗑
+                    <Icon name="trash" />
                   </button>
                 )}
               </>

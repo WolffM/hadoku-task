@@ -8,6 +8,7 @@ import { ContextMenu } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import type { BoardsFile } from '../../domain/types'
 import { formatError } from '../../domain/utils/tags'
+import { Icon } from '@wolffm/themes'
 
 export interface BoardContextMenuProps {
   isOpen: boolean
@@ -56,7 +57,11 @@ export function BoardContextMenu({
       className="board-context-menu"
       items={[
         {
-          label: '🗑️ Delete Board',
+          label: (
+            <>
+              <Icon name="trash" /> Delete Board
+            </>
+          ),
           isDanger: true,
           onClick: handleDelete
         }

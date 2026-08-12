@@ -9,6 +9,7 @@ import { formatTagsForDisplay } from '../domain/utils/tags'
 import { openQuestionCount, parsePlanNotes, questionsAnswered } from '../domain/planNotes'
 import { NotesPopout } from './NotesPopout'
 import { TagIcon } from '@wolffm/task-ui-components'
+import { Icon } from '@wolffm/themes'
 
 interface TaskItemProps {
   task: Task
@@ -233,7 +234,7 @@ export function TaskItem({
             aria-label={hasNotes ? 'Open notes' : 'Add notes'}
             aria-haspopup="dialog"
           >
-            📝
+            <Icon name="note" />
           </button>
         )}
         {showTagButton && (
@@ -255,7 +256,7 @@ export function TaskItem({
             aria-pressed={isCompleted}
             disabled={isCompleting || isDeleting}
           >
-            {isCompleting ? '⏳' : isCompleted ? '↺' : '✓'}
+            {isCompleting ? <Icon name="hourglass" /> : isCompleted ? '↺' : '✓'}
           </button>
         )}
         {showDeleteButton && (
@@ -265,7 +266,7 @@ export function TaskItem({
             title="Delete task"
             disabled={isCompleting || isDeleting}
           >
-            {isDeleting ? '⏳' : '×'}
+            {isDeleting ? <Icon name="hourglass" /> : '×'}
           </button>
         )}
       </div>
