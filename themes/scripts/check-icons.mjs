@@ -322,7 +322,12 @@ for (const target of targets) {
         // only-emoji rules below miss it entirely, which is why hadoku-meet
         // reported clean while shipping two of them.
         if (isMarkup) {
-          for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}]+)\s+(?=[A-Za-z(])/g)) {
+          // The lookahead includes `{`: `<div>👤 {pr.author}</div>` is the single
+          // most common shape of "icon then value" in this codebase, and without
+          // it the rule only fired when the label happened to start with a
+          // letter. tenhands shipped four that way (👤 💬 📝 🕐) with the gate
+          // reporting the repo clean.
+          for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}]+)\s+(?=[A-Za-z({])/g)) {
             const lead = m[3]
             const hit = [...lead.matchAll(EMOJI)].map(x => x[0]).filter(isEmoji)
             if (hit.length && hit.join('') === lead) {

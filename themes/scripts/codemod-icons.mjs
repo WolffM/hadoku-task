@@ -171,7 +171,8 @@ for (const root of roots) {
       if (canEmitJsx) {
         // (2)/(3) an emoji opening a JSX text run: alone, or leading a label.
         line = line.replace(
-          /(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)(\s*)(?=$|<|[A-Za-z(])/g,
+          // `{` in the lookahead: `<div>👤 {value}</div>` is the commonest shape.
+          /(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)(\s*)(?=$|<|[A-Za-z({])/g,
           (m, pre, ws, tok, post) => {
             const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
             if (!hits.length || hits.join('') !== tok) return m
