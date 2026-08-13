@@ -289,7 +289,15 @@ for (const target of targets) {
         if (isMarkup || isCode) {
           // A string literal that is ONLY emoji — `'⏳'`, `icon={'📋'}`, ternary arms.
           // Nothing but an icon is ever written this way.
-          for (const m of line.matchAll(/(['"`])([^'"`\n]{1,24})\1/g)) {
+          // Cap raised from 24 to 200 for MARKUP only. At 24, tenhands'
+          // `🔄 Refresh Workflows (${repos.length})` slipped through — a template
+          // literal with interpolation is still a label with an icon on the front.
+          // Scoped to markup on purpose: vibecop's src/output/*.ts formatters build
+          // GitHub issue markdown, where an emoji is the correct output and an SVG
+          // is impossible, exactly like the Discord payloads in monitoring-api.
+          const maxLen = isMarkup ? 200 : 24
+          const STR = new RegExp(`(['\"\`])([^'\"\`\\n]{1,${maxLen}})\\1`, 'g')
+          for (const m of line.matchAll(STR)) {
             const raw = m[2].trim()
             if (!raw) continue
             const hit = [...raw.matchAll(EMOJI)].map(x => x[0]).filter(isEmoji)
