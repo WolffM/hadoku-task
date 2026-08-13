@@ -85,6 +85,26 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // IS the truth: they start, and stay, 'synced'.
   const [syncState, setSyncState] = useState<SyncState>('syncFromApi' in api ? 'pending' : 'synced')
 
+  // Wall-clock of the last successful server sync, and whether one is running.
+  // Both are refs, not state: the debounce below is a scheduling decision made
+  // inside callbacks, and re-rendering the board because a timestamp moved would
+  // be pure noise.
+  const lastSyncAtRef = useRef(0)
+  const syncInFlightRef = useRef(false)
+  // Mirrors `pendingOperations` for the same reason `currentBoardIdRef` mirrors
+  // the selection — the refresh check runs inside a callback that would otherwise
+  // close over a stale Set.
+  const pendingOpsRef = useRef(pendingOperations)
+  pendingOpsRef.current = pendingOperations
+
+  /**
+   * How long a completed sync is treated as fresh enough to skip a BACKGROUND
+   * refresh. Manual refreshes ignore it entirely — if someone pulls to refresh,
+   * they are telling us the data looks wrong, and answering that with a no-op is
+   * the one response guaranteed to feel broken.
+   */
+  const BACKGROUND_REFRESH_FRESH_MS = 2 * 60 * 1000
+
   // Force a fresh network sync, then repaint. Used by the refresh button and
   // pull-to-refresh. The mount effect below uses a cache-first variant so the
   // first paint doesn't wait on the network.
@@ -92,9 +112,62 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     logger.info('[useTasks] initialLoad called')
     if ('syncFromApi' in api) {
       const ok = await api.syncFromApi()
+      // Stamp on success only. A failed sync must NOT start a fresh window —
+      // that would suppress background refreshes for two minutes precisely when
+      // the data on screen is least trustworthy.
+      if (ok) lastSyncAtRef.current = Date.now()
       setSyncState(ok ? 'synced' : 'stale')
     }
     await reload()
+  }
+
+  /**
+   * Revalidate from the server behind the current paint, unless we just did.
+   *
+   * Why the FULL board sync and not the cheaper `GET /task/api/tasks?board=x`:
+   * a stale session switching boards needs more than that board's tasks. The
+   * board may have been renamed, deleted, or shared out; it may have gained
+   * tags; another board may have appeared. All of that lives in the boards
+   * collection and nowhere else.
+   *
+   * And the collection response cannot be made conditional as it stands. Its
+   * ETag comes from `board_meta.version`, which task writes do NOT bump — they
+   * bump the per-board `boards.tasks_version`. An `If-None-Match` on this route
+   * would answer 304 for a board whose tasks moved, which is exactly the change
+   * a background refresh exists to catch. Making it conditional needs a
+   * composite validator over both counters first.
+   */
+  async function refreshInBackground(reason: string) {
+    // Public/anon users never sync: their local data IS the truth, so a
+    // "refresh" could only overwrite it with someone else's empty board.
+    if (!('syncFromApi' in api)) return
+    if (syncInFlightRef.current) return
+    // A sync overwrites EVERY board from the server, so it would discard an
+    // optimistic write still on its way up (see the note above `type Undo` in
+    // api/client.ts). Let the write settle; the next switch picks it up.
+    if (pendingOpsRef.current.size > 0) {
+      logger.info('[useTasks] background refresh skipped: writes in flight', { reason })
+      return
+    }
+    const age = Date.now() - lastSyncAtRef.current
+    if (age < BACKGROUND_REFRESH_FRESH_MS) {
+      logger.info('[useTasks] background refresh skipped: fresh', { reason, ageMs: age })
+      return
+    }
+
+    syncInFlightRef.current = true
+    logger.info('[useTasks] background refresh starting', { reason, ageMs: age })
+    try {
+      const ok = await api.syncFromApi()
+      if (ok) lastSyncAtRef.current = Date.now()
+      setSyncState(ok ? 'synced' : 'stale')
+      await reload()
+    } catch (err) {
+      logger.warn('[useTasks] background refresh failed', { reason, error: String(err) })
+      setSyncState('stale')
+    } finally {
+      syncInFlightRef.current = false
+    }
   }
 
   async function reload() {
@@ -153,6 +226,10 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       if ('syncFromApi' in api) {
         try {
           const ok = await api.syncFromApi() // network → refreshes the faithful cache
+          // Start the freshness window here, so switching boards in the first
+          // couple of minutes after a cold load costs nothing: this one call
+          // already fetched every board.
+          if (ok) lastSyncAtRef.current = Date.now()
           setSyncState(ok ? 'synced' : 'stale')
           await reload() // seamless repaint with server truth
         } catch (err) {
@@ -493,6 +570,12 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       // this board once it lands, and supersede any load already running.
       void reload()
     }
+    // Paint first, revalidate behind it. Selecting a board is the moment a stale
+    // tab is most likely to be looking at something that has since moved — the
+    // taskauto sweep advances lanes on its own roughly every 15 minutes, and
+    // nothing else in this app ever refetches on its own. Unawaited on purpose:
+    // the switch must stay instant.
+    void refreshInBackground(`board-switch:${boardId}`)
   }
 
   // `tasks` carries mixed state — Active plus anything completed in the last 24h,
