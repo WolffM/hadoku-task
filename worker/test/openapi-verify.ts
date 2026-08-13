@@ -40,6 +40,7 @@ const REQUIRED_PATHS = [
   '/task/api/boards/{ref}/shares/{granteeUserId}',
   '/task/api/automation/presets',
   '/task/api/boards/{ref}/repo',
+  '/task/api/boards/{ref}/actionable',
   '/task/api/boards/{ref}/activate-automation',
   '/task/api/boards/{ref}/deactivate-automation',
   // A board's calendar (§9) — the sub-resource an integration reads to reconcile.
@@ -61,6 +62,8 @@ const REQUIRED_SCHEMAS = [
   'AutomationPreset',
   'SetRepoInput',
   'ListPresetsResponse',
+  'ActionableItem',
+  'ActionableResponse',
   'ActivationPreview',
   'DeactivateAutomationResponse',
   'GrantShareInput',

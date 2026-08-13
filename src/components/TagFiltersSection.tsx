@@ -8,6 +8,7 @@ import { TagFilterButton } from './TagFilterButton'
 import { ShareIcon } from './ShareIcon'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import { formatError } from '../domain/utils/tags'
+import { automateLabel } from '../domain/utils/actionable'
 import { logger } from '@wolffm/logger/client'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import type { SyncState } from '../hooks/useTasks'
@@ -46,6 +47,16 @@ export interface TagFiltersSectionProps {
   upcomingScheduledCount?: number
   /** Whether the board on screen is server truth — drives the stale pill. */
   syncState?: SyncState
+  /**
+   * Open issues/PRs on this board's repo with no task yet (§5.6). 0 (or absent)
+   * renders no button at all — including when the scan couldn't be trusted, so
+   * a provider outage never shows up here as "nothing to do".
+   */
+  automateCount?: number
+  /** Already run (or running) — the click has been spent for this board load. */
+  automateDisabled?: boolean
+  /** Turn those items into ordinary Inbox tasks. */
+  onAutomate?: () => void
 }
 
 export function TagFiltersSection({
@@ -67,7 +78,10 @@ export function TagFiltersSection({
   currentView,
   onToggleCalendar,
   upcomingScheduledCount = 0,
-  syncState = 'synced'
+  syncState = 'synced',
+  automateCount = 0,
+  automateDisabled = false,
+  onAutomate
 }: TagFiltersSectionProps) {
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -140,6 +154,21 @@ export function TagFiltersSection({
           >
             ＋
           </button>
+
+          {/* Only ever rendered when the repo has open work with no task yet, so
+              its presence IS the message — there is nothing to say in the empty
+              case, and a permanently-visible "0 items" button would be noise on
+              every board load. */}
+          {automateCount > 0 && onAutomate && (
+            <button
+              className="pill-btn task-app__filter-automate"
+              onClick={onAutomate}
+              disabled={automateDisabled}
+              title={`Create a task for each of the ${automateCount} open issue(s)/PR(s) on this board's repo`}
+            >
+              {automateLabel(automateCount)}
+            </button>
+          )}
         </>
       )}
 

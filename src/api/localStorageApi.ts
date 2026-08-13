@@ -11,6 +11,7 @@ import type {
   Board,
   AuthContext,
   CreateTaskInput,
+  ActionableScan,
   AutomationPreset,
   PresetSourceStatus,
   PresetUpdate
@@ -142,6 +143,11 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       // Presets come from a provider the worker talks to; there's no offline copy,
       // and a signed-out user can't activate a board anyway.
       return { presets: [], sources: [] }
+    },
+    async listActionable(_boardRef: string): Promise<ActionableScan> {
+      // The scan asks a provider about a repo, with a credential a signed-out
+      // client doesn't have — and there are no automation boards offline to scan.
+      return { ok: false, repo: null, items: [], reason: 'signed_out' }
     },
     async getPresetUpdate(_boardRef: string): Promise<PresetUpdate | null> {
       // Same reason: no provider contract offline, and nothing to activate up to.

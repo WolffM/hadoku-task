@@ -40,6 +40,18 @@ export interface Env {
   // Each URL is fetched server-side for the lane contracts the activation UI
   // offers. https only. Absent ⇒ no preset picker, paste-JSON still works.
   AUTOMATION_PRESET_SOURCES?: string
+  // This worker's OWN identity at TenHands, sent as X-User-Key when scanning a
+  // board's repo for open issues/PRs (GET /boards/{ref}/actionable, §5.6).
+  // TenHands gates every non-public path on a registry key; presets are exempt
+  // (a lane vocabulary is public), an issue list is not.
+  //
+  // Ours, never the caller's: forwarding a person's credential to another origin
+  // hands that origin the ability to act as them. Same pattern contact-api uses
+  // to reach task-api (CONTACTUI_SERVICE_KEY).
+  //
+  // Absent ⇒ the scan reports `no_service_key` and the "Automate open items"
+  // button never appears. Nothing else degrades.
+  TENHANDS_SERVICE_KEY?: string
   // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
   // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
   // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board

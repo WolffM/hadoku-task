@@ -10,7 +10,10 @@
  *   :3002  a provider serving automation presets, so the activation picker has
  *          something real to fetch. Serves a strong ETag and honours
  *          If-None-Match, like a real origin — the revalidation path is what
- *          keeps unchanged contracts from being re-downloaded.
+ *          keeps unchanged contracts from being re-downloaded. It also stands in
+ *          for TenHands' `/api/taskauto/actionable`, the open-issue/PR scan
+ *          behind "Automate open items" (§5.6), which unlike presets is
+ *          credentialled — the stub 401s without the service key.
  *
  * Not a *-verify.ts harness (it's a server, not an assertion run), so
  * run-worker-verify.mjs ignores it. Started by scripts/dev-api.mjs.
@@ -64,6 +67,52 @@ const PRESETS = {
 const PRESETS_BODY = JSON.stringify(PRESETS)
 const PRESETS_ETAG = '"dev-presets-1"'
 
+/** This stack's stand-in for the TenHands service key. The worker sends it as
+ * X-User-Key on the actionable scan; the stub below refuses without it, so a
+ * regression that drops the credential fails here instead of in production. */
+const TENHANDS_KEY = 'dev-tenhands-key'
+
+/**
+ * What the stub says is open on any board's repo — two issues and a PR, the
+ * shape `GET /api/taskauto/actionable` returns. Already filtered on the
+ * provider's side (no taskauto/* PRs, no bot authors), exactly as the real one
+ * promises.
+ */
+const ACTIONABLE = {
+  success: true,
+  repo: 'WolffM/dev-fixture',
+  items: [
+    {
+      kind: 'issue',
+      number: 42,
+      title: 'Board switch drops the active filter',
+      url: 'https://github.com/WolffM/dev-fixture/issues/42',
+      author: 'someone',
+      suggested_title: 'Address #42',
+      body_snippet: 'Switching boards leaves the previous board’s tag filter applied.'
+    },
+    {
+      kind: 'issue',
+      number: 51,
+      title: 'Calendar badge counts completed tasks',
+      url: 'https://github.com/WolffM/dev-fixture/issues/51',
+      author: 'someone-else',
+      suggested_title: 'Address #51',
+      body_snippet: 'The badge should count active scheduled work only.'
+    },
+    {
+      kind: 'pr',
+      number: 17,
+      title: 'Add a retry to the sync path',
+      url: 'https://github.com/WolffM/dev-fixture/pull/17',
+      author: 'contributor',
+      head_ref: 'feature-sync-retry',
+      suggested_title: 'Address PR #17',
+      body_snippet: 'CI is red on the new spec and review left two comments.'
+    }
+  ]
+}
+
 function makeKV() {
   const store = new Map<string, string>()
   return {
@@ -115,11 +164,25 @@ const env = {
   // a default dev/e2e run never POSTs to GitHub — deliberate: the specs must be
   // hermetic. Supply the PAT to smoke-test the real outbound call end to end:
   //   node ../hadoku_site/scripts/secrets/dev-vault.mjs -- pnpm run dev:api
-  GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN || process.env.HADOKU_SITE_TOKEN
+  GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN || process.env.HADOKU_SITE_TOKEN,
+  // Our identity at the provider for the open-items scan. The stub above checks
+  // it, so the dev stack proves the credential is actually sent.
+  TENHANDS_SERVICE_KEY: process.env.DEV_TENHANDS_SERVICE_KEY ?? TENHANDS_KEY
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────
 createServer((req, res) => {
+  // The open-items scan (§5.6). Credentialled, unlike presets.
+  if (req.url?.startsWith('/api/taskauto/actionable')) {
+    const key = req.headers['x-user-key']
+    console.log(`[provider] ${req.method} ${req.url} key=${key ?? '-'}`)
+    if (key !== TENHANDS_KEY) {
+      res.writeHead(401, { 'Content-Type': 'application/json' }).end('{"error":"unauthorized"}')
+      return
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(ACTIONABLE))
+    return
+  }
   if (!req.url?.startsWith('/automation/presets')) {
     res.writeHead(404).end()
     return

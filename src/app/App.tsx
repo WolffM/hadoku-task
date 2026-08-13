@@ -14,6 +14,7 @@ import { useTaskSort } from '../hooks/useTaskSort'
 import { usePreferences } from '../hooks/usePreferences'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
+import { useActionableScan } from '../hooks/useActionableScan'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator'
@@ -188,6 +189,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     deleteTag,
     setTaskNotes,
     renameTask,
+    addTasksVerbatim,
     boards,
     boardsLoaded,
     syncState,
@@ -331,6 +333,19 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
         // completed tasks fall through to "Other Tasks", which is for UNTAGGED
         // work. They keep their column until the grace window takes them.
         getTopTags(activeTasks, laneLimit ?? Infinity, getAllTags(tasks))
+
+  // Open issues/PRs on an automation board's repo that have no task yet (§5.6).
+  // Scanned when such a board loads; renders a button only when there is
+  // something new to take on. `tasks` (not activeTasks) is the dedup set —
+  // completing a task must not put its issue back on offer.
+  const actionable = useActionableScan({
+    board: currentBoard,
+    tasks,
+    userType,
+    listActionable: shareApi.listActionable,
+    createTasks: addTasksVerbatim,
+    onShowToast: showToast
+  })
 
   // Handle preference changes from settings modal
   const handleSavePreferences = async (prefs: Partial<UserPreferences>) => {
@@ -485,6 +500,9 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           onToggleCalendar={() => changeView(currentView === 'board' ? 'calendar' : 'board')}
           upcomingScheduledCount={upcomingScheduledCount}
           syncState={syncState}
+          automateCount={actionable.count}
+          automateDisabled={actionable.disabled}
+          onAutomate={() => void actionable.automate()}
         />
 
         {currentView === 'board' ? (

@@ -261,6 +261,43 @@ export const ListPresetsResponseSchema = z
   })
   .openapi('ListPresetsResponse')
 
+/** One open issue or PR on a board's repo that the pipeline could take on (§5.6).
+ * Sourced from TenHands, which has already dropped the pipeline's own
+ * `taskauto/*` PRs and bot authors — this is the list AFTER that filtering. */
+export const ActionableItemSchema = z
+  .object({
+    kind: z.enum(['issue', 'pr']).openapi({ example: 'issue' }),
+    number: z.number().openapi({ example: 42 }),
+    title: z.string().openapi({ example: 'Board switch drops the filter' }),
+    url: z.string().openapi({ example: 'https://github.com/WolffM/hadoku-task/issues/42' }),
+    author: z.string().optional(),
+    suggestedTitle: z.string().openapi({
+      example: 'Address #42',
+      description: 'The task title to create. Also what dedup matches on.'
+    }),
+    bodySnippet: z.string().optional(),
+    headRef: z.string().optional().openapi({
+      example: 'feature-x',
+      description: 'PRs only — the branch a runner checks out to continue the work.'
+    })
+  })
+  .openapi('ActionableItem')
+
+/** The scan result. `ok:false` always names a `reason` — an empty list from a
+ * provider outage must not read as "nothing left to do". */
+export const ActionableResponseSchema = z
+  .object({
+    ok: z.boolean(),
+    repo: z.string().nullable().openapi({ example: 'WolffM/hadoku-task' }),
+    items: z.array(ActionableItemSchema),
+    reason: z.string().optional().openapi({
+      example: 'no_repo',
+      description:
+        'Why the list is empty: no_repo, not_automation, signed_out, no_provider_configured, no_service_key, provider_<status>, provider_timeout, provider_unreachable, bad_payload.'
+    })
+  })
+  .openapi('ActionableResponse')
+
 /** Set (or clear) the repo a board drives. Empty string / null / omitted all
  * clear it — the UI clears by blurring an emptied field, not by a DELETE. */
 export const SetRepoInputSchema = z

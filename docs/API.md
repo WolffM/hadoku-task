@@ -967,6 +967,40 @@ schemas. Generate a client from it rather than transcribing the shapes above. It
 that public automation surface; the rest of the TenHands API is authenticated and deliberately
 absent.
 
+### GET `/boards/:ref/actionable`
+
+Signed-in, non-readonly. What this board's repo has **open** that the pipeline could take on —
+the data behind the "Automate open items" button. →
+`{ ok, repo, items[], reason? }`, where an item is
+`{ kind: "issue" | "pr", number, title, url, author?, suggestedTitle, bodySnippet?, headRef? }`.
+
+Fetched server-side from TenHands (`GET {base}/api/taskauto/actionable?board=<handle>`), which has
+already dropped the pipeline's own `taskauto/*` PRs and bot authors — so this is work a human
+filed, not the pipeline's output looping back. The `base` is derived from the `tenhands` entry in
+`AUTOMATION_PRESET_SOURCES` (its URL minus `/automation/presets`); the credential is **not**
+shared with presets — a lane vocabulary is public, an issue list is not — and comes from
+`TENHANDS_SERVICE_KEY`, sent as `X-User-Key`. The caller's own credential is never forwarded.
+
+The board is identified by its **handle**, the same identifier the runner discovers boards by, not
+by whatever ref you addressed this route with.
+
+`ok` says the answer is TRUSTWORTHY, not that the list is non-empty. `ok: true` with
+`reason: "no_repo"` / `"not_automation"` means there is definitely nothing to do; `ok: false`
+means we don't know, and a UI must render nothing rather than an empty backlog. Reasons:
+`no_repo`, `not_automation`, `signed_out`, `no_provider_configured`, `no_service_key`,
+`provider_<status>`, `provider_timeout`, `provider_unreachable`, `bad_payload`,
+`provider_reported_failure`. Nothing is cached — this is "what is open right now", read on board
+load — and nothing is created: the caller turns the items into ordinary tasks itself.
+
+**How the app uses it.** Scan on board load, drop items whose `suggestedTitle` (or `Address #N` /
+`Address PR #N` form) already matches a task on the board, and offer the rest. Each accepted item
+becomes an ordinary untagged Inbox task — no lane, no metadata — titled `suggestedTitle`, with
+notes carrying the URL, title, snippet, and a one-line instruction (`Reproduce if needed, fix it,
+and open a PR.` for an issue; `Check out branch {headRef} and address the outstanding review/CI
+feedback.` for a PR). The taskauto runner picks those rows up on its own. Because visibility
+already excludes items that have a task, the action needs no lock: a double-click or a reload is
+safe.
+
 ### POST `/boards/:ref/activate-automation`
 
 Body: `{ lanes[], schemaId?, schemaVersion?, repo?, dryRun?, digest? }`. Each lane

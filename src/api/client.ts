@@ -3,6 +3,7 @@ import type {
   BoardsFile,
   Task,
   CreateTaskInput,
+  ActionableScan,
   AutomationPreset,
   PresetSourceStatus,
   PresetUpdate
@@ -737,6 +738,30 @@ export function createApi(
         return (await res.json()) as { presets: AutomationPreset[]; sources: PresetSourceStatus[] }
       } catch {
         return { presets: [], sources: [] }
+      }
+    },
+
+    /**
+     * What this board's repo has open that the pipeline could take on (§5.6).
+     * The worker asks TenHands with its own service key; we just read the list.
+     *
+     * Called on every board load, so a failure has to be quiet and legible:
+     * `ok:false` + a reason, never a throw the board load has to survive. The
+     * caller shows nothing on `ok:false` — an outage must not render as "there
+     * is nothing left to automate".
+     */
+    async listActionable(boardRef: string): Promise<ActionableScan> {
+      try {
+        const res = await fetch(
+          `/task/api/boards/${encodeURIComponent(boardRef)}/actionable`,
+          { headers: adminHeaders(userType, sessionId) }
+        )
+        // 403 (read-only) and 404 (no such board) are answers, not faults — the
+        // reason carries the status so a support question has something to go on.
+        if (!res.ok) return { ok: false, repo: null, items: [], reason: `http_${res.status}` }
+        return (await res.json()) as ActionableScan
+      } catch {
+        return { ok: false, repo: null, items: [], reason: 'network' }
       }
     },
 

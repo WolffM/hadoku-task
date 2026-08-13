@@ -100,6 +100,39 @@ export interface PresetUpdate {
   toInbox: number
 }
 
+/**
+ * One open issue or PR on an automation board's repo that the pipeline could
+ * take on (§5.6). The worker reads these from TenHands, which has already
+ * dropped the pipeline's own `taskauto/*` PRs and bot authors — so this list is
+ * the work a HUMAN filed, not the pipeline's own output looping back.
+ */
+export interface ActionableItem {
+  kind: 'issue' | 'pr'
+  number: number
+  title: string
+  url: string
+  author?: string
+  /** The task title to create, e.g. "Address #42" / "Address PR #17". Also what
+   * dedup matches on, so an item already turned into a task is never re-offered. */
+  suggestedTitle: string
+  bodySnippet?: string
+  /** PRs only — the branch to check out to continue the work. */
+  headRef?: string
+}
+
+/**
+ * The result of scanning a board's repo. `ok` says whether the answer is
+ * TRUSTWORTHY, not whether the list is non-empty: a board with no repo answers
+ * ok with `reason: 'no_repo'` (definitely nothing to do), a provider outage
+ * answers `ok: false` (unknown). The UI must not present the second as the first.
+ */
+export interface ActionableScan {
+  ok: boolean
+  repo: string | null
+  items: ActionableItem[]
+  reason?: string
+}
+
 /** Per-provider fetch outcome, so the picker can tell "no presets exist" apart
  * from "the provider is down and these are the lanes we last saw". */
 export interface PresetSourceStatus {

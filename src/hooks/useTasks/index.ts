@@ -311,6 +311,32 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     }
   }
 
+  /**
+   * Create several tasks from EXPLICIT fields, then repaint once.
+   *
+   * Deliberately not `addTask`: that one runs the typed-input parser, and these
+   * titles are "Address #42" — `parseTaskInput` reads the trailing `#42` as a
+   * tag and would file a task called "Address" under a lane named `42`. Anything
+   * with a machine-supplied title has to skip the parser.
+   *
+   * One reload for the batch, not one per task: each `reload` is a full board
+   * read, and firing eight of them at a repo's worth of open issues is how a
+   * click turns into a visible stall.
+   */
+  async function addTasksVerbatim(
+    items: Array<{ title: string; notes?: string | null }>
+  ): Promise<number> {
+    let created = 0
+    for (const item of items) {
+      // Sequential: the optimistic writes all mutate the same localStorage board
+      // blob, so racing them loses tasks to last-write-wins.
+      await api.createTask({ title: item.title, notes: item.notes ?? null }, currentBoardId)
+      created++
+    }
+    if (created > 0) await reload()
+    return created
+  }
+
   // Reschedule a task by patching its calendar times (used by the calendar view's
   // drag-to-move). Goes through the same patchTask path as tag edits.
   async function rescheduleTask(
@@ -596,6 +622,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       grantShare: api.grantShare,
       revokeShare: api.revokeShare,
       listAutomationPresets: api.listAutomationPresets,
+      listActionable: api.listActionable,
       getPresetUpdate: api.getPresetUpdate,
       activateAutomation: api.activateAutomation,
       deactivateAutomation: api.deactivateAutomation,
@@ -613,6 +640,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
     // Task operations
     addTask,
+    addTasksVerbatim,
     rescheduleTask,
     completeTask,
     deleteTask,
