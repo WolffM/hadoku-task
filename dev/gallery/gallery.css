@@ -1,0 +1,279 @@
+/**
+ * Gallery-only layout. Deliberately thin: colour comes from theme tokens and the
+ * component look comes from the task app's own stylesheet, so what you see here is
+ * what a consumer app gets. Nothing in this file paints an icon.
+ */
+
+.gallery {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gallery__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.gallery__title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.gallery__sub {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.gallery__card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  padding: 18px 20px 22px;
+}
+
+.gallery__h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery__count {
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-normal);
+  font-size: 0.85rem;
+}
+
+.gallery__note {
+  margin: 0 0 14px;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 78ch;
+}
+
+.gallery__note code,
+.gallery__cell code,
+.gallery__free-cell code {
+  font-size: 0.8em;
+  color: var(--color-text-tertiary);
+}
+
+/* ── controls ─────────────────────────────────────────────────────────── */
+
+.gallery__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.gallery__control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gallery__label {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gallery__label em {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-tertiary);
+}
+
+.gallery__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gallery__pills .pill-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── the contrast comparison ──────────────────────────────────────────── */
+
+.gallery__compare {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.gallery__compare-cell {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--hdk-radius);
+  background: var(--color-bg);
+}
+
+/* The anti-pattern, shown on purpose so it can be judged against the tiles.
+   This is the ONLY place an accent paints a bare glyph, it is labelled "fails
+   8/36" in the UI, and it is exactly what check-usage rule 6 exists to stop —
+   hence the explicit waiver rather than a workaround the scanner cannot see. */
+.gallery__bad-glyph {
+  /* check-usage-disable-next-line */
+  color: var(--color-warning);
+  display: inline-flex;
+}
+
+.gallery__verdict {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.gallery__verdict--bad {
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
+}
+
+.gallery__verdict--ok {
+  background: var(--color-success-bg);
+  color: var(--color-on-success-bg);
+}
+
+/* ── app chrome sample ────────────────────────────────────────────────── */
+
+.gallery__list {
+  margin-bottom: 16px;
+}
+
+.gallery__form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.gallery__form .settings-text-input {
+  flex: 1 1 220px;
+}
+
+.gallery__form .pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gallery__badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gallery__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── framework-free proof ─────────────────────────────────────────────── */
+
+.gallery__freeform {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.gallery__free-cell {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--hdk-radius);
+}
+
+.gallery__free-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery__free-side {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gallery__free-side em {
+  font-size: 0.65rem;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-tertiary);
+}
+
+.gallery__free-vs {
+  color: var(--color-text-tertiary);
+  font-size: 0.9rem;
+}
+
+.gallery__free-cell figcaption {
+  text-align: center;
+}
+
+/* ── the full set ─────────────────────────────────────────────────────── */
+
+.gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.gallery__cell {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 14px 6px 10px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--hdk-radius);
+  background: var(--color-bg);
+  min-height: 92px;
+}
+
+.gallery__cell:hover {
+  background: var(--color-bg-hover);
+}
+
+.gallery__name {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+}

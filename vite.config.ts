@@ -67,6 +67,17 @@ export default defineConfig({
         changeOrigin: true,
         ws: false,
         timeout: 5000
+      },
+      // The prefs worker CORS-allowlists DEFAULT_HADOKU_ORIGINS, which contains no
+      // localhost entry, so any dev shell calling http://localhost:3003 directly is
+      // preflight-rejected and degrades to localStorage. Proxying makes it
+      // same-origin, so a dev page exercises the real fetch -> edge-auth -> D1 path.
+      // Used by the icon gallery; the e2e helper still points straight at :3003.
+      '/prefs': {
+        target: 'http://127.0.0.1:3003',
+        changeOrigin: true,
+        ws: false,
+        timeout: 5000
       }
     }
   },

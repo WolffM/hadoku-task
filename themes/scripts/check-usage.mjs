@@ -72,7 +72,28 @@ function* walk(dir) {
 }
 
 const problems = []
-const add = (file, line, kind, detail) => problems.push({ file, line, kind, detail })
+/**
+ * Opt-out, one line at a time:
+ *
+ *   \/* check-usage-disable-next-line *\/
+ *   color: var(--color-warning);
+ *
+ * Deliberately per-line and comment-based, so every suppression sits next to the
+ * thing it excuses and shows up in review. The real case it exists for is
+ * DEMONSTRATING an anti-pattern — dev/gallery renders a bare accent glyph beside
+ * the tile treatments precisely so the contrast failure is visible. Without a
+ * suppression the only ways to ship that are to weaken the rule for everyone or
+ * to hide the colour somewhere the scanner cannot see, and both are worse.
+ */
+const DISABLE_NEXT = /(?:\/\*|\/\/|<!--)\s*check-usage-disable-next-line/
+
+/** Lines whose finding was explicitly waived by the preceding line. */
+const suppressed = new Map()
+
+const add = (file, line, kind, detail) => {
+  if (suppressed.get(file)?.has(line)) return
+  problems.push({ file, line, kind, detail })
+}
 
 /** Tokens a file is allowed to define locally (app-scoped, not theme tokens). */
 const localDefinitions = new Set()
@@ -99,6 +120,14 @@ for (const target of targets) {
 
     const rel = relative(process.cwd(), file)
     const lines = readFileSync(file, 'utf8').split(/\r?\n/)
+
+    // Collect waivers before scanning, so a rule reported by offset (the
+    // block-level checks below) is covered as well as the per-line ones.
+    const waived = new Set()
+    lines.forEach((line, i) => {
+      if (DISABLE_NEXT.test(line)) waived.add(i + 2)
+    })
+    suppressed.set(rel, waived)
 
     lines.forEach((line, i) => {
       const n = i + 1

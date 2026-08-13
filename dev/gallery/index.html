@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Icon gallery — @wolffm/themes</title>
+    <script>
+      // Keep prefs traffic off production. Unset, @wolffm/prefs-client defaults to
+      // https://hadoku.me/prefs, so a local gallery would read and write REAL rows —
+      // and from localhost the preflight is CORS-rejected anyway, filling the console
+      // with failures that look like icon bugs. Pointed at a SAME-ORIGIN path that
+      // vite proxies to the local prefs-api on :3003 (`pnpm run dev:api`) — the
+      // worker's CORS allowlist has no localhost entry, so calling :3003 directly is
+      // preflight-rejected. Stack down => proxy 502 => falls back to localStorage.
+      window.__HADOKU_PREFS_API_BASE__ = '/prefs'
+    </script>
+    <script>
+      // Same pre-paint theme script the app uses, so the gallery does not flash
+      // light before React mounts.
+      ;(function () {
+        try {
+          const saved = sessionStorage.getItem('hadoku-theme') || localStorage.getItem('hadoku-theme')
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          const theme = saved || (prefersDark ? 'dark' : 'light')
+          if (theme !== 'light') document.documentElement.setAttribute('data-theme', theme)
+          document.documentElement.setAttribute('data-theme-mode', 'simple')
+        } catch (e) {
+          /* storage blocked — fall through to the light default */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

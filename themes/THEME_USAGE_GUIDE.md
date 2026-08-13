@@ -209,6 +209,14 @@ for all five families, because they reuse pairings the system already guarantees
 | `trophy`       | `undo`        | `upload`     | `user`        | `videotape`  | `volume-high`  |
 | `volume-low`   | `volume-mute` | `wand`       | `warning`     | `wave`       | `wrench`       |
 
+### See them all
+
+`pnpm run gallery` (in hadoku-task) serves a live page at
+`http://localhost:5200/dev/gallery/index.html`: every icon, the real
+`<HadokuThemePicker>` to sweep all 18 themes, variant/family/size controls, the
+React-vs-string comparison, and the icons sitting in real app chrome. It is the
+fastest way to check a new icon before committing it.
+
 ### Adding an icon
 
 1. Add `"name": "lucide-slug"` to `themes/src/icons/sources.json`.
