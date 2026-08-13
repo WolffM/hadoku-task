@@ -59,8 +59,16 @@ const namesOnly = args.includes('--names-only')
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.astro', '.claude',
   'playwright-report', 'test-results', '.profiler', '.wrangler', 'coverage',
-  'vendor', 'third_party', '__pycache__', '.venv'
+  'vendor', 'third_party', '__pycache__', '.venv', 'venv',
+  // Vendored third-party trees. hadoku-conjure carries ComfyUI extensions under
+  // backend/custom_nodes and a Python env with site-packages; 14 of its findings
+  // were somebody else's emoji in somebody else's code, which we neither can nor
+  // should edit. `.venv` alone did not cover it — that env is `.venv-torch2110-backup`.
+  'custom_nodes', 'site-packages', 'bower_components', 'Pods', '.tox', '.gradle'
 ])
+
+/** Virtualenv directories are named freely (`.venv-torch2110-backup`, `env39`). */
+const VENV_DIR = /^\.?(venv|virtualenv|env)[-_.0-9a-z]*$/i
 
 /**
  * Generated output. An emoji here is a copy of one in some source file, and
@@ -171,6 +179,7 @@ function* walk(dir) {
   }
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue
+    if (e.isDirectory() && VENV_DIR.test(e.name)) continue
     const full = join(dir, e.name)
     if (e.isSymbolicLink()) continue
     if (e.isDirectory()) yield* walk(full)
