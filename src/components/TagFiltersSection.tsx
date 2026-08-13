@@ -11,6 +11,7 @@ import { formatError } from '../domain/utils/tags'
 import { logger } from '@wolffm/logger/client'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import type { SyncState } from '../hooks/useTasks'
+import { Icon } from '@wolffm/themes'
 
 /** Ties the calendar button to its off-screen "N scheduled" description. */
 const SCHEDULED_COUNT_ID = 'task-app-scheduled-count'
@@ -153,7 +154,7 @@ export function TagFiltersSection({
           // claim is that the refresh didn't land.
           title="The last refresh didn't land, so this may be out of date. Click to retry."
         >
-          ⚠ Not synced
+          <Icon name="warning" /> Not synced
         </button>
       )}
 

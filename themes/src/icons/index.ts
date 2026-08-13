@@ -21,16 +21,23 @@ export const ICON_FAMILIES = ['primary', 'success', 'warning', 'danger', 'neutra
 export type IconFamily = (typeof ICON_FAMILIES)[number]
 
 /**
- * How the accent is applied.
- * - `bare`   — glyph inherits `currentColor`. The default, and the only treatment with
- *              no contrast obligation of its own.
+ * How the icon is coloured. Every option resolves through theme tokens — there is
+ * no way to pass a raw colour — but WHICH treatment to use is the consumer's call.
+ *
+ * - `bare`   — glyph inherits `currentColor`. The default. Use it inside a button
+ *              or beside a label and the icon matches that text automatically, in
+ *              every theme, with no contrast obligation of its own.
+ * - `accent` — glyph painted `--color-<family>`. For when the icon is its own
+ *              element and should NOT match the surrounding text. You own the
+ *              contrast: a bare accent glyph clears 3:1 on a card/page surface in
+ *              28 of 36 theme/surface combinations for `warning`, so this is right
+ *              when you know the surface and wrong as a blanket default.
  * - `tint`   — glyph in a `--color-<f>-bg` tile with `--color-on-<f>-bg` ink.
  * - `filled` — glyph in a `--color-<f>` tile with `--color-on-<f>` ink.
  *
- * `tint` and `filled` both clear 3:1 in all 18 themes for all five families; painting
- * the bare glyph with an accent does not. See the header of icons.css for the numbers.
+ * `tint` and `filled` clear 3:1 in all 18 themes for all five families.
  */
-export type IconVariant = 'bare' | 'tint' | 'filled'
+export type IconVariant = 'bare' | 'accent' | 'tint' | 'filled'
 
 export function isIconName(value: unknown): value is IconName {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ICON_MARKUP, value)
@@ -54,6 +61,11 @@ export interface IconSvgOptions {
   size?: string | number
   /** Extra classes appended after `hdk-icon`. */
   className?: string
+  /**
+   * Paint the glyph with `--color-<family>` instead of inheriting `currentColor`.
+   * Adds `hdk-icon--<family>`; requires icons.css. Omit to inherit.
+   */
+  family?: IconFamily
   /**
    * Accessible name. Omit for decorative icons (the default) — those are rendered
    * `aria-hidden` so a screen reader does not announce a glyph that repeats an
@@ -82,9 +94,11 @@ export function getIconSvg(name: IconName, options: IconSvgOptions = {}): string
         `Add it to themes/src/icons/sources.json and run \`pnpm run generate:icons\`.`
     )
   }
-  const { size = '1em', className, title, strokeWidth = 2 } = options
+  const { size = '1em', className, title, strokeWidth = 2, family } = options
   const dim = typeof size === 'number' ? `${size}px` : size
-  const cls = className ? `hdk-icon ${className}` : 'hdk-icon'
+  const cls = ['hdk-icon', family ? `hdk-icon--${family}` : '', className ?? '']
+    .filter(Boolean)
+    .join(' ')
   const label = title
     ? `role="img" aria-label="${escapeHtml(title)}"`
     : 'aria-hidden="true" focusable="false"'

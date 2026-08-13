@@ -185,11 +185,40 @@ accent over a surface.
 When you want the accent, put it on the tile. Both treatments pass 3:1 in 18/18 themes
 for all five families, because they reuse pairings the system already guarantees:
 
-| Variant  | Background       | Glyph               |
-| -------- | ---------------- | ------------------- |
-| `bare`   | — (inherits)     | `currentColor`      |
-| `tint`   | `--color-<f>-bg` | `--color-on-<f>-bg` |
-| `filled` | `--color-<f>`    | `--color-on-<f>`    |
+| Variant  | Background       | Glyph               | Contrast                      |
+| -------- | ---------------- | ------------------- | ----------------------------- |
+| `bare`   | — (inherits)     | `currentColor`      | matches its text, always safe |
+| `accent` | — (inherits)     | `--color-<f>`       | **yours to own** — see below  |
+| `tint`   | `--color-<f>-bg` | `--color-on-<f>-bg` | 3:1 in 18/18 themes           |
+| `filled` | `--color-<f>`    | `--color-on-<f>`    | 3:1 in 18/18 themes           |
+
+**How you colour an icon is your call; where the colour comes from is not.** Every
+variant resolves through family tokens, and no raw colour can travel through this
+API — so an icon cannot drift from the theme.
+
+Two cases, both first-class:
+
+```tsx
+// Inline in a button — inherit, so the icon matches the button's own text in
+// every theme with no extra thought.
+<button className="pill-btn"><Icon name="plus" /> Add</button>
+
+// Its own element, deliberately a different colour from the surrounding text.
+<Icon name="warning" variant="accent" family="danger" />
+```
+
+`accent` is opt-in rather than default because contrast moves to you when you use
+it: a bare accent glyph clears 3:1 on a card or page surface in 28 of 36
+theme/surface combinations for `warning`. That is fine when you know the surface —
+an accent glyph on a tinted row, or beside a label you have checked — and wrong as
+a blanket default. When the accent must be safe everywhere, use a tile.
+
+Framework-free gets the same control:
+
+```js
+getIconSvg('warning', { family: 'danger' }) // accent glyph
+getIconSvg('plus') // inherits
+```
 
 ### The set
 

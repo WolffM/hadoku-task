@@ -124,6 +124,63 @@ test.describe('icon registry', () => {
   })
 })
 
+test.describe('consumer-controlled colouring', () => {
+  test('variant="accent" paints the glyph from the family token, in every theme', async ({
+    page
+  }) => {
+    const cells = THEMES.flatMap(theme =>
+      ICON_FAMILIES.map(
+        family =>
+          `<div data-theme="${theme}" style="background:var(--color-bg-card)">` +
+          `<span data-accent="${theme}|${family}" style="font-size:24px">` +
+          `${getIconSvg('warning', { family })}</span>` +
+          `<span data-token="${theme}|${family}" ` +
+          `style="color:var(--color-${family});display:none"></span></div>`
+      )
+    ).join('')
+    await mount(page, cells)
+
+    const mismatches = await page.evaluate(() => {
+      const bad: string[] = []
+      for (const host of Array.from(document.querySelectorAll('[data-accent]'))) {
+        const key = host.getAttribute('data-accent')!
+        const stroke = getComputedStyle(host.querySelector('svg')!).stroke
+        // The token's own computed value, read off a sibling — so this asserts the
+        // glyph resolves to the TOKEN, not to some colour that merely looks right.
+        const ref = document.querySelector(`[data-token="${key}"]`)!
+        const expected = getComputedStyle(ref).color
+        if (stroke !== expected) bad.push(`${key}: ${stroke} != ${expected}`)
+      }
+      return bad
+    })
+    expect(
+      mismatches,
+      `accent glyphs not matching their token: ${JSON.stringify(mismatches, null, 2)}`
+    ).toEqual([])
+  })
+
+  test('a bare icon still inherits, so it matches the text it sits in', async ({ page }) => {
+    // The two consumer stories side by side: inline in a button (inherit) and as
+    // its own element (accent). Both must resolve through tokens.
+    await mount(
+      page,
+      `<button id="btn" style="color:var(--color-on-primary);background:var(--color-primary)">` +
+        `${getIconSvg('check')} Save</button>` +
+        `<span id="own">${getIconSvg('warning', { family: 'danger' })}</span>` +
+        `<span id="ref" style="color:var(--color-danger)"></span>`
+    )
+    const r = await page.evaluate(() => ({
+      inButton: getComputedStyle(document.querySelector('#btn svg')!).stroke,
+      buttonText: getComputedStyle(document.querySelector('#btn')!).color,
+      own: getComputedStyle(document.querySelector('#own svg')!).stroke,
+      danger: getComputedStyle(document.querySelector('#ref')!).color
+    }))
+    expect(r.inButton).toBe(r.buttonText)
+    expect(r.own).toBe(r.danger)
+    expect(r.own).not.toBe(r.inButton)
+  })
+})
+
 test.describe('accent tiles across all 18 themes', () => {
   const variants = ['tint', 'filled'] as const
 

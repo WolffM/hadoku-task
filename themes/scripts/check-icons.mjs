@@ -21,7 +21,7 @@
  * Exits non-zero on any finding.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
-import { join, extname, relative, resolve, dirname } from 'node:path'
+import { join, extname, relative, resolve, dirname, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -61,8 +61,45 @@ const SKIP_DIRS = new Set([
   'playwright-report', 'test-results', '.profiler', '.wrangler', 'coverage',
   'vendor', 'third_party', '__pycache__', '.venv'
 ])
+
+/**
+ * Generated output. An emoji here is a copy of one in some source file, and
+ * "fixing" it is worse than useless: the edit is erased by the next build while
+ * the real occurrence stays put. hadoku_site alone carries ~76 of these in
+ * `public/mf/*` (bundled micro-frontends) and `public/v3` — a quarter of the
+ * ecosystem's raw findings, all of them phantoms.
+ */
+const GENERATED_PATH =
+  /(^|\/)(public\/(mf|v\d+)|\.output|\.vercel|storybook-static|bundle)(\/|$)|\.(min|bundle|generated)\.[a-z]+$/
+
+/**
+ * Path segments that hold code with no DOM to render into. Applies to SCRIPT
+ * files only — never to markup — because the distinction is "can this string
+ * ever become an icon", and in a worker it cannot.
+ *
+ * This is what stops the gate demanding SVGs inside Discord webhook payloads.
+ * monitoring-api posts `🚨 **runners** on …` to a channel; Discord renders emoji
+ * and cannot render an inline SVG, so the emoji there is not a stand-in for an
+ * icon, it IS the correct output. Same for CLI banners under `scripts/`.
+ *
+ * Deliberately NOT extension-blind: `personal-dataplatform/server/.../static/
+ * index.html` is real UI that happens to live under `server/`, and it must keep
+ * being checked. A `.html` file is a UI file wherever it sits.
+ */
+const NON_UI_CODE_DIR =
+  /(^|\/)(workers?|services?|server|scripts?|functions|cli|bin|migrations|e2e|tests?|__tests__)(\/|$)/
+
+/**
+ * Test files, matched by NAME rather than by folder. `spec` is deliberately NOT a
+ * skipped directory: hadoku_site keeps its icon CATALOGUE in `spec/categories.json`,
+ * the single most important file in this whole migration, and a `spec/` rule
+ * silently excused all three copies of it.
+ */
+const TEST_FILE = /\.(spec|test)\.[cm]?[jt]sx?$/
+
 const MARKUP_EXT = new Set(['.tsx', '.jsx', '.astro', '.vue', '.svelte', '.html'])
 const CONFIG_EXT = new Set(['.json'])
+const SCRIPT_EXT = new Set(['.ts', '.js', '.mjs', '.cjs'])
 
 // A pictographic run, including ZWJ sequences, skin tones and keycaps.
 const EMOJI = /(?:\p{RI}\p{RI}|[#*0-9]️?⃣|\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}])*(?:‍\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}])*)*)/gu
@@ -98,6 +135,18 @@ function* walk(dir) {
     else yield full
   }
 }
+
+/**
+ * Opt out one line at a time, same convention as check-usage:
+ *
+ *   {/* check-icons-disable-next-line *\/}
+ *   <span>🎉</span>
+ *
+ * The case this exists for is an emoji that is genuinely emoji — an emoji picker,
+ * a reaction the user chose, a Discord message composed in the browser. Those are
+ * content, not iconography, and no registry entry can stand in for them.
+ */
+const DISABLE_NEXT = /(?:\/\*|\/\/|<!--|\{\s*\/\*)\s*check-icons-disable-next-line/
 
 const findings = []
 const seen = new Set()
@@ -139,8 +188,16 @@ for (const target of targets) {
     const ext = extname(file)
     const isMarkup = MARKUP_EXT.has(ext)
     const isConfig = CONFIG_EXT.has(ext)
-    const isCode = isMarkup || ['.ts', '.js', '.mjs', '.cjs'].includes(ext)
+    const isScript = SCRIPT_EXT.has(ext)
+    const isCode = isMarkup || isScript
     if (!isMarkup && !isConfig && !isCode) continue
+
+    const posix = file.split(sep).join('/')
+    if (GENERATED_PATH.test(posix)) continue
+    // Server/CLI code renders no DOM, so nothing in it is an icon. Markup is
+    // exempt from this rule — a .html under server/ is still a page.
+    if (!isMarkup && NON_UI_CODE_DIR.test(posix)) continue
+    if (TEST_FILE.test(posix)) continue
 
     let st
     try {
@@ -159,8 +216,13 @@ for (const target of targets) {
     scanned++
     const rel = relative(process.cwd(), file)
     const lines = text.split('\n')
+    const waived = new Set()
+    lines.forEach((line, i) => {
+      if (DISABLE_NEXT.test(line)) waived.add(i + 2)
+    })
 
     for (let i = 0; i < lines.length; i++) {
+      if (waived.has(i + 1)) continue
       const line = lines[i]
       const no = i + 1
 
@@ -199,6 +261,23 @@ for (const target of targets) {
               add(
                 rel, no, 'raw-emoji-icon',
                 `"${raw}" prefixes a label with a raw emoji. Render <Icon name="..."/> ` +
+                  `beside the text instead.`
+              )
+            }
+          }
+        }
+        // An emoji LEADING a text run — `📅 Scheduled on Discord:` — reads as an
+        // icon with a label, and is how most of these are actually written. The
+        // only-emoji rules below miss it entirely, which is why hadoku-meet
+        // reported clean while shipping two of them.
+        if (isMarkup) {
+          for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}]+)\s+(?=[A-Za-z(])/g)) {
+            const lead = m[3]
+            const hit = [...lead.matchAll(EMOJI)].map(x => x[0]).filter(isEmoji)
+            if (hit.length && hit.join('') === lead) {
+              add(
+                rel, no, 'raw-emoji-icon',
+                `"${lead}" leads a text run as an icon. Render <Icon name="..."/> ` +
                   `beside the text instead.`
               )
             }

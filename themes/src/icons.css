@@ -52,6 +52,37 @@ span.hdk-icon > svg {
   height: 100%;
 }
 
+/* ── consumer-chosen glyph colour ──────────────────────────────────────────── */
+
+/*
+ * The escape hatch, and the reason it is a class rather than a prop taking a
+ * colour: a consumer may paint the glyph itself with any FAMILY token, but only
+ * with a family token. No hex can travel through this API, which is the whole
+ * constraint — how you colour an icon is your call, where the colour comes from
+ * is not.
+ *
+ * Contrast then belongs to the consumer. A bare accent glyph clears 3:1 on a page
+ * or card surface in only 28 of 36 theme/surface combinations for `warning` (see
+ * the header note), so this is right when you know the surface — an accent glyph
+ * inside a tinted row, or beside a label you have already checked — and wrong as
+ * a blanket default. Hence `bare` stays the default and this is opt-in.
+ */
+.hdk-icon--primary {
+  color: var(--color-primary);
+}
+.hdk-icon--success {
+  color: var(--color-success);
+}
+.hdk-icon--warning {
+  color: var(--color-warning);
+}
+.hdk-icon--danger {
+  color: var(--color-danger);
+}
+.hdk-icon--neutral {
+  color: var(--color-neutral);
+}
+
 /* ── the accent chrome ─────────────────────────────────────────────────────── */
 
 .hdk-icon-tile {

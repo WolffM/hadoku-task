@@ -17,12 +17,12 @@ export interface IconProps {
   /** CSS length. Defaults to `1em` so the glyph scales with surrounding text. */
   size?: string | number
   /**
-   * Accent family, applied to the tile. Ignored when `variant` is `bare`, because a
-   * bare glyph deliberately inherits `currentColor` — see icons.css for why an
-   * accent-painted glyph fails contrast in half the themes.
+   * Which family token colours this icon. Applies to `accent` (the glyph itself)
+   * and to `tint`/`filled` (the tile). Ignored for `bare`, which inherits
+   * `currentColor` by design.
    */
   family?: IconFamily
-  /** `bare` (default), `tint`, or `filled`. */
+  /** `bare` (default), `accent`, `tint`, or `filled` — see IconVariant. */
   variant?: IconVariant
   /** Round the accent tile. No effect when `variant` is `bare`. */
   round?: boolean
@@ -109,10 +109,22 @@ export const Icon: React.FC<IconProps> = ({
     ? ({ role: 'img', 'aria-label': title } as const)
     : ({ 'aria-hidden': true, focusable: 'false' } as const)
 
+  // `bare` and `accent` render the <svg> as the outermost element, so the caller's
+  // className belongs on it. `tint`/`filled` wrap it in a tile, and the className
+  // goes there instead — in both cases it lands on the element you get back.
+  const isTile = variant === 'tint' || variant === 'filled'
+  const svgClass = [
+    'hdk-icon',
+    variant === 'accent' ? `hdk-icon--${family}` : '',
+    !isTile && className ? className : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   const svg = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={variant === 'bare' && className ? `hdk-icon ${className}` : 'hdk-icon'}
+      className={svgClass}
       width={dim}
       height={dim}
       viewBox="0 0 24 24"
@@ -128,7 +140,7 @@ export const Icon: React.FC<IconProps> = ({
     </svg>
   )
 
-  if (variant === 'bare') return svg
+  if (!isTile) return svg
 
   const tile =
     `hdk-icon-tile hdk-icon-tile--${variant} hdk-icon-tile--${family}` +

@@ -76,7 +76,7 @@ function Gallery() {
               <div className="gallery__control">
                 <span className="gallery__label">Variant</span>
                 <div className="gallery__pills">
-                  {(['bare', 'tint', 'filled'] as const).map(v => (
+                  {(['bare', 'accent', 'tint', 'filled'] as const).map(v => (
                     <button
                       key={v}
                       className={`pill-btn ${variant === v ? 'pill-btn--active' : ''}`}
@@ -136,6 +136,11 @@ function Gallery() {
                 </span>
                 <code>accent glyph</code>
                 <span className="gallery__verdict gallery__verdict--bad">fails 8/36</span>
+              </div>
+              <div className="gallery__compare-cell">
+                <Icon name="warning" size={40} variant="accent" family={family} />
+                <code>accent (opt-in)</code>
+                <span className="gallery__verdict">yours to own</span>
               </div>
               <div className="gallery__compare-cell">
                 <Icon name="warning" size={40} variant="tint" family={family} />
