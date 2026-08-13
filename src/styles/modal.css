@@ -296,6 +296,14 @@
   cursor: not-allowed;
 }
 
+/* The board list is the one unbounded thing in this modal — it grows with the
+   account, and nothing above it did. At 67 boards the card rendered 3492px tall
+   inside a 720px viewport with no scroll container anywhere in the ancestor
+   chain (`.modal-card` and `.modal-overlay` are both `overflow: visible`), so
+   the bottom rows were simply unreachable: not clipped-but-scrollable, just
+   gone. Capping the list and letting IT scroll keeps the card a sane height at
+   any board count, and leaves overflow visible everywhere else in the modal so
+   nothing that needs to escape its bounds gets clipped. */
 .edit-boards__list {
   list-style: none;
   margin: 0;
@@ -303,6 +311,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--edit-boards-gap);
+  max-height: min(55vh, 460px);
+  overflow-y: auto;
+  /* Room for the scrollbar so it never sits on top of a row's controls. */
+  padding-right: var(--hdk-space-xs);
 }
 
 .edit-boards__row {

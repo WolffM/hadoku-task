@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { pointPrefsAtLocalStack } from './helpers/prefs'
 
 /**
  * A completed task stays in ITS OWN lane until its grace window closes.
@@ -35,6 +36,17 @@ async function sectionOf(page: Page, title: string): Promise<string> {
   })
 }
 
+/**
+ * Send prefs traffic to the local stack.
+ *
+ * Not because these specs assert on prefs — they don't — but because
+ * @wolffm/prefs-client defaults to https://hadoku.me/prefs and derives its
+ * whoami URL from it, so an unpointed page fires `https://hadoku.me/session/whoami`
+ * at PRODUCTION on every load. In a sandboxed run that request never settles, and
+ * a single never-settling request is enough to make `waitForLoadState('networkidle')`
+ * hang until the 60s hook timeout — which is exactly how these specs sat red on
+ * main. Nothing polls; one hung request is the whole story.
+ */
 test.describe('Completed tasks keep their lane', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?userType=public')
@@ -157,6 +169,7 @@ test.describe('Completed tasks keep their lane: automation board', () => {
     await request.post(API, {
       data: { boardId, id: `${boardId}-done`, title: 'Landed work', tag: laneTag }
     })
+    await pointPrefsAtLocalStack(page)
     await signIn(page)
     await page.goto('/')
     await page.getByRole('button', { name: boardId, exact: true }).click()

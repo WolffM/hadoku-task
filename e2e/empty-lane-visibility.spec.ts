@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { pointPrefsAtLocalStack } from './helpers/prefs'
 
 /**
  * An automation board hides its empty lanes — including AFTER a drag.
@@ -152,6 +153,17 @@ async function syntheticDrag(page: Page, title: string) {
   }
 }
 
+/**
+ * Send prefs traffic to the local stack.
+ *
+ * Not because these specs assert on prefs — they don't — but because
+ * @wolffm/prefs-client defaults to https://hadoku.me/prefs and derives its
+ * whoami URL from it, so an unpointed page fires `https://hadoku.me/session/whoami`
+ * at PRODUCTION on every load. In a sandboxed run that request never settles, and
+ * a single never-settling request is enough to make `waitForLoadState('networkidle')`
+ * hang until the 60s hook timeout — which is exactly how these specs sat red on
+ * main. Nothing polls; one hung request is the whole story.
+ */
 test.describe('automation board: empty lanes', () => {
   let boardId: string
   let lanes: string[]
@@ -180,6 +192,7 @@ test.describe('automation board: empty lanes', () => {
       expect((await request.post(API, { data: { boardId, ...t } })).ok()).toBe(true)
     }
 
+    await pointPrefsAtLocalStack(page)
     await signIn(page)
     await page.goto('/')
     await page.getByRole('button', { name: boardId, exact: true }).click()
