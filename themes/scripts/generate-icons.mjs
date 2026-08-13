@@ -102,6 +102,30 @@ if (missing.length) {
 
 icons.sort((a, b) => a.name.localeCompare(b.name))
 
+// The canonical emoji -> name map is compiled INTO the generated module rather
+// than imported as JSON at runtime: an ESM `import ... from './x.json'` needs an
+// import attribute, and bundler support for those is uneven. One source
+// (emoji-map.json), two consumers (this file and check-icons.mjs), no runtime
+// JSON loading anywhere.
+const MAP_PATH = resolve(here, '../src/icons/emoji-map.json')
+const emojiPairs = []
+if (existsSync(MAP_PATH)) {
+  const rawMap = JSON.parse(readFileSync(MAP_PATH, 'utf8'))
+  const names = new Set(icons.map(i => i.name))
+  const bad = []
+  for (const [emoji, name] of Object.entries(rawMap)) {
+    if (emoji.startsWith('$')) continue
+    if (typeof name !== 'string') continue
+    if (!names.has(name)) bad.push(`${emoji} -> "${name}"`)
+    else emojiPairs.push([emoji, name])
+  }
+  if (bad.length) {
+    console.error(`generate-icons: FAILED — emoji-map.json points at ${bad.length} icon(s) that do not exist:`)
+    for (const b of bad) console.error(`  ${b}`)
+    process.exit(1)
+  }
+}
+
 const body = icons
   .map(i => `  ${/^[a-z][a-zA-Z0-9]*$/.test(i.name) ? i.name : `'${i.name}'`}: ${JSON.stringify(i.body)}`)
   .join(',\n')
@@ -131,6 +155,15 @@ ${icons.map(i => `  ${/^[a-z][a-zA-Z0-9]*$/.test(i.name) ? i.name : `'${i.name}'
 }
 
 export const LUCIDE_VERSION = '${lucideVersion}'
+
+/**
+ * Canonical raw-emoji -> icon name. Source: src/icons/emoji-map.json.
+ * Keys are stored exactly as written there; look them up through
+ * emojiToIconName(), which strips variation selectors and skin tones first.
+ */
+export const EMOJI_TO_ICON: Record<string, IconName> = {
+${emojiPairs.map(([e, n]) => `  ${JSON.stringify(e)}: ${JSON.stringify(n)}`).join(',\n')}
+}
 `
 
 if (check) {

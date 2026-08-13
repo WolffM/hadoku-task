@@ -120,6 +120,48 @@ const EMOJI = /(?:\p{RI}\p{RI}|[#*0-9]️?⃣|\p{Extended_Pictographic}(?:️|[\
  */
 const isEmoji = seq => /\p{Extended_Pictographic}|\p{RI}\p{RI}|⃣/u.test(seq)
 
+/**
+ * CANONICAL emoji -> icon name, so a finding carries its own answer.
+ *
+ * A gate that says "use a name from the registry" leaves 217 decisions on the
+ * floor, and twelve repos migrating independently would make them twelve
+ * different ways. With the map, each finding is an edit rather than a decision —
+ * and the mapping is settled once, here.
+ */
+const EMOJI_MAP_PATH = resolve(here, '../src/icons/emoji-map.json')
+const EMOJI_MAP = new Map()
+if (existsSync(EMOJI_MAP_PATH)) {
+  const raw = JSON.parse(readFileSync(EMOJI_MAP_PATH, 'utf8'))
+  const unknown = []
+  for (const [emoji, name] of Object.entries(raw)) {
+    if (emoji.startsWith('$')) continue
+    if (!ICON_NAMES.has(name)) unknown.push(`${emoji} -> ${name}`)
+    EMOJI_MAP.set(stripVs(emoji), name)
+  }
+  if (unknown.length) {
+    console.error('check-icons: emoji-map.json points at icons that do not exist:')
+    for (const u of unknown) console.error(`  ${u}`)
+    process.exit(1)
+  }
+}
+
+/** Variation selectors and skin tones are presentation, not identity. */
+function stripVs(s) {
+  return [...s].filter(c => {
+    const p = c.codePointAt(0)
+    return p !== 0xfe0f && p !== 0xfe0e && !(p >= 0x1f3fb && p <= 0x1f3ff)
+  }).join('')
+}
+
+/** The suggestion appended to a finding, when we know the answer. */
+function suggest(raw) {
+  const first = [...raw.matchAll(EMOJI)].map(m => m[0]).filter(isEmoji)[0]
+  if (!first) return ''
+  const name = EMOJI_MAP.get(stripVs(first))
+  return name ? `\n    → <Icon name="${name}" />   (getIconSvg('${name}'))` : ''
+}
+
+
 function* walk(dir) {
   let entries
   try {
@@ -238,7 +280,8 @@ for (const target of targets) {
               add(
                 rel, no, 'raw-emoji-icon',
                 `${m[1]}: "${value}" is a raw emoji. Platform emoji fonts render it ` +
-                  `differently per OS. Use a name from the @wolffm/themes registry.`
+                  `differently per OS. Use a name from the @wolffm/themes registry.` +
+                  suggest(value)
               )
             }
           }
@@ -254,14 +297,14 @@ for (const target of targets) {
             if (hit.join('') === raw) {
               add(
                 rel, no, 'raw-emoji-icon',
-                `"${raw}" is a bare emoji glyph. Use <Icon name="..."/> or getIconSvg().`
+                `"${raw}" is a bare emoji glyph. Use <Icon name="..."/> or getIconSvg().` + suggest(raw)
               )
             } else if (raw.startsWith(hit[0]) && /^\s/.test(raw.slice(hit[0].length))) {
               // `'🗑️ Delete Board'` — an emoji prefixing a label is an icon plus text.
               add(
                 rel, no, 'raw-emoji-icon',
                 `"${raw}" prefixes a label with a raw emoji. Render <Icon name="..."/> ` +
-                  `beside the text instead.`
+                  `beside the text instead.` + suggest(raw)
               )
             }
           }
@@ -278,7 +321,7 @@ for (const target of targets) {
               add(
                 rel, no, 'raw-emoji-icon',
                 `"${lead}" leads a text run as an icon. Render <Icon name="..."/> ` +
-                  `beside the text instead.`
+                  `beside the text instead.` + suggest(lead)
               )
             }
           }
@@ -294,7 +337,7 @@ for (const target of targets) {
               add(
                 rel, no, 'raw-emoji-icon',
                 `"${candidate}" is rendered as a bare emoji glyph. Use <Icon name="..."/> ` +
-                  `or getIconSvg() from @wolffm/themes.`
+                  `or getIconSvg() from @wolffm/themes.` + suggest(candidate)
               )
             }
           }

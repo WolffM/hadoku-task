@@ -125,3 +125,27 @@ export function getIconTileClass(
     (round ? ' hdk-icon-tile--round' : '')
   )
 }
+
+// Canonical emoji -> icon name. Generated into registry.generated.ts from
+// emoji-map.json, so nothing loads JSON at runtime and there is one source.
+import { EMOJI_TO_ICON } from './registry.generated'
+
+export { EMOJI_TO_ICON } from './registry.generated'
+
+/** Variation selectors and skin tones are presentation, not identity. */
+function stripPresentation(s: string): string {
+  return [...s]
+    .filter(c => {
+      const p = c.codePointAt(0)!
+      return p !== 0xfe0f && p !== 0xfe0e && !(p >= 0x1f3fb && p <= 0x1f3ff)
+    })
+    .join('')
+}
+
+/**
+ * The registry name a raw emoji should become, or undefined if it has no
+ * canonical answer. `⚙` and `⚙️` resolve identically.
+ */
+export function emojiToIconName(emoji: string): IconName | undefined {
+  return EMOJI_TO_ICON[stripPresentation(emoji)] ?? EMOJI_TO_ICON[emoji]
+}
