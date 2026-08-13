@@ -93,6 +93,11 @@ export default defineConfig({
     dedupe: ['@wolffm/task-ui-components', '@wolffm/themes']
   },
   build: {
+    // The favicon in public/ is for the `vite dev` harness only. This bundle is
+    // a library mounted into hadoku.me, which serves its own favicon from the
+    // site root — so copying public/ into dist/ would ship a stray asset in the
+    // published package that nothing would ever read.
+    copyPublicDir: false,
     lib: {
       entry: 'src/app/entry.tsx',
       formats: ['es'],
@@ -103,24 +108,24 @@ export default defineConfig({
       // 'react-dom' (bare) is needed for flushSync in entry.tsx and maps to
       // /mf/vendor/react-dom.mjs in the host importmap.
       // Provided by the parent page's import map (hadoku_site
-// src/layouts/Base.astro). Each of these is a SINGLETON: React and the
-// theme context match on module identity, and prefs-client and the logger
-// each hold their own cache. Inlining one gives the page a second copy
-// that the first never talks to — which is how aggregator and printtool
-// threw "No <HadokuThemeRoot> above this component" on 2026-08-05 with
-// the provider plainly mounted.
-// Enforced by hadoku_site's check:mf-externals.
-external: [
-  'react',
-  'react-dom',
-  'react-dom/client',
-  'react/jsx-runtime',
-  '@wolffm/themes',
-  '@wolffm/task-ui-components',
-  '@wolffm/logger/client',
-  '@wolffm/prefs-client',
-  '@wolffm/prefs-client/react'
-],
+      // src/layouts/Base.astro). Each of these is a SINGLETON: React and the
+      // theme context match on module identity, and prefs-client and the logger
+      // each hold their own cache. Inlining one gives the page a second copy
+      // that the first never talks to — which is how aggregator and printtool
+      // threw "No <HadokuThemeRoot> above this component" on 2026-08-05 with
+      // the provider plainly mounted.
+      // Enforced by hadoku_site's check:mf-externals.
+      external: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
+        '@wolffm/themes',
+        '@wolffm/task-ui-components',
+        '@wolffm/logger/client',
+        '@wolffm/prefs-client',
+        '@wolffm/prefs-client/react'
+      ],
       output: {
         assetFileNames: 'style.css',
         entryFileNames: 'index.js',
