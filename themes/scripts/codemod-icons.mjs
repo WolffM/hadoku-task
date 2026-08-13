@@ -150,7 +150,25 @@ for (const root of roots) {
         }
       )
 
-      if (isMarkup) {
+      // Only JSX files get an <Icon> element. An .astro/.vue/.svelte/.html file
+      // has no such component in scope and the import block below cannot give it
+      // one — emitting <Icon> there produces markup that does not compile. Astro
+      // wants `set:html={getIconSvg('name')}` with a frontmatter import, which is
+      // a different edit in a different part of the file, so it is reported
+      // instead of guessed at.
+      const canEmitJsx = ext === '.tsx' || ext === '.jsx'
+      if (isMarkup && !canEmitJsx) {
+        for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)/g)) {
+          const tok = m[3]
+          const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
+          if (hits.length && hits.join('') === tok && nameFor(tok)) {
+            skipped.push(
+              `${rel}:${i + 1}  ${tok} -> ${nameFor(tok)} (${ext} needs getIconSvg + a frontmatter import, by hand)`
+            )
+          }
+        }
+      }
+      if (canEmitJsx) {
         // (2)/(3) an emoji opening a JSX text run: alone, or leading a label.
         line = line.replace(
           /(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)(\s*)(?=$|<|[A-Za-z(])/g,
@@ -180,8 +198,28 @@ for (const root of roots) {
 
     // Add the import only when JSX was actually produced.
     if (jsxEdits && (ext === '.tsx' || ext === '.jsx') && !/from '@wolffm\/themes'/.test(out)) {
+      // Insert after the line that CLOSES the last import, not after the last
+      // line that merely starts with `import`. A multi-line
+      //     import {
+      //       a, b
+      //     } from 'x'
+      // matches the naive test on its first line, and inserting there lands the
+      // new import INSIDE the braces — which is exactly what it did to
+      // pygmalion's BakeoffReview.tsx, and the build caught it.
       const src = out.split('\n')
-      const lastImport = src.reduce((acc, l, idx) => (l.startsWith('import ') ? idx : acc), -1)
+      let lastImport = -1
+      let inImport = false
+      for (let idx = 0; idx < src.length; idx++) {
+        const l = src[idx]
+        if (!inImport && /^\s*import\b/.test(l)) {
+          // Single-line import, or the head of a multi-line one.
+          if (/\bfrom\s*['"][^'"]+['"]\s*;?\s*$/.test(l) || /^\s*import\s*['"]/.test(l)) lastImport = idx
+          else inImport = true
+        } else if (inImport && /\bfrom\s*['"][^'"]+['"]\s*;?\s*$/.test(l)) {
+          lastImport = idx
+          inImport = false
+        }
+      }
       if (lastImport >= 0) {
         src.splice(lastImport + 1, 0, "import { Icon } from '@wolffm/themes'")
         out = src.join('\n')
