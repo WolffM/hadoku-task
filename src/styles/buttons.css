@@ -127,6 +127,18 @@
   height: 16px;
 }
 
+/* The notes icon is a themes `Icon` (`note` / notebook-pen), sized `1em` by
+   default like every other `hdk-icon` consumer. Its glyph is symmetric within
+   its own viewBox, but `.task-app__action-btn`'s centering formula
+   (padding-top: min-height/2 - 0.5em) anchors the box's *top* edge, so a
+   14px (1em) box reads ~1px high next to the complete/delete text glyphs.
+   Match the tag button's explicit 16px box above — the anchored top stays
+   put and the extra height shifts the visual center down to line up. */
+.task-app__notes-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Complete button */
 .task-app__action-btn.task-app__complete-btn {
   background: linear-gradient(180deg, var(--color-success) 0%, var(--color-success-dark) 100%);
