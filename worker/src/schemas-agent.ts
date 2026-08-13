@@ -293,7 +293,7 @@ export const ActionableResponseSchema = z
     reason: z.string().optional().openapi({
       example: 'no_repo',
       description:
-        'Why the list is empty: no_repo, not_automation, signed_out, no_provider_configured, no_service_key, provider_<status>, provider_timeout, provider_unreachable, bad_payload.'
+        'Why the list is empty: no_repo, not_automation, signed_out, no_provider_configured, provider_<status>, provider_timeout, provider_unreachable, bad_payload, provider_reported_failure.'
     })
   })
   .openapi('ActionableResponse')

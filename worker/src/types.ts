@@ -40,18 +40,27 @@ export interface Env {
   // Each URL is fetched server-side for the lane contracts the activation UI
   // offers. https only. Absent ⇒ no preset picker, paste-JSON still works.
   AUTOMATION_PRESET_SOURCES?: string
-  // This worker's OWN identity at TenHands, sent as X-User-Key when scanning a
-  // board's repo for open issues/PRs (GET /boards/{ref}/actionable, §5.6).
-  // TenHands gates every non-public path on a registry key; presets are exempt
-  // (a lane vocabulary is public), an issue list is not.
+  // This worker's OWN registry identity — the service-tier key minted for this
+  // repo — sent as X-User-Key when we call a sibling service. Today that is the
+  // open-items scan (GET /boards/{ref}/actionable, §5.6): TenHands gates every
+  // non-public path on a registry key, and while a lane vocabulary is public
+  // (hence no credential on /automation/presets), a repo's issue list is not.
   //
-  // Ours, never the caller's: forwarding a person's credential to another origin
-  // hands that origin the ability to act as them. Same pattern contact-api uses
-  // to reach task-api (CONTACTUI_SERVICE_KEY).
+  // OURS, and specifically NOT `TENHANDS_SERVICE_KEY` — that vault item holds
+  // the key TenHands' own worker presents (see DEFAULT_RUNNER_NAME in
+  // shares.ts). Binding it here would hand this worker the automation runner's
+  // identity, which every automation board grants `contributor`; a bug in this
+  // file would then be able to write to those boards as the runner. A service
+  // presents itself. Same reasoning as contact-api's CONTACTUI_SERVICE_KEY, and
+  // as the admin-tier CONTACT_SYNC_KEY that was deleted for impersonating.
   //
-  // Absent ⇒ the scan reports `no_service_key` and the "Automate open items"
-  // button never appears. Nothing else degrades.
-  TENHANDS_SERVICE_KEY?: string
+  // Not the CALLER's key either: forwarding a person's credential to another
+  // origin hands that origin the ability to act as them.
+  //
+  // Absent ⇒ the scan still calls, unauthenticated, and reports whatever the
+  // provider says (a 401 on a gated route, a result if it's public). Nothing
+  // else degrades.
+  TASK_SERVICE_KEY?: string
   // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
   // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
   // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board

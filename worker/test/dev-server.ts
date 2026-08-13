@@ -67,10 +67,10 @@ const PRESETS = {
 const PRESETS_BODY = JSON.stringify(PRESETS)
 const PRESETS_ETAG = '"dev-presets-1"'
 
-/** This stack's stand-in for the TenHands service key. The worker sends it as
+/** This stack's stand-in for THIS app's service key. The worker sends it as
  * X-User-Key on the actionable scan; the stub below refuses without it, so a
  * regression that drops the credential fails here instead of in production. */
-const TENHANDS_KEY = 'dev-tenhands-key'
+const TASK_KEY = 'dev-task-service-key'
 
 /**
  * What the stub says is open on any board's repo — two issues and a PR, the
@@ -167,7 +167,7 @@ const env = {
   GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN || process.env.HADOKU_SITE_TOKEN,
   // Our identity at the provider for the open-items scan. The stub above checks
   // it, so the dev stack proves the credential is actually sent.
-  TENHANDS_SERVICE_KEY: process.env.DEV_TENHANDS_SERVICE_KEY ?? TENHANDS_KEY
+  TASK_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ createServer((req, res) => {
   if (req.url?.startsWith('/api/taskauto/actionable')) {
     const key = req.headers['x-user-key']
     console.log(`[provider] ${req.method} ${req.url} key=${key ?? '-'}`)
-    if (key !== TENHANDS_KEY) {
+    if (key !== TASK_KEY) {
       res.writeHead(401, { 'Content-Type': 'application/json' }).end('{"error":"unauthorized"}')
       return
     }

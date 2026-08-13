@@ -14,8 +14,9 @@
  * sync — one provider, one URL, one place to change when it moves. What is NOT
  * shared with presets is the credential: a lane vocabulary is public, and this
  * is a repo's issue list, so it needs a key. We send our OWN service identity
- * (TENHANDS_SERVICE_KEY), never the caller's credential — forwarding a person's
- * key to another origin hands that origin the ability to act as them.
+ * (TASK_SERVICE_KEY — this repo's registry key, not TenHands' own, and not the
+ * caller's: forwarding a person's key to another origin hands that origin the
+ * ability to act as them).
  *
  * Fetched SERVER-side for the same reasons presets are: no CORS contract to
  * maintain, a malformed payload never reaches the UI, and one origin's outage
@@ -120,15 +121,18 @@ function toItem(raw: unknown): ActionableItem | null {
  * load and a board must still load.
  */
 export async function fetchActionable(
-  env: { AUTOMATION_PRESET_SOURCES?: string; TENHANDS_SERVICE_KEY?: string },
+  env: { AUTOMATION_PRESET_SOURCES?: string; TASK_SERVICE_KEY?: string },
   boardRef: string
 ): Promise<ActionableScan> {
   const base = taskautoBase(env.AUTOMATION_PRESET_SOURCES)
   if (!base) return { ok: false, repo: null, items: [], reason: 'no_provider_configured' }
-  const key = (env.TENHANDS_SERVICE_KEY ?? '').trim()
-  // Without our identity the provider answers 401. Say so plainly instead of
-  // spending a round-trip to be told.
-  if (!key) return { ok: false, repo: null, items: [], reason: 'no_service_key' }
+  // Our identity when we have one. We still CALL without it rather than
+  // refusing locally: whether this route is credentialled is the provider's
+  // decision (its sibling /automation/presets is public), and a local refusal
+  // would make a public route look permanently broken to anyone who hadn't
+  // bound a secret they didn't need. Unauthenticated against a gated route is
+  // simply a 401, reported like any other provider answer.
+  const key = (env.TASK_SERVICE_KEY ?? '').trim()
 
   const url = `${base}/api/taskauto/actionable?board=${encodeURIComponent(boardRef)}`
   try {
@@ -136,7 +140,7 @@ export async function fetchActionable(
       headers: {
         Accept: 'application/json',
         'User-Agent': 'hadoku-task',
-        'X-User-Key': key
+        ...(key && { 'X-User-Key': key })
       },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     })

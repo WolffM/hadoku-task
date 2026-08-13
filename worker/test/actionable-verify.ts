@@ -7,7 +7,8 @@
  * and never an outage dressed up as "nothing left to do". Proves:
  *
  *   - the provider base is derived from the preset source, not a second binding;
- *   - our OWN service key is sent (X-User-Key), never the caller's credential;
+ *   - our OWN service key is sent (X-User-Key), never the caller's credential,
+ *     and a missing key still asks rather than refusing locally;
  *   - the board's HANDLE is what the provider is asked about;
  *   - a board with no repo, a standard board, and a public caller each answer
  *     without touching the network;
@@ -108,7 +109,7 @@ const env: Record<string, unknown> = {
   AUTOMATION_PRESET_SOURCES: JSON.stringify([
     { id: 'tenhands', label: 'TenHands', url: PRESETS_URL }
   ]),
-  TENHANDS_SERVICE_KEY: SERVICE_KEY
+  TASK_SERVICE_KEY: SERVICE_KEY
 }
 /** The same install with one binding removed/changed. */
 function envWithout(key: string, replacement?: unknown): Record<string, unknown> {
@@ -336,12 +337,24 @@ async function main() {
     }
   }
 
-  section('5. An unconfigured install says so instead of calling out')
+  section('5. A missing binding degrades honestly')
   {
     respond = () => ({ body: { success: true, repo: 'r', items: ITEMS } })
-    const before = calls.length
-    const noKey = await scan('auto-board', { env: envWithout('TENHANDS_SERVICE_KEY') })
-    check('no service key → reason no_service_key', noKey.body.reason === 'no_service_key')
+    // No key bound: we still ASK — whether the route is credentialled is the
+    // provider's call — and report what it answered rather than refusing locally.
+    respond = () => ({ status: 401, body: { error: 'unauthorized' } })
+    const gated = await scan('auto-board', { env: envWithout('TASK_SERVICE_KEY') })
+    check('no key against a GATED route → the provider’s 401', gated.body.reason === 'provider_401')
+    check(
+      '…and the request carried no X-User-Key at all',
+      calls[calls.length - 1]?.key === null,
+      `${calls[calls.length - 1]?.key}`
+    )
+    respond = () => ({ body: { success: true, repo: 'r', items: ITEMS } })
+    const open = await scan('auto-board', { env: envWithout('TASK_SERVICE_KEY') })
+    check('no key against a PUBLIC route → it just works', open.body.ok === true, open.body.reason)
+    check('…with the items', open.body.items.length === 2)
+    const before2 = calls.length
     const noProvider = await scan('auto-board', { env: envWithout('AUTOMATION_PRESET_SOURCES') })
     check(
       'no provider → reason no_provider_configured',
@@ -361,7 +374,11 @@ async function main() {
       ambiguous.body.reason === 'no_provider_configured',
       ambiguous.body.reason
     )
-    check('none of those reached the network', calls.length === before, `${calls.length}`)
+    check(
+      'an unknown provider is never called',
+      calls.length === before2,
+      `${calls.length} vs ${before2}`
+    )
 
     // …but a source explicitly declared `tenhands` alongside others IS found.
     const picked = await scan('auto-board', {

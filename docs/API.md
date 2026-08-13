@@ -979,7 +979,17 @@ already dropped the pipeline's own `taskauto/*` PRs and bot authors — so this 
 filed, not the pipeline's output looping back. The `base` is derived from the `tenhands` entry in
 `AUTOMATION_PRESET_SOURCES` (its URL minus `/automation/presets`); the credential is **not**
 shared with presets — a lane vocabulary is public, an issue list is not — and comes from
-`TENHANDS_SERVICE_KEY`, sent as `X-User-Key`. The caller's own credential is never forwarded.
+`TASK_SERVICE_KEY`, this worker's own service-tier registry identity, sent as `X-User-Key`.
+
+Note what that binding is **not**. It is not `TENHANDS_SERVICE_KEY`, the vault item holding the key
+TenHands' own worker presents: that identity is granted `contributor` on every automation board, so
+binding it here would let a bug in this route write to those boards as the runner. And it is not the
+caller's key — forwarding a person's credential to another origin lets that origin act as them. A
+service presents itself.
+
+With no key bound we still make the call and report what the provider answered (a `provider_401` on
+a gated route, a result if it's public), rather than refusing locally — whether this route needs a
+credential is the provider's decision, not ours.
 
 The board is identified by its **handle**, the same identifier the runner discovers boards by, not
 by whatever ref you addressed this route with.
@@ -987,7 +997,7 @@ by whatever ref you addressed this route with.
 `ok` says the answer is TRUSTWORTHY, not that the list is non-empty. `ok: true` with
 `reason: "no_repo"` / `"not_automation"` means there is definitely nothing to do; `ok: false`
 means we don't know, and a UI must render nothing rather than an empty backlog. Reasons:
-`no_repo`, `not_automation`, `signed_out`, `no_provider_configured`, `no_service_key`,
+`no_repo`, `not_automation`, `signed_out`, `no_provider_configured`,
 `provider_<status>`, `provider_timeout`, `provider_unreachable`, `bad_payload`,
 `provider_reported_failure`. Nothing is cached — this is "what is open right now", read on board
 load — and nothing is created: the caller turns the items into ordinary tasks itself.
