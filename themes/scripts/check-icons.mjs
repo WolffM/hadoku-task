@@ -263,8 +263,21 @@ for (const target of targets) {
       if (DISABLE_NEXT.test(line)) waived.add(i + 2)
     })
 
+    // Track BLOCK comments across lines. `isNonUiLine` only sees a line that
+    // STARTS with a marker, so the middle of a `{/* … */}` block reads as code —
+    // and personal-dataplatform's VodBrowser has a comment explaining that it
+    // used to render "👎 -3", which the gate then reported as an icon. Prose
+    // about an emoji is not an emoji.
+    let inBlockComment = false
+
     for (let i = 0; i < lines.length; i++) {
       if (waived.has(i + 1)) continue
+      const opens = (lines[i].match(/\/\*/g) || []).length
+      const closes = (lines[i].match(/\*\//g) || []).length
+      const startedInside = inBlockComment
+      if (opens > closes) inBlockComment = true
+      else if (closes > opens) inBlockComment = false
+      if (startedInside) continue
       const line = lines[i]
       const no = i + 1
 
