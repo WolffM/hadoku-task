@@ -111,7 +111,7 @@ jobs:
 
       - name: Configure npm for GitHub Packages
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_SITE_TOKEN }}" > ~/.npmrc
+          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
@@ -485,6 +485,12 @@ jobs:
           echo "🔄 Rebuilding with new versions..."
 
       # Rebuild if versions were auto-bumped
+        env:
+          # `npm view` here reads the private registry. It used to authenticate
+          # implicitly off the literal token in .npmrc; with the placeholder the
+          # step must declare its own, or every read resolves an empty token.
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
       - name: Rebuild after version bump
         if: steps.version_check.outputs.version_issues == '1'
         run: |
