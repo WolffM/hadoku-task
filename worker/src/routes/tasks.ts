@@ -226,7 +226,7 @@ export function createTaskRoutes() {
           bid,
           expectedVersion
         ),
-      { write: true, taskId: id, ...laneOpts }
+      { write: true, mustExist: true, taskId: id, ...laneOpts }
     )
   }) as never)
 
@@ -282,7 +282,7 @@ export function createTaskRoutes() {
       c,
       boardId,
       (storage, auth, bid) => TaskHandlers.completeTask(storage, auth, id, bid, expectedVersion),
-      { write: true }
+      { write: true, mustExist: true }
     )
   }) as never)
 
@@ -334,7 +334,7 @@ export function createTaskRoutes() {
       c,
       boardId,
       (storage, auth, bid) => TaskHandlers.deleteTask(storage, auth, id, bid, expectedVersion),
-      { write: true }
+      { write: true, mustExist: true }
     )
   }) as never)
 

@@ -19,6 +19,15 @@ export interface BoardResolution {
   ownerId: string
   boardId: string // the owner's slug for the board
   access: Access
+  /**
+   * Whether a board row actually exists for this ref. False for the step-4
+   * fallthrough below, which INVENTS the caller's not-yet-created board so
+   * implicit boards (a first-load `main`, a create into a fresh slug) keep
+   * working. Operations on an EXISTING task must refuse that invented board —
+   * see `mustExist` in handleBoardOperation — because searching an empty board
+   * reports the TASK as missing and hides the real fault, the board reference.
+   */
+  exists: boolean
   // Automation config carried through so a route can enforce lane writes (§5.2)
   // without a second board read. `mode` is 'standard' | 'automation'; `lanes` is
   // the raw JSON column (parsed lazily by the enforcement helper).
@@ -60,6 +69,7 @@ export async function resolveBoardAccess(
       ownerId: callerId,
       boardId: own.id,
       access: 'owner',
+      exists: true,
       mode: own.mode,
       lanesJson: own.lanes
     }
@@ -81,6 +91,7 @@ export async function resolveBoardAccess(
       ownerId: shared.owner,
       boardId: shared.bid,
       access: shared.access,
+      exists: true,
       mode: shared.mode,
       lanesJson: shared.lanes
     }
@@ -96,7 +107,14 @@ export async function resolveBoardAccess(
 
   // 4. An unknown slug: the caller's own (not-yet-created) board of that slug —
   //    a standard board by default (automation is opt-in via activation).
-  return { ownerId: callerId, boardId: ref, access: 'owner', mode: 'standard', lanesJson: null }
+  return {
+    ownerId: callerId,
+    boardId: ref,
+    access: 'owner',
+    exists: false,
+    mode: 'standard',
+    lanesJson: null
+  }
 }
 
 /** Owner-resolve a board ref to the owner's board, for owner-only share management. */

@@ -251,7 +251,7 @@ export async function updateTask(
     auth,
     boardId,
     (tasks, stats, timestamp) => {
-      const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
+      const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId, boardId)
 
       const updatedTask: Task = {
         ...task,
@@ -307,7 +307,7 @@ export async function completeTask(
     auth,
     boardId,
     (tasks, stats, timestamp) => {
-      const { task: current } = findTaskOrThrow(tasks, taskId)
+      const { task: current } = findTaskOrThrow(tasks, taskId, boardId)
 
       if (current.state === 'Completed') {
         const { updatedTasks, reopenedTask } = reopenTask(tasks, taskId, timestamp)
@@ -322,7 +322,7 @@ export async function completeTask(
         }
       }
 
-      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp)
+      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Completed', timestamp, boardId)
       return {
         updatedTasks,
         statsEvents: [{ task: closedTask, eventType: 'completed' as const }],
@@ -357,7 +357,7 @@ export async function deleteTask(
     auth,
     boardId,
     (tasks, stats, timestamp) => {
-      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Deleted', timestamp)
+      const { updatedTasks, closedTask } = closeTask(tasks, taskId, 'Deleted', timestamp, boardId)
 
       return {
         updatedTasks,

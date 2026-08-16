@@ -29,6 +29,8 @@ export interface BoardCtx {
   isOwn: boolean
   ownerId: string
   callerId: string
+  /** False when the ref resolved to an invented, not-yet-created board (§7). */
+  exists: boolean
   /** 'standard' | 'automation' — selects lane enforcement (§5.2). */
   mode: string
   /** The board's lane set (empty on a standard board). */
@@ -66,6 +68,7 @@ export async function resolveBoardCtx(
     auth: scopedAuth,
     boardId: res.boardId,
     access: res.access,
+    exists: res.exists,
     isOwn,
     ownerId: res.ownerId,
     callerId,
@@ -259,10 +262,23 @@ export async function handleBoardOperation<T>(
   // for a shared board addressed by handle, that differs from `boardId`, and the
   // handler must scope by the owner's slug, not the handle.
   operation: (storage: TaskStorage, auth: TaskAuthContext, resolvedBoardId: string) => Promise<T>,
-  opts: { write?: boolean; laneTag?: string | null; taskId?: string } = {}
+  opts: {
+    write?: boolean
+    laneTag?: string | null
+    taskId?: string
+    /**
+     * Refuse an invented board. Set on operations that act on an EXISTING task:
+     * if the board itself was never created, the caller named the wrong board,
+     * and searching the resulting empty board would blame the TASK instead —
+     * `Task <id> not found`, which is what sent a real user round a loop of
+     * deletes that could never succeed. Left off for creates, which legitimately
+     * bring a board into being.
+     */
+    mustExist?: boolean
+  } = {}
 ): Promise<Response> {
   const ctx = await getBoardContext(c, boardId)
-  if (!ctx) {
+  if (!ctx || (opts.mustExist && !ctx.exists)) {
     return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
   }
   if (opts.write && ctx.access === 'readonly') {

@@ -162,9 +162,13 @@ async function reportRefusal(
   operation: string,
   context: Record<string, unknown>,
   onError?: SyncErrorReporter,
-  undo?: Undo
+  undo?: Undo,
+  // A Response body reads once. When the caller already had to inspect it to
+  // decide whether this IS a refusal, it passes the result in rather than
+  // re-reading an exhausted stream.
+  prereadDetail?: SyncErrorDetail
 ): Promise<void> {
-  const detail = await readErrorDetail(r)
+  const detail = prereadDetail ?? (await readErrorDetail(r))
   logger.warn(`[api] ${operation}: Server sync returned error`, {
     status: r.status,
     code: detail.code,
@@ -195,6 +199,19 @@ async function reportRefusal(
  *
  * `undo` runs for a definitive 4xx before the error is reported, so the local
  * write is already rolled back by the time the user reads why.
+ *
+ * `missingIsDone` marks an IDEMPOTENT removal — a delete, whose goal state is
+ * "the server does not have this". A TASK_NOT_FOUND 404 means it already holds
+ * that state, so the write succeeded in every sense the user cares about.
+ * Without this, the one status that means "already gone" was the one that put
+ * the row BACK: 404 passes isDefinitiveRefusal, so the undo re-created the task
+ * locally and the board showed it again on the next paint, for as long as the
+ * delete kept 404ing.
+ *
+ * BOARD_NOT_FOUND is deliberately NOT swallowed. It is also a 404, but it means
+ * the delete never ran — we named a board that does not exist — so the task is
+ * still there. Treating that as success would drop it locally while the server
+ * keeps it, which is a silent divergence that the next sync quietly undoes.
  */
 function backgroundSync(
   url: string,
@@ -202,11 +219,22 @@ function backgroundSync(
   operation: string,
   context: Record<string, unknown>,
   onError?: SyncErrorReporter,
-  undo?: Undo
+  undo?: Undo,
+  missingIsDone = false
 ): void {
   fetch(url, options)
     .then(async r => {
-      if (!r.ok) {
+      if (missingIsDone && r.status === 404) {
+        const detail = await readErrorDetail(r)
+        if (detail.code !== 'BOARD_NOT_FOUND') {
+          logger.info(
+            `[api] ${operation}: already absent server-side — treating 404 as done`,
+            context
+          )
+          return r
+        }
+        await reportRefusal(r, operation, context, onError, undo, detail)
+      } else if (!r.ok) {
         await reportRefusal(r, operation, context, onError, undo)
       } else {
         logger.info(`[api] ${operation}: Server sync completed`, context)
@@ -561,7 +589,10 @@ export function createApi(
               }
               return true
             }
-          : undefined
+          : undefined,
+        // A delete is idempotent: 404 means the task is already gone, which is
+        // exactly what was asked for. Never resurrect it.
+        true
       )
     },
 
@@ -752,10 +783,9 @@ export function createApi(
      */
     async listActionable(boardRef: string): Promise<ActionableScan> {
       try {
-        const res = await fetch(
-          `/task/api/boards/${encodeURIComponent(boardRef)}/actionable`,
-          { headers: adminHeaders(userType, sessionId) }
-        )
+        const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/actionable`, {
+          headers: adminHeaders(userType, sessionId)
+        })
         // 403 (read-only) and 404 (no such board) are answers, not faults — the
         // reason carries the status so a support question has something to go on.
         if (!res.ok) return { ok: false, repo: null, items: [], reason: `http_${res.status}` }

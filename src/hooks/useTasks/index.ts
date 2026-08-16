@@ -373,14 +373,21 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   }
 
   async function deleteTask(taskId: string) {
-    logger.info('[useTasks] deleteTask START', { taskId, currentBoardId })
+    // The LIVE selection, not the `currentBoardId` state this closure captured.
+    // A delete fired while a board switch or first load is still settling would
+    // otherwise address the previously-selected board (initially `main`), and the
+    // server answers that with `Task <id> not found` rather than a board error —
+    // an unknown slug resolves to an empty board of that name, so the miss looks
+    // like a missing TASK. The task is left untouched and returns on every load.
+    const boardId = currentBoardIdRef.current
+    logger.info('[useTasks] deleteTask START', { taskId, boardId })
     await withPendingOperation(
       `delete-${taskId}`,
       pendingOperations,
       setPendingOperations,
       async () => {
-        logger.info('[useTasks] deleteTask: calling api.deleteTask', { taskId, currentBoardId })
-        await api.deleteTask(taskId, currentBoardId)
+        logger.info('[useTasks] deleteTask: calling api.deleteTask', { taskId, boardId })
+        await api.deleteTask(taskId, boardId)
         logger.info('[useTasks] deleteTask: calling reload')
         await reload()
         logger.info('[useTasks] deleteTask END')

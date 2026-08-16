@@ -35,10 +35,14 @@ export function backfillTaskDate(task: Task): Task {
  * @throws TaskNotFoundError if task not found (HTTP 404)
  * @returns Task and its index in the tasks array
  */
-export function findTaskOrThrow(tasks: TasksFile, taskId: ULID): { task: Task; index: number } {
+export function findTaskOrThrow(
+  tasks: TasksFile,
+  taskId: ULID,
+  boardId?: string
+): { task: Task; index: number } {
   const index = tasks.tasks.findIndex(t => t.id === taskId)
   if (index < 0) {
-    throw new TaskNotFoundError(taskId)
+    throw new TaskNotFoundError(taskId, boardId)
   }
   return { task: tasks.tasks[index], index }
 }
@@ -200,12 +204,13 @@ export function closeTask(
   tasks: TasksFile,
   taskId: string,
   state: 'Completed' | 'Deleted',
-  timestamp: string
+  timestamp: string,
+  boardId?: string
 ): {
   updatedTasks: TasksFile
   closedTask: Task
 } {
-  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId)
+  const { task, index: taskIndex } = findTaskOrThrow(tasks, taskId, boardId)
 
   const closedTask: Task = {
     ...task,

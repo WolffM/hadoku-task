@@ -340,8 +340,19 @@ export class DomainError extends Error {
  * HTTP status: 404 Not Found
  */
 export class TaskNotFoundError extends DomainError {
-  constructor(taskId?: string) {
-    super(taskId ? `Task ${taskId} not found` : 'Task not found', 'TASK_NOT_FOUND', 404)
+  /**
+   * `boardId` is part of the message because the board is the usual culprit: a
+   * lookup in the WRONG board reports the task as missing, and a bare
+   * "Task <id> not found" sends you hunting for a task that was never the
+   * problem. Naming the board searched makes a board mismatch self-evident.
+   */
+  constructor(taskId?: string, boardId?: string) {
+    const where = boardId ? ` on board ${boardId}` : ''
+    super(
+      taskId ? `Task ${taskId} not found${where}` : `Task not found${where}`,
+      'TASK_NOT_FOUND',
+      404
+    )
     this.name = 'TaskNotFoundError'
   }
 }

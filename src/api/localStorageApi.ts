@@ -311,7 +311,7 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       const taskToDelete = tasksFileBefore.tasks.find(t => t.id === id)
 
       if (!taskToDelete) {
-        throw new TaskNotFoundError(id)
+        throw new TaskNotFoundError(id, boardId)
       }
 
       // Use handler to delete the task
