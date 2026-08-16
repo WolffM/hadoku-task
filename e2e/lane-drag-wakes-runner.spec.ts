@@ -73,10 +73,19 @@ async function createBoard(request: APIRequestContext, id: string) {
   expect(applied.ok()).toBe(true)
 }
 
-async function openBoard(page: Page, boardId: string) {
+/**
+ * Wait for THIS board's own card, not `.task-app__item` at large: the previously
+ * selected board's cards are still on screen while the switch settles, so the
+ * generic wait can return before the board under test has rendered anything.
+ */
+async function openBoard(page: Page, boardId: string, expectTitle: string) {
   await page.goto('/')
   await page.getByRole('button', { name: boardId, exact: true }).click()
-  await page.locator('.task-app__item').first().waitFor({ state: 'visible', timeout: 10000 })
+  await page
+    .locator('.task-app__item')
+    .filter({ hasText: expectTitle })
+    .first()
+    .waitFor({ state: 'visible', timeout: 15000 })
 }
 
 test.describe('a lane drag wakes the runner', () => {
@@ -105,7 +114,7 @@ test.describe('a lane drag wakes the runner', () => {
       expect((await request.post(API, { data: { boardId, ...t } })).ok()).toBe(true)
     }
     await signIn(page)
-    await openBoard(page, boardId)
+    await openBoard(page, boardId, 'Drag me into a lane')
   })
 
   /**
@@ -158,17 +167,50 @@ test.describe('a lane drag wakes the runner', () => {
     page.locator('.task-app__item').filter({ hasText: 'Drag me into a lane' })
 
   /**
-   * Pick the card up by its PADDING, not its centre. A card is a drag handle
-   * everywhere except on its own text (see card-drag-vs-select.spec.ts), and the
-   * centre of this one is the title — pressing there starts a text selection and
-   * no drag ever begins.
+   * Drive the app's OWN drag protocol: one DataTransfer carried from `dragstart`
+   * on the card through `dragover` to `drop` on the lane target.
+   *
+   * NOT `locator.dragTo()`, which is what made this spec fail ~25% of full-suite
+   * runs while passing every time in isolation. Chromium stops producing frames
+   * while it holds a drag, so every Playwright wait starves for the duration
+   * (empty-lane-visibility.spec.ts documents the same trap, and refused-lane-drag
+   * .spec.ts records `dragTo` hanging outright on the chips). Dropping on a lane
+   * COLUMN is the worst case of it. Under load the drop never landed inside the
+   * window and `waitForRequest` timed out — a failure on a path this spec does
+   * not even test, in a suite CI never runs.
+   *
+   * The endpoint assertion is untouched by the switch: these are the real React
+   * `onDrop`/`onFilterDrop` handlers, reached through the real dataTransfer, so
+   * WHICH endpoint they call is still what gets proved. That a real mouse gesture
+   * starts a drag at all is a separate concern, owned by card-drag-vs-select.spec.ts.
    */
-  const grabByPadding = async (page: Page, target: ReturnType<Page['locator']>) => {
-    const box = await card(page).boundingBox()
-    expect(box, 'card should be measurable').not.toBeNull()
-    await card(page).dragTo(target, {
-      sourcePosition: { x: (box?.width ?? 40) / 4, y: 4 }
-    })
+  async function dropOnLane(page: Page, title: string, lane: string, on: 'column' | 'chip') {
+    const result = await page.evaluate(
+      ({ title, lane, on }) => {
+        const card = [...document.querySelectorAll('.task-app__item')].find(el =>
+          el.textContent?.includes(title)
+        ) as HTMLElement | undefined
+        const target = (
+          on === 'column'
+            ? [...document.querySelectorAll('.task-app__tag-column')].find(el =>
+                el.textContent?.includes(`#${lane}`)
+              )
+            : [...document.querySelectorAll('button')].find(
+                el => el.textContent?.trim() === `#${lane}`
+              )
+        ) as HTMLElement | undefined
+        if (!card || !target) return { ok: false, foundCard: !!card, foundTarget: !!target }
+        const dt = new DataTransfer()
+        card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
+        target.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: dt }))
+        target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt }))
+        return { ok: true, types: [...dt.types] }
+      },
+      { title, lane, on }
+    )
+    expect(result.ok, `card "${title}" and ${on} "#${lane}" should both exist`).toBe(true)
+    // If the app ever stops writing its own type, the drop silently moves nothing.
+    expect(result.types).toContain('application/x-hadoku-task-ids')
   }
 
   test('dropping on the lane column posts the lane write to the batch endpoint', async ({
@@ -180,7 +222,7 @@ test.describe('a lane drag wakes the runner', () => {
     const lane = page.locator('.task-app__tag-column').filter({ hasText: '#todo' })
     await expect(lane).toBeVisible()
 
-    await expectLaneWrite(page, () => grabByPadding(page, lane))
+    await expectLaneWrite(page, () => dropOnLane(page, 'Drag me into a lane', 'todo', 'column'))
     await expectLanded(request)
   })
 
@@ -189,7 +231,7 @@ test.describe('a lane drag wakes the runner', () => {
     const chip = page.getByRole('button', { name: '#todo', exact: true })
     await expect(chip).toBeVisible()
 
-    await expectLaneWrite(page, () => grabByPadding(page, chip))
+    await expectLaneWrite(page, () => dropOnLane(page, 'Drag me into a lane', 'todo', 'chip'))
     await expectLanded(request)
   })
 })
