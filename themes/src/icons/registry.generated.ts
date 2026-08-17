@@ -17,6 +17,7 @@ export const ICON_MARKUP = {
   'arrow-up': "<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />",
   'arrow-up-right': "<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />",
   'arrows-horizontal': "<path d=\"M8 3 4 7l4 4\" /><path d=\"M4 7h16\" /><path d=\"m16 21 4-4-4-4\" /><path d=\"M20 17H4\" />",
+  ban: "<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M4.929 4.929 19.07 19.071\" />",
   bell: "<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /><path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />",
   bone: "<path d=\"M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z\" />",
   book: "<path d=\"M12 5v16\" /><path d=\"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z\" />",
@@ -154,6 +155,7 @@ export const ICON_SOURCE_SLUGS: Record<IconName, string> = {
   'arrow-up': 'arrow-up',
   'arrow-up-right': 'arrow-up-right',
   'arrows-horizontal': 'arrow-left-right',
+  ban: 'ban',
   bell: 'bell',
   bone: 'bone',
   book: 'book-open',
@@ -437,5 +439,7 @@ export const EMOJI_TO_ICON: Record<string, IconName> = {
   "🛠": "toolbox",
   "⚔": "toolbox",
   "🏹": "target",
-  "🔱": "layers"
+  "🔱": "layers",
+  "🚫": "ban",
+  "⛔": "ban"
 }

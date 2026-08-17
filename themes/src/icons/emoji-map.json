@@ -174,5 +174,7 @@
   "🛠": "toolbox",
   "⚔": "toolbox",
   "🏹": "target",
-  "🔱": "layers"
+  "🔱": "layers",
+  "🚫": "ban",
+  "⛔": "ban"
 }
