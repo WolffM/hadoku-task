@@ -43,6 +43,34 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 - **Never** `var(--color-x, #hex)` fallbacks, `text-white`/hex literals on a filled bg, or a hand-written `@theme` color block — import `@wolffm/themes/tailwind-colors.css` instead. Import `style.css` **unlayered** or every color resolves to nothing.
 - Verify with `pnpm run lint:css` (runs the token/contrast/usage gates). Contracts: `docs/THEME_SYSTEM_RULES.md`.
 
+## Icons
+
+**Never render an emoji as an icon.** Platform emoji fonts draw the same codepoint
+differently on every OS and no CSS can fix it, so icons come from the enforced registry
+in `@wolffm/themes` (129 glyphs, artwork vendored from Lucide, ISC).
+
+- React: `<Icon name="trash" />` from `@wolffm/themes`
+- Framework-free (Astro/Qwik/plain HTML): `getIconSvg('trash')` from `@wolffm/themes/icons`
+- Standalone page with no bundler: inline the SVG literally, sourced from the registry
+- Import `@wolffm/themes/icons.css` next to `style.css`, **unlayered**, or icons render at the wrong size
+
+Colour is yours to choose, but only through tokens — `bare` inherits `currentColor`,
+`accent` paints the glyph `--color-<family>`, `tint`/`filled` put it in a tile. No raw
+colour can pass through the API.
+
+Verify with `pnpm run lint:icons` (`hadoku-check-icons .`). Each finding prints the
+answer, e.g. `🗑️ → <Icon name="trash" />`. `hadoku-codemod-icons . --write` does the
+mechanical cases.
+
+**The gate is a worklist, not proof** — run the real build AND lint, and grep the BUILT
+output for leftover pictographs. Several repos' builds do not typecheck, so lint is what
+catches an undefined `<Icon>`.
+
+Some emoji legitimately stay: text-only attributes (`<optgroup label>`, `title=`),
+strings assigned to `.textContent`, CSS `content:`, and payloads bound for Discord,
+GitHub issues or a terminal — those systems cannot render an SVG. Waive those with
+`/* check-icons-disable-next-line */` and a reason.
+
 ## Exports (what hadoku-site consumes)
 
 - `@wolffm/task/frontend` -> `mount(el, props)`, `unmount(el)` [src/app/entry.tsx]
