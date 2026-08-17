@@ -64,7 +64,12 @@ const SKIP_DIRS = new Set([
   // backend/custom_nodes and a Python env with site-packages; 14 of its findings
   // were somebody else's emoji in somebody else's code, which we neither can nor
   // should edit. `.venv` alone did not cover it — that env is `.venv-torch2110-backup`.
-  'custom_nodes', 'site-packages', 'bower_components', 'Pods', '.tox', '.gradle'
+  'custom_nodes', 'site-packages', 'bower_components', 'Pods', '.tox', '.gradle',
+  // Scraped/generated payload dumps. ArchiveBot writes Discord archives to
+  // Output/<guild>/<channel>/archive_*.json, and every reaction in them is an
+  // `"emoji":` field — 320 findings that are somebody's chat history, not icons.
+  // A directory literally named Output holds output, never authored UI.
+  'Output', 'output', 'outputs'
 ])
 
 /** Virtualenv directories are named freely (`.venv-torch2110-backup`, `env39`). */
@@ -95,7 +100,7 @@ const GENERATED_PATH =
  * being checked. A `.html` file is a UI file wherever it sits.
  */
 const NON_UI_CODE_DIR =
-  /(^|\/)(workers?|services?|server|scripts?|functions|cli|bin|migrations|e2e|tests?|__tests__)(\/|$)/
+  /(^|\/)(workers?|services?|server|scripts?|functions|cli|bin|migrations|e2e|tests?|__tests__|output|outputs|formatters?)(\/|$)/
 
 /**
  * Test files, matched by NAME rather than by folder. `spec` is deliberately NOT a
