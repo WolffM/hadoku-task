@@ -19,6 +19,56 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The steps below exist so the SMELLS lane measures this repo's code
+      # instead of its own missing dependencies.
+      #
+      # That lane is type-coverage: it counts `any`-typed identifiers per file.
+      # @wolffm/themes and @wolffm/task-ui-components declare their `types`
+      # entry points inside gitignored dist/, so on a bare checkout tsc cannot
+      # resolve them and every identifier derived from those imports degrades
+      # to `any`. The count that comes back is a property of the checkout, not
+      # of the source.
+      #
+      # Measured 2026-08-17 against anchor 0bdb52a: src/utils/theme.ts reported
+      # 15 anys with node_modules but no dist, and 0 with the packages built.
+      # The file contains no `any` at all. Because the lane scores by DENSITY,
+      # a 36-line file scored the 1.5 cap and became the audit's rank-1
+      # "corroborated" work item — a fully fictional finding sitting at the top
+      # of the briefing.
+      #
+      # node_modules/ and dist/ are both in vibecheck's EXCLUDED_DIRS, so
+      # populating them adds no candidate files to any lane.
+      #
+      # setup-node BEFORE corepack — see ci.yml: `corepack enable` symlinks its
+      # shims next to the active node, and without setup-node that is the
+      # host's /usr/bin, which the runner user cannot write.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@wolffm'
+
+      # corepack, not pnpm/action-setup — the self-installer shares one
+      # directory across every runner instance on this host and dies with
+      # `ENOENT ... uv_cwd` when concurrent jobs race it.
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.0 --activate
+
+      # @wolffm/logger, prefs-client and worker-utils resolve from GH Packages,
+      # so the install needs auth. GITHUB_TOKEN is not enough — it cannot read
+      # another repo's packages.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
+      - name: Build workspace packages
+        run: pnpm run build:packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+
       - name: Run vibeCompact
         uses: WolffM/vibecheck@main
         with:

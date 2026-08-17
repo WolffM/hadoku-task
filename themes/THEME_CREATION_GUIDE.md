@@ -91,9 +91,10 @@ completed · `warning` = caution/pending · `danger` = destructive/errors ·
 `neutral` = non-critical, disabled, unknown.
 
 > Do not hand-compute these. Author the five MAIN colours, then run
-> `node themes/scripts/normalize-tokens.mjs` to derive the rest in OKLCH and
-> `node themes/scripts/check-contrast.mjs` to verify every pair. The editor's
-> live HSL cascade is a preview, not the authority.
+> `pnpm --filter @wolffm/themes run normalize:tokens` to derive the rest in
+> OKLCH (add `-- --dry` to preview) and
+> `pnpm --filter @wolffm/themes run check:contrast` to verify every pair. The
+> editor's live HSL cascade is a preview, not the authority.
 
 #### 6. Text Colors (4 variables)
 

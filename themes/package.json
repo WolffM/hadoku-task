@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.7.0",
+  "version": "5.7.1",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -53,6 +53,8 @@
     "check:tailwind": "node scripts/generate-tailwind-colors.mjs --check",
     "check:docs": "node scripts/check-docs.mjs",
     "generate:tailwind": "node scripts/generate-tailwind-colors.mjs",
+    "generate:preview": "node scripts/generate-preview.mjs",
+    "normalize:tokens": "node scripts/normalize-tokens.mjs",
     "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:icons && pnpm run check:usage",
     "generate:icons": "node scripts/generate-icons.mjs",
     "check:icons": "node scripts/generate-icons.mjs --check && node scripts/check-icons.mjs .."
