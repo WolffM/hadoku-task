@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task-ui-components",
-  "version": "4.6.1",
+  "version": "4.6.2",
   "description": "Reusable UI components with Bento grid and metallic gradient support",
   "type": "module",
   "main": "dist/index.js",

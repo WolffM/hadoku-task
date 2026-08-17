@@ -30,7 +30,7 @@
 import { parsePresetSources } from './board-presets'
 
 /** One open issue or PR TenHands says is worth working. */
-export interface ActionableItem {
+interface ActionableItem {
   kind: 'issue' | 'pr'
   number: number
   title: string
@@ -67,7 +67,7 @@ const PRESETS_PATH = '/automation/presets'
  * ambiguity — the taskauto API is TenHands', not "whichever provider was listed
  * first" — so we answer null rather than guess and call a stranger's origin.
  */
-export function taskautoBase(rawBinding: string | undefined): string | null {
+function taskautoBase(rawBinding: string | undefined): string | null {
   const sources = parsePresetSources(rawBinding)
   const source =
     sources.find(s => s.id === 'tenhands') ?? (sources.length === 1 ? sources[0] : null)

@@ -41,9 +41,6 @@ export const isDarkTheme = name => name.endsWith('dark')
 /** The five semantic color families that must share an identical token set. */
 export const FAMILIES = ['primary', 'success', 'warning', 'danger', 'neutral']
 
-/** The canonical per-family variants after normalization. */
-export const VARIANTS = ['', '-dark', '-bg', '-hover']
-
 /** Structural (non-family) color tokens. */
 export const STRUCTURAL = [
   'text',

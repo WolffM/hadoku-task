@@ -114,16 +114,16 @@ function getClient(): PrefsClient<TaskPrefs> {
     // resolved blob to sessionStorage on every read/hydrate/refresh/broadcast.
     // sessionStorage['hadoku-theme'] is a shared contract with the hadoku.me
     // host page (and the inline <head> FOUC script): the host seeds it, and
-    // useTheme writes it only on explicit in-app theme changes (see
-    // writeStoredTheme in ../utils/theme.ts). A read-path write-through would
-    // clobber an inherited theme with the app's own resolved default.
+    // it is written only on explicit in-app theme changes (saveTheme in
+    // @wolffm/themes). A read-path write-through would clobber an inherited
+    // theme with the app's own resolved default.
     //
     // A prefs-client fix (mirrors only on explicit save() by default, with a
     // mirrorBootstrapOnRead opt-in for the old behavior) is prepared on
     // hadoku_site's fix/prefs-client-race branch but not yet published. Once
     // this app depends on a version that includes it, bootstrapToSessionStorage
-    // + the manual writeStoredTheme path can likely be consolidated — verify
-    // against e2e/theme-inheritance.spec.ts before removing either side.
+    // can likely take over the mirroring — verify against
+    // e2e/theme-inheritance.spec.ts before removing either side.
   })
   return cachedClient
 }

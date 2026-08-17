@@ -12,7 +12,7 @@ import { THEME_FAMILIES } from '@wolffm/themes'
 import type { ThemeName } from '../app/types'
 
 /** sessionStorage key shared with the hadoku.me host page + FOUC head script. */
-export const THEME_STORAGE_KEY = 'hadoku-theme'
+const THEME_STORAGE_KEY = 'hadoku-theme'
 
 const VALID_THEMES = new Set<string>(THEME_FAMILIES.flatMap(f => [f.lightTheme, f.darkTheme]))
 
@@ -32,7 +32,7 @@ const FAMILY_VARIANTS = new Map<string, { light: string; dark: string }>(
  * variant per `prefersDark`. Returns null for unrecognized values so callers
  * can fall back to their own default instead of silently landing on 'light'.
  */
-export function normalizeThemeName(
+function normalizeThemeName(
   value: string | null | undefined,
   prefersDark: boolean
 ): ThemeName | null {
@@ -51,19 +51,5 @@ export function readStoredTheme(prefersDark: boolean): ThemeName | null {
     return normalizeThemeName(window.sessionStorage.getItem(THEME_STORAGE_KEY), prefersDark)
   } catch {
     return null
-  }
-}
-
-/**
- * Persist the theme to the shared key. Called ONLY on explicit in-app theme
- * changes — never as a read/hydrate write-through, so a theme inherited from
- * the host page is never clobbered by the app's own default.
- */
-export function writeStoredTheme(theme: ThemeName): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.sessionStorage.setItem(THEME_STORAGE_KEY, theme)
-  } catch {
-    // Storage unavailable (e.g. blocked third-party context) — non-fatal.
   }
 }

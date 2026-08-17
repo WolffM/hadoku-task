@@ -53,7 +53,7 @@ const fmt = (rgb, alpha) =>
  * cutoff, so this picks by measured WCAG ratio instead: whichever of black or
  * white scores higher.
  */
-export function deriveOn(base) {
+function deriveOn(base) {
   return contrast('black', base) >= contrast('white', base) ? 'black' : 'white'
 }
 
@@ -67,7 +67,7 @@ export function deriveOn(base) {
  * contrast, so the ramp can only improve from there. The nudge preserves hue
  * and chroma and is 0.015–0.045 L, below the just-noticeable threshold.
  */
-export function ensureFillable(base) {
+function ensureFillable(base) {
   const headroom = c => Math.max(contrast('black', c), contrast('white', c))
   if (headroom(base) >= TARGET + 0.2) return { color: base, nudged: false }
 
@@ -84,7 +84,7 @@ export function ensureFillable(base) {
  * The gradient's bottom stop: as deep as possible without dropping `on` below
  * the AA floor, bounded so the ramp stays visible but never runaway.
  */
-export function deriveDark(base, on = deriveOn(base)) {
+function deriveDark(base, on = deriveOn(base)) {
   let shift = 0
   for (let s = MIN_DARK_SHIFT; s <= MAX_DARK_SHIFT; s += 0.005) {
     if (contrast(on, toHex(shiftLightness(base, -s).rgb)) >= TARGET) shift = s
@@ -105,7 +105,7 @@ export function deriveDark(base, on = deriveOn(base)) {
  * them — deriving against `bg-card` alone left 19 pairs under the bar once the
  * same badge was placed on `bg-alt`.
  */
-export function deriveOnBg(base, tint, surfaces) {
+function deriveOnBg(base, tint, surfaces) {
   const list = Array.isArray(surfaces) ? surfaces : [surfaces]
   const solidTints = list.map(s => flatten(tint, s))
   const holds = color => solidTints.every(t => contrast(color, toHex(t)) >= TARGET)
