@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.6.3",
+  "version": "5.7.0",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -85,5 +85,9 @@
     "@types/react": "^19.2.16",
     "lucide-static": "1.28.0",
     "typescript": "^5.6.3"
+  },
+  "bin": {
+    "hadoku-check-icons": "./scripts/check-icons.mjs",
+    "hadoku-codemod-icons": "./scripts/codemod-icons.mjs"
   }
 }
