@@ -23,30 +23,21 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join, extname, relative, resolve, dirname, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadIconRegistry, MISSING_REGISTRY_MESSAGE } from './lib/icon-registry.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-// Read the generated registry without needing it compiled — this script runs from a
-// consumer repo where themes/dist may not exist.
-const REGISTRY = resolve(here, '../src/icons/registry.generated.ts')
-if (!existsSync(REGISTRY)) {
-  console.error('check-icons: registry.generated.ts is missing — run `pnpm run generate:icons`')
+// Prefer the authored .ts (no build needed in this workspace), fall back to the built
+// registry (the only tree a consumer install is guaranteed to carry). See lib/icon-registry.mjs.
+const { iconNames: ICON_NAMES, emojiMap: EMOJI_MAP_RAW } = await loadIconRegistry()
+
+if (!ICON_NAMES.size) {
+  console.error(`check-icons: ${MISSING_REGISTRY_MESSAGE}`)
   process.exit(1)
 }
-const registrySrc = readFileSync(REGISTRY, 'utf8')
-const body = registrySrc.slice(
-  registrySrc.indexOf('export const ICON_MARKUP'),
-  registrySrc.indexOf('export type IconName')
-)
-const ICON_NAMES = new Set([...body.matchAll(/^\s{2}'?([a-z0-9-]+)'?:/gm)].map(m => m[1]))
-
 if (process.argv.includes('--list')) {
   console.log([...ICON_NAMES].sort().join('\n'))
   process.exit(0)
-}
-if (!ICON_NAMES.size) {
-  console.error('check-icons: parsed 0 icons out of the registry — the generator format changed')
-  process.exit(1)
 }
 
 const args = process.argv.slice(2)
@@ -141,12 +132,10 @@ const isEmoji = seq => /\p{Extended_Pictographic}|\p{RI}\p{RI}|⃣/u.test(seq)
  * different ways. With the map, each finding is an edit rather than a decision —
  * and the mapping is settled once, here.
  */
-const EMOJI_MAP_PATH = resolve(here, '../src/icons/emoji-map.json')
 const EMOJI_MAP = new Map()
-if (existsSync(EMOJI_MAP_PATH)) {
-  const raw = JSON.parse(readFileSync(EMOJI_MAP_PATH, 'utf8'))
+if (EMOJI_MAP_RAW) {
   const unknown = []
-  for (const [emoji, name] of Object.entries(raw)) {
+  for (const [emoji, name] of Object.entries(EMOJI_MAP_RAW)) {
     if (emoji.startsWith('$')) continue
     if (!ICON_NAMES.has(name)) unknown.push(`${emoji} -> ${name}`)
     EMOJI_MAP.set(stripVs(emoji), name)

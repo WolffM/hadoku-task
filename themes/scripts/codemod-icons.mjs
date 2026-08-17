@@ -29,6 +29,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join, extname, relative, resolve, dirname, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadIconRegistry, MISSING_REGISTRY_MESSAGE } from './lib/icon-registry.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
@@ -40,7 +41,13 @@ if (!roots.length) {
   process.exit(1)
 }
 
-const MAP = JSON.parse(readFileSync(resolve(here, '../src/icons/emoji-map.json'), 'utf8'))
+// Same two-tree resolution as check-icons — an unguarded read here threw a raw
+// ENOENT stack at anyone running the codemod from a consumer install.
+const { emojiMap: MAP } = await loadIconRegistry()
+if (!MAP) {
+  console.error(`codemod-icons: ${MISSING_REGISTRY_MESSAGE}`)
+  process.exit(1)
+}
 const stripVs = s =>
   [...s]
     .filter(c => {
