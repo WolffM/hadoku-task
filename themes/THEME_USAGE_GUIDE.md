@@ -141,13 +141,20 @@ and no CSS can fix it. The package ships **78 vendored line icons** (artwork fro
 
 **Reference icons by name. Never inline your own SVG, and never add an emoji.**
 
-### Two consumption paths
+### Three consumption paths
 
 ```tsx
-// React
+// React, in an app that also uses the theming stack
 import { Icon } from '@wolffm/themes'
 ;<Icon name="popcorn" />
 ;<Icon name="popcorn" variant="tint" family="warning" />
+```
+
+```tsx
+// React, icons only — same component, none of the theming stack.
+// The root barrel re-exports useTheme, which imports @wolffm/prefs-client
+// and zod. If all you want is glyphs, take them from here instead.
+import { Icon } from '@wolffm/themes/icons/react'
 ```
 
 ```astro

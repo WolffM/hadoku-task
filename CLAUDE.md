@@ -50,7 +50,11 @@ differently on every OS and no CSS can fix it, so icons come from the enforced r
 in `@wolffm/themes` (129 glyphs, artwork vendored from Lucide, ISC).
 
 - React: `<Icon name="trash" />` from `@wolffm/themes`
+- React, icons only: same `<Icon>` from `@wolffm/themes/icons/react`. The root barrel pulls
+  `useTheme` -> `@wolffm/prefs-client` -> `zod`; this subpath pulls React and the registry and
+  nothing else, so an app that only wants glyphs doesn't bundle the theming stack.
 - Framework-free (Astro/Qwik/plain HTML): `getIconSvg('trash')` from `@wolffm/themes/icons`
+  (zero external imports — keep it that way; never import React into `src/icons/index.ts`)
 - Standalone page with no bundler: inline the SVG literally, sourced from the registry
 - Import `@wolffm/themes/icons.css` next to `style.css`, **unlayered**, or icons render at the wrong size
 

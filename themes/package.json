@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.7.2",
+  "version": "5.7.3",
   "description": "18 beautiful themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Strawberry, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -40,6 +40,10 @@
       "types": "./dist/icons/index.d.ts",
       "default": "./dist/icons/index.js"
     },
+    "./icons/react": {
+      "types": "./dist/icons/Icon.d.ts",
+      "default": "./dist/icons/Icon.js"
+    },
     "./check-icons": "./scripts/check-icons.mjs"
   },
   "scripts": {
@@ -70,16 +74,15 @@
   ],
   "author": "WolffM",
   "license": "MIT",
-  "peerDependencies": {
-    "@wolffm/prefs-client": "*",
-    "react": "^18.0.0 || ^19.0.0",
+  "dependencies": {
+    "@wolffm/prefs-client": "^1.0.7",
     "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
-      "optional": true
-    },
-    "@wolffm/task-ui-components": {
       "optional": true
     }
   },
