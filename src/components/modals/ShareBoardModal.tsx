@@ -8,7 +8,8 @@
 import React from 'react'
 import { Modal } from '@wolffm/task-ui-components'
 import type { Board } from '../../domain/types'
-import { SharePanel, type ShareApi } from './EditBoardsModal'
+import { SharePanel } from './SharePanel'
+import type { ShareApi } from './shareApi'
 
 export interface ShareBoardModalProps {
   isOpen: boolean

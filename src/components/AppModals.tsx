@@ -15,7 +15,7 @@ import {
   BoardContextMenu,
   TagContextMenu
 } from './modals'
-import type { ShareApi } from './modals/EditBoardsModal'
+import type { ShareApi } from './modals/shareApi'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 
