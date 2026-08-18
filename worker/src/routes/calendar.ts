@@ -68,7 +68,7 @@ export function createCalendarRoutes() {
     }
   })
 
-  app.openapi(getCalendarRoute, (async (c: any) => {
+  app.openapi(getCalendarRoute, async c => {
     const { ref } = c.req.valid('param')
     const { from, to, source } = c.req.valid('query')
 
@@ -78,7 +78,8 @@ export function createCalendarRoutes() {
     })
 
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx)
+      return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
 
     const result = await TaskHandlers.getBoardCalendar(ctx.storage, ctx.auth, ctx.boardId, {
       from,
@@ -88,24 +89,27 @@ export function createCalendarRoutes() {
     // Name the calendar from the board row — the ref may be a handle, which says
     // nothing about what the board is called.
     const cfg = await getBoardConfig(c.env.DB, ctx.ownerId, ctx.boardId)
-    return c.json({
-      // Echo the reference the CALLER used, not the owner's slug: that is the one
-      // that resolves for them on the next write.
-      board: ref,
-      calendar: {
-        ref,
-        name: cfg?.name ?? ctx.boardId,
-        canWrite: ctx.access !== 'readonly',
-        // The whole calendar, not the filtered window — `tasks` already says what
-        // the window holds.
-        scheduled: result.scheduled
+    return c.json(
+      {
+        // Echo the reference the CALLER used, not the owner's slug: that is the one
+        // that resolves for them on the next write.
+        board: ref,
+        calendar: {
+          ref,
+          name: cfg?.name ?? ctx.boardId,
+          canWrite: ctx.access !== 'readonly',
+          // The whole calendar, not the filtered window — `tasks` already says what
+          // the window holds.
+          scheduled: result.scheduled
+        },
+        from: result.from,
+        to: result.to,
+        count: result.tasks.length,
+        tasks: result.tasks
       },
-      from: result.from,
-      to: result.to,
-      count: result.tasks.length,
-      tasks: result.tasks
-    })
-  }) as never)
+      200
+    )
+  })
 
   return app
 }

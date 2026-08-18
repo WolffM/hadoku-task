@@ -130,9 +130,19 @@ export async function resolveOwnBoard(
   return row ? { boardId: row.id } : null
 }
 
+/**
+ * A grant a `board_shares` row can hold.
+ *
+ * NOT `Access`: that union includes 'owner', which describes a resolved board
+ * context rather than a stored grant — an owner is the board row, never a share
+ * row. The only write path is GrantShareInputSchema, whose level enum is exactly
+ * these two, and it is what the published GrantShareResponse has always said.
+ */
+export type ShareLevel = Exclude<Access, 'owner'>
+
 export interface ShareRow {
   granteeUserId: string
-  level: Access
+  level: ShareLevel
   createdAt: string
 }
 
@@ -158,7 +168,7 @@ export async function upsertShare(
   ownerId: string,
   boardId: string,
   granteeUserId: string,
-  level: Access,
+  level: ShareLevel,
   nowIso: string
 ): Promise<void> {
   await db

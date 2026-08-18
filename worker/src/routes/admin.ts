@@ -67,7 +67,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(getThrottleStatusRoute, (async (c: any) => {
+  app.openapi(getThrottleStatusRoute, async c => {
     const auth = c.get('authContext')
     if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -89,7 +89,7 @@ export function createAdminRoutes() {
       },
       200
     )
-  }) as never)
+  })
 
   // Get Sessions for Auth Key
   const getSessionsRoute = createRoute({
@@ -132,7 +132,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(getSessionsRoute, (async (c: any) => {
+  app.openapi(getSessionsRoute, async c => {
     const auth = c.get('authContext')
     if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -163,7 +163,7 @@ export function createAdminRoutes() {
       },
       200
     )
-  }) as never)
+  })
 
   // Unblacklist Session
   const unblacklistRoute = createRoute({
@@ -206,7 +206,7 @@ export function createAdminRoutes() {
     }
   })
 
-  app.openapi(unblacklistRoute, (async (c: any) => {
+  app.openapi(unblacklistRoute, async c => {
     const auth = c.get('authContext')
     if (!tierAtLeast(auth, 'admin')) {
       return c.json({ error: 'Admin access required' }, 403)
@@ -226,7 +226,7 @@ export function createAdminRoutes() {
       { success: true as const, message: `Session ${maskSessionId(sessionId)} unblacklisted` },
       200
     )
-  }) as never)
+  })
 
   return app
 }

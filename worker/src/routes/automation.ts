@@ -39,6 +39,7 @@ import {
   SetRepoInputSchema,
   SetRepoResponseSchema,
   ReconcileSharesInputSchema,
+  ReconcileBoardSchema,
   ReconcileSharesResponseSchema,
   ForbiddenErrorSchema,
   BoardNotFoundErrorSchema,
@@ -56,7 +57,10 @@ async function validateRepo(
 ): Promise<{
   repo: string
   valid: boolean
-  reason: string
+  // The exact five the published RepoValidateResponse enum names. `string` here
+  // meant the compiler could not tell whether the handler and the spec still
+  // agreed — and a sixth reason could have shipped without anyone noticing.
+  reason: 'ok' | 'not_found_or_no_access' | 'bad_format' | 'token' | 'error'
   private?: boolean
   defaultBranch?: string
   message?: string
@@ -150,12 +154,12 @@ export function createAutomationRoutes() {
       }
     }
   })
-  app.openapi(presetsRoute, (async (c: any) => {
+  app.openapi(presetsRoute, async c => {
     const auth = c.get('authContext')
-    if (!tierAtLeast(auth, 'friend')) return c.json({ presets: [], sources: [] })
+    if (!tierAtLeast(auth, 'friend')) return c.json({ presets: [], sources: [] }, 200)
     const result = await listPresets(c.env.AUTOMATION_PRESET_SOURCES)
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Set a board's repo (owner only). Auto-saved by the UI the moment a repo
   // validates, so there's no separate "save" button.
@@ -179,12 +183,15 @@ export function createAutomationRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(setRepoRoute, (async (c: any) => {
+  app.openapi(setRepoRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
-      return c.json({ error: 'Only the board owner can set the repo', code: 'FORBIDDEN' }, 403)
+      return c.json(
+        { error: 'Only the board owner can set the repo', code: 'FORBIDDEN' as const },
+        403
+      )
     }
     const body = c.req.valid('json') as { repo?: string | null }
     // Blank is a clear, not a value — the UI clears by emptying the field.
@@ -199,7 +206,7 @@ export function createAutomationRoutes() {
     // what the write actually did: 0 rows means there was no board to map, and
     // answering {ok:true} there hands a runner a checkout mapping that isn't stored.
     if (res.meta.changes === 0) {
-      return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+      return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
     }
     // Connecting a repo is all it should take for that repo's own agent to reach
     // the board, so grant its service key here rather than making every owner
@@ -218,8 +225,8 @@ export function createAutomationRoutes() {
           : `skipped:${serviceKeyShare.reason}`
       })
     })
-    return c.json({ ok: true, repo, ...(serviceKeyShare && { serviceKeyShare }) })
-  }) as never)
+    return c.json({ ok: true, repo, ...(serviceKeyShare && { serviceKeyShare }) }, 200)
+  })
 
   // What this board's repo has open that the pipeline could take on (§5.6).
   //
@@ -232,7 +239,7 @@ export function createAutomationRoutes() {
     tags: ['Automation'],
     summary: "Open issues/PRs on this board's repo that could be automated",
     description:
-      "Fetched server-side from TenHands (`/api/taskauto/actionable`), which has already dropped the pipeline's own `taskauto/*` PRs and bot authors. Addressed by the board's HANDLE, the same identifier the runner discovers boards by. `ok` means the answer is trustworthy, not that the list is non-empty: a board with no repo answers `ok:true` with `reason:\"no_repo\"` (definitely nothing to do), while a provider outage answers `ok:false` (unknown, do not present as an empty backlog). Nothing is created here — the caller creates ordinary Inbox tasks from the result.",
+      'Fetched server-side from TenHands (`/api/taskauto/actionable`), which has already dropped the pipeline\'s own `taskauto/*` PRs and bot authors. Addressed by the board\'s HANDLE, the same identifier the runner discovers boards by. `ok` means the answer is trustworthy, not that the list is non-empty: a board with no repo answers `ok:true` with `reason:"no_repo"` (definitely nothing to do), while a provider outage answers `ok:false` (unknown, do not present as an empty backlog). Nothing is created here — the caller creates ordinary Inbox tasks from the result.',
     request: { params: refParam },
     responses: {
       200: {
@@ -243,29 +250,30 @@ export function createAutomationRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(actionableRoute, (async (c: any) => {
+  app.openapi(actionableRoute, async c => {
     const auth = c.get('authContext')
     // A public visitor has no board to automate and no identity to scan with.
     if (!tierAtLeast(auth, 'friend')) {
-      return c.json({ ok: false, repo: null, items: [], reason: 'signed_out' })
+      return c.json({ ok: false, repo: null, items: [], reason: 'signed_out' }, 200)
     }
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     // Readonly can't create the tasks this feeds, so scanning for them is a
     // round-trip to the provider spent on a button that would never work.
     if (ctx.access === 'readonly') {
-      return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+      return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' as const }, 403)
     }
     const cfg = await getBoardConfig(c.env.DB, ctx.ownerId, ctx.boardId)
     // An unknown slug resolves to "your own not-yet-created board" (branch 4 of
     // resolveBoardAccess), so a null config here is a board that isn't stored.
-    if (!cfg) return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    if (!cfg)
+      return c.json({ error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
     if (cfg.mode !== 'automation') {
-      return c.json({ ok: true, repo: cfg.repo ?? null, items: [], reason: 'not_automation' })
+      return c.json({ ok: true, repo: cfg.repo ?? null, items: [], reason: 'not_automation' }, 200)
     }
     if (!cfg.repo?.trim()) {
-      return c.json({ ok: true, repo: null, items: [], reason: 'no_repo' })
+      return c.json({ ok: true, repo: null, items: [], reason: 'no_repo' }, 200)
     }
 
     // The board's OWN handle, not the ref the caller happened to use: a shared
@@ -279,8 +287,8 @@ export function createAutomationRoutes() {
       items: scan.items.length,
       ...(scan.reason && { reason: scan.reason })
     })
-    return c.json({ ...scan, repo: scan.repo ?? cfg.repo })
-  }) as never)
+    return c.json({ ...scan, repo: scan.repo ?? cfg.repo }, 200)
+  })
 
   // One-time (and re-runnable) reconcile of every link on the caller's OWN boards.
   //
@@ -314,7 +322,7 @@ export function createAutomationRoutes() {
       }
     }
   })
-  app.openapi(reconcileRoute, (async (c: any) => {
+  app.openapi(reconcileRoute, async c => {
     const auth = c.get('authContext')
     const body = (c.req.valid('json') ?? {}) as {
       dryRun?: boolean
@@ -337,7 +345,7 @@ export function createAutomationRoutes() {
       return c.json(
         {
           error: "Reconciling every owner's boards needs a service-tier key.",
-          code: 'FORBIDDEN'
+          code: 'FORBIDDEN' as const
         },
         403
       )
@@ -374,7 +382,11 @@ export function createAutomationRoutes() {
       })
     )
 
-    const report: Array<Record<string, unknown>> = []
+    // Typed from the schema the route publishes, not `Record<string, unknown>`:
+    // the report is the response body, so an untyped bag meant the compiler
+    // could not tell whether what reconcile builds still matches what the spec
+    // promises — including the `grants[].kind` and `outcome` enums.
+    const report: Array<z.infer<typeof ReconcileBoardSchema>> = []
     const tally = { granted: 0, escalated: 0, alreadyShared: 0, skipped: 0 }
 
     for (const b of boards as Array<{
@@ -383,7 +395,7 @@ export function createAutomationRoutes() {
       repo: string | null
       mode: string
     }>) {
-      const grants: Array<Record<string, unknown>> = []
+      const grants: z.infer<typeof ReconcileBoardSchema>['grants'] = []
       // In a cross-owner sweep the owner is the ROW's, not the caller's.
       const ownerId = b.user_id
       const isOwn = ownerId === auth.sessionId
@@ -488,20 +500,23 @@ export function createAutomationRoutes() {
       escalated: tally.escalated,
       skipped: tally.skipped
     })
-    return c.json({
-      dryRun,
-      allOwners,
-      summary: {
-        boardsScanned: boards.length,
-        boardsWithWork: report.length,
-        granted: tally.granted,
-        escalated: tally.escalated,
-        alreadyShared: tally.alreadyShared,
-        skipped: tally.skipped
+    return c.json(
+      {
+        dryRun,
+        allOwners,
+        summary: {
+          boardsScanned: boards.length,
+          boardsWithWork: report.length,
+          granted: tally.granted,
+          escalated: tally.escalated,
+          alreadyShared: tally.alreadyShared,
+          skipped: tally.skipped
+        },
+        boards: report
       },
-      boards: report
-    })
-  }) as never)
+      200
+    )
+  })
 
   // Validate a board's repo by probing GitHub. Signed-in only.
   const repoValidateRoute = createRoute({
@@ -517,20 +532,23 @@ export function createAutomationRoutes() {
       }
     }
   })
-  app.openapi(repoValidateRoute, (async (c: any) => {
+  app.openapi(repoValidateRoute, async c => {
     const auth = c.get('authContext')
     if (!tierAtLeast(auth, 'friend')) {
-      return c.json({
-        repo: '',
-        valid: false,
-        reason: 'token',
-        message: 'Sign in to validate repos.'
-      })
+      return c.json(
+        {
+          repo: '',
+          valid: false,
+          reason: 'token',
+          message: 'Sign in to validate repos.'
+        },
+        200
+      )
     }
     const { repo } = c.req.valid('query')
     const result = await validateRepo(repo, githubToken(c.env))
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Activate (or re-activate) automation — owner only, preview-then-commit.
   const activateRoute = createRoute({
@@ -559,15 +577,15 @@ export function createAutomationRoutes() {
       422: { description: 'Invalid lane set (LANE_SET_INVALID)', content: laneSetInvalid }
     }
   })
-  app.openapi(activateRoute, (async (c: any) => {
+  app.openapi(activateRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     // Readonly never writes. Owner vs contributor is decided INSIDE
     // activateAutomation, which is where the preview exists: a contributor may
     // upgrade an already-automated board when the new lane set strands nothing.
     if (ctx.access === 'readonly') {
-      return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+      return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' as const }, 403)
     }
     const body = c.req.valid('json') as {
       schemaId?: string | null
@@ -619,14 +637,17 @@ export function createAutomationRoutes() {
           repoShare: repoShare.granted ? `granted:${repoShare.name}` : `skipped:${repoShare.reason}`
         })
       })
-      return c.json({
-        ...result,
-        automationRunnerShare: share,
-        ...(repoShare && { repoServiceKeyShare: repoShare })
-      })
+      return c.json(
+        {
+          ...result,
+          automationRunnerShare: share,
+          ...(repoShare && { repoServiceKeyShare: repoShare })
+        },
+        200
+      )
     }
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Deactivate automation — owner only. Restores the pre-activation tag list.
   const deactivateRoute = createRoute({
@@ -644,20 +665,20 @@ export function createAutomationRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(deactivateRoute, (async (c: any) => {
+  app.openapi(deactivateRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
       return c.json(
-        { error: 'Only the board owner can deactivate automation', code: 'FORBIDDEN' },
+        { error: 'Only the board owner can deactivate automation', code: 'FORBIDDEN' as const },
         403
       )
     }
     logRequest('POST', `/task/api/boards/${ref}/deactivate-automation`, { board: ctx.boardId })
     const result = await deactivateAutomation(c.env.DB, ctx.ownerId, ctx.boardId)
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   return app
 }

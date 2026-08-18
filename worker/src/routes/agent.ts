@@ -12,7 +12,7 @@
  * Declared with createRoute so the routes validate and appear in the OpenAPI spec.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { getBoardContext, type BoardCtx } from './route-utils'
+import { getBoardContext } from './route-utils'
 import {
   claimTask,
   heartbeatClaim,
@@ -49,6 +49,7 @@ import {
   NotesTooLargeErrorSchema
 } from '../schemas-agent'
 import { DEFAULT_SESSION_ID } from '../constants'
+import type { Context } from 'hono'
 import type { AppContext } from '../types'
 
 // Each error response is typed to the codes THAT route+status can actually emit,
@@ -66,12 +67,18 @@ const notesTooLarge = { 'application/json': { schema: NotesTooLargeErrorSchema }
 /**
  * Resolve the board for a write on the agent path. Returns the resolved BoardCtx,
  * or a Response (404 unshared / 403 readonly) the caller returns as-is.
+ *
+ * The return type is inferred, not annotated: writing `Promise<BoardCtx | Response>`
+ * flattened both error arms to a bare `Response`, which is what stopped the
+ * caller's handler from type-checking against its route and forced the
+ * `as never` cast. `instanceof Response` still narrows, because the typed
+ * responses c.json() returns are Responses.
  */
-async function boardForWrite(c: any, ref: string): Promise<BoardCtx | Response> {
+async function boardForWrite(c: Context<AppContext>, ref: string) {
   const ctx = await getBoardContext(c, ref)
-  if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+  if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
   if (ctx.access === 'readonly') {
-    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' as const }, 403)
   }
   return ctx
 }
@@ -100,7 +107,7 @@ export function createAgentRoutes() {
       422: { description: 'Unknown destination lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
-  app.openapi(claimRoute, (async (c: any) => {
+  app.openapi(claimRoute, async c => {
     const body = c.req.valid('json') as {
       board: string
       taskId: string
@@ -117,8 +124,8 @@ export function createAgentRoutes() {
       mode: ctx.mode,
       lanes: ctx.lanes
     })
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Extend a lease. 409 LEASE_LOST if the token no longer holds the claim.
   const heartbeatRoute = createRoute({
@@ -137,7 +144,7 @@ export function createAgentRoutes() {
       409: { description: 'Lease was taken (LEASE_LOST)', content: leaseLost }
     }
   })
-  app.openapi(heartbeatRoute, (async (c: any) => {
+  app.openapi(heartbeatRoute, async c => {
     const body = c.req.valid('json') as {
       board: string
       taskId: string
@@ -153,8 +160,8 @@ export function createAgentRoutes() {
       body.token,
       body.leaseSeconds
     )
-    return c.json({ ok: true, ...result })
-  }) as never)
+    return c.json({ ok: true, ...result }, 200)
+  })
 
   // Move a task's lane while holding the claim.
   const setLaneRoute = createRoute({
@@ -174,7 +181,7 @@ export function createAgentRoutes() {
       422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
-  app.openapi(setLaneRoute, (async (c: any) => {
+  app.openapi(setLaneRoute, async c => {
     const body = c.req.valid('json') as {
       board: string
       taskId: string
@@ -195,8 +202,8 @@ export function createAgentRoutes() {
         lanes: ctx.lanes
       }
     )
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Release the claim: move to a lane, write notes/metadata, unclaim. Idempotent on token.
   const releaseRoute = createRoute({
@@ -226,7 +233,7 @@ export function createAgentRoutes() {
       422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
     }
   })
-  app.openapi(releaseRoute, (async (c: any) => {
+  app.openapi(releaseRoute, async c => {
     const body = c.req.valid('json') as {
       board: string
       taskId: string
@@ -250,8 +257,8 @@ export function createAgentRoutes() {
       mode: ctx.mode,
       lanes: ctx.lanes
     })
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Cancel a claim — the board OWNER force-drops a stuck/held claim by hand.
   const cancelRoute = createRoute({
@@ -269,16 +276,19 @@ export function createAgentRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(cancelRoute, (async (c: any) => {
+  app.openapi(cancelRoute, async c => {
     const body = c.req.valid('json') as { board: string; taskId: string }
     const ctx = await getBoardContext(c, body.board)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
-      return c.json({ error: 'Only the board owner can cancel a claim', code: 'FORBIDDEN' }, 403)
+      return c.json(
+        { error: 'Only the board owner can cancel a claim', code: 'FORBIDDEN' as const },
+        403
+      )
     }
     const result = await cancelClaim(c.env.DB, ctx.ownerId, body.taskId)
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   // Claim history for a task (read; any access to the board).
   const historyRoute = createRoute({
@@ -300,13 +310,13 @@ export function createAgentRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(historyRoute, (async (c: any) => {
+  app.openapi(historyRoute, async c => {
     const { board: ref, task: taskId } = c.req.valid('query')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     const history = await getClaimHistory(c.env.DB, ctx.ownerId, taskId)
-    return c.json({ history })
-  }) as never)
+    return c.json({ history }, 200)
+  })
 
   // One board, fully hydrated (§5.5): metadata (repo, mode, lanes) + its tasks,
   // each flagged `claimed` if a live lease holds it. Resolves through sharing.
@@ -328,12 +338,12 @@ export function createAgentRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(hydratedRoute, (async (c: any) => {
+  app.openapi(hydratedRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     const cfg = await getBoardConfig(c.env.DB, ctx.ownerId, ctx.boardId)
-    if (!cfg) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!cfg) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     const [file, claimed] = await Promise.all([
       ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
       liveClaimedTaskIds(c.env.DB, ctx.ownerId, ctx.boardId)
@@ -358,24 +368,27 @@ export function createAgentRoutes() {
       warmPresets(binding, c)
     }
 
-    return c.json({
-      board: {
-        id: ctx.boardId,
-        name: cfg.name,
-        handle: cfg.handle,
-        repo: cfg.repo,
-        mode: cfg.mode,
-        lanes: cfg.lanes,
-        schemaId: cfg.schemaId,
-        schemaVersion: cfg.schemaVersion,
-        access: ctx.access,
-        ownerUserId: ctx.ownerId,
-        ...(presetUpdate ? { presetUpdate } : {})
+    return c.json(
+      {
+        board: {
+          id: ctx.boardId,
+          name: cfg.name,
+          handle: cfg.handle,
+          repo: cfg.repo,
+          mode: cfg.mode,
+          lanes: cfg.lanes,
+          schemaId: cfg.schemaId,
+          schemaVersion: cfg.schemaVersion,
+          access: ctx.access,
+          ownerUserId: ctx.ownerId,
+          ...(presetUpdate ? { presetUpdate } : {})
+        },
+        tasks: file.tasks.map(t => ({ ...t, claimed: claimed.has(t.id) })),
+        version: file.version ?? 1
       },
-      tasks: file.tasks.map(t => ({ ...t, claimed: claimed.has(t.id) })),
-      version: file.version ?? 1
-    })
-  }) as never)
+      200
+    )
+  })
 
   // Change feed (§4.4): the caller's own tasks since a cursor. `since` is
   // "<updated_at>,<id>"; omit for a full initial sweep.
@@ -400,7 +413,7 @@ export function createAgentRoutes() {
       }
     }
   })
-  app.openapi(changesRoute, (async (c: any) => {
+  app.openapi(changesRoute, async c => {
     const auth = c.get('authContext')
     const ownerId = auth?.sessionId ?? DEFAULT_SESSION_ID
     const { since, limit: limitStr } = c.req.valid('query')
@@ -411,8 +424,8 @@ export function createAgentRoutes() {
       if (comma > 0) cursor = { updatedAt: since.slice(0, comma), id: since.slice(comma + 1) }
     }
     const result = await getChanges(c.env.DB, ownerId, cursor, Number.isNaN(limit) ? 100 : limit)
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   return app
 }

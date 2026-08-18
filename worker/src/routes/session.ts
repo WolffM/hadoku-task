@@ -4,15 +4,18 @@
  * Handles session handshake endpoint for establishing and migrating sessions
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { badRequest, maskKey, maskSessionId } from '@wolffm/worker-utils'
+import { maskKey, maskSessionId } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { handleSessionHandshake } from '../session'
 import type { AppContext } from '../types'
 import {
   SessionHandshakeInputSchema,
   SessionHandshakeResponseSchema,
-  ErrorResponseSchema
+  ApiErrorSchema
 } from '../schemas'
+
+/** The timestamp worker-utils' badRequest() puts on the wire — kept identical. */
+const now = () => new Date().toISOString()
 
 export function createSessionRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -50,20 +53,20 @@ export function createSessionRoutes() {
         description: 'Invalid request',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema
+            schema: ApiErrorSchema
           }
         }
       }
     }
   })
 
-  app.openapi(handshakeRoute, (async (c: any) => {
+  app.openapi(handshakeRoute, async c => {
     try {
       const auth = c.get('authContext')
       const body = c.req.valid('json')
 
       if (!body.newSessionId) {
-        return badRequest(c, 'newSessionId is required')
+        return c.json({ error: 'newSessionId is required', timestamp: now() }, 400)
       }
 
       const authKey = auth.key || auth.sessionId || 'public'
@@ -96,9 +99,9 @@ export function createSessionRoutes() {
         '/task/api/session/handshake',
         error instanceof Error ? error : new Error(errorMessage)
       )
-      return badRequest(c, `Handshake failed: ${errorMessage}`)
+      return c.json({ error: `Handshake failed: ${errorMessage}`, timestamp: now() }, 400)
     }
-  }) as never)
+  })
 
   return app
 }

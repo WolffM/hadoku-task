@@ -5,7 +5,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { badRequest, requireFields } from '@wolffm/worker-utils'
+import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
 import { annotatedSharesByBoard } from './shares'
@@ -42,7 +42,7 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(getBoardsRoute, (async (c: any) => {
+  app.openapi(getBoardsRoute, async c => {
     const authContext = c.get('authContext')
     logRequest('GET', '/task/api/boards', { userType: authContext.userType })
 
@@ -104,7 +104,7 @@ export function createBoardRoutes() {
       },
       200
     )
-  }) as never)
+  })
 
   // Create a New Board
   const createBoardRoute = createRoute({
@@ -142,13 +142,13 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(createBoardRoute, (async (c: any) => {
+  app.openapi(createBoardRoute, async c => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['id', 'name'])
     if (error) {
       logError('POST', '/task/api/boards', error)
-      return badRequest(c, error)
+      return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('POST', '/task/api/boards', {
@@ -169,7 +169,7 @@ export function createBoardRoutes() {
       c.header('ETag', `"${v}"`)
     }
     return c.json(result, 200)
-  }) as never)
+  })
 
   // Delete a Board
   const deleteBoardRoute = createRoute({
@@ -203,13 +203,13 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(deleteBoardRoute, (async (c: any) => {
+  app.openapi(deleteBoardRoute, async c => {
     const { boardId } = c.req.valid('param')
 
     const validationError = validateBoardId(boardId)
     if (validationError) {
       logError('DELETE', '/task/api/boards/:boardId', validationError)
-      return badRequest(c, validationError)
+      return c.json({ error: validationError, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('DELETE', `/task/api/boards/${boardId}`, {
@@ -230,7 +230,7 @@ export function createBoardRoutes() {
       c.header('ETag', `"${v}"`)
     }
     return c.json(result, 200)
-  }) as never)
+  })
 
   // Update a board's metadata (rename). Goes through board-collection OCC.
   const updateBoardRoute = createRoute({
@@ -262,14 +262,14 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(updateBoardRoute, (async (c: any) => {
+  app.openapi(updateBoardRoute, async c => {
     const { boardId } = c.req.valid('param')
     const body = c.req.valid('json')
 
     const validationError = validateBoardId(boardId)
     if (validationError) {
       logError('PATCH', '/task/api/boards/:boardId', validationError)
-      return badRequest(c, validationError)
+      return c.json({ error: validationError, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('PATCH', `/task/api/boards/${boardId}`, {
@@ -288,7 +288,7 @@ export function createBoardRoutes() {
     const v = (result as unknown as { version?: number }).version
     if (typeof v === 'number') c.header('ETag', `"${v}"`)
     return c.json(result, 200)
-  }) as never)
+  })
 
   // Set the pinned board set + order (pin, unpin, reorder in one write).
   const setPinnedRoute = createRoute({
@@ -319,7 +319,7 @@ export function createBoardRoutes() {
     }
   })
 
-  app.openapi(setPinnedRoute, (async (c: any) => {
+  app.openapi(setPinnedRoute, async c => {
     const body = c.req.valid('json')
 
     logRequest('PUT', '/task/api/boards/pinned', {
@@ -338,7 +338,7 @@ export function createBoardRoutes() {
     const v = (result as unknown as { version?: number }).version
     if (typeof v === 'number') c.header('ETag', `"${v}"`)
     return c.json(result, 200)
-  }) as never)
+  })
 
   return app
 }

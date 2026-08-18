@@ -112,6 +112,36 @@ export const BoardNotFoundErrorSchema = narrowError(
   'No such board, or it is not shared with you.'
 )
 
+/**
+ * The 403/404 pair every board-scoped route can return, ready to spread into a
+ * `responses` block.
+ *
+ * These come from the shared wrappers — `handleBoardOperation` in route-utils
+ * answers 404 BOARD_NOT_FOUND for an unresolvable ref and 403 FORBIDDEN for a
+ * readonly grantee — so a route that delegates to them can emit both without
+ * saying so anywhere in its own file. Until the handlers were type-checked
+ * against their routes, most of them didn't: the spec advertised 200 only, and
+ * a generated client had no reason to expect either status.
+ */
+export const boardErrorResponses = {
+  403: {
+    description: 'Read-only access to this board, or the route is owner-only (FORBIDDEN)',
+    content: { 'application/json': { schema: ForbiddenErrorSchema } }
+  },
+  404: {
+    description: 'No such board, or it is not shared with you (BOARD_NOT_FOUND)',
+    content: { 'application/json': { schema: BoardNotFoundErrorSchema } }
+  }
+}
+
+/** Just the 404 half, for read routes that cannot 403. */
+export const boardNotFoundResponse = {
+  404: {
+    description: 'No such board, or it is not shared with you (BOARD_NOT_FOUND)',
+    content: { 'application/json': { schema: BoardNotFoundErrorSchema } }
+  }
+}
+
 /** 404 on claim / release: the board resolves but the task row may not. */
 export const TaskOrBoardNotFoundErrorSchema = narrowError(
   'TaskOrBoardNotFoundError',

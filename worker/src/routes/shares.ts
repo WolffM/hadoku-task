@@ -10,7 +10,7 @@
  * generated OpenAPI spec (schemas-agent.ts).
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { badRequest, tierAtLeast } from '@wolffm/worker-utils'
+import { tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { listShares, upsertShare, removeShare, resolveOwnBoard } from './board-sharing'
@@ -46,7 +46,7 @@ type GranteeOk = { userId: string; name?: string | null; tier?: string }
 const noUserId: GranteeError = {
   error: 'That key has never signed in, so it has no id yet.',
   status: 409,
-  code: 'NO_USER_ID'
+  code: 'NO_USER_ID' as const
 }
 
 /**
@@ -74,7 +74,7 @@ async function resolveGrantee(
       return {
         error: `No registered key named "${input.name}".`,
         status: 404,
-        code: 'NAME_NOT_FOUND'
+        code: 'NAME_NOT_FOUND' as const
       }
     }
     if (!row.userId) return noUserId
@@ -534,17 +534,17 @@ export function createShareRoutes() {
       }
     }
   })
-  app.openapi(searchRoute, (async (c: any) => {
+  app.openapi(searchRoute, async c => {
     const auth = c.get('authContext')
     // Only signed-in users may enumerate names (avoids anonymous scraping).
     if (!tierAtLeast(auth, 'friend')) {
-      return c.json({ users: [] })
+      return c.json({ users: [] }, 200)
     }
     const { q, limit } = c.req.valid('query')
     const n = Math.min(Math.max(1, parseInt(limit ?? '8', 10) || 8), 20)
     const users = await searchRegistryNames(c.env, q, n)
-    return c.json({ users })
-  }) as never)
+    return c.json({ users }, 200)
+  })
 
   // Grant (or update) a share — owner only.
   const grantRoute = createRoute({
@@ -570,12 +570,15 @@ export function createShareRoutes() {
       409: { description: 'Named key never signed in (NO_USER_ID)', content: noUserIdErr }
     }
   })
-  app.openapi(grantRoute, (async (c: any) => {
+  app.openapi(grantRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
-      return c.json({ error: 'Only the board owner can manage shares', code: 'FORBIDDEN' }, 403)
+      return c.json(
+        { error: 'Only the board owner can manage shares', code: 'FORBIDDEN' as const },
+        403
+      )
     }
     const body = c.req.valid('json') as {
       name?: string
@@ -590,12 +593,24 @@ export function createShareRoutes() {
       userId: body.userId
     })
     if ('error' in grantee) {
-      const b: Record<string, unknown> = { error: grantee.error }
-      if (grantee.code) b.code = grantee.code
-      return c.json(b, grantee.status)
+      // Discriminated rather than posted as one untyped bag with a dynamic
+      // status: each declared response has its own schema (404 carries a
+      // NAME_NOT_FOUND code, 409 a NO_USER_ID one, 400 neither), and only a
+      // literal status lets the compiler check the body against the right one.
+      // The wire is unchanged — resolveGrantee sets `code` on exactly these two.
+      if (grantee.status === 404) {
+        return c.json({ error: grantee.error, code: 'NAME_NOT_FOUND' as const }, 404)
+      }
+      if (grantee.status === 409) {
+        return c.json({ error: grantee.error, code: 'NO_USER_ID' as const }, 409)
+      }
+      return c.json({ error: grantee.error }, 400)
     }
     if (grantee.userId === ctx.ownerId) {
-      return badRequest(c, 'The owner already has full access.')
+      return c.json(
+        { error: 'The owner already has full access.', timestamp: new Date().toISOString() },
+        400
+      )
     }
 
     // Never log the key — only the (masked) resolved id + display name.
@@ -607,14 +622,17 @@ export function createShareRoutes() {
 
     await upsertShare(c.env.DB, ctx.ownerId, ctx.boardId, grantee.userId, body.level, nowIso())
     // Echo what was granted so the owner can confirm it's the right identity/tier.
-    return c.json({
-      ok: true,
-      granteeUserId: grantee.userId,
-      granteeName: grantee.name ?? null,
-      level: body.level,
-      granted: { name: grantee.name ?? null, tier: grantee.tier ?? null, level: body.level }
-    })
-  }) as never)
+    return c.json(
+      {
+        ok: true,
+        granteeUserId: grantee.userId,
+        granteeName: grantee.name ?? null,
+        level: body.level,
+        granted: { name: grantee.name ?? null, tier: grantee.tier ?? null, level: body.level }
+      },
+      200
+    )
+  })
 
   // List shares on a board — owner only.
   const listRoute = createRoute({
@@ -632,12 +650,15 @@ export function createShareRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(listRoute, (async (c: any) => {
+  app.openapi(listRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
-      return c.json({ error: 'Only the board owner can view shares', code: 'FORBIDDEN' }, 403)
+      return c.json(
+        { error: 'Only the board owner can view shares', code: 'FORBIDDEN' as const },
+        403
+      )
     }
     const shares = await listShares(c.env.DB, ctx.ownerId, ctx.boardId)
     // Annotate each grantee with their display name + tier (one registry scan)
@@ -647,8 +668,8 @@ export function createShareRoutes() {
       const who = names.get(s.granteeUserId)
       return { ...s, name: who?.name ?? null, tier: who?.tier ?? null }
     })
-    return c.json({ shares: annotated })
-  }) as never)
+    return c.json({ shares: annotated }, 200)
+  })
 
   // Leave a shared board — grantee removes their OWN access, no owner involved.
   const leaveRoute = createRoute({
@@ -666,17 +687,23 @@ export function createShareRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(leaveRoute, (async (c: any) => {
+  app.openapi(leaveRoute, async c => {
     const { ref } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access === 'owner') {
-      return badRequest(c, "You own this board; you can't leave it. Delete it instead.")
+      return c.json(
+        {
+          error: "You own this board; you can't leave it. Delete it instead.",
+          timestamp: new Date().toISOString()
+        },
+        400
+      )
     }
     logRequest('DELETE', `/task/api/boards/${ref}/shares/me`, { board: ctx.boardId })
     await removeShare(c.env.DB, ctx.ownerId, ctx.boardId, ctx.callerId)
-    return c.json({ ok: true, left: true })
-  }) as never)
+    return c.json({ ok: true, left: true }, 200)
+  })
 
   // Revoke a grantee's access — owner only.
   const revokeRoute = createRoute({
@@ -698,22 +725,25 @@ export function createShareRoutes() {
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound }
     }
   })
-  app.openapi(revokeRoute, (async (c: any) => {
+  app.openapi(revokeRoute, async c => {
     const { ref, granteeUserId } = c.req.valid('param')
     const ctx = await getBoardContext(c, ref)
-    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     if (ctx.access !== 'owner') {
-      return c.json({ error: 'Only the board owner can revoke shares', code: 'FORBIDDEN' }, 403)
+      return c.json(
+        { error: 'Only the board owner can revoke shares', code: 'FORBIDDEN' as const },
+        403
+      )
     }
     // Guard: the owner's board must actually resolve to their own row.
     const own = await resolveOwnBoard(c.env.DB, ctx.ownerId, ref)
-    if (!own) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' }, 404)
+    if (!own) return c.json({ error: 'Board not found', code: 'BOARD_NOT_FOUND' as const }, 404)
     logRequest('DELETE', `/task/api/boards/${ref}/shares/${granteeUserId.slice(0, 8)}…`, {
       board: ctx.boardId
     })
     const removed = await removeShare(c.env.DB, ctx.ownerId, ctx.boardId, granteeUserId)
-    return c.json({ ok: true, removed })
-  }) as never)
+    return c.json({ ok: true, removed }, 200)
+  })
 
   return app
 }

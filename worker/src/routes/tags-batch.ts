@@ -5,7 +5,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers, BoardSchemaLockedError } from '@wolffm/task/api'
-import { badRequest, requireFields } from '@wolffm/worker-utils'
+import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
   getBoardContext,
@@ -36,6 +36,8 @@ import {
   BatchClearTagResponseSchema,
   ErrorResponseSchema
 } from '../schemas'
+import { boardErrorResponses } from '../schemas-agent'
+import type { Context } from 'hono'
 import type { AppContext } from '../types'
 
 /**
@@ -44,7 +46,7 @@ import type { AppContext } from '../types'
  * throw 409 BOARD_SCHEMA_LOCKED. Scoped to the caller's own board (activation is
  * owner-only, so only an owner ever has an automation board to lock).
  */
-async function assertBoardNotLocked(c: any, boardId: string): Promise<void> {
+async function assertBoardNotLocked(c: Context<AppContext>, boardId: string): Promise<void> {
   const auth = c.get('authContext')
   const ownerId = auth?.sessionId ?? DEFAULT_SESSION_ID
   const cfg = await getBoardConfig(c.env.DB, ownerId, boardId)
@@ -69,20 +71,26 @@ async function assertBoardNotLocked(c: any, boardId: string): Promise<void> {
  * The dispatch fires ONCE per request: a multi-card drag is one human gesture, so
  * it is one wake signal, not N.
  */
-async function batchUpdateTags(c: any, boardId: string): Promise<Response> {
-  const body = c.req.valid('json')
-
+async function batchUpdateTags(
+  c: Context<AppContext>,
+  boardId: string,
+  // Passed in rather than read via c.req.valid('json'): only the route handler's
+  // own context knows the validated body's type, and this helper is shared by
+  // two routes on different paths. Typed from the schema both of them validate
+  // against, so it cannot drift from what the caller actually hands over.
+  body: z.infer<typeof BatchUpdateTagsInputSchema>
+) {
   const error = requireFields(body, ['updates'])
   if (error) {
-    return badRequest(c, error)
+    return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
   }
 
   const ctx = await getBoardContext(c, boardId)
   if (!ctx) {
-    return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
   }
   if (ctx.access === 'readonly') {
-    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' as const }, 403)
   }
 
   const updates = (body.updates ?? []) as Array<{ taskId?: string; tag?: string | null }>
@@ -162,13 +170,13 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(createTagRoute, (async (c: any) => {
+  app.openapi(createTagRoute, async c => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['boardId', 'tag'])
     if (error) {
       logError('POST', '/task/api/tags', error)
-      return badRequest(c, error)
+      return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('POST', '/task/api/tags', {
@@ -179,7 +187,7 @@ export function createTagsBatchRoutes() {
 
     await assertBoardNotLocked(c, body.boardId)
     return handleOperation(c, (storage, auth) => TaskHandlers.createTag(storage, auth, body))
-  }) as never)
+  })
 
   // Delete Tag
   const deleteTagRoute = createRoute({
@@ -217,13 +225,13 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(deleteTagRoute, (async (c: any) => {
+  app.openapi(deleteTagRoute, async c => {
     const body = c.req.valid('json')
 
     const error = requireFields(body, ['boardId', 'tag'])
     if (error) {
       logError('POST', '/task/api/tags/delete', error)
-      return badRequest(c, error)
+      return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('POST', '/task/api/tags/delete', {
@@ -234,7 +242,7 @@ export function createTagsBatchRoutes() {
 
     await assertBoardNotLocked(c, body.boardId)
     return handleOperation(c, (storage, auth) => TaskHandlers.deleteTag(storage, auth, body))
-  }) as never)
+  })
 
   // ============================================================================
   // Batch Operations
@@ -275,11 +283,12 @@ export function createTagsBatchRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(batchUpdateTagsWithParamRoute, (async (c: any) => {
+  app.openapi(batchUpdateTagsWithParamRoute, async c => {
     const { boardId: boardIdFromParam } = c.req.valid('param')
     const body = c.req.valid('json')
     const boardId = boardIdFromParam || body.boardId || 'main'
@@ -289,8 +298,8 @@ export function createTagsBatchRoutes() {
       boardId
     })
 
-    return batchUpdateTags(c, boardId)
-  }) as never)
+    return batchUpdateTags(c, boardId, c.req.valid('json'))
+  })
 
   // Batch Update Tags (legacy alias)
   const batchUpdateTagsLegacyRoute = createRoute({
@@ -324,11 +333,12 @@ export function createTagsBatchRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(batchUpdateTagsLegacyRoute, (async (c: any) => {
+  app.openapi(batchUpdateTagsLegacyRoute, async c => {
     const body = c.req.valid('json')
     const boardId = body.boardId || 'main'
 
@@ -337,8 +347,8 @@ export function createTagsBatchRoutes() {
       boardId
     })
 
-    return batchUpdateTags(c, boardId)
-  }) as never)
+    return batchUpdateTags(c, boardId, c.req.valid('json'))
+  })
 
   // Batch Move Tasks
   const batchMoveTasksRoute = createRoute({
@@ -376,7 +386,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchMoveTasksRoute, (async (c: any) => {
+  app.openapi(batchMoveTasksRoute, async c => {
     logRequest('POST', '/task/api/batch/move-tasks', {
       userType: c.get('authContext').userType
     })
@@ -395,7 +405,7 @@ export function createTagsBatchRoutes() {
         boardLockKey(sessionId, body.targetBoardId as string)
       ]
     )
-  }) as never)
+  })
 
   // Batch Move Tasks (legacy alias)
   const batchMoveLegacyRoute = createRoute({
@@ -433,7 +443,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchMoveLegacyRoute, (async (c: any) => {
+  app.openapi(batchMoveLegacyRoute, async c => {
     logRequest('POST', '/task/api/batch-move', {
       userType: c.get('authContext').userType
     })
@@ -452,7 +462,7 @@ export function createTagsBatchRoutes() {
         boardLockKey(sessionId, body.targetBoardId as string)
       ]
     )
-  }) as never)
+  })
 
   // Batch Clear Tag
   const batchClearTagRoute = createRoute({
@@ -490,7 +500,7 @@ export function createTagsBatchRoutes() {
     }
   })
 
-  app.openapi(batchClearTagRoute, (async (c: any) => {
+  app.openapi(batchClearTagRoute, async c => {
     const preview = await c.req.json()
     logRequest('POST', '/task/api/batch-clear-tag', {
       userType: c.get('authContext').userType
@@ -508,7 +518,7 @@ export function createTagsBatchRoutes() {
         ),
       (body, sessionId) => [boardLockKey(sessionId, body.boardId as string)]
     )
-  }) as never)
+  })
 
   return app
 }

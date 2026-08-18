@@ -31,8 +31,11 @@ import { logger } from './logger'
 
 export interface UserPreferences {
   theme?: string
-  buttons?: Record<string, unknown>
-  experimentalFlags?: Record<string, unknown>
+  // `unknown` here was looser than the published contract, which has always
+  // said boolean (UserPreferencesSchema) — these are on/off toggles per button
+  // and per flag. The gap only survived because the route handlers took `c: any`.
+  buttons?: Record<string, boolean>
+  experimentalFlags?: Record<string, boolean>
   layout?: Record<string, unknown>
   deviceInfo?: Record<string, unknown>
   lastUpdated?: string
@@ -333,7 +336,12 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 }
 
 export interface HandshakeRequest {
-  oldSessionId: string | null
+  /**
+   * Optional AND nullable, matching SessionHandshakeInputSchema. Declaring it
+   * `string | null` was only tenable while the route handler took `c: any`;
+   * the request body genuinely omits it on a first login.
+   */
+  oldSessionId?: string | null
   newSessionId: string
 }
 

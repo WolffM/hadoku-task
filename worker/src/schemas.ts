@@ -13,6 +13,32 @@ import {
 
 // Re-export shared schemas for convenience
 export { ValidationErrorResponseSchema }
+/**
+ * The error body this API actually returns, which is not what
+ * `ErrorResponseSchema` (worker-utils' SimpleErrorResponse) describes.
+ *
+ * Two shapes reach the wire and neither matched the declared `{error, message?}`:
+ *
+ *   - handlers return `{ error, code? }`, where `code` is the machine-readable
+ *     discriminator agents branch on — BOARD_NOT_FOUND, LANE_NOT_EDITABLE,
+ *     DIGEST_MISMATCH. It was entirely undocumented despite being the field a
+ *     generated client most needs.
+ *   - worker-utils' `badRequest()` returns `{ error, details?, timestamp }`.
+ *
+ * This is the union of both, so it describes every error response honestly.
+ * `message` is kept optional for anything still emitting the older shape.
+ */
+export const ApiErrorSchema = z
+  .object({
+    error: z.string().openapi({ example: 'Board not found' }),
+    /** Machine-readable discriminator. Absent on generic failures. */
+    code: z.string().optional().openapi({ example: 'BOARD_NOT_FOUND' }),
+    message: z.string().optional(),
+    details: z.unknown().optional(),
+    timestamp: z.string().optional().openapi({ example: '2026-01-15T10:30:00.000Z' })
+  })
+  .openapi('ApiError')
+
 export const ErrorResponseSchema = SimpleErrorResponseSchema
 export const ThrottleErrorResponseSchema = SharedThrottleErrorResponseSchema
 export const HealthResponseSchema = TaskApiHealthResponseSchema
@@ -65,7 +91,16 @@ export const StatsCountersSchema = z
 export const TimelineEventSchema = z
   .object({
     t: z.string().openapi({ example: '2024-01-15T10:30:00.000Z' }),
-    event: z.enum(['created', 'completed', 'edited', 'deleted']).openapi({ example: 'created' }),
+    /**
+     * Mirrors `StatsEventType` in src/domain/types.ts. `uncompleted` was missing
+     * here: it is a real timeline event — the ✓-toggle undoing a completion — and
+     * a strict client parsing the timeline would have rejected a valid board.
+     * It is deliberately NOT a counter, because `counters.completed` is the NET
+     * count (complete → uncomplete → complete reads as one completion).
+     */
+    event: z
+      .enum(['created', 'completed', 'edited', 'deleted', 'uncompleted'])
+      .openapi({ example: 'created' }),
     id: z.string().optional().openapi({ example: '01HXYZ123ABC' })
   })
   .openapi('TimelineEvent')
@@ -449,11 +484,20 @@ export const UpdatePreferencesResponseSchema = z
 // ============================================================================
 
 // GET /admin/throttle/:sessionId
+/**
+ * Mirrors `ThrottleState` in worker/src/throttle.ts, which is what
+ * GET /admin/throttle/{sessionId} serialises verbatim.
+ *
+ * The counter is `count`, not `requestCount` — the documented name never
+ * existed on the wire, so a generated client read undefined for the one number
+ * the endpoint is about. `lastViolation` was missing entirely.
+ */
 export const ThrottleStateSchema = z
   .object({
-    requestCount: z.number().openapi({ example: 15 }),
-    windowStart: z.number().openapi({ example: 1704067200000 }),
-    violations: z.number().openapi({ example: 0 })
+    count: z.number().openapi({ example: 15 }),
+    windowStart: z.number().openapi({ example: 1704067200000, description: 'Epoch ms.' }),
+    violations: z.number().openapi({ example: 0 }),
+    lastViolation: z.number().optional().openapi({ example: 1704067205000 })
   })
   .openapi('ThrottleState')
 

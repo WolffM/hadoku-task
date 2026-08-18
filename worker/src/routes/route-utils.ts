@@ -188,11 +188,11 @@ function setVersionETag(c: Context<AppContext>, result: unknown): void {
 export async function handleOperation<T>(
   c: Context<AppContext>,
   operation: (storage: TaskStorage, auth: TaskAuthContext) => Promise<T>
-): Promise<Response> {
+) {
   const { storage, auth } = getContext(c)
 
   const result = await operation(storage, auth)
-  return c.json(result)
+  return c.json(result, 200)
 }
 
 /**
@@ -276,13 +276,13 @@ export async function handleBoardOperation<T>(
      */
     mustExist?: boolean
   } = {}
-): Promise<Response> {
+) {
   const ctx = await getBoardContext(c, boardId)
   if (!ctx || (opts.mustExist && !ctx.exists)) {
-    return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
   }
   if (opts.write && ctx.access === 'readonly') {
-    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' }, 403)
+    return c.json({ error: 'Read-only access to this board', code: 'FORBIDDEN' as const }, 403)
   }
   // Automation lane enforcement (§5.2): the human path may only land a task in a
   // `user` lane. Throws LaneInvalidError (422) / LaneNotEditableError (403),
@@ -320,7 +320,7 @@ export async function handleBoardOperation<T>(
   }
 
   setVersionETag(c, result)
-  return c.json(result)
+  return c.json(result, 200)
 }
 
 /**
@@ -338,21 +338,21 @@ export async function handleBatchOperation<T>(
   // owner here — but the key must still be built with boardLockKey so a batch
   // write serialises against the single-task writes on the same board.
   getBoardKeys?: (body: Record<string, unknown>, sessionId: string) => string[]
-): Promise<Response> {
+) {
   const { storage, auth } = getContext(c)
   const body = await c.req.json()
 
   // Validate required fields
-  const { requireFields, badRequest } = await import('@wolffm/worker-utils')
+  const { requireFields } = await import('@wolffm/worker-utils')
   const error = requireFields(body, requiredFields)
   if (error) {
-    return badRequest(c, error)
+    return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
   }
 
   // If no board keys provided, no locking needed
   if (!getBoardKeys) {
     const result = await operation(storage, auth, body)
-    return c.json(result)
+    return c.json(result, 200)
   }
 
   // Get board keys and apply locks
@@ -363,7 +363,7 @@ export async function handleBatchOperation<T>(
     const result = await withBoardLock(boardsKeys[0], async () => {
       return operation(storage, auth, body)
     })
-    return c.json(result)
+    return c.json(result, 200)
   }
 
   // Multiple board locks (in consistent order to prevent deadlocks)
@@ -373,5 +373,5 @@ export async function handleBatchOperation<T>(
       return operation(storage, auth, body)
     })
   })
-  return c.json(result)
+  return c.json(result, 200)
 }

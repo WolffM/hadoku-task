@@ -181,7 +181,7 @@ export async function createTask(
   input: CreateTaskInput,
   boardId: string = 'main',
   expectedVersion?: number
-): Promise<{ ok: boolean; id: ULID }> {
+): Promise<{ ok: true; id: ULID }> {
   assertNotesWithinLimit(input.notes)
   return withTaskOperation(
     storage,
@@ -244,7 +244,7 @@ export async function updateTask(
   input: UpdateTaskInput,
   boardId: string = 'main',
   expectedVersion?: number
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: true; message: string }> {
   assertNotesWithinLimit(input.notes)
   return withTaskOperation(
     storage,
@@ -301,8 +301,10 @@ export async function completeTask(
   taskId: ULID,
   boardId: string = 'main',
   expectedVersion?: number
-): Promise<{ ok: boolean; message: string; state: Task['state'] }> {
-  return withTaskOperation(
+): Promise<{ ok: true; message: string; state: 'Active' | 'Completed' }> {
+  // Pinned, not inferred: the two branches return different literal states, and
+  // inference would fix T to whichever it saw first and reject the other.
+  return withTaskOperation<{ ok: true; message: string; state: 'Active' | 'Completed' }>(
     storage,
     auth,
     boardId,
@@ -317,7 +319,7 @@ export async function completeTask(
           result: {
             ok: true,
             message: `Task ${taskId} reopened`,
-            state: 'Active' as Task['state']
+            state: 'Active' as const
           }
         }
       }
@@ -329,7 +331,7 @@ export async function completeTask(
         result: {
           ok: true,
           message: `Task ${taskId} completed`,
-          state: 'Completed' as Task['state']
+          state: 'Completed' as const
         }
       }
     },
@@ -351,7 +353,7 @@ export async function deleteTask(
   taskId: ULID,
   boardId: string = 'main',
   expectedVersion?: number
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: true; message: string }> {
   return withTaskOperation(
     storage,
     auth,
@@ -379,7 +381,7 @@ export async function createBoard(
   auth: AuthContext,
   input: { id: string; name: string },
   expectedVersion?: number
-): Promise<{ ok: boolean; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
+): Promise<{ ok: true; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
   return withBoardOperation(
     storage,
     auth,
@@ -419,7 +421,7 @@ export async function deleteBoard(
   auth: AuthContext,
   boardId: string,
   expectedVersion?: number
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: true; message: string }> {
   // Prevent deleting the main board
   if (boardId === 'main') {
     throw new Error('Cannot delete the main board')
@@ -458,7 +460,7 @@ export async function updateBoard(
   boardId: string,
   patch: { name?: string },
   expectedVersion?: number
-): Promise<{ ok: boolean; board: Board }> {
+): Promise<{ ok: true; board: Board }> {
   return withBoardOperation(
     storage,
     auth,
@@ -491,7 +493,7 @@ export async function setPinnedBoards(
   auth: AuthContext,
   orderedIds: string[],
   expectedVersion?: number
-): Promise<{ ok: boolean; boards: Board[] }> {
+): Promise<{ ok: true; boards: Board[] }> {
   return withBoardOperation(
     storage,
     auth,
@@ -521,7 +523,7 @@ export async function createTag(
   storage: Storage,
   auth: AuthContext,
   input: { boardId: string; tag: string }
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: true; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
     const { updatedBoards, modified } = modifyBoardTags(
       boards,
@@ -551,7 +553,7 @@ export async function deleteTag(
   storage: Storage,
   auth: AuthContext,
   input: { boardId: string; tag: string }
-): Promise<{ ok: boolean; message: string }> {
+): Promise<{ ok: true; message: string }> {
   return withBoardOperation(storage, auth, (boards, timestamp) => {
     const { updatedBoards } = modifyBoardTags(
       boards,
@@ -581,7 +583,7 @@ export async function batchUpdateTags(
     boardId: string
     updates: Array<{ taskId: string; tag: string | null }>
   }
-): Promise<{ ok: boolean; message: string; updated: number }> {
+): Promise<{ ok: true; message: string; updated: number }> {
   return withTaskOperation(storage, auth, input.boardId, (tasks, stats, timestamp) => {
     // Apply all updates in one pass
     let updatedCount = 0
@@ -635,7 +637,7 @@ export async function batchMoveTasks(
     targetBoardId: string
     taskIds: string[]
   }
-): Promise<{ ok: boolean; message: string; moved: number }> {
+): Promise<{ ok: true; message: string; moved: number }> {
   const timestamp = now()
 
   // Load source and target board data
@@ -714,7 +716,7 @@ export async function batchClearTag(
     tag: string
     taskIds: string[]
   }
-): Promise<{ ok: boolean; message: string; cleared: number }> {
+): Promise<{ ok: true; message: string; cleared: number }> {
   // First, clear tag from tasks using task operation pattern
   const taskResult = await withTaskOperation(
     storage,

@@ -5,7 +5,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { badRequest, requireFields } from '@wolffm/worker-utils'
+import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
   handleBoardOperation,
@@ -14,6 +14,7 @@ import {
   boardRefFrom,
   withoutBoardRef
 } from './route-utils'
+import { boardErrorResponses, boardNotFoundResponse } from '../schemas-agent'
 import type { AppContext } from '../types'
 import {
   GetTasksResponseSchema,
@@ -68,11 +69,12 @@ export function createTaskRoutes() {
             schema: GetTasksResponseSchema
           }
         }
-      }
+      },
+      ...boardNotFoundResponse
     }
   })
 
-  app.openapi(getTasksRoute, (async (c: any) => {
+  app.openapi(getTasksRoute, async c => {
     const boardId = boardRefFrom(c)
 
     logRequest('GET', '/task/api/tasks', {
@@ -85,12 +87,13 @@ export function createTaskRoutes() {
     // clients ignore the extra field/header. Board-aware (§7): a shared board reads
     // the owner's tasks; readonly access still reads fine.
     const ctx = await getBoardContext(c, boardId)
-    if (!ctx) return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx)
+      return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
     const file = await ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId)
     const version = file.version ?? 1
     c.header('ETag', `"${version}"`)
-    return c.json({ tasks: file.tasks, version })
-  }) as never)
+    return c.json({ tasks: file.tasks, version }, 200)
+  })
 
   // Create Task
   const createTaskRoute = createRoute({
@@ -127,11 +130,12 @@ export function createTaskRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(createTaskRoute, (async (c: any) => {
+  app.openapi(createTaskRoute, async c => {
     const body = c.req.valid('json')
     const boardId = boardRefFrom(c, body)
     const input = withoutBoardRef(body)
@@ -140,7 +144,7 @@ export function createTaskRoutes() {
     const error = requireFields(input, ['id', 'title'])
     if (error) {
       logError('POST', '/task/api', error)
-      return badRequest(c, error)
+      return c.json({ error: error, timestamp: new Date().toISOString() }, 400)
     }
 
     logRequest('POST', '/task/api', {
@@ -156,7 +160,7 @@ export function createTaskRoutes() {
       (storage, auth, bid) => TaskHandlers.createTask(storage, auth, input, bid, expectedVersion),
       { write: true, laneTag: input.tag ?? null, taskId: input.id }
     )
-  }) as never)
+  })
 
   // Update Task
   const updateTaskRoute = createRoute({
@@ -194,11 +198,12 @@ export function createTaskRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(updateTaskRoute, (async (c: any) => {
+  app.openapi(updateTaskRoute, async c => {
     const { id } = c.req.valid('param')
     const body = c.req.valid('json')
     const boardId = boardRefFrom(c, body)
@@ -228,7 +233,7 @@ export function createTaskRoutes() {
         ),
       { write: true, mustExist: true, taskId: id, ...laneOpts }
     )
-  }) as never)
+  })
 
   // Complete Task
   const completeTaskRoute = createRoute({
@@ -263,11 +268,12 @@ export function createTaskRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(completeTaskRoute, (async (c: any) => {
+  app.openapi(completeTaskRoute, async c => {
     const { id } = c.req.valid('param')
     const boardId = boardRefFrom(c)
 
@@ -284,7 +290,7 @@ export function createTaskRoutes() {
       (storage, auth, bid) => TaskHandlers.completeTask(storage, auth, id, bid, expectedVersion),
       { write: true, mustExist: true }
     )
-  }) as never)
+  })
 
   // Delete Task
   const deleteTaskRoute = createRoute({
@@ -315,11 +321,12 @@ export function createTaskRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      }
+      },
+      ...boardErrorResponses
     }
   })
 
-  app.openapi(deleteTaskRoute, (async (c: any) => {
+  app.openapi(deleteTaskRoute, async c => {
     const { id } = c.req.valid('param')
     const boardId = boardRefFrom(c)
 
@@ -336,7 +343,7 @@ export function createTaskRoutes() {
       (storage, auth, bid) => TaskHandlers.deleteTask(storage, auth, id, bid, expectedVersion),
       { write: true, mustExist: true }
     )
-  }) as never)
+  })
 
   // Get Board Stats
   const getStatsRoute = createRoute({
@@ -356,11 +363,12 @@ export function createTaskRoutes() {
             schema: GetStatsResponseSchema
           }
         }
-      }
+      },
+      ...boardNotFoundResponse
     }
   })
 
-  app.openapi(getStatsRoute, (async (c: any) => {
+  app.openapi(getStatsRoute, async c => {
     const boardId = boardRefFrom(c)
 
     logRequest('GET', '/task/api/stats', {
@@ -369,10 +377,11 @@ export function createTaskRoutes() {
     })
 
     const ctx = await getBoardContext(c, boardId)
-    if (!ctx) return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' }, 404)
+    if (!ctx)
+      return c.json({ error: `Board ${boardId} not found`, code: 'BOARD_NOT_FOUND' as const }, 404)
     const result = await TaskHandlers.getBoardStats(ctx.storage, ctx.auth, ctx.boardId)
-    return c.json(result)
-  }) as never)
+    return c.json(result, 200)
+  })
 
   return app
 }

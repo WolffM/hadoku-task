@@ -4,7 +4,7 @@
  * Handles user preference management (theme, buttons, experimental flags, layout)
  */
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { badRequest, maskSessionId } from '@wolffm/worker-utils'
+import { maskSessionId } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
   readPreferencesWithRepair,
@@ -46,7 +46,7 @@ key by copying them forward into the stable namespace (read-repair).`,
     }
   })
 
-  app.openapi(getPreferencesRoute, (async (c: any) => {
+  app.openapi(getPreferencesRoute, async c => {
     const auth = c.get('authContext')
     const { id, legacyIds } = resolvePrefsIdentity(c, auth)
 
@@ -88,7 +88,7 @@ key by copying them forward into the stable namespace (read-repair).`,
         200
       )
     }
-  }) as never)
+  })
 
   // Save User Preferences
   const updatePreferencesRoute = createRoute({
@@ -128,7 +128,7 @@ Merges with existing preferences, including any recovered from a legacy namespac
     }
   })
 
-  app.openapi(updatePreferencesRoute, (async (c: any) => {
+  app.openapi(updatePreferencesRoute, async c => {
     const auth = c.get('authContext')
     const { id, legacyIds } = resolvePrefsIdentity(c, auth)
 
@@ -164,9 +164,15 @@ Merges with existing preferences, including any recovered from a legacy namespac
         '/task/api/preferences',
         error instanceof Error ? error : new Error(errorMessage)
       )
-      return badRequest(c, `Failed to save preferences: ${errorMessage}`)
+      return c.json(
+        {
+          error: `Failed to save preferences: ${errorMessage}`,
+          timestamp: new Date().toISOString()
+        },
+        400
+      )
     }
-  }) as never)
+  })
 
   return app
 }
