@@ -16,7 +16,7 @@
  * Run: pnpm run test:worker
  */
 import { createTaskHandler } from '../src/index'
-import { SessionHandshakeResponseSchema } from '../src/schemas'
+import { SessionHandshakeResponseSchema, UserPreferencesSchema } from '../src/schemas'
 
 const EDGE_SECRET = 'test-edge-secret'
 
@@ -325,6 +325,35 @@ async function main() {
     'other recovered field survived too',
     merged?.experimentalThemes === true,
     JSON.stringify(merged)
+  )
+
+  // The custom keys must survive the PUBLISHED contract, not just KV.
+  //
+  // UpdatePreferencesInputSchema is passthrough on purpose ("Allow additional
+  // fields like notifications, language, etc."), and the two keys above are
+  // exactly that. UserPreferencesSchema — which types GET /preferences, the
+  // handshake's `preferences`, and this endpoint's own echo — was a CLOSED
+  // object, so a client generated from the spec would drop the very fields the
+  // write side invited. Parsing here proves the response schema keeps them:
+  // zod strips unknown keys unless the object is passthrough, so this assertion
+  // fails the moment that is removed.
+  r = await req('GET', '/task/api/preferences', u6)
+  check('GET → 200', r.status === 200, `status=${r.status}`)
+  const throughSchema = UserPreferencesSchema.parse(r.json) as Record<string, unknown>
+  check(
+    'a custom preference key survives the response schema',
+    throughSchema.alwaysVerticalLayout === true,
+    JSON.stringify(throughSchema)
+  )
+  check(
+    'and so does one that arrived from a recovered blob',
+    throughSchema.experimentalThemes === true,
+    JSON.stringify(throughSchema)
+  )
+  check(
+    'the named keys still parse as themselves',
+    throughSchema.theme === 'keep-me',
+    JSON.stringify(throughSchema)
   )
 
   // ---------------------------------------------------------------------

@@ -37,9 +37,13 @@ export interface UserPreferences {
   buttons?: Record<string, boolean>
   experimentalFlags?: Record<string, boolean>
   layout?: Record<string, unknown>
-  deviceInfo?: Record<string, unknown>
   lastUpdated?: string
-  [key: string]: unknown // Allow additional custom preferences
+  // Arbitrary extra keys are part of the contract, not a loophole:
+  // UpdatePreferencesInputSchema is passthrough, so whatever a caller sends is
+  // stored and handed back. (`deviceInfo` used to be named here and was written
+  // by nothing, read by nothing, and asserted by nothing — the index signature
+  // already covers it if any stored blob still carries one.)
+  [key: string]: unknown
 }
 
 export interface SessionMapping {
