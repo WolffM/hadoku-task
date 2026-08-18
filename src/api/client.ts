@@ -19,12 +19,15 @@ import { automationMethods } from './client-automation'
 import { batchMethods } from './client-batch'
 import { miscMethods } from './client-misc'
 
+// Re-exported because App.tsx and useTasks import them from here; ApiCtx is
+// deliberately NOT among them — every method group takes it straight from
+// client-context, and re-exporting it here just made a second public name for
+// an internal seam.
 export type {
   SyncErrorDetail,
   SyncErrorReporter,
   CreateApiOptions,
-  TaskUserTier,
-  ApiCtx
+  TaskUserTier
 } from './client-context'
 import type { CreateApiOptions, TaskUserTier } from './client-context'
 
