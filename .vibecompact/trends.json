@@ -250,5 +250,47 @@
       "offenders": 0,
       "suppressedByFloor": 0
     }
+  },
+  {
+    "at": "2026-08-18T16:25:44-07:00",
+    "sha": "baa31b7ac11d053831551b2cd9524447a23f1a8e",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": ["arrival"],
+    "aggregates": {
+      "candidateFiles": 380,
+      "perLane": {
+        "size": {
+          "filesAssessed": 311,
+          "filesFlagged": 3
+        },
+        "arrival": {
+          "filesAssessed": 119,
+          "filesFlagged": 0
+        },
+        "deadcode": {
+          "filesAssessed": 267,
+          "filesFlagged": 0
+        },
+        "duplication": {
+          "filesAssessed": 311,
+          "filesFlagged": 0
+        },
+        "smells": {
+          "filesAssessed": 234,
+          "filesFlagged": 0
+        },
+        "consistency": {
+          "filesAssessed": 214,
+          "filesFlagged": 0
+        }
+      },
+      "gatePassing": 0,
+      "offenders": 0,
+      "suppressedByFloor": 0
+    }
   }
 ]
