@@ -153,6 +153,30 @@ for (const root of roots) {
       /process\.stdout|\bprint\(/.test(l)
 
     /**
+     * Where a `//` line comment starts, or the line length. Everything past it
+     * renders nothing, so no rule may rewrite there AND no emoji there can clash
+     * with an icon beside it. `isNonUi` only catches lines that BEGIN with a comment
+     * marker, and pygmalion's icons.tsx documents its whole registry in TRAILING
+     * ones — `export const WarnIcon = TriangleAlert // ⚠` would otherwise become
+     * `// <Icon name="warning" />`, rewriting prose about an icon into an icon.
+     * Quote-aware, so a `//` inside a string is not mistaken for a comment.
+     */
+    const codeEndOf = line => {
+      let quote = null
+      for (let k = 0; k < line.length; k++) {
+        const c = line[k]
+        if (quote) {
+          if (c === '\\') k++
+          else if (c === quote) quote = null
+          continue
+        }
+        if (c === "'" || c === '"' || c === '`') { quote = c; continue }
+        if (c === '/' && line[k + 1] === '/') return k
+      }
+      return line.length
+    }
+
+    /**
      * One line's rewrite, isolated so it can be run twice: once as a PROBE that
      * answers "does this line still hold a raw emoji afterwards", and once for
      * real. `report` is null on the probe pass so nothing is logged twice.
@@ -190,44 +214,74 @@ for (const root of roots) {
       // a different edit in a different part of the file, so it is reported
       // instead of guessed at.
       const canEmitJsx = ext === '.tsx' || ext === '.jsx'
+      const codeEnd = codeEndOf(line)
+
+      /**
+       * The icon name for a token that is NOTHING BUT emoji.
+       *   undefined — not an emoji-only token, ignore it silently
+       *   null      — emoji, but this run will not convert it (reason logged)
+       */
+      const resolveToken = tok => {
+        const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
+        if (!hits.length || hits.join('') !== tok) return undefined
+        const name = nameFor(tok)
+        if (name) return name
+        const note = ambiguityNote(tok)
+        say(
+          note
+            ? `${rel}:${i + 1}  ${tok} needs judgement — ${note}`
+            : `${rel}:${i + 1}  no mapping for ${tok}`
+        )
+        return null
+      }
+
+      // An emoji OPENING a text run — `<div>👤 {value}</div>`, the commonest shape.
+      const LEADING = /(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)(\s*)(?=$|<|[A-Za-z({])/g
+      // An emoji CLOSING one — `<b>{disp(m.b)}</b> wins ▶`. LEADING anchors on `>` or
+      // line start, so a glyph sitting AFTER its label was invisible to it: the codemod
+      // stayed silent on pygmalion's BakeoffReview `wins ▶` and on promptsmith's
+      // `Pick B ▶` while check-icons reported both. The two tools now agree.
+      //
+      // Anchored on the whitespace before the token and a `<` or end-of-line after it,
+      // which is what keeps it out of strings and attributes: the token class excludes
+      // quotes and braces, so `'⚠ ' + err` and `className="a b"` cannot produce one.
+      const TRAILING = /(\s)([^\s<>{}'"`]+)(\s*)(?=<|$)/g
+
       if (isMarkup && !canEmitJsx) {
-        for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)/g)) {
-          const tok = m[3]
-          const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
-          if (!hits.length || hits.join('') !== tok) continue
-          const note = ambiguityNote(tok)
-          if (note) {
-            say(`${rel}:${i + 1}  ${tok} needs judgement — ${note}`)
-          } else if (nameFor(tok)) {
+        // Report only — an .astro/.vue/.html file has no <Icon> in scope.
+        const seen = new Set()
+        for (const re of [LEADING, TRAILING]) {
+          re.lastIndex = 0
+          for (const m of line.matchAll(re)) {
+            const tok = re === LEADING ? m[3] : m[2]
+            if (m.index + m[0].indexOf(tok) >= codeEnd) continue
+            if (seen.has(tok)) continue
+            const name = resolveToken(tok)
+            if (name === undefined || name === null) continue
+            seen.add(tok)
             say(
-              `${rel}:${i + 1}  ${tok} -> ${nameFor(tok)} (${ext} needs getIconSvg + a frontmatter import, by hand)`
+              `${rel}:${i + 1}  ${tok} -> ${name} (${ext} needs getIconSvg + a frontmatter import, by hand)`
             )
           }
         }
       }
       if (canEmitJsx) {
-        // (2)/(3) an emoji opening a JSX text run: alone, or leading a label.
-        line = line.replace(
-          // `{` in the lookahead: `<div>👤 {value}</div>` is the commonest shape.
-          /(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)(\s*)(?=$|<|[A-Za-z({])/g,
-          (m, pre, ws, tok, post) => {
-            const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
-            if (!hits.length || hits.join('') !== tok) return m
-            const name = nameFor(tok)
-            if (!name) {
-              const note = ambiguityNote(tok)
-              say(
-                note
-                  ? `${rel}:${i + 1}  ${tok} needs judgement — ${note}`
-                  : `${rel}:${i + 1}  no mapping for ${tok}`
-              )
-              return m
-            }
-            jsx++
-            edits++
-            return `${pre}${ws}<Icon name="${name}" />${post}`
-          }
-        )
+        line = line.replace(LEADING, (m, pre, ws, tok, post, offset) => {
+          if (offset + pre.length + ws.length >= codeEnd) return m
+          const name = resolveToken(tok)
+          if (!name) return m
+          jsx++
+          edits++
+          return `${pre}${ws}<Icon name="${name}" />${post}`
+        })
+        line = line.replace(TRAILING, (m, pre, tok, post, offset) => {
+          if (offset + pre.length >= codeEnd) return m
+          const name = resolveToken(tok)
+          if (!name) return m
+          jsx++
+          edits++
+          return `${pre}<Icon name="${name}" />${post}`
+        })
       }
       return { line, jsx, edits }
     }
@@ -256,7 +310,8 @@ for (const root of roots) {
     const retainsRawEmoji = lines.map((l, i) => {
       if (isNonUi(l)) return false
       const { line: after } = convertLine(l, i, null)
-      return [...after.matchAll(EMOJI_RE)].some(m => isEmoji(m[0]))
+      const code = after.slice(0, codeEndOf(after))
+      return [...code.matchAll(EMOJI_RE)].some(m => isEmoji(m[0]))
     })
     const nearRetained = i => {
       const lo = Math.max(0, i - PAIR_WINDOW)

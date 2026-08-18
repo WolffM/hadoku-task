@@ -233,6 +233,28 @@ const isNonUiLine = line => {
   )
 }
 
+/**
+ * Where a `//` line comment starts, or the line length. `isNonUiLine` only catches
+ * lines that BEGIN with a marker, so a TRAILING comment is still "code" to it —
+ * and pygmalion's icons.tsx annotates its whole registry that way
+ * (`export const WarnIcon = TriangleAlert // ⚠`). Prose about an icon is not an icon.
+ * Quote-aware, so a `//` inside a string is not mistaken for a comment.
+ */
+const codeEndOf = line => {
+  let quote = null
+  for (let k = 0; k < line.length; k++) {
+    const c = line[k]
+    if (quote) {
+      if (c === '\\') k++
+      else if (c === quote) quote = null
+      continue
+    }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue }
+    if (c === '/' && line[k + 1] === '/') return k
+  }
+  return line.length
+}
+
 /** JSON keys whose value is rendered as an icon. */
 const ICON_KEY = /"(icon|emoji|glyph|symbol)"\s*:\s*"([^"]*)"/g
 /** The same idea in JS/TS object literals and JSX props. */
@@ -369,6 +391,30 @@ for (const target of targets) {
                 rel, no, 'raw-emoji-icon',
                 `"${lead}" leads a text run as an icon. Render <Icon name="..."/> ` +
                   `beside the text instead.` + suggest(lead)
+              )
+            }
+          }
+        }
+
+        // An emoji CLOSING a text run — `<b>{name}</b> wins ▶`. Every rule above
+        // anchors on what comes BEFORE the glyph, so one sitting AFTER its label was
+        // invisible: pygmalion reported clean across 268 files while shipping a raw
+        // `▶` in BakeoffReview, and the codemod could not see it either.
+        //
+        // Anchored on whitespace before and `<` or end-of-line after, and stopped at
+        // a trailing comment, which together keep it out of strings, attributes and
+        // annotations.
+        if (isMarkup) {
+          const end = codeEndOf(line)
+          for (const m of line.matchAll(/(\s)([^\s<>{}'"`]+)(\s*)(?=<|$)/g)) {
+            if (m.index + m[1].length >= end) continue
+            const tail = m[2]
+            const hit = [...tail.matchAll(EMOJI)].map(x => x[0]).filter(isEmoji)
+            if (hit.length && hit.join('') === tail) {
+              add(
+                rel, no, 'raw-emoji-icon',
+                `"${tail}" closes a text run as an icon. Render <Icon name="..."/> ` +
+                  `beside the text instead.` + suggest(tail)
               )
             }
           }
