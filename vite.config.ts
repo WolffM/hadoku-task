@@ -124,7 +124,16 @@ export default defineConfig({
         '@wolffm/task-ui-components',
         '@wolffm/logger/client',
         '@wolffm/prefs-client',
-        '@wolffm/prefs-client/react'
+        '@wolffm/prefs-client/react',
+        // zod is in the parent's import map too, and reaches this bundle through
+        // src/prefs/taskPrefs.ts. Not a singleton — a second copy does not fork
+        // state, it is just weight, and weight for nothing: @wolffm/themes
+        // imports zod BARE from its themePrefs.js, so the page fetches
+        // esm.sh/zod whether or not this bundle carries its own copy. Verified
+        // 2026-08-18: /task inlining zod issued the same 16 esm.sh/zod requests
+        // as an app that externalizes it. The rule is mechanical — anything the
+        // import map provides that you import belongs here.
+        'zod'
       ],
       output: {
         assetFileNames: 'style.css',
