@@ -166,5 +166,47 @@
       "offenders": 0,
       "suppressedByFloor": 0
     }
+  },
+  {
+    "at": "2026-08-18T15:33:14-07:00",
+    "sha": "6cab6c0b64837fa8c29a6743e59b6243961512ca",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": ["arrival"],
+    "aggregates": {
+      "candidateFiles": 367,
+      "perLane": {
+        "size": {
+          "filesAssessed": 298,
+          "filesFlagged": 5
+        },
+        "arrival": {
+          "filesAssessed": 119,
+          "filesFlagged": 0
+        },
+        "deadcode": {
+          "filesAssessed": 254,
+          "filesFlagged": 0
+        },
+        "duplication": {
+          "filesAssessed": 298,
+          "filesFlagged": 0
+        },
+        "smells": {
+          "filesAssessed": 221,
+          "filesFlagged": 0
+        },
+        "consistency": {
+          "filesAssessed": 203,
+          "filesFlagged": 0
+        }
+      },
+      "gatePassing": 0,
+      "offenders": 0,
+      "suppressedByFloor": 0
+    }
   }
 ]
