@@ -3,6 +3,23 @@ import { formatError } from '../domain/utils/tags'
 import type { UserType } from '../domain/types'
 
 /**
+ * The success body of `POST /task/api/session/handshake`, as the worker builds
+ * it — `HandshakeResponse` in worker/src/session.ts.
+ *
+ * Declared here rather than imported: the frontend does not compile against the
+ * worker's tsconfig. That makes this a hand-kept mirror, so it is deliberately
+ * read through `Partial<>` at the call site and every field is treated as
+ * possibly absent.
+ */
+interface HandshakeResponsePayload {
+  sessionId: string
+  preferences: unknown
+  isNewSession: boolean
+  migratedFrom?: string
+  userType: UserType
+}
+
+/**
  * Result from session handshake
  */
 export interface HandshakeResult {
@@ -140,7 +157,12 @@ export async function performSessionHandshake(
       throw new Error(`Handshake failed: ${response.status}`)
     }
 
-    const data = await response.json()
+    // `response.json()` is `any`, and every `data.*` read below inherits it —
+    // this is an untrusted network boundary, so name the shape the worker
+    // actually returns (`HandshakeResponse` in worker/src/session.ts) and let
+    // the compiler check the reads. Fields are optional because a stale worker,
+    // an error body, or an edge shim can serve something narrower.
+    const data = (await response.json()) as Partial<HandshakeResponsePayload>
     logger.info('[Session] Handshake successful', { data })
 
     // Store the new sessionId
@@ -157,8 +179,13 @@ export async function performSessionHandshake(
       storeUserType(data.userType)
     }
 
+    // `data.preferences` is deliberately dropped, not forwarded. Preferences
+    // come from the prefs SDK (`loadTaskPreferences`), and the only thing
+    // useSessionInitialization takes from the handshake is serverUserType —
+    // which is why HandshakeResult types this field as `null`. Returning the
+    // server's blob here typechecked only because `response.json()` was `any`.
     return {
-      preferences: data.preferences,
+      preferences: null,
       serverUserType
     }
   } catch (error) {
