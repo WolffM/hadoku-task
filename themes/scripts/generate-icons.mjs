@@ -109,10 +109,18 @@ icons.sort((a, b) => a.name.localeCompare(b.name))
 // JSON loading anywhere.
 const MAP_PATH = resolve(here, '../src/icons/emoji-map.json')
 const emojiPairs = []
+// `$ambiguous` has to be emitted too, not just skipped with the other `$` keys.
+// A consumer install has no src/ tree, so check-icons and the codemod read the
+// map back out of THIS file — and without the caveats they silently resolve `▶`
+// to `play` inside a mirrored pair again, which is the bug they exist to stop.
+const ambiguousPairs = []
 if (existsSync(MAP_PATH)) {
   const rawMap = JSON.parse(readFileSync(MAP_PATH, 'utf8'))
   const names = new Set(icons.map(i => i.name))
   const bad = []
+  for (const [emoji, note] of Object.entries(rawMap.$ambiguous ?? {})) {
+    if (typeof note === 'string') ambiguousPairs.push([emoji, note])
+  }
   for (const [emoji, name] of Object.entries(rawMap)) {
     if (emoji.startsWith('$')) continue
     if (typeof name !== 'string') continue
@@ -163,6 +171,15 @@ export const LUCIDE_VERSION = '${lucideVersion}'
  */
 export const EMOJI_TO_ICON: Record<string, IconName> = {
 ${emojiPairs.map(([e, n]) => `  ${JSON.stringify(e)}: ${JSON.stringify(n)}`).join(',\n')}
+}
+
+/**
+ * Emoji whose EMOJI_TO_ICON entry is only right in one context, and the rule for
+ * each. Source: the \`$ambiguous\` block in src/icons/emoji-map.json. check-icons
+ * prints these beside its suggestion; codemod-icons refuses to rewrite them.
+ */
+export const AMBIGUOUS_EMOJI: Record<string, string> = {
+${ambiguousPairs.map(([e, n]) => `  ${JSON.stringify(e)}: ${JSON.stringify(n)}`).join(',\n')}
 }
 `
 

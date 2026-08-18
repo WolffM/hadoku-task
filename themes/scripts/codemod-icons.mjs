@@ -46,7 +46,7 @@ if (!roots.length) {
 
 // Same two-tree resolution as check-icons — an unguarded read here threw a raw
 // ENOENT stack at anyone running the codemod from a consumer install.
-const { emojiMap: MAP } = await loadIconRegistry()
+const { emojiMap: MAP, ambiguous: AMBIGUOUS_RAW } = await loadIconRegistry()
 if (!MAP) {
   console.error(`codemod-icons: ${MISSING_REGISTRY_MESSAGE}`)
   process.exit(1)
@@ -69,7 +69,7 @@ for (const [e, n] of Object.entries(MAP)) {
  * play — a mismatched pair, written automatically, in every repo the codemod touches.
  */
 const AMBIGUOUS = new Map(
-  Object.entries(MAP.$ambiguous ?? {}).map(([e, note]) => [stripVs(e), note])
+  Object.entries(AMBIGUOUS_RAW ?? {}).map(([e, note]) => [stripVs(e), note])
 )
 const nameFor = e => (AMBIGUOUS.has(stripVs(e)) ? undefined : EMOJI_TO_ICON.get(stripVs(e)))
 const ambiguityNote = e => AMBIGUOUS.get(stripVs(e))

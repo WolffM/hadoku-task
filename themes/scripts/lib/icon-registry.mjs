@@ -45,9 +45,11 @@ function parseRegistrySource(src) {
 }
 
 /**
- * @returns {Promise<{iconNames: Set<string>, emojiMap: Record<string,string>|null, source: string}>}
+ * @returns {Promise<{iconNames: Set<string>, emojiMap: Record<string,string>|null, ambiguous: Record<string,string>|null, source: string}>}
  *   `emojiMap` is null only when neither tree carries one; `$`-prefixed comment
- *   keys are passed through untouched for the caller to skip.
+ *   keys are passed through untouched for the caller to skip. `ambiguous` maps an
+ *   emoji to the reason its single mapping needs a human — see `$ambiguous` in
+ *   emoji-map.json.
  */
 export async function loadIconRegistry() {
   if (existsSync(SRC_REGISTRY)) {
@@ -56,7 +58,12 @@ export async function loadIconRegistry() {
       const emojiMap = existsSync(SRC_EMOJI_MAP)
         ? JSON.parse(readFileSync(SRC_EMOJI_MAP, 'utf8'))
         : null
-      return { iconNames, emojiMap, source: 'src/icons/registry.generated.ts' }
+      return {
+        iconNames,
+        emojiMap,
+        ambiguous: emojiMap?.$ambiguous ?? null,
+        source: 'src/icons/registry.generated.ts',
+      }
     }
   }
 
@@ -66,12 +73,15 @@ export async function loadIconRegistry() {
       return {
         iconNames: new Set(Object.keys(mod.ICON_MARKUP)),
         emojiMap: mod.EMOJI_TO_ICON ?? null,
+        // Only the generated registry carries these in a consumer install —
+        // there is no emoji-map.json outside the source tree to fall back on.
+        ambiguous: mod.AMBIGUOUS_EMOJI ?? null,
         source: 'dist/icons/registry.generated.js',
       }
     }
   }
 
-  return { iconNames: new Set(), emojiMap: null, source: null }
+  return { iconNames: new Set(), emojiMap: null, ambiguous: null, source: null }
 }
 
 /** The message every caller should print when {@link loadIconRegistry} comes back empty. */

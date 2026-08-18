@@ -29,7 +29,11 @@ const here = dirname(fileURLToPath(import.meta.url))
 
 // Prefer the authored .ts (no build needed in this workspace), fall back to the built
 // registry (the only tree a consumer install is guaranteed to carry). See lib/icon-registry.mjs.
-const { iconNames: ICON_NAMES, emojiMap: EMOJI_MAP_RAW } = await loadIconRegistry()
+const {
+  iconNames: ICON_NAMES,
+  emojiMap: EMOJI_MAP_RAW,
+  ambiguous: AMBIGUOUS_RAW,
+} = await loadIconRegistry()
 
 if (!ICON_NAMES.size) {
   console.error(`check-icons: ${MISSING_REGISTRY_MESSAGE}`)
@@ -162,7 +166,7 @@ function stripVs(s) {
  * filled triangle. The caveat rides along with the answer instead.
  */
 const AMBIGUOUS = new Map(
-  Object.entries(EMOJI_MAP_RAW?.$ambiguous ?? {}).map(([e, note]) => [stripVs(e), note])
+  Object.entries(AMBIGUOUS_RAW ?? {}).map(([e, note]) => [stripVs(e), note])
 )
 
 /** The suggestion appended to a finding, when we know the answer. */

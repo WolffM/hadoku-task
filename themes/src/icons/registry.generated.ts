@@ -443,3 +443,13 @@ export const EMOJI_TO_ICON: Record<string, IconName> = {
   "🚫": "ban",
   "⛔": "ban"
 }
+
+/**
+ * Emoji whose EMOJI_TO_ICON entry is only right in one context, and the rule for
+ * each. Source: the `$ambiguous` block in src/icons/emoji-map.json. check-icons
+ * prints these beside its suggestion; codemod-icons refuses to rewrite them.
+ */
+export const AMBIGUOUS_EMOJI: Record<string, string> = {
+  "◀": "in a mirrored `◀ … ▶` pair use chevron-left WITH chevron-right — never pair it with play",
+  "▶": "play ONLY as a transport control beside ⏸; in a mirrored `◀ … ▶` pair use chevron-right"
+}
