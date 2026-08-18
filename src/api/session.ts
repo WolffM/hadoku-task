@@ -204,19 +204,19 @@ export function clearOldSessionStorage(oldSessionId: string, userType: string): 
 export function clearAllSessionStorage(oldSessionId: string): void {
   if (!oldSessionId) return
 
-  const userTypes = ['public', 'friend', 'admin']
   const keysToRemove: string[] = []
 
-  // Find all keys matching the old session pattern for any userType
+  // Match on the session id, NOT on an enumerated list of userTypes. This used to
+  // loop over ['public', 'friend', 'admin'] — three of the five tiers — so a
+  // `service` or `wife` user's keys survived an account switch, which is precisely
+  // what this function's contract says it prevents. Any list of tiers drifts the
+  // moment one is added (`wife` arrived 2026-08-04); the session id does not.
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key) {
-      for (const ut of userTypes) {
-        if (key.startsWith(`${ut}-${oldSessionId}-`)) {
-          keysToRemove.push(key)
-          break
-        }
-      }
+    // `<userType>-<sessionId>-<rest>`: anchor both dashes so a bare substring
+    // collision cannot match, without caring what the userType is.
+    if (key && key.includes(`-${oldSessionId}-`) && !key.startsWith(`-${oldSessionId}-`)) {
+      keysToRemove.push(key)
     }
   }
 
