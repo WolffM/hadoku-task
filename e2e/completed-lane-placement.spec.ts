@@ -1,5 +1,6 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
 import { pointPrefsAtLocalStack } from './helpers/prefs'
+import { API, apiUp, signIn } from './helpers/stack'
 
 /**
  * A completed task stays in ITS OWN lane until its grace window closes.
@@ -106,23 +107,6 @@ test.describe('Completed tasks keep their lane', () => {
  * board, and skips itself when that isn't up — same contract as
  * plan-review.spec.ts.
  */
-const API = 'http://127.0.0.1:3001/task/api'
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
-
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
 
 /** Activate a board of this test's own — activation is permanent and the dev DB is shared. */
 async function createAutomationBoard(request: APIRequestContext, id: string): Promise<string[]> {

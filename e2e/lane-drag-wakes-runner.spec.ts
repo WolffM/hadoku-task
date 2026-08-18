@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { API, apiUp, signIn } from './helpers/stack'
 
 /**
  * A real lane drag must reach the endpoint that wakes the runner.
@@ -24,25 +25,6 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
  * Requires the local API stack (`node scripts/dev-api.mjs`); skipped when it
  * isn't up, like the other server-path specs.
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
-
-/** Sign in the way the key-swap flow does: the app reads these on boot. */
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 /**
  * An automation board of this test's own, wired to a repo. Driven through the API

@@ -1,10 +1,5 @@
-import {
-  test,
-  expect,
-  type Page,
-  type APIRequestContext,
-  type CDPSession
-} from '@playwright/test'
+import { test, expect, type Page, type APIRequestContext, type CDPSession } from '@playwright/test'
+import { API, apiUp, signIn } from './helpers/stack'
 
 /**
  * The notes popout on a phone.
@@ -22,8 +17,6 @@ import {
  * Requires the local API stack (`pnpm run dev:api`), and skips without it so the
  * default `pnpm test:e2e` stays green.
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
 
 /** Below the 640px breakpoint, and the height of a Pixel with its nav bar up. */
 const PHONE = { width: 393, height: 727 }
@@ -50,22 +43,6 @@ ${Array.from({ length: 14 }, (_, i) => `${i + 3}. Step ${i + 3}, so the plan is 
 
 One component, one stylesheet.
 `
-
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 /**
  * One board for the whole file, not one per test. The dev stack shares a single
@@ -158,7 +135,10 @@ test.describe('notes popout on a phone', () => {
     test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
     await createAutomationBoard(request, BOARD_ID)
     // One task per test, so a test that edits notes can't disturb another's.
-    const taskTitle = `Plan ${test.info().testId.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`
+    const taskTitle = `Plan ${test
+      .info()
+      .testId.replace(/[^a-z0-9]/gi, '')
+      .slice(0, 12)}`
     await request.post(API, {
       data: {
         boardId: BOARD_ID,
@@ -386,7 +366,10 @@ test.describe('a paragraph-length task title', () => {
     // Unique per test. The dev stack keeps one in-memory DB for the whole run
     // and a POST to an existing id does not rewrite its title, so a fixed id
     // silently measures whatever an earlier run seeded.
-    const marker = `LT${test.info().testId.replace(/[^a-z0-9]/gi, '').slice(0, 10)}`
+    const marker = `LT${test
+      .info()
+      .testId.replace(/[^a-z0-9]/gi, '')
+      .slice(0, 10)}`
     await request.post(API, {
       data: {
         boardId: BOARD_ID,

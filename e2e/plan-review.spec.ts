@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { API, apiUp, signIn } from './helpers/stack'
 
 /**
  * The plan-review surface (§6), end to end in a real browser.
@@ -16,8 +17,6 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
  * preset spec; skipped when it isn't up so the default `pnpm test:e2e` stays
  * green.
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
 
 const PLAN = `## What I think you want
 
@@ -41,23 +40,6 @@ Ship the review surface so a plan stops being read through a keyhole.
 
 One component, one stylesheet.
 `
-
-/** Sign in the way the key-swap flow does: the app reads these on boot. */
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 /**
  * A board of this test's own, driven through the API rather than the preset
@@ -259,12 +241,12 @@ test.describe('plan review', () => {
     await page.locator('.notes-popout__close').click()
 
     // Same tri-state on the card itself.
-    await expect(
-      card(page, 'Plan under review').locator('.task-app__item-questions')
-    ).toHaveText('Answered questions')
-    await expect(
-      card(page, 'Plan under review').locator('.task-app__item-questions')
-    ).toHaveClass(/task-app__item-questions--answered/)
+    await expect(card(page, 'Plan under review').locator('.task-app__item-questions')).toHaveText(
+      'Answered questions'
+    )
+    await expect(card(page, 'Plan under review').locator('.task-app__item-questions')).toHaveClass(
+      /task-app__item-questions--answered/
+    )
 
     // A replan rewrites notes wholesale with a fresh, un-replied Questions
     // list — the badge has to flip straight back to "open", not stay stuck on
@@ -277,9 +259,9 @@ test.describe('plan review', () => {
     })
     expect(patched.ok()).toBe(true)
     await openBoard(page, boardId)
-    await expect(
-      card(page, 'Plan under review').locator('.task-app__item-questions')
-    ).toHaveText('2 open questions')
+    await expect(card(page, 'Plan under review').locator('.task-app__item-questions')).toHaveText(
+      '2 open questions'
+    )
   })
 
   test('Escape backs out of the editor first, then the dialog', async ({ page }) => {

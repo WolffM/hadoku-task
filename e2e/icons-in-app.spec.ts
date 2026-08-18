@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { pointPrefsAtLocalStack, prefsUp } from './helpers/prefs'
+import { mockShellApi } from './helpers/mock-api'
 
 /**
  * The dogfood check: the icons this repo migrated off emoji must actually render as
@@ -16,24 +17,7 @@ const PUBLIC_SESSION_ID = 'public-icons-session'
 const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 
 async function setupRoutes(page: Page) {
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  )
-  await page.route('**/task/api/boards*', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-      })
-    })
-  )
+  await mockShellApi(page)
   await pointPrefsAtLocalStack(page)
 }
 

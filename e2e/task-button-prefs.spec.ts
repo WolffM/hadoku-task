@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { mockShellApi } from './helpers/mock-api'
 
 /**
  * E2E for the task-button preferences block (settings popout → Task buttons).
@@ -34,25 +35,7 @@ function readSdkCacheBlob(page: Page): Promise<Record<string, unknown> | null> {
 }
 
 async function setupRoutes(page: Page) {
-  await page.route('**/task/api/session/handshake', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  })
-
-  await page.route('**/task/api/boards*', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-      })
-    })
-  })
+  await mockShellApi(page)
 
   // Hermetic prefs backend for @wolffm/prefs-client (see theme-mode.spec.ts for
   // why GET 404s: it keeps the optimistic localStorage cache authoritative).

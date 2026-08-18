@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { MAIN_BOARD, mockShellApi } from './helpers/mock-api'
+import { signIn } from './helpers/stack'
 
 /**
  * Every board in the Edit Boards modal must stay reachable, however many there are.
@@ -21,37 +23,16 @@ import { test, expect } from '@playwright/test'
 const BOARD_COUNT = 60
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  )
-  await page.route('**/task/api/boards*', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        boards: [
-          { id: 'main', name: 'Main', tasks: [], tags: [] },
-          ...Array.from({ length: BOARD_COUNT }, (_, i) => ({
-            id: `board-${String(i).padStart(3, '0')}`,
-            name: `Board ${String(i).padStart(3, '0')}`,
-            tasks: [],
-            tags: []
-          }))
-        ]
-      })
-    })
-  )
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
+  await mockShellApi(page, [
+    MAIN_BOARD,
+    ...Array.from({ length: BOARD_COUNT }, (_, i) => ({
+      id: `board-${String(i).padStart(3, '0')}`,
+      name: `Board ${String(i).padStart(3, '0')}`,
+      tasks: [],
+      tags: []
+    }))
+  ])
+  await signIn(page)
 })
 
 test('the last board stays reachable with a long board list', async ({ page }) => {

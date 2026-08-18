@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { mockShellApi } from './helpers/mock-api'
 
 /**
  * E2E tests for the theme mode attribute shipped from @wolffm/themes.
@@ -43,25 +44,7 @@ function readSdkCacheBlob(
 }
 
 async function setupRoutes(page: Page) {
-  await page.route('**/task/api/session/handshake', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  })
-
-  await page.route('**/task/api/boards*', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-      })
-    })
-  })
+  await mockShellApi(page)
 
   // No prefs routing here on purpose. Both rows and /session/whoami are served
   // by the REAL prefs-api worker on :3003 (scripts/dev-api.mjs), against a real

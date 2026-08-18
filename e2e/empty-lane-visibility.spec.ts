@@ -1,5 +1,6 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
 import { pointPrefsAtLocalStack } from './helpers/prefs'
+import { API, apiUp, signIn } from './helpers/stack'
 
 /**
  * An automation board hides its empty lanes — including AFTER a drag.
@@ -21,24 +22,6 @@ import { pointPrefsAtLocalStack } from './helpers/prefs'
  * Needs the local API stack (`node scripts/dev-api.mjs`) for a real activated
  * board; skips itself when that isn't up.
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
-
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
 
 interface Lane {
   tag: string

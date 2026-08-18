@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { mockShellApi } from './helpers/mock-api'
 
 /**
  * E2E tests for the hadoku.me theme-integration contract.
@@ -19,28 +20,6 @@ import { test, expect, type Page } from '@playwright/test'
 
 const THEME_KEY = 'hadoku-theme'
 
-async function setupRoutes(page: Page) {
-  await page.route('**/task/api/session/handshake', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  })
-
-  await page.route('**/task/api/boards*', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-      })
-    })
-  })
-}
-
 async function seedHostTheme(page: Page, theme: string) {
   await page.addInitScript(({ key, value }) => window.sessionStorage.setItem(key, value), {
     key: THEME_KEY,
@@ -59,7 +38,7 @@ function getAppliedTheme(page: Page): Promise<string | null> {
 
 test.describe('Theme inheritance from host page', () => {
   test.beforeEach(async ({ page }) => {
-    await setupRoutes(page)
+    await mockShellApi(page)
   })
 
   test('adopts a fully-qualified inherited theme and does not clobber it', async ({ page }) => {
@@ -88,7 +67,7 @@ test.describe('Theme inheritance from host page', () => {
   test('expands a bare family token per dark color scheme', async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: 'dark' })
     const page = await context.newPage()
-    await setupRoutes(page)
+    await mockShellApi(page)
     await seedHostTheme(page, 'coffee')
     await loadApp(page)
 

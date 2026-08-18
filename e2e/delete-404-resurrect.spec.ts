@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import { API, apiUp } from './helpers/stack'
 
 /**
  * REGRESSION GUARD — "I delete the task, refresh, and it comes back."
@@ -16,16 +17,6 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
  *
  * Requires the local API stack (`node scripts/dev-api.mjs`).
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 test.describe('a 404 on delete resurrects the task', () => {
   test('SERVER: deleting with the wrong board ref blames the BOARD, not the task', async ({

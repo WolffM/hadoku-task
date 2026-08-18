@@ -1,4 +1,5 @@
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { API, apiUp } from './helpers/stack'
 
 /**
  * "I delete the task, refresh, and it comes back" — the customer loop, end to
@@ -21,16 +22,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
  * Requires the local API stack (`node scripts/dev-api.mjs`).
  */
 
-const API = 'http://127.0.0.1:3001/task/api'
 const BOARD = 'main'
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 const card = (page: Page, title: string) =>
   page.locator('.task-app__item').filter({ hasText: title })

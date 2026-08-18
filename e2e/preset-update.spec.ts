@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
+import { API, apiUp } from './helpers/stack'
 
 /**
  * "Your provider's contract has moved" (§5.5), end to end against the real worker.
@@ -16,7 +17,6 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
  * isn't up, so the default `pnpm test:e2e` stays green.
  */
 
-const API = 'http://127.0.0.1:3001/task/api'
 const APP_HEADER = 'h1.app-header__title'
 const KEY = { 'X-User-Key': 'dev-key', 'Content-Type': 'application/json' }
 
@@ -84,17 +84,12 @@ async function readBoard(
   }
 }
 
-async function apiUp(req: APIRequestContext): Promise<boolean> {
-  try {
-    return (await req.get(`${API}/automation/presets`, { headers: KEY })).ok()
-  } catch {
-    return false
-  }
-}
-
 test.describe('Preset update detection', () => {
   test.beforeEach(async ({ request }) => {
-    test.skip(!(await apiUp(request)), 'local API stack not running (node scripts/dev-api.mjs)')
+    test.skip(
+      !(await apiUp(request, KEY)),
+      'local API stack not running (node scripts/dev-api.mjs)'
+    )
     // The read path answers from cache and never fetches, so a cold isolate has
     // nothing to say. The picker is what warms it in practice; do that first so
     // these assertions test detection rather than cache timing.
@@ -169,10 +164,7 @@ test.describe('Preset update detection', () => {
     expect(other.board.presetUpdate).toBeUndefined()
   })
 
-  test('offers the update in the panel and applies it in one click', async ({
-    page,
-    request
-  }) => {
+  test('offers the update in the panel and applies it in one click', async ({ page, request }) => {
     const id = boardId('ui')
     await activate(request, id, 0, await providerLanes(request))
 

@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { API, apiUp } from './helpers/stack'
 
 /**
  * Every optimistic write the server definitively refuses must be rolled back.
@@ -21,20 +22,10 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
  * Requires the local API stack (`node scripts/dev-api.mjs`).
  */
 
-const API = 'http://127.0.0.1:3001/task/api'
-
 const FORBIDDEN = {
   status: 403,
   contentType: 'application/json',
   body: JSON.stringify({ error: 'Read-only access to this board', code: 'FORBIDDEN' })
-}
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
 }
 
 /** An automation board on tenhands-simple: `todo`/`review` user, `working` agent. */

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { mockShellApi } from './helpers/mock-api'
 
 /**
  * E2E tests for theme picker dropdown placement
@@ -12,26 +13,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Theme Picker', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock API endpoints to avoid needing a real backend
-    await page.route('**/task/api/session/handshake', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ preferences: null })
-      })
-    })
-
-    await page.route('**/task/api/boards*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          version: 1,
-          updatedAt: new Date().toISOString(),
-          boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-        })
-      })
-    })
+    await mockShellApi(page)
 
     await page.goto('/')
     await page.waitForSelector('h1.app-header__title', { timeout: 10000 })
@@ -117,25 +99,7 @@ test.describe('Theme Picker', () => {
     })
     const page = await context.newPage()
 
-    // Mock APIs
-    await page.route('**/task/api/session/handshake', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ preferences: null })
-      })
-    })
-    await page.route('**/task/api/boards*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          version: 1,
-          updatedAt: new Date().toISOString(),
-          boards: [{ id: 'main', name: 'Main', tasks: [], tags: [] }]
-        })
-      })
-    })
+    await mockShellApi(page)
 
     await page.goto('/')
     await page.waitForSelector('h1.app-header__title', { timeout: 10000 })

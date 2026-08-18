@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { apiUp, signIn } from './helpers/stack'
 
 /**
  * Automation preset picker (§5.4), end to end in a real browser.
@@ -18,24 +19,6 @@ const APP_HEADER = 'h1.app-header__title'
 
 /** Unique per test AND per run — the dev stack's DB outlives a single run. */
 const boardName = (slug: string) => `auto-${slug}-${Date.now().toString(36)}`
-
-/** Sign in the way the key-swap flow does: the app reads these on boot. */
-async function signIn(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('hadoku_session_id', 'dev-uid')
-    localStorage.setItem('hadoku_user_type', 'friend')
-  })
-}
-
-async function apiUp(page: Page): Promise<boolean> {
-  try {
-    const res = await page.request.get('http://127.0.0.1:3001/task/api/automation/presets')
-    return res.ok()
-  } catch {
-    return false
-  }
-}
 
 /**
  * A board of this test's own. The dev stack keeps one in-memory DB for the whole
@@ -62,7 +45,10 @@ async function openAutomationPanel(page: Page, boardName: string) {
 
 test.describe('Automation preset picker', () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!(await apiUp(page)), 'local API stack not running (node scripts/dev-api.mjs)')
+    test.skip(
+      !(await apiUp(page.request)),
+      'local API stack not running (node scripts/dev-api.mjs)'
+    )
     await signIn(page)
   })
 

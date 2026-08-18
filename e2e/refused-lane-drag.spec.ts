@@ -1,4 +1,5 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+import { API, apiUp } from './helpers/stack'
 
 /**
  * A drag the server refuses must be undone, and must say why.
@@ -18,16 +19,6 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
  * The 403 case is driven against the REAL worker, not a mocked response — that is
  * the one that must not regress. Requires `node scripts/dev-api.mjs`.
  */
-
-const API = 'http://127.0.0.1:3001/task/api'
-
-async function apiUp(request: APIRequestContext): Promise<boolean> {
-  try {
-    return (await request.get(`${API}/automation/presets`)).ok()
-  } catch {
-    return false
-  }
-}
 
 /** An automation board on the tenhands-simple preset: `todo`/`review` user, `working` agent. */
 async function createBoard(request: APIRequestContext, id: string) {
