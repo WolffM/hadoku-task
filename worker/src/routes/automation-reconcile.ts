@@ -9,7 +9,8 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
-import { githubToken, validateRepo } from './board-automation'
+import { githubToken } from './board-automation'
+import { validateRepo } from './github-repo'
 import {
   repoServiceKeyName,
   automationRunnerName,

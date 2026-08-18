@@ -10,7 +10,8 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
-import { githubToken, validateRepo } from './board-automation'
+import { githubToken } from './board-automation'
+import { validateRepo } from './github-repo'
 import { grantRepoServiceKeyShare } from './shares'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
