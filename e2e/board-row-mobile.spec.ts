@@ -61,7 +61,14 @@ test.describe('board bar on a phone', () => {
     await seedBoards(request, BOARD_NAMES)
     await signIn(page)
     await page.goto('/')
-    await page.locator('.task-app__board-list .pill-btn').first().waitFor({ timeout: 15000 })
+    // Wait for the pills to STOP arriving, not for the first one to appear.
+    // The board list paints incrementally, and `.first().waitFor()` is satisfied
+    // by a single pill — weaker than what the tests then assert (`count > 1`,
+    // and that none of them escapes the viewport). That gap made this spec fail
+    // roughly one run in three, on main as well as on a branch.
+    await expect
+      .poll(() => page.locator('.task-app__board-list .pill-btn').count(), { timeout: 15000 })
+      .toBeGreaterThan(1)
   })
 
   test('every board pill stays on screen and the page does not scroll sideways', async ({
@@ -91,7 +98,14 @@ test.describe('board bar on a phone', () => {
       }
     })
     await page.reload()
-    await page.locator('.task-app__board-list .pill-btn').first().waitFor({ timeout: 15000 })
+    // Wait for the pills to STOP arriving, not for the first one to appear.
+    // The board list paints incrementally, and `.first().waitFor()` is satisfied
+    // by a single pill — weaker than what the tests then assert (`count > 1`,
+    // and that none of them escapes the viewport). That gap made this spec fail
+    // roughly one run in three, on main as well as on a branch.
+    await expect
+      .poll(() => page.locator('.task-app__board-list .pill-btn').count(), { timeout: 15000 })
+      .toBeGreaterThan(1)
 
     // Whether or not it lands in the pinned set, nothing may leave the viewport.
     const geo = await pillGeometry(page)
