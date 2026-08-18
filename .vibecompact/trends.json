@@ -7,9 +7,7 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": [
-      "arrival"
-    ],
+    "saturated": ["arrival"],
     "aggregates": {
       "candidateFiles": 313,
       "perLane": {
@@ -51,9 +49,7 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": [
-      "arrival"
-    ],
+    "saturated": ["arrival"],
     "aggregates": {
       "candidateFiles": 317,
       "perLane": {
@@ -84,6 +80,48 @@
       },
       "gatePassing": 1,
       "offenders": 1,
+      "suppressedByFloor": 0
+    }
+  },
+  {
+    "at": "2026-08-18T12:20:41-07:00",
+    "sha": "c2f4371d98b5d3afda33bc58cdcc24b5cd134346",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": ["arrival"],
+    "aggregates": {
+      "candidateFiles": 352,
+      "perLane": {
+        "size": {
+          "filesAssessed": 283,
+          "filesFlagged": 13
+        },
+        "arrival": {
+          "filesAssessed": 119,
+          "filesFlagged": 0
+        },
+        "deadcode": {
+          "filesAssessed": 239,
+          "filesFlagged": 0
+        },
+        "duplication": {
+          "filesAssessed": 283,
+          "filesFlagged": 0
+        },
+        "smells": {
+          "filesAssessed": 206,
+          "filesFlagged": 0
+        },
+        "consistency": {
+          "filesAssessed": 196,
+          "filesFlagged": 0
+        }
+      },
+      "gatePassing": 0,
+      "offenders": 0,
       "suppressedByFloor": 0
     }
   }

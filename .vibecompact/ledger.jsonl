@@ -22,3 +22,8 @@
 {"id":"01KZEHBVQGT016QB2EDN8X5EQF","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"duplication:e2e/theme-picker.spec.ts","score":0.4639175257731959,"threshold":0.3}
 {"id":"01KZEHBVQGT016QB2EDN8X5EQG","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"consistency:themes/dev/build.js","score":0.8,"threshold":0.7}
 {"id":"01KZEHBVQGT016QB2EDN8X5EQH","at":"2026-08-07T09:37:10-07:00","kind":"firing","fingerprint":"consistency:themes/dev/editor.js","score":0.8,"threshold":0.7}
+{"id":"01M0B535S8MMBHQQYGN7FVSDPH","at":"2026-08-18T12:20:41-07:00","verdict":"fixed","fingerprint":"size:src/components/modals/EditBoardsModal.tsx","score":0.676,"threshold":1}
+{"id":"01M0B535S8MMBHQQYGN7FVSDPJ","at":"2026-08-18T12:20:41-07:00","verdict":"fixed","fingerprint":"duplication:e2e/theme-picker.spec.ts","score":0,"threshold":0.3}
+{"id":"01M0B535S8MMBHQQYGN7FVSDPK","at":"2026-08-18T12:20:41-07:00","verdict":"fixed","fingerprint":"duplication:e2e/lane-drag-wakes-runner.spec.ts","score":0,"threshold":0.3}
+{"id":"01M0B535S8MMBHQQYGN7FVSDPM","at":"2026-08-18T12:20:41-07:00","verdict":"fixed","fingerprint":"duplication:e2e/automate-open-items.spec.ts","score":0,"threshold":0.3}
+{"id":"01M0B535S8MMBHQQYGN7FVSDPN","at":"2026-08-18T12:20:41-07:00","verdict":"fixed","fingerprint":"smells:src/api/session.ts","score":0,"threshold":0.5}
