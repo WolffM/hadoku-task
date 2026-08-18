@@ -25,6 +25,9 @@
  *   - Any emoji listed under `$ambiguous` there — `◀`/`▶`, whose correct icon depends
  *     on whether it is a transport control or one arm of a mirrored nav pair. Rewriting
  *     those off the map alone writes a mismatched pair automatically, everywhere.
+ *   - Anything within a few lines of an emoji it is leaving raw, for any of the reasons
+ *     above. Refusing `▶ Play` while rewriting the `⏸ Pause` beside it still ships an
+ *     SVG next to a glyph — the refusal only helps if its neighbours wait with it.
  *
  * Those are reported, not guessed at. A codemod that is wrong 5% of the time
  * across twelve repos costs more review than it saves.
@@ -149,10 +152,15 @@ for (const root of roots) {
       /\b(console|logger|log)\s*\.\s*(log|warn|error|info|debug|table|trace|group)\b/.test(l) ||
       /process\.stdout|\bprint\(/.test(l)
 
-    for (let i = 0; i < lines.length; i++) {
-      let line = lines[i]
-      if (isNonUi(line)) continue
-      const before = line
+    /**
+     * One line's rewrite, isolated so it can be run twice: once as a PROBE that
+     * answers "does this line still hold a raw emoji afterwards", and once for
+     * real. `report` is null on the probe pass so nothing is logged twice.
+     */
+    const convertLine = (line, i, report) => {
+      let jsx = 0
+      let edits = 0
+      const say = msg => { if (report) report.push(msg) }
 
       // (1) icon/glyph/emoji field values — pure string swap.
       line = line.replace(
@@ -163,14 +171,14 @@ for (const root of roots) {
           const name = nameFor(hits[0])
           if (!name) {
             const note = ambiguityNote(hits[0])
-            skipped.push(
+            say(
               note
                 ? `${rel}:${i + 1}  ${hits[0]} needs judgement — ${note}`
                 : `${rel}:${i + 1}  no mapping for ${val}`
             )
             return m
           }
-          fileEdits++
+          edits++
           return `${head}${q}${name}${q}`
         }
       )
@@ -189,9 +197,9 @@ for (const root of roots) {
           if (!hits.length || hits.join('') !== tok) continue
           const note = ambiguityNote(tok)
           if (note) {
-            skipped.push(`${rel}:${i + 1}  ${tok} needs judgement — ${note}`)
+            say(`${rel}:${i + 1}  ${tok} needs judgement — ${note}`)
           } else if (nameFor(tok)) {
-            skipped.push(
+            say(
               `${rel}:${i + 1}  ${tok} -> ${nameFor(tok)} (${ext} needs getIconSvg + a frontmatter import, by hand)`
             )
           }
@@ -208,24 +216,75 @@ for (const root of roots) {
             const name = nameFor(tok)
             if (!name) {
               const note = ambiguityNote(tok)
-              skipped.push(
+              say(
                 note
                   ? `${rel}:${i + 1}  ${tok} needs judgement — ${note}`
                   : `${rel}:${i + 1}  no mapping for ${tok}`
               )
               return m
             }
-            jsxEdits++
-            fileEdits++
+            jsx++
+            edits++
             return `${pre}${ws}<Icon name="${name}" />${post}`
           }
         )
       }
+      return { line, jsx, edits }
+    }
 
-      if (line !== before) {
-        lines[i] = line
+    /**
+     * PARTIAL PAIRS. Converting one glyph of a control group while its neighbour
+     * stays a raw emoji is the failure this guard exists for: `▶ Play` is refused
+     * as ambiguous, `⏸ Pause` on the next line is not, and --write leaves an SVG
+     * sitting beside an emoji — the very mismatch the refusal was meant to avoid.
+     *
+     * A line that STILL holds an emoji after its own rewrite is one this run is
+     * leaving raw, whatever the reason (ambiguous, unmapped, a bare string, an
+     * .html file with no <Icon> in scope). Nothing within PAIR_WINDOW lines of one
+     * is converted; it is reported instead, so the human fixes the group together.
+     *
+     * Comments are excluded — an emoji in a comment renders nothing, so it cannot
+     * clash with an icon beside it.
+     *
+     * The window is deliberately small. Sibling controls in one row sit within a
+     * few lines of each other (the promptsmith tournament row spanned five), while
+     * unrelated emoji are typically far off — pygmalion's BakeoffReview has a `▶`
+     * at line 310 and its next emoji at 31 and 471. File scope would have blocked
+     * both of those for no reason.
+     */
+    const PAIR_WINDOW = 4
+    const retainsRawEmoji = lines.map((l, i) => {
+      if (isNonUi(l)) return false
+      const { line: after } = convertLine(l, i, null)
+      return [...after.matchAll(EMOJI_RE)].some(m => isEmoji(m[0]))
+    })
+    const nearRetained = i => {
+      const lo = Math.max(0, i - PAIR_WINDOW)
+      const hi = Math.min(lines.length - 1, i + PAIR_WINDOW)
+      for (let j = lo; j <= hi; j++) if (retainsRawEmoji[j]) return true
+      return false
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      if (isNonUi(lines[i])) continue
+      // Run for real either way: a deferred line still owes its own reasons
+      // ("▶ needs judgement"), which are what tell the human what to do.
+      const r = convertLine(lines[i], i, skipped)
+      if (nearRetained(i)) {
+        if (r.edits) {
+          skipped.push(
+            `${rel}:${i + 1}  deferred — a raw emoji this run cannot convert sits within ` +
+              `${PAIR_WINDOW} lines; converting this one alone would leave an SVG beside a glyph`
+          )
+        }
+        continue
+      }
+      if (r.line !== lines[i]) {
+        lines[i] = r.line
         changed.push(`${rel}:${i + 1}`)
       }
+      jsxEdits += r.jsx
+      fileEdits += r.edits
     }
 
     if (!fileEdits) continue
