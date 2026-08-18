@@ -22,6 +22,9 @@
  *   - String literals that are only an emoji, for the same reason: whether the
  *     value is rendered, logged, or compared is not knowable from the literal.
  *   - Any emoji with no entry in emoji-map.json.
+ *   - Any emoji listed under `$ambiguous` there — `◀`/`▶`, whose correct icon depends
+ *     on whether it is a transport control or one arm of a mirrored nav pair. Rewriting
+ *     those off the map alone writes a mismatched pair automatically, everywhere.
  *
  * Those are reported, not guessed at. A codemod that is wrong 5% of the time
  * across twelve repos costs more review than it saves.
@@ -59,7 +62,17 @@ const EMOJI_TO_ICON = new Map()
 for (const [e, n] of Object.entries(MAP)) {
   if (!e.startsWith('$') && typeof n === 'string') EMOJI_TO_ICON.set(stripVs(e), n)
 }
-const nameFor = e => EMOJI_TO_ICON.get(stripVs(e))
+/**
+ * Glyphs listed under `$ambiguous` in emoji-map.json resolve two ways depending on
+ * what sits beside them, so they are exactly the "needs judgement" case this script
+ * refuses. Rewriting `◀ Prev` / `Next ▶` off the map alone emits chevron-left beside
+ * play — a mismatched pair, written automatically, in every repo the codemod touches.
+ */
+const AMBIGUOUS = new Map(
+  Object.entries(MAP.$ambiguous ?? {}).map(([e, note]) => [stripVs(e), note])
+)
+const nameFor = e => (AMBIGUOUS.has(stripVs(e)) ? undefined : EMOJI_TO_ICON.get(stripVs(e)))
+const ambiguityNote = e => AMBIGUOUS.get(stripVs(e))
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.astro', '.claude',
@@ -149,7 +162,12 @@ for (const root of roots) {
           if (!hits.length || hits.join('') !== val.trim()) return m
           const name = nameFor(hits[0])
           if (!name) {
-            skipped.push(`${rel}:${i + 1}  no mapping for ${val}`)
+            const note = ambiguityNote(hits[0])
+            skipped.push(
+              note
+                ? `${rel}:${i + 1}  ${hits[0]} needs judgement — ${note}`
+                : `${rel}:${i + 1}  no mapping for ${val}`
+            )
             return m
           }
           fileEdits++
@@ -168,7 +186,11 @@ for (const root of roots) {
         for (const m of line.matchAll(/(^|>|\{' '\}|\{" "\})(\s*)([^\s<>{}'"`]+)/g)) {
           const tok = m[3]
           const hits = [...tok.matchAll(EMOJI_RE)].map(x => x[0]).filter(isEmoji)
-          if (hits.length && hits.join('') === tok && nameFor(tok)) {
+          if (!hits.length || hits.join('') !== tok) continue
+          const note = ambiguityNote(tok)
+          if (note) {
+            skipped.push(`${rel}:${i + 1}  ${tok} needs judgement — ${note}`)
+          } else if (nameFor(tok)) {
             skipped.push(
               `${rel}:${i + 1}  ${tok} -> ${nameFor(tok)} (${ext} needs getIconSvg + a frontmatter import, by hand)`
             )
@@ -185,7 +207,12 @@ for (const root of roots) {
             if (!hits.length || hits.join('') !== tok) return m
             const name = nameFor(tok)
             if (!name) {
-              skipped.push(`${rel}:${i + 1}  no mapping for ${tok}`)
+              const note = ambiguityNote(tok)
+              skipped.push(
+                note
+                  ? `${rel}:${i + 1}  ${tok} needs judgement — ${note}`
+                  : `${rel}:${i + 1}  no mapping for ${tok}`
+              )
               return m
             }
             jsxEdits++

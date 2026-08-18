@@ -155,12 +155,26 @@ function stripVs(s) {
   }).join('')
 }
 
+/**
+ * Glyphs whose single mapping is only right in one context — see `$comment_ambiguous`
+ * in emoji-map.json. Printing the suggestion bare presents one arm of a mirrored pair
+ * as settled, which is how `◀ Pick A` / `Pick B ▶` shipped as a chevron facing a
+ * filled triangle. The caveat rides along with the answer instead.
+ */
+const AMBIGUOUS = new Map(
+  Object.entries(EMOJI_MAP_RAW?.$ambiguous ?? {}).map(([e, note]) => [stripVs(e), note])
+)
+
 /** The suggestion appended to a finding, when we know the answer. */
 function suggest(raw) {
   const first = [...raw.matchAll(EMOJI)].map(m => m[0]).filter(isEmoji)[0]
   if (!first) return ''
-  const name = EMOJI_MAP.get(stripVs(first))
-  return name ? `\n    → <Icon name="${name}" />   (getIconSvg('${name}'))` : ''
+  const key = stripVs(first)
+  const name = EMOJI_MAP.get(key)
+  if (!name) return ''
+  const caveat = AMBIGUOUS.get(key)
+  return `\n    → <Icon name="${name}" />   (getIconSvg('${name}'))` +
+    (caveat ? `\n    ⚠ ${first} needs judgement: ${caveat}` : '')
 }
 
 

@@ -14,6 +14,28 @@
     "Every value must exist in sources.json — check-icons fails loudly if one does not."
   ],
 
+  "$comment_ambiguous": [
+    "A FLAT MAP CANNOT RESOLVE THESE. One emoji, two right answers depending on what",
+    "sits next to it, so `$ambiguous` names them and both tools defer to a human:",
+    "the codemod refuses them outright, and check-icons prints the caveat under its",
+    "suggestion instead of presenting one arm of a pair as settled.",
+    "",
+    "`◀`/`▶` is the case that proved it. `▶` lives in the transport row below with",
+    "`⏸`/`⏭`/`⏮` because a play button really is `play` — hadoku-dataplatform's",
+    "VodPlayer renders `isPlaying ? <Icon name=\"pause\"/> : <Icon name=\"play\"/>`.",
+    "But `◀`/`▶` is just as often a mirrored nav pair, and there applying the map",
+    "arm by arm yields an outline chevron facing a filled triangle. That is exactly",
+    "how promptsmith shipped a mismatched tournament row, and how the same repo's",
+    "PartBadge `◀ ▶` had to be hand-corrected to chevron-left/chevron-right.",
+    "",
+    "Neither value can move without breaking the other site, so the ambiguity is",
+    "recorded here rather than papered over with a coin-flip default."
+  ],
+  "$ambiguous": {
+    "◀": "in a mirrored `◀ … ▶` pair use chevron-left WITH chevron-right — never pair it with play",
+    "▶": "play ONLY as a transport control beside ⏸; in a mirrored `◀ … ▶` pair use chevron-right"
+  },
+
   "$comment_catalogue": "hadoku_site/spec/categories.json — the frontpage catalogue.",
   "👋": "wave",
   "📄": "document",

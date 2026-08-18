@@ -70,6 +70,13 @@ mechanical cases.
 output for leftover pictographs. Several repos' builds do not typecheck, so lint is what
 catches an undefined `<Icon>`.
 
+**Convert mirrored pairs together.** `◀`/`▶`, `▼`/`▶`, `☀`/`☾` — the second of each is
+often not `Extended_Pictographic`, so the gate flags one arm and says nothing about the
+other. Converting only the flagged arm leaves an SVG beside a text glyph at a different
+weight, which looks worse than leaving both. `◀`/`▶` additionally resolve two ways
+(`$ambiguous` in `emoji-map.json`): a transport control beside `⏸` is `play`, but a
+mirrored nav pair is `chevron-left`/`chevron-right`. The codemod refuses both glyphs.
+
 Some emoji legitimately stay: text-only attributes (`<optgroup label>`, `title=`),
 strings assigned to `.textContent`, CSS `content:`, and payloads bound for Discord,
 GitHub issues or a terminal — those systems cannot render an SVG. Waive those with
