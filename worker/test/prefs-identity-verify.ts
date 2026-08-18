@@ -16,6 +16,7 @@
  * Run: pnpm run test:worker
  */
 import { createTaskHandler } from '../src/index'
+import { SessionHandshakeResponseSchema } from '../src/schemas'
 
 const EDGE_SECRET = 'test-edge-secret'
 
@@ -344,6 +345,28 @@ async function main() {
     'handshake returned the migrated prefs',
     (r.json?.preferences as Record<string, unknown> | undefined)?.theme === 'handshake-theme',
     JSON.stringify(r.json)
+  )
+
+  // The published contract must describe the response that just came back.
+  //
+  // This is here because it silently didn't: SessionHandshakeResponseSchema
+  // declared `success` and `migrated`, which the handler has never sent, and
+  // omitted `userType`, which it always sends and which the frontend reads to
+  // detect an expired session. Nothing caught it — @hono/zod-openapi validates
+  // requests, not responses, so the schema is documentation, and the route is
+  // registered through an `as never` cast that stops TypeScript comparing the
+  // two. The only consumer that felt it was TenHands, codegenning a Python
+  // client from a spec that was wrong in both directions.
+  //
+  // `.strict()` is the point: a plain parse strips unknown keys and would pass
+  // an undocumented field straight through, which is exactly the `userType`
+  // half of the bug. Only the TOP level is strict — `preferences` is an open
+  // blob by design (UserPreferences has an index signature).
+  const contract = SessionHandshakeResponseSchema.strict().safeParse(r.json)
+  check(
+    'the real handshake response satisfies its own OpenAPI schema, exactly',
+    contract.success,
+    contract.success ? '' : JSON.stringify(contract.error.issues)
   )
   check(
     'handshake wrote prefs to prefs:{userId}',
