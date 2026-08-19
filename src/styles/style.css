@@ -9,7 +9,13 @@
 @import './notes-popout.css';
 @import './task-layout.css';
 @import './main.css';
+@import './settings.css';
+@import './boards-bar.css';
+@import './filters.css';
 @import './modal.css';
+@import './edit-boards.css';
+@import './share-panel.css';
+@import './automation-panel.css';
 @import './calendar.css';
 @import '@wolffm/themes/advanced.css';
 @import '@wolffm/task-ui-components/theme-picker.css';

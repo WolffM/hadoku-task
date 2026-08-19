@@ -1,0 +1,248 @@
+/**
+ * The automation panel inside Edit Boards: the convert flow, the preset picker,
+ * and the "your provider moved on" banner.
+ */
+
+/* Automation panel */
+.automation-panel__hint,
+.automation-panel__status {
+  margin: 0;
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text-secondary);
+}
+/* "Your provider moved on" banner. Primary tint when applying moves nothing;
+   warning when it would strand tasks — the two cases need different urgency. */
+.automation-panel__update {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hdk-space-sm);
+  flex-wrap: wrap;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__update.is-unsafe {
+  background: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+}
+.automation-panel__update-text {
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__update-btn {
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: none;
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--hdk-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.automation-panel__update-btn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+.automation-panel__update-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.automation-panel__update.is-unsafe .automation-panel__update-btn {
+  background: var(--color-warning);
+  color: var(--color-on-warning);
+}
+.automation-panel__update-cancel {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-xs);
+  cursor: pointer;
+}
+.automation-panel__update-cancel:hover {
+  color: var(--color-text);
+}
+.automation-panel__repo {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-sm);
+  flex-wrap: wrap;
+}
+.automation-panel__repo-input {
+  flex: 1;
+  min-width: 12rem;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__repo-status {
+  font-size: var(--hdk-text-xs);
+}
+.automation-panel__repo-status.is-checking {
+  color: var(--color-text-muted);
+}
+.automation-panel__repo-status.is-ok {
+  color: var(--color-on-success-bg);
+  background: var(--color-success-bg);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+}
+.automation-panel__repo-status.is-bad {
+  color: var(--color-on-danger-bg);
+  background: var(--color-danger-bg);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+}
+/* Provider preset picker — sits above the paste box; choosing one fills it. */
+.automation-panel__presets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+}
+.automation-panel__preset {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.automation-panel__preset:hover {
+  background: var(--color-neutral-hover);
+}
+.automation-panel__preset.is-chosen {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__preset-label {
+  font-size: var(--hdk-text-sm);
+  font-weight: 600;
+}
+.automation-panel__preset-meta {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-secondary);
+}
+.automation-panel__preset.is-chosen .automation-panel__preset-meta {
+  color: var(--color-on-primary-bg);
+}
+.automation-panel__presets-msg {
+  margin: 0;
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-muted);
+}
+.automation-panel__presets-msg.is-warn {
+  color: var(--color-on-warning-bg);
+  background: var(--color-warning-bg);
+  padding: var(--hdk-space-xs) var(--hdk-space-sm);
+  border-radius: var(--hdk-radius-sm);
+}
+.automation-panel__json {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: var(--hdk-text-xs);
+  padding: var(--hdk-space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  /* Grow with content instead of scrolling internally — the modal card is the
+     only scrollbar this dialog needs. `resize: vertical` stays as a fallback
+     for browsers without field-sizing support. */
+  field-sizing: content;
+  resize: vertical;
+}
+.automation-panel__actions {
+  display: flex;
+  gap: var(--hdk-space-sm);
+  justify-content: flex-end;
+}
+.automation-panel__activate-btn,
+.automation-panel__deactivate {
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  border: none;
+  border-radius: var(--hdk-radius-sm);
+  cursor: pointer;
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__activate-btn {
+  background: var(--color-warning);
+  color: var(--color-on-warning);
+}
+.automation-panel__deactivate {
+  align-self: flex-start;
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
+}
+.automation-panel__preset:disabled,
+.automation-panel__activate-btn:disabled,
+.automation-panel__deactivate:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.automation-panel__preview {
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  padding: var(--hdk-space-sm);
+  background: var(--color-bg-card);
+}
+.automation-panel__preview-head {
+  margin: 0 0 var(--hdk-space-xs);
+  font-size: var(--hdk-text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.automation-panel__mapping,
+.automation-panel__lanes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+}
+.automation-panel__mapping li,
+.automation-panel__lane {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-sm);
+  font-size: var(--hdk-text-sm);
+}
+.automation-panel__map-tag,
+.automation-panel__lane-tag {
+  color: var(--color-text);
+}
+.automation-panel__map-arrow {
+  color: var(--color-text-muted);
+}
+.automation-panel__map-dest.is-inbox {
+  color: var(--color-on-warning-bg);
+  background: var(--color-warning-bg);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+}
+.automation-panel__lane-by {
+  margin-left: auto;
+  font-size: var(--hdk-text-xs);
+  padding: 0 var(--hdk-space-xs);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-neutral-bg);
+  color: var(--color-on-neutral-bg);
+}
+.automation-panel__lane-by.is-agent {
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
