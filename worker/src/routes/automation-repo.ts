@@ -12,7 +12,7 @@ import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { githubToken } from './board-automation'
 import { validateRepo } from './github-repo'
-import { grantRepoServiceKeyShare } from './shares'
+import { grantRepoServiceKeyShare } from './share-grants'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
   RepoValidateResponseSchema,

@@ -16,7 +16,7 @@
  *
  * Called directly: these are pure functions.
  */
-import { repoServiceKeyName, automationRunnerName } from '../src/routes/shares'
+import { repoServiceKeyName, automationRunnerName } from '../src/routes/share-naming'
 
 let pass = 0
 let fail = 0

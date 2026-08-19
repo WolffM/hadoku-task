@@ -11,12 +11,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { githubToken } from './board-automation'
 import { validateRepo } from './github-repo'
-import {
-  repoServiceKeyName,
-  automationRunnerName,
-  liveRowsByName,
-  grantContributor
-} from './shares'
+import { grantContributor, liveRowsByName } from './share-grants'
+import { automationRunnerName, repoServiceKeyName } from './share-naming'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import {
   ReconcileSharesInputSchema,

@@ -9,7 +9,7 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { activateAutomation, deactivateAutomation } from './board-automation'
-import { grantAutomationRunnerShare, grantRepoServiceKeyShare } from './shares'
+import { grantAutomationRunnerShare, grantRepoServiceKeyShare } from './share-grants'
 import {
   ActivateInputSchema,
   ActivateResponseSchema,
