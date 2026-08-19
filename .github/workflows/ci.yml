@@ -130,7 +130,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # `typecheck` covers the workspace packages, the app (tsc --noEmit) and
       # the worker. The workspace packages must be BUILT first — the app's tsc
@@ -140,7 +140,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm run build:packages
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Typecheck
         if: steps.scope.outputs.run == 'true'
@@ -210,7 +210,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: ESLint
         if: steps.scope.outputs.run == 'true'
@@ -285,7 +285,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # Boots the REAL worker (createTaskHandler) in-process against an
       # in-memory KV. Each harness runs in its own child process and asserts by

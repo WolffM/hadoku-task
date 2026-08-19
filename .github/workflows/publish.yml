@@ -114,12 +114,12 @@ jobs:
           echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Install dependencies
         run: pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # Validate that required manually-maintained files exist
       - name: Validate required source files
@@ -195,7 +195,7 @@ jobs:
       - name: Build Task package
         run: pnpm run build:all
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # Fallback version bump check - ensures the version was incremented even if
       # the pre-commit hook was skipped. Uses the up-front change flags (never a
@@ -285,7 +285,7 @@ jobs:
             echo "✅ All changed packages carry an unpublished version — nothing to bump."
           fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # Auto-bump versions if pre-commit hook was bypassed
       - name: Auto-bump versions
@@ -489,7 +489,7 @@ jobs:
           # `npm view` here reads the private registry. It used to authenticate
           # implicitly off the literal token in .npmrc; with the placeholder the
           # step must declare its own, or every read resolves an empty token.
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Rebuild after version bump
         if: steps.version_check.outputs.version_issues == '1'
@@ -506,7 +506,7 @@ jobs:
 
           echo "✅ Rebuild complete!"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       # Publish in dependency order: UI Components → Themes → Task, gated on the
       # up-front change flags (steps.changes) — NOT a fresh diff, which the
@@ -556,7 +556,7 @@ jobs:
             verify_published "@wolffm/task" "."
           fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Notify parent about package updates
         if: steps.changes.outputs.ui == 'true' || steps.changes.outputs.themes == 'true' || steps.changes.outputs.task == 'true'
