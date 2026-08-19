@@ -292,5 +292,47 @@
       "offenders": 0,
       "suppressedByFloor": 0
     }
+  },
+  {
+    "at": "2026-08-18T19:52:14-07:00",
+    "sha": "7344f262beafd8a624223dce5b0e120df154e935",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": ["arrival"],
+    "aggregates": {
+      "candidateFiles": 384,
+      "perLane": {
+        "size": {
+          "filesAssessed": 315,
+          "filesFlagged": 2
+        },
+        "arrival": {
+          "filesAssessed": 121,
+          "filesFlagged": 0
+        },
+        "deadcode": {
+          "filesAssessed": 271,
+          "filesFlagged": 0
+        },
+        "duplication": {
+          "filesAssessed": 315,
+          "filesFlagged": 0
+        },
+        "smells": {
+          "filesAssessed": 238,
+          "filesFlagged": 0
+        },
+        "consistency": {
+          "filesAssessed": 217,
+          "filesFlagged": 0
+        }
+      },
+      "gatePassing": 0,
+      "offenders": 0,
+      "suppressedByFloor": 0
+    }
   }
 ]
