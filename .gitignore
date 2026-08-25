@@ -84,3 +84,9 @@ test-results/
 # vibeCheck audit working artifacts (regenerable; ledger + trends stay tracked)
 .vibecompact/audit.md
 .vibecompact/out/
+
+# Agent worktrees (`git worktree add .claude/worktrees/<task>`). A worktree is
+# a FULL second checkout, so without this a `git add -A` commits one whole.
+# Scoped deliberately: the REST of .claude/ is tracked (1 file is here), and a
+# blanket `.claude/` would silently swallow the next file added to it.
+.claude/worktrees/
