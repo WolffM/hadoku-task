@@ -83,7 +83,7 @@
   "author": "WolffM",
   "license": "MIT",
   "dependencies": {
-    "@wolffm/prefs-client": "^1.0.9",
+    "@wolffm/prefs-client": "^1.0.11",
     "zod": "^4.0.0"
   },
   "peerDependencies": {
