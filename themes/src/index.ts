@@ -204,3 +204,19 @@ export {
   isIconName
 } from './icons/index'
 export type { IconName, IconFamily, IconVariant, IconSvgOptions } from './icons/index'
+// Platform context — one device definition for the fleet, replacing six
+// hand-rolled `useIsMobile` implementations with four different thresholds.
+// Framework-free half is also published at `@wolffm/themes/platform` for the
+// plain-TS consumers, exactly as the icon module is.
+export {
+  detectPlatform,
+  createPlatform,
+  stampPlatform,
+  isSamePlatform,
+  NARROW_BREAKPOINT,
+  NARROW_QUERY,
+  TOUCH_FIRST_QUERY
+} from './platform/index'
+export type { PlatformSeed, PlatformStore } from './platform/index'
+export { usePlatform } from './platform/usePlatform'
+export type { UsePlatformOptions } from './platform/usePlatform'
