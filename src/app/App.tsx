@@ -15,7 +15,6 @@ import { usePreferences } from '../hooks/usePreferences'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useModalState } from '../hooks/useModalState'
 import { useActionableScan } from '../hooks/useActionableScan'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator'
 import { isMobileApp } from '../utils/platform'
@@ -27,7 +26,7 @@ import { useToast, Toaster } from '@wolffm/task-ui-components'
 import { logger } from '@wolffm/logger/client'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { AppHeader } from '@wolffm/task-ui-components'
-import { HadokuThemeRoot, useHadokuTheme } from '@wolffm/themes'
+import { HadokuThemeRoot, useHadokuTheme, usePlatform } from '@wolffm/themes'
 import { TaskPreferencesSection } from '../components/TaskPreferencesSection'
 import { useThemePrefsMigration } from '../hooks/useThemePrefsMigration'
 import type { ViewType } from './types'
@@ -88,8 +87,18 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   })
 
   // Basic state
-  const isMobileDevice = useIsMobile()
-  // Detect once at mount — UA doesn't change during a session
+  //
+  // Viewport width, from the one shared definition in @wolffm/themes — this
+  // used to be a local `useIsMobile` that seeded from `window.innerWidth < 768`
+  // and then listened on `(max-width: 767px)`. Two mechanisms for one boundary:
+  // they disagree under fractional zoom, and innerWidth reads stale during iOS
+  // orientationchange, which is exactly the rotation the listener was there to
+  // catch. The shared hook uses matchMedia for both, and takes the host's seed
+  // so the first paint is not the wrong layout.
+  const isMobileDevice = usePlatform({ propsPlatform: props.platform }).narrow
+  // Detect once at mount — UA doesn't change during a session. This is a
+  // DIFFERENT question from the line above ("am I inside the native shell?"),
+  // which the host cannot answer, so it stays local and stays frozen.
   const [isInMobileApp] = useState(() => isMobileApp())
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
