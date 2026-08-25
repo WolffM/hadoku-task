@@ -3,19 +3,23 @@
  *
  * WHAT THIS REPLACES
  * ------------------
- * Six independent implementations, using four different thresholds (768, 820,
- * 900, 1000), answering three different questions. Two of them disagreed with
- * their own CSS: `hadoku-pygmalion` branched on `innerWidth >= 900` while its
- * stylesheet carried `max-width:900px`, `899px` AND `820px` (so at exactly
- * 900px the JS said desktop and the CSS said mobile), and
- * `hadoku-dataplatform` used a pure pointer query in JS against twelve
- * `max-width:900px` rules in CSS (so a landscape tablet got touch-first
- * behaviour and desktop layout at the same time).
+ * Six independent implementations across the fleet, using four different
+ * thresholds (768, 820, 900, 1000) to answer three different questions.
+ * `hadoku-task` asked about viewport WIDTH and `hadoku-dataplatform` about
+ * POINTER TYPE — the same "am I on mobile?" question, answered two ways, and
+ * neither app could tell you which one it meant from the name `useIsMobile`.
+ * Those two are what this replaces.
  *
- * Same failure as the eight hand-copied `useTheme.ts` files this package
- * already absorbed — see the header of ../useTheme.tsx — so it gets the same
- * fix: one definition here, a seed passed down by the host on mount, and a
- * shared hook that owns the live value.
+ * (The other three turned out on inspection to be component CAPACITY
+ * thresholds, each already agreeing with its own stylesheet — pygmalion's 900
+ * is "room for three panes", merchant's 1000 is "room for a second column".
+ * Those are legitimately local and are NOT candidates for this module. An
+ * earlier draft catalogued them as drift; that was a bad read.)
+ *
+ * The failure this DOES fix is the same one as the eight hand-copied
+ * `useTheme.ts` files this package already absorbed — see the header of
+ * ../useTheme.tsx — so it gets the same fix: one definition here, a seed passed
+ * down by the host on mount, and a shared hook that owns the live value.
  *
  * TWO FLAGS, NOT ONE
  * ------------------
@@ -90,11 +94,12 @@ export function isSamePlatform(a: PlatformSeed, b: PlatformSeed): boolean {
  * Mirror the flags onto an element as `data-touch-first` / `data-narrow`, so
  * CSS keys off the IDENTICAL source the JS does.
  *
- * This is what makes the two JS/CSS disagreements described at the top of this
- * file structurally impossible to reintroduce: a stylesheet writing
- * `[data-narrow] .lane { … }` cannot drift from the hook, because there is only
- * one query left. Present/absent rather than `="true"`/`="false"` so the plain
- * attribute selector works.
+ * A stylesheet writing `[data-narrow] .lane { … }` cannot drift from the hook,
+ * because there is only one query left to keep in step. `hadoku-dataplatform`
+ * already did exactly this for itself with an `is-mobile` class it set from the
+ * same value it branched on — this is that idea with one fleet-wide name.
+ * Present/absent rather than `="true"`/`="false"` so the plain attribute
+ * selector works.
  */
 export function stampPlatform(el: Element | null | undefined, platform: PlatformSeed): void {
   if (!el) return
