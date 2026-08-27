@@ -76,9 +76,23 @@ jobs:
           pnpm --version
 
       - name: Configure npm auth for GitHub Packages
+        # SINGLE quotes, and the literal ${NODE_AUTH_TOKEN} — never the value.
+        #
+        # This wrote the RAW TOKEN. `${{ secrets.X }}` is expanded by GitHub
+        # before the shell ever sees it, so the double-quoted form put a live PAT
+        # into ~/.npmrc — the SHARED home directory of a self-hosted runner,
+        # where it then clobbered the fleet's tokenless npmrc for every later job
+        # on that machine. Found on claw-1 (2026-08-26) and hokon (2026-08-27),
+        # same credential, written by this step on the daily @wolffm fan-out.
+        #
+        # pnpm expands ${NODE_AUTH_TOKEN} from the environment at install time,
+        # which is what `env:` below supplies — so the file on disk never holds a
+        # secret. This repo's own publish.yml already does it this way.
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.HADOKU_NPM_READ_TOKEN }}" > ~/.npmrc
+          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > ~/.npmrc
           echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Update @wolffm/* to latest (majors included)
         env:
