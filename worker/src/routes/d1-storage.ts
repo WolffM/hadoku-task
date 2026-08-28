@@ -516,10 +516,15 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
     // --- Delete board data ----------------------------------------------
     async deleteBoardData(_userType: UserType, sessionId: string, boardId: string): Promise<void> {
       await ensureInitialized(sessionId)
-      const uid = sessionId ?? 'public'
+      // `sessionId` is a required string, so the `?? 'public'` that used to sit
+      // here could never fire — a dead guard, and a misleading one: it sat on
+      // `tasks.user_id` / `boards.user_id`, which ARE ownership columns, and so
+      // suggested `'public'` is a value that may own a row. It is not
+      // (IDENTITY_MODEL.md R8: absence is NULL, never an in-band sentinel).
+      // Removed rather than made reachable.
       await db.batch([
-        db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
-        db.prepare('DELETE FROM boards WHERE user_id = ? AND id = ?').bind(uid, boardId)
+        db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(sessionId, boardId),
+        db.prepare('DELETE FROM boards WHERE user_id = ? AND id = ?').bind(sessionId, boardId)
       ])
       // Events live in D1 keyed by the masked credential (unchanged path).
       await deleteBoardEvents(env.DB, maskKey(sessionId), boardId)
