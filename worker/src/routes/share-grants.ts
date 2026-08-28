@@ -8,7 +8,7 @@
  */
 import { logRequest } from '../logger'
 import { DEFAULT_RUNNER_NAME, repoServiceKeyName } from './share-naming'
-import { nowIso, readLiveRows, resolveRegistryName } from './share-registry'
+import { nowIso, resolveRegistryName } from './share-registry'
 import type { Env } from '../types'
 
 /** Why an auto-grant didn't happen. Reported, never silently swallowed. */
@@ -85,25 +85,6 @@ export async function grantAutomationRunnerShare(
 ): Promise<AutoShareOutcome> {
   const name = env.AUTOMATION_RUNNER_KEY_NAME?.trim() || DEFAULT_RUNNER_NAME
   return grantShareByName(env, ownerId, boardId, name, 'automation-runner')
-}
-
-/**
- * Every live registry row keyed by LOWERCASED display name, for callers that
- * resolve many names at once. `resolveRegistryName` costs a full `key:` scan per
- * name; a reconcile over N boards would pay that 2N times. This pays it once.
- *
- * A name can appear on more than one live row only through operator error (the
- * registry treats names as unique, `isNameTaken`-style); last row wins, which
- * matches how `registryNameMap` resolves a duplicate userId.
- */
-export async function liveRowsByName(
-  env: Env
-): Promise<Map<string, { userId: string; name: string | null; tier?: string }>> {
-  const map = new Map<string, { userId: string; name: string | null; tier?: string }>()
-  for (const row of await readLiveRows(env)) {
-    if (row.name) map.set(row.name.trim().toLowerCase(), row)
-  }
-  return map
 }
 
 /**

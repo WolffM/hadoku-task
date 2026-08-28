@@ -2,9 +2,11 @@
  * Board share management routes (§7).
  *
  * Owner-only: grant, list, revoke. Grantee-only: leave (remove own access).
- * Grantee identity is resolved by KEY via the read-only SESSIONS_KV registry
- * (never stored, never logged), or by a raw userId. A board is addressed by the
- * same ref (slug/handle) as everywhere else and resolved through route-utils.
+ * A grantee is named by display NAME (preferred — no credential changes hands)
+ * or by raw key, and either way the registry resolves it; a raw userId is not
+ * accepted, because an owner taken on faith from a request body is the defect
+ * this whole model exists to prevent. A board is addressed by the same ref
+ * (slug/handle) as everywhere else and resolved through route-utils.
  *
  * Routes are declared with createRoute so they both validate and appear in the
  * generated OpenAPI spec (schemas-agent.ts).
@@ -32,6 +34,7 @@ import {
 } from '../schemas-agent'
 import { ErrorResponseSchema } from '../schemas'
 import {
+  isIdentityError,
   nowIso,
   registryNameMap,
   resolveGrantee,
@@ -123,16 +126,14 @@ export function createShareRoutes() {
     const body = c.req.valid('json') as {
       name?: string
       key?: string
-      userId?: string
       level: Level
     }
 
-    const grantee = await resolveGrantee(c.env, {
-      name: body.name,
-      key: body.key,
-      userId: body.userId
-    })
-    if ('error' in grantee) {
+    // Two ways in, and neither is "trust what you were sent". There is no
+    // userId branch: an already-resolved owner cannot be re-resolved, so
+    // accepting one from a body is always a claim taken on faith (R5).
+    const grantee = await resolveGrantee(c.env, { name: body.name, key: body.key })
+    if (isIdentityError(grantee)) {
       // Discriminated rather than posted as one untyped bag with a dynamic
       // status: each declared response has its own schema (404 carries a
       // NAME_NOT_FOUND code, 409 a NO_USER_ID one, 400 neither), and only a

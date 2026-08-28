@@ -109,7 +109,41 @@ const env: Record<string, unknown> = {
   AUTOMATION_PRESET_SOURCES: JSON.stringify([
     { id: 'tenhands', label: 'TenHands', url: PRESETS_URL }
   ]),
-  TASK_SERVICE_KEY: SERVICE_KEY
+  TASK_SERVICE_KEY: SERVICE_KEY,
+  // The read-only key registry. A share is granted by display NAME and the
+  // registry is what turns that into an owner — there is no way to hand the
+  // endpoint a userId any more, because an owner taken on faith from a request
+  // body is the defect the identity model exists to prevent. See
+  // docs/architecture/IDENTITY_MODEL.md (R5) in hadoku_site.
+  SESSIONS_KV: makeRegistry()
+}
+
+/** A stand-in for edge-router's `key:{rawKey}` registry. */
+function makeRegistry() {
+  const rows: Record<string, unknown> = {
+    'key:owner-key': {
+      name: 'Owner',
+      tier: 'friend',
+      createdAt: 1,
+      lastSeenAt: 1,
+      userId: 'owner-uid'
+    },
+    'key:other-key': {
+      name: 'Other',
+      tier: 'friend',
+      createdAt: 1,
+      lastSeenAt: 1,
+      userId: 'other-uid'
+    }
+  }
+  return {
+    async get(k: string) {
+      return rows[k] === undefined ? null : JSON.stringify(rows[k])
+    },
+    async list() {
+      return { keys: Object.keys(rows).map(name => ({ name })) }
+    }
+  }
 }
 /** The same install with one binding removed/changed. */
 function envWithout(key: string, replacement?: unknown): Record<string, unknown> {
@@ -408,7 +442,8 @@ async function main() {
       {
         method: 'POST',
         headers: headersFor(OWNER),
-        body: JSON.stringify({ userId: OTHER.id, level: 'readonly' })
+        // By NAME. `userId` used to be accepted here and stored unlooked-up.
+        body: JSON.stringify({ name: 'Other', level: 'readonly' })
       },
       env
     )

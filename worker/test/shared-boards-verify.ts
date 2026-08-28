@@ -351,7 +351,7 @@ async function main() {
   section('6. Contributor cannot manage shares (owner-only)')
   // ---------------------------------------------------------------------
   r = await req(CONTRIB, 'POST', `/task/api/boards/${handle}/shares`, {
-    userId: 'someone',
+    name: 'someone',
     level: 'readonly'
   })
   check('contributor grant → 403', r.status === 403, `status=${r.status}`)

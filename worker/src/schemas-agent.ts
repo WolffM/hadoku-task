@@ -464,10 +464,12 @@ export const GrantShareInputSchema = z
       example: 'friend-…',
       description: 'Grantee access key — a bearer credential; prefer `name`.'
     }),
-    userId: z
-      .string()
-      .optional()
-      .openapi({ description: 'Grantee userId, if you already have it.' }),
+    // `userId` was here, and accepting it was the defect. A userId in a request
+    // body is a CLAIM: it can be a display name someone read in a doc comment,
+    // or a well-formed UUID belonging to nobody, and neither is distinguishable
+    // from a real one without asking the registry. It went straight through
+    // unlooked-up. See docs/architecture/IDENTITY_MODEL.md (R5) in hadoku_site.
+    // Grant by `name`; it is what a human actually has.
     level: z.enum(['readonly', 'contributor']).openapi({ example: 'contributor' })
   })
   .openapi('GrantShareInput')
