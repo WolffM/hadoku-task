@@ -246,44 +246,12 @@ jobs:
           exit 1
 
       - name: Report the outcome so a silent red streak screams
-        # On 2026-08-04 this workflow failed ten times in a row and told nobody
-        # until the next daily CI digest. POST /health/api/jobs is the fleet's
-        # one alerting path — monitoring-api hangs the Discord alert on the
-        # outcome itself (job-alerts.ts), throttled to one reminder per 24h,
-        # with a recovery notice when it goes green again. Same pattern as
-        # tenhands/taskauto.yml. A runner that dies mid-run still can't report
-        # itself; that rarer class stays covered by the daily digest.
+        # Why a job reports, and why this action is vendored rather than
+        # shared, are both in .github/actions/report-job/action.yml.
         if: always()
-        env:
-          OUTCOME: ${{ job.status }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          RUN_ID: ${{ github.run_id }}
-          HADOKU_SERVICE_KEY: ${{ secrets.KEY_SERVICE_TASK }}
-        run: |
-          case "$OUTCOME" in
-            success) status=succeeded ;;
-            failure) status=failed ;;
-            # A cancel (concurrency superseded it) is not breakage, and must not
-            # clear a live failure streak either — stay silent.
-            *) echo "outcome=$OUTCOME — not reported"; exit 0 ;;
-          esac
-
-          if [ -z "$HADOKU_SERVICE_KEY" ]; then
-            echo "::warning::KEY_SERVICE_TASK is unset — outcome not reported"
-            exit 0
-          fi
-
-          duration_ms=$(( ($(date -u +%s) - ${RUN_STARTED_AT:-$(date -u +%s)}) * 1000 ))
-
-          jq -n --arg st "$status" --arg run "gha_$RUN_ID" \
-                --arg err "auto-update run failed — $RUN_URL" \
-                --argjson d "$duration_ms" \
-            '{job_name: "hadoku-task:update-wolffm", status: $st, run_id: $run, duration_ms: $d}
-             + (if $st == "failed" then {error: $err} else {} end)' > /tmp/update-wolffm-outcome.json
-
-          # Never fail the job over a reporting blip. `-f` so a non-2xx shows.
-          curl -sS -f -X POST https://hadoku.me/health/api/jobs \
-            -H "X-User-Key: $HADOKU_SERVICE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data @/tmp/update-wolffm-outcome.json \
-            || echo "::warning::could not report outcome to monitoring-api"
+        uses: ./.github/actions/report-job
+        with:
+          job-name: hadoku-task:update-wolffm
+          service-key: ${{ secrets.KEY_SERVICE_TASK }}
+          started-at: ${{ env.RUN_STARTED_AT }}
+          error-message: auto-update run failed — $RUN_URL
