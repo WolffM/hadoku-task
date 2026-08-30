@@ -17,10 +17,13 @@ on:
 
 jobs:
   build:
+    # HOSTED, deliberately — see allowHosted in hadoku_site's
+    # repo-policy-manifest.json. KF6 dev packages only exist on Debian trixie /
+    # Ubuntu 25.04, neither of which is a GitHub-hosted runner. Run inside a
+    # Debian 13 (trixie) container, which carries KF6 6.x — matching the target
+    # desktop exactly. The container: step needs Docker, which the claws don't
+    # have (verified 2026-08-30). Revisit if the claws gain Docker.
     runs-on: ubuntu-24.04
-    # KF6 dev packages only exist on Debian trixie / Ubuntu 25.04, neither of
-    # which is a GitHub-hosted runner. Run inside a Debian 13 (trixie) container,
-    # which carries KF6 6.x — matching the target desktop exactly.
     container: debian:trixie
     steps:
       - name: Install KF6/Qt6 toolchain
