@@ -49,23 +49,10 @@ jobs:
       # setup-node BEFORE corepack — see ci.yml: `corepack enable` symlinks its
       # shims next to the active node, and without setup-node that is the
       # host's /usr/bin, which the runner user cannot write.
-      - uses: actions/setup-node@v6
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
         with:
-          node-version: '22'
-          registry-url: https://npm.pkg.github.com
-          scope: '@wolffm'
+          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
-      # corepack, not pnpm/action-setup — the self-installer shares one
-      # directory across every runner instance on this host and dies with
-      # `ENOENT ... uv_cwd` when concurrent jobs race it.
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-
-      # @wolffm/logger, prefs-client and worker-utils resolve from GH Packages,
-      # so the install needs auth. GITHUB_TOKEN is not enough — it cannot read
-      # another repo's packages.
       - name: Install
         run: pnpm install --frozen-lockfile
         env:

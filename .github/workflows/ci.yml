@@ -106,26 +106,10 @@ jobs:
       # runner user cannot write: `EACCES: permission denied, symlink
       # '../lib/node_modules/corepack/dist/yarn.js' -> '/usr/bin/yarn'`.
       # setup-node puts node in the writable tool cache first.
-      - uses: actions/setup-node@v6
-        if: steps.scope.outputs.run == 'true'
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
         with:
-          node-version: '22'
-          registry-url: https://npm.pkg.github.com
-          scope: '@wolffm'
+          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
-      # corepack, not pnpm/action-setup — see publish.yml: the self-installer
-      # shares one directory across every runner instance on this host and dies
-      # with `ENOENT ... uv_cwd` when concurrent jobs race it. The version is
-      # pinned by the `packageManager` field in package.json.
-      - name: Enable pnpm
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-
-      # @wolffm/logger, prefs-client and worker-utils resolve from GH Packages
-      # (task-ui-components and themes are workspace:* and resolve locally), so
-      # the install needs auth. HADOKU_SITE_TOKEN is what publish.yml uses.
       - name: Install
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile

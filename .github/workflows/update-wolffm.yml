@@ -55,25 +55,9 @@ jobs:
           # pattern hadoku_site/update-packages.yml already uses.
           token: ${{ secrets.HADOKU_SITE_TOKEN }}
 
-      - uses: actions/setup-node@v6
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
         with:
-          node-version: '22'
-
-      # Auth goes in ~/.npmrc, NOT the repo's tracked .npmrc (which carries the
-      # registry line and nothing else). Writing the token into the tracked file
-      # leaves the tree permanently dirty, which defeats the no-op check below —
-      # and puts a secret one stray `git add .` away from being committed.
-      # Mirrors publish.yml.
-
-      # pnpm via corepack, pinned by the `packageManager` field in package.json.
-      # Replaces pnpm/action-setup, whose self-installer shares one directory
-      # across every runner instance on the host and dies with
-      # `ENOENT ... uv_cwd` when concurrent jobs race it.
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-          pnpm --version
+          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
       - name: Configure npm auth for GitHub Packages
         # SINGLE quotes, and the literal ${NODE_AUTH_TOKEN} — never the value.

@@ -32,33 +32,10 @@ jobs:
           # pattern hadoku_site/update-packages.yml already uses.
           token: ${{ secrets.HADOKU_SITE_TOKEN }}
 
-      - uses: actions/setup-node@v6
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
         with:
-          node-version: '22'
-          registry-url: https://npm.pkg.github.com
-          scope: '@wolffm'
+          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
 
-      # pnpm via corepack, pinned by the `packageManager` field in package.json.
-      # Replaces pnpm/action-setup, whose self-installer shares one directory
-      # across every runner instance on the host and dies with
-      # `ENOENT ... uv_cwd` when concurrent jobs race it.
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.5.0 --activate
-          pnpm --version
-
-      # Detect which packages changed ONCE, up front, from the FULL push range
-      # (event.before..sha) — before any later step moves HEAD. Every downstream
-      # step reads these outputs and never re-runs `git diff HEAD~1 HEAD`.
-      #
-      # Why this matters: the auto-bump step below commits + pushes a version
-      # bump. Any change-detection that runs AFTER that would diff the auto-bump
-      # commit (package.json + lockfile only) and conclude "task-ui-components did
-      # not change" — silently skipping its publish while `task` still ships
-      # pinned to the never-published version. That exact bug stranded the
-      # registry twice. HEAD~1..HEAD is also wrong for squash merges and
-      # multi-commit pushes; event.before..sha covers all three.
       - name: Detect changed packages
         id: changes
         run: |
