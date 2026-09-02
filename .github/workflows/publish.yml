@@ -38,16 +38,35 @@ jobs:
 
       - name: Detect changed packages
         id: changes
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
           ui=false; themes=false; task=false
 
-          # Base of the comparison. On push this is the commit before the push
-          # (covers squash merges + multi-commit pushes). On workflow_dispatch
-          # github.event.before is empty, so we fall back to the parent of HEAD
-          # — i.e. a manual run simply re-evaluates the last commit, which also
-          # recovers a publish that a previous run left stranded (a missing
-          # version gets published as-is, with no spurious bump of packages whose
-          # current version is already on the registry).
+          # A manual dispatch is an explicit "publish now", and it exists to
+          # recover a publish a push skipped — so it must never be vetoed by the
+          # same check that skipped it.
+          #
+          # This used to fall through to the HEAD~1 branch below, on the argument
+          # that re-evaluating the last commit still recovers a stranded publish.
+          # That holds for the version WALK, which starts from the registry and
+          # will publish a missing version as-is — but not for this gate, which
+          # vetoes the walk before it runs. A three-commit push where themes
+          # changed first left no dispatch that could ship it, and the only way
+          # out was a no-op commit under themes/.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "Manual dispatch: publishing every package unconditionally"
+            echo "ui=true" >> $GITHUB_OUTPUT
+            echo "themes=true" >> $GITHUB_OUTPUT
+            echo "task=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Base of the comparison: the commit before the PUSH, which covers
+          # squash merges and multi-commit pushes alike. A branch's first push
+          # sends the all-zero sha and a force-push can name an unreachable
+          # commit; fall back to the last commit in both cases — a narrower range
+          # than the truth, but never a broken one.
           BEFORE="${{ github.event.before }}"
           if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
