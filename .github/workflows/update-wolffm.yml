@@ -238,4 +238,3 @@ jobs:
           job-name: hadoku-task:update-wolffm
           service-key: ${{ secrets.KEY_SERVICE_TASK }}
           started-at: ${{ env.RUN_STARTED_AT }}
-          error-message: auto-update run failed — $RUN_URL
