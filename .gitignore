@@ -19,7 +19,18 @@ src/**/*.d.ts.map
 
 # IMPORTANT: Exceptions for manually-maintained files that MUST be committed
 # These files are required by the build process and are validated in CI
-!src/app/entry.d.ts          # Type definitions for package exports (used by vite.config.ts)
+#
+# NOTE: .gitignore has no trailing comments — everything after the pattern on the
+# same line is PART OF THE PATTERN. Both of these carried one, so they matched
+# nothing and re-included nothing; src/app/entry.d.ts stayed in the repo only
+# because it was already tracked when the src/**/*.d.ts rule landed, and a
+# `git rm --cached` would have made it vanish silently. Comments go on their own
+# line.
+
+# Type definitions for package exports (used by vite.config.ts)
+!src/app/entry.d.ts
+# Declares __HADOKU_APP_NAME__, the build-time app name vite injects
+!src/globals.d.ts
 
 # Editor directories and files
 .vscode/*

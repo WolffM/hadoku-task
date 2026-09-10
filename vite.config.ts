@@ -2,9 +2,30 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync, mkdirSync, appendFileSync } from 'fs'
 import { resolve, dirname } from 'path'
+import { labelFor } from '@wolffm/catalogue'
+
+// THE APP'S ID — the one identifier this repo states about itself. The display
+// NAME is looked up from it, so the two can never disagree. Must match the `id`
+// in hadoku_site's spec/categories.json.
+const APP_ID = 'task'
+
+// Read from the catalogue at CONFIG TIME (this file runs in node), so the name
+// is never written down in this repo and the catalogue never ships in the bundle.
+const APP_NAME = labelFor(APP_ID) ?? APP_ID
 
 export default defineConfig({
+  define: {
+    // The standalone name. Mounted by the host, `appName` in the registry props
+    // carries the live value and this is never read.
+    __HADOKU_APP_NAME__: JSON.stringify(APP_NAME)
+  },
   plugins: [
+    {
+      // index.html is static and cannot import the catalogue; this keeps the
+      // standalone TAB and the standalone HEADER the one name.
+      name: 'hadoku-app-name',
+      transformIndexHtml: (html: string) => html.split('__HADOKU_APP_NAME__').join(APP_NAME)
+    },
     react(),
     // Dev-only local log sink. The client logger's dev sink POSTs every entry
     // here (see src/utils/devLogSink.ts); we append one JSON line per event to

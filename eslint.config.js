@@ -48,6 +48,10 @@ export default [
         }
       },
       globals: {
+        // Injected by vite's `define` from @wolffm/catalogue at config time — see
+        // vite.config.ts. It is a build-time literal, so no-undef cannot see the
+        // ambient declaration in src/globals.d.ts.
+        __HADOKU_APP_NAME__: 'readonly',
         // Node.js globals
         console: 'readonly',
         process: 'readonly',

@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "5.11.10",
+  "version": "5.11.11",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "repository": {
@@ -80,6 +80,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.60.1",
     "@vitejs/plugin-react": "^5.1.1",
+    "@wolffm/catalogue": "^1.0.0",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
