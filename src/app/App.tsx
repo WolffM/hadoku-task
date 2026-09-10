@@ -431,7 +431,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
             platform's from HadokuThemeRoot's context. What this app still owns
             is its own preferences, which go in the children slot below the
             four canonical rows. */}
-        <AppHeader title="Tasks">
+        <AppHeader title="Task">
           <TaskPreferencesSection
             preferences={preferences}
             onSavePreferences={handleSavePreferences}
