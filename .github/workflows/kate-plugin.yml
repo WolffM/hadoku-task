@@ -17,32 +17,55 @@ on:
 
 jobs:
   build:
-    # HOSTED, deliberately — see allowHosted in hadoku_site's
-    # repo-policy-manifest.json. KF6 dev packages only exist on Debian trixie /
-    # Ubuntu 25.04, neither of which is a GitHub-hosted runner. Run inside a
-    # Debian 13 (trixie) container, which carries KF6 6.x — matching the target
-    # desktop exactly. The container: step needs Docker, which the claws don't
-    # have (verified 2026-08-30). Revisit if the claws gain Docker.
-    runs-on: ubuntu-24.04
-    container: debian:trixie
+    # ON THE FLEET since 2026-09-10, and the container is GONE.
+    #
+    # The old rationale was right that KF6 dev packages only exist on Debian
+    # trixie / Ubuntu 25.04 and that no GitHub-hosted image is either — but it
+    # reached for Docker to import trixie onto `ubuntu-24.04` without noticing
+    # that EVERY CLAW ALREADY IS Debian 13 (trixie). `fleet toolchain` reports
+    # it for all eight live nodes. So the container was importing an OS the
+    # target machine already runs, and the Docker the claws lack was only ever
+    # needed to paper over the wrong base image.
+    #
+    # KF6 6.13.0 and Qt6 6.8.2 are installed on every claw from trixie's own
+    # archive, so this job now compiles against the same KF6 the target desktop
+    # runs — which is what the container was for in the first place.
+    #
+    # GUARDED, not fallback-routed: `build` is NOT one of this repo's required
+    # contexts (those are typecheck, lint, worker-tests), so a fork PR can skip
+    # it without pinning the PR unmergeable. hadoku-task is PUBLIC, so a fork
+    # PR must never execute on the claws.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+               github.event.pull_request.author_association)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER) }}
     steps:
+      # `sudo`, because this is a real machine rather than a root container.
+      # The claws are provisioned with this exact set, so on the fleet these are
+      # already-satisfied no-ops that only cost the `apt-get update`.
+      # INSTALL ONLY WHAT IS MISSING, and touch apt only then. Every claw is
+      # provisioned with this exact set, so on the fleet this is a no-op costing
+      # one dpkg query rather than an `apt-get update` per job. It must also be
+      # a no-op on HOKON, which gains `hadoku-builder` when the backstop
+      # promotes it in an all-claws-down outage and which deliberately has no
+      # NOPASSWD sudo rule — an unconditional `sudo apt-get` there just fails.
       - name: Install KF6/Qt6 toolchain
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            ca-certificates \
-            git \
-            cmake \
-            build-essential \
-            extra-cmake-modules \
-            qt6-base-dev \
-            qt6-declarative-dev \
-            libkf6texteditor-dev \
-            libkf6coreaddons-dev \
-            libkf6i18n-dev \
-            libkf6xmlgui-dev \
-            libkf6wallet-dev \
-            gettext
+          missing=""
+          for p in ca-certificates git cmake build-essential extra-cmake-modules \
+                   qt6-base-dev qt6-declarative-dev libkf6texteditor-dev \
+                   libkf6coreaddons-dev libkf6i18n-dev libkf6xmlgui-dev \
+                   libkf6wallet-dev gettext; do
+            dpkg -s "$p" >/dev/null 2>&1 || missing="$missing $p"
+          done
+          if [ -n "$missing" ]; then
+            echo "installing:$missing"
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends $missing
+          else
+            echo "KF6/Qt6 toolchain already present — nothing to install"
+          fi
 
       - name: Checkout
         uses: actions/checkout@v6
