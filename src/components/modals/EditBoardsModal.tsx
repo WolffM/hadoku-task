@@ -21,6 +21,7 @@ import { Icon } from '@wolffm/themes'
 import { boardRef, type ShareApi } from './shareApi'
 import { SharePanel } from './SharePanel'
 import { AutomationPanel } from './AutomationPanel'
+import { ConfirmModal } from './ConfirmModal'
 
 export interface EditBoardsModalProps {
   isOpen: boolean
@@ -39,6 +40,12 @@ export interface EditBoardsModalProps {
 }
 
 const isOwned = (b: Board): boolean => !b.access || b.access === 'owner'
+
+/** A destructive action waiting on its confirmation dialog. */
+interface PendingAction {
+  kind: 'delete' | 'leave'
+  board: Board
+}
 
 export function EditBoardsModal({
   isOpen,
@@ -63,6 +70,11 @@ export function EditBoardsModal({
   const [automatingId, setAutomatingId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  // Destructive actions confirm through a dialog this app renders, NOT through
+  // window.confirm — a browser told to stop prompting for this page returns
+  // false from confirm() without showing anything, which turned Delete into a
+  // dead button with no way back short of clearing site settings.
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
   // The favorited set the toggle operates on. Defaults to the first N standard
   // boards when nothing is explicitly favorited yet (effectivePinnedIds), so the
@@ -135,6 +147,16 @@ export function EditBoardsModal({
   }
 
   const createInvalid = !newName.trim() || validateBoardName(newName) !== null
+
+  const runPendingAction = async () => {
+    const action = pendingAction
+    if (!action) return
+    setPendingAction(null)
+    await run(async () => {
+      if (action.kind === 'delete') await onDelete(action.board.id)
+      else await shareApi.revokeShare(boardRef(action.board), 'me')
+    })
+  }
 
   const renderRow = (b: Board) => {
     const isPinned = pinnedSet.has(b.id)
@@ -268,11 +290,7 @@ export function EditBoardsModal({
                 {!isMain && (
                   <button
                     className="edit-boards__delete"
-                    onClick={() => {
-                      if (window.confirm(`Delete board "${b.name}" and all its tasks?`)) {
-                        void run(() => onDelete(b.id))
-                      }
-                    }}
+                    onClick={() => setPendingAction({ kind: 'delete', board: b })}
                     disabled={busy}
                     title="Delete board"
                     aria-label={`Delete ${b.name}`}
@@ -284,13 +302,7 @@ export function EditBoardsModal({
             ) : (
               <button
                 className="edit-boards__leave"
-                onClick={() => {
-                  if (window.confirm(`Leave shared board "${b.name}"?`)) {
-                    void run(async () => {
-                      await shareApi.revokeShare(boardRef(b), 'me')
-                    })
-                  }
-                }}
+                onClick={() => setPendingAction({ kind: 'leave', board: b })}
                 disabled={busy}
                 title="Leave this shared board"
                 aria-label={`Leave ${b.name}`}
@@ -377,6 +389,27 @@ export function EditBoardsModal({
           <ul className="edit-boards__list">{shared.map(renderRow)}</ul>
         </>
       )}
+
+      <ConfirmModal
+        isOpen={pendingAction !== null}
+        title={pendingAction?.kind === 'leave' ? 'Leave shared board?' : 'Delete board?'}
+        message={
+          pendingAction?.kind === 'leave' ? (
+            <>
+              You will lose access to <strong>{pendingAction?.board.name}</strong>. The owner can
+              share it with you again.
+            </>
+          ) : (
+            <>
+              <strong>{pendingAction?.board.name}</strong> and all its tasks will be permanently
+              deleted.
+            </>
+          )
+        }
+        confirmLabel={pendingAction?.kind === 'leave' ? 'Leave board' : 'Delete board'}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={runPendingAction}
+      />
     </Modal>
   )
 }

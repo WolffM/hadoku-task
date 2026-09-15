@@ -38,6 +38,13 @@ export interface ModalProps {
   lead?: React.ReactNode
 }
 
+/**
+ * Open dialogs, outermost first. Each mounted-and-open Modal pushes a token
+ * and pops it on close, so the handler can tell whether it is the one the
+ * keypress is meant for.
+ */
+const escapeStack: symbol[] = []
+
 export function Modal({
   isOpen,
   title,
@@ -65,17 +72,31 @@ export function Modal({
   // Bound to the document rather than the card so it works before anything
   // inside has been focused — previously the handler hung off the optional
   // text input, so a dialog without one could not be dismissed by keyboard.
+  //
+  // Only the TOP-MOST open dialog answers, which is what makes a confirm
+  // nested inside another modal usable: the parent's document listener is
+  // still live underneath it, so without the stack one Escape closes both.
+  // onClose is read through a ref so a caller passing an unmemoised handler
+  // cannot re-run this effect and shuffle itself back to the top of the stack.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   useEffect(() => {
     if (!isOpen) return
+    const id = Symbol('modal')
+    escapeStack.push(id)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
+      if (e.key !== 'Escape') return
+      if (escapeStack[escapeStack.length - 1] !== id) return
+      e.preventDefault()
+      onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      const at = escapeStack.lastIndexOf(id)
+      if (at >= 0) escapeStack.splice(at, 1)
+    }
+  }, [isOpen])
 
   // Move focus into the dialog on open, so the keyboard starts inside it.
   useEffect(() => {

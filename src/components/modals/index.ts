@@ -4,6 +4,7 @@
  */
 
 export { ClearTagModal } from './ClearTagModal'
+export { ConfirmModal } from './ConfirmModal'
 export { CreateBoardModal } from './CreateBoardModal'
 export { EditBoardsModal } from './EditBoardsModal'
 export { ShareBoardModal } from './ShareBoardModal'
@@ -13,6 +14,7 @@ export { BoardContextMenu } from './BoardContextMenu'
 export { TagContextMenu } from './TagContextMenu'
 
 export type { ClearTagModalProps } from './ClearTagModal'
+export type { ConfirmModalProps } from './ConfirmModal'
 export type { CreateBoardModalProps } from './CreateBoardModal'
 export type { EditBoardsModalProps } from './EditBoardsModal'
 export type { CreateTagModalProps } from './CreateTagModal'

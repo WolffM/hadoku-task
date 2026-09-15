@@ -127,8 +127,13 @@ function makeKV() {
     async delete(key: string) {
       store.delete(key)
     },
-    async list() {
-      return { keys: [...store.keys()].map(name => ({ name })) }
+    // Honours `prefix`, because the identity registry scan is a prefix list and
+    // a fake that ignores it would hand back every unrelated row in the store.
+    async list(options?: { prefix?: string }) {
+      const prefix = options?.prefix ?? ''
+      return {
+        keys: [...store.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name }))
+      }
     }
   }
 }
@@ -143,8 +148,28 @@ d1.__raw.exec(`
     timestamp TEXT NOT NULL DEFAULT (datetime('now')));`)
 const app = createTaskHandler()
 
+/**
+ * The edge-router key registry, read-only as far as this worker is concerned.
+ *
+ * The dev stack ran without it, so EVERY identity resolution answered
+ * NO_REGISTRY — sharing a board by name was unreachable locally and
+ * preset-update.spec's contributor test could not pass. Production always has
+ * the binding, so its absence here was pure dev/prod divergence.
+ *
+ * `other` is the counterpart to `X-Dev-As: other-uid`: a second real identity
+ * to grant to, so owner-vs-contributor behaviour can actually be exercised.
+ */
+const SEEDED_REGISTRY: Record<string, { name: string; userId: string; tier: string }> = {
+  [`key:${USER.key}`]: { name: 'Dev', userId: USER.id, tier: USER.tier },
+  'key:other-uid': { name: 'Other', userId: 'other-uid', tier: 'friend' }
+}
+
+const sessionsKv = makeKV()
+for (const [k, row] of Object.entries(SEEDED_REGISTRY)) await sessionsKv.put(k, row)
+
 const env = {
   TASKS_KV: makeKV(),
+  SESSIONS_KV: sessionsKv,
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',

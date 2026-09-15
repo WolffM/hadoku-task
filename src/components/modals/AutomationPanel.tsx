@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import type { Board, AutomationPreset, PresetSourceStatus, PresetUpdate } from '../../domain/types'
 import { boardRef, type ShareApi } from './shareApi'
+import { ConfirmModal } from './ConfirmModal'
 
 /**
  * Convert a board to (or off) an automation board (§5.4). Activation is a
@@ -26,6 +27,10 @@ export function AutomationPanel({
   const [presetSources, setPresetSources] = useState<PresetSourceStatus[]>([])
   const [chosen, setChosen] = useState<string | null>(null)
   const [presetUpdate, setPresetUpdate] = useState<PresetUpdate | null>(null)
+  // See ConfirmModal: window.confirm() returns false with no dialog once the
+  // browser has been told to stop prompting for this page, which silently
+  // disables whatever it guards.
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false)
 
   const showConvert = !isAutomation
 
@@ -185,12 +190,7 @@ export function AutomationPanel({
   }
 
   const deactivate = () => {
-    if (
-      !window.confirm(
-        `Deactivate automation on "${board.name}"? Tasks keep their tags; the lane lock is removed.`
-      )
-    )
-      return
+    setConfirmingDeactivate(false)
     setBusy(true)
     setErr(null)
     void shareApi
@@ -282,9 +282,26 @@ export function AutomationPanel({
           ))}
         </ul>
         {err && <p className="share-panel__msg is-err">{err}</p>}
-        <button className="automation-panel__deactivate" onClick={deactivate} disabled={busy}>
+        <button
+          className="automation-panel__deactivate"
+          onClick={() => setConfirmingDeactivate(true)}
+          disabled={busy}
+        >
           Deactivate automation
         </button>
+
+        <ConfirmModal
+          isOpen={confirmingDeactivate}
+          title="Deactivate automation?"
+          message={
+            <>
+              The lane lock is removed from <strong>{board.name}</strong>. Tasks keep their tags.
+            </>
+          }
+          confirmLabel="Deactivate"
+          onCancel={() => setConfirmingDeactivate(false)}
+          onConfirm={deactivate}
+        />
       </div>
     )
   }

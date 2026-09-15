@@ -148,11 +148,15 @@ test.describe('Preset update detection', () => {
     expect(owner.board.access).toBe('owner')
     expect(owner.board.presetUpdate).toBeDefined()
 
+    // By display NAME. The wire dropped `userId` when resolveGrantee lost its
+    // unlooked-up branch (R5) — a grant that names its own grantee's owner id
+    // has been a 400 ever since, and this spec kept sending one because CI does
+    // not run Playwright. 'Other' is seeded in the dev stack's key registry.
     const grant = await request.post(`${API}/boards/${id}/shares`, {
       headers: KEY,
-      data: { userId: 'other-uid', level: 'contributor' }
+      data: { name: 'Other', level: 'contributor' }
     })
-    expect(grant.ok(), 'share should be granted').toBeTruthy()
+    expect(grant.ok(), `share should be granted: ${await grant.text()}`).toBeTruthy()
 
     // Same board, same drift — only the reader differs. A slug resolves solely
     // inside its owner's namespace, so the grantee reads it by handle.
