@@ -306,6 +306,23 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* A bare URL in the notes is rendered as a link. The affordance is the
+   UNDERLINE, not a hue: it must not fall back to the UA's blue (there is no
+   preflight here), and --color-primary is a fill colour that fails AA as bare
+   text on a card. Hover moves to the validated primary tint pair, which is the
+   one place a family colour is safe to show. `break-word` on `.plan-md`
+   already keeps a long URL inside the panel. */
+.plan-md a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.plan-md a:hover {
+  background-color: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+
 .plan-md code {
   padding: 0 var(--hdk-space-xs);
   border-radius: var(--hdk-radius-sm);

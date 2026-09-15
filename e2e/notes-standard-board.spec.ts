@@ -87,6 +87,32 @@ test.describe('Notes on a standard board', () => {
     await expect(page.locator('.notes-popout__body')).toContainText('Remember the milk')
   })
 
+  test('a bare URL in the notes renders as a followable link', async ({ page }) => {
+    // Contact's mirrored bookings put the join link in the notes as a bare URL
+    // (the renderer supports no link syntax), so this is the only thing that
+    // makes it clickable instead of select-and-copy.
+    await addTask(page, 'Meeting: Jane Doe')
+    await card(page, 'Meeting: Jane Doe').locator('.task-app__notes-toggle').click()
+
+    const panel = page.locator('.notes-popout')
+    await panel
+      .locator('.notes-popout__editor')
+      .fill('- **Join** https://discord.gg/sTcNUzQaPm\n- Ends the sentence: https://example.com/a.')
+    await panel.getByRole('button', { name: 'Save' }).click()
+
+    const join = panel.getByRole('link', { name: 'https://discord.gg/sTcNUzQaPm' })
+    await expect(join).toHaveAttribute('href', 'https://discord.gg/sTcNUzQaPm')
+    await expect(join).toHaveAttribute('rel', 'noopener noreferrer')
+
+    // A full stop after a URL belongs to the prose, not to the href — but it
+    // must still be rendered, not eaten.
+    await expect(panel.getByRole('link', { name: 'https://example.com/a' })).toHaveAttribute(
+      'href',
+      'https://example.com/a'
+    )
+    await expect(panel.locator('.notes-popout__body')).toContainText('https://example.com/a.')
+  })
+
   test('the Notes preference hides the button on a standard board', async ({ page }) => {
     await addTask(page, 'Toggle my notes')
     const notesBtn = card(page, 'Toggle my notes').locator('.task-app__notes-toggle')

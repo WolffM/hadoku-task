@@ -14,6 +14,13 @@
  *
  * Everything is built as React elements. No dangerouslySetInnerHTML — notes are
  * agent-authored text and get rendered verbatim, never as markup.
+ *
+ * The one exception is a bare http(s) URL, which becomes an <a>. Notes carry
+ * links worth following — a mirrored booking's join link, a PR — and a link you
+ * have to select and copy is a link you don't follow. The URL pattern is the
+ * whole allowlist: no other scheme can match, so `javascript:` never reaches an
+ * href, and `[text](url)` stays unsupported rather than opening a second way to
+ * put an arbitrary string there.
  */
 
 import React from 'react'
@@ -22,8 +29,15 @@ const FENCE = /^\s*(?:```|~~~)(.*)$/
 const SUBHEADING = /^(#{3,})\s+(.*)$/
 const BULLET = /^(\s*)[-*+]\s+(.*)$/
 const ORDERED = /^(\s*)(\d+)[.)]\s+(.*)$/
-/** Inline code, then bold, then emphasis — code first so `**` inside it is literal. */
-const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\n]+\*)|(_[^_\n]+_)/g
+/**
+ * Inline code, then bold, then emphasis, then bare URLs — code first so `**`
+ * inside it is literal, and URLs last so an underscore in a path is not read as
+ * emphasis before the URL alternative gets a chance at it.
+ */
+const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\n]+\*)|(_[^_\n]+_)|(https?:\/\/[^\s<>()]+)/g
+
+/** Trailing punctuation that ends the sentence, not the URL. */
+const URL_TAIL = /[.,;:!?]+$/
 
 /** Emphasis and inline code within one line of text. Unmatched runs pass through. */
 function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
@@ -40,6 +54,15 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
       out.push(<code key={key}>{token.slice(1, -1)}</code>)
     } else if (token.startsWith('**')) {
       out.push(<strong key={key}>{token.slice(2, -2)}</strong>)
+    } else if (match[5]) {
+      const href = token.replace(URL_TAIL, '')
+      out.push(
+        <a key={key} href={href} target="_blank" rel="noopener noreferrer">
+          {href}
+        </a>
+      )
+      // Whatever the tail regex trimmed is text, and must not be swallowed.
+      out.push(token.slice(href.length))
     } else {
       out.push(<em key={key}>{token.slice(1, -1)}</em>)
     }
