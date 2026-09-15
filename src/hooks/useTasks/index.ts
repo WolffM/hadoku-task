@@ -15,6 +15,17 @@ interface UseTasksProps {
   // sessionId from parent
   sessionId?: string
   onSyncError?: SyncErrorReporter
+  /**
+   * Report a FOREGROUND failure — one the user is standing in front of, waiting
+   * on. Distinct from onSyncError, which reports a background write that already
+   * looked like it succeeded.
+   *
+   * Injected rather than called directly because this hook has no view: App
+   * wires it to a toast. It replaced `alert()`, which the browser stops drawing
+   * once "prevent this page from creating additional dialogs" is ticked — so
+   * every one of these failures used to go completely unreported.
+   */
+  onError?: (message: string) => void
 }
 
 /**
@@ -25,7 +36,7 @@ interface UseTasksProps {
  */
 export type SyncState = 'pending' | 'synced' | 'stale'
 
-export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
+export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
 
@@ -34,6 +45,20 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
   // every render would rebuild the API client every render.
   const onSyncErrorRef = useRef(onSyncError)
   onSyncErrorRef.current = onSyncError
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+
+  /**
+   * Tell the user an operation failed, and leave a log line either way.
+   *
+   * Read through a ref for the same reason onSyncError is: a caller passing an
+   * unmemoised handler must not rebuild the API client on every render.
+   */
+  const report = useCallback((context: string, error: unknown, fallback: string) => {
+    const message = (error as Error)?.message || fallback
+    logger.error(`[useTasks] ${context}`, { error: formatError(error) })
+    onErrorRef.current?.(message)
+  }, [])
   const reloadRef = useRef<() => Promise<void>>(async () => {})
 
   /**
@@ -306,7 +331,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       await reload()
       return true
     } catch (error) {
-      alert((error as Error).message || 'Failed to create task')
+      report('addTask ERROR', error, 'Failed to create task')
       return false
     }
   }
@@ -352,7 +377,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
         await reload()
       },
       {
-        onError: error => alert(error.message || 'Failed to reschedule task')
+        onError: error => report('rescheduleTask ERROR', error, 'Failed to reschedule task')
       }
     )
   }
@@ -367,7 +392,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
         await reload()
       },
       {
-        onError: error => alert(error.message || 'Failed to complete task')
+        onError: error => report('completeTask ERROR', error, 'Failed to complete task')
       }
     )
   }
@@ -393,32 +418,9 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
         logger.info('[useTasks] deleteTask END')
       },
       {
-        onError: error => alert(error.message || 'Failed to delete task')
+        onError: error => report('deleteTask ERROR', error, 'Failed to delete task')
       }
     )
-  }
-
-  async function addTagToTask(taskId: string) {
-    const newTag = prompt('Enter tag (without #):')
-    if (!newTag) return
-
-    // Normalize tag: remove any leading '#' characters, trim, convert spaces to hyphens
-    const normalizedTag = newTag.trim().replace(/^#+/, '').replace(/\s+/g, '-')
-
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
-
-    const existingTags = splitTags(task.tag)
-    if (existingTags.includes(normalizedTag)) return
-
-    const updatedTags = [...existingTags, normalizedTag].join(' ')
-
-    try {
-      await api.patchTask(taskId, { tag: updatedTags }, currentBoardId)
-      await reload()
-    } catch (error) {
-      alert((error as Error).message || 'Failed to add tag')
-    }
   }
 
   // updateTaskTags now returns an object with suppressBroadcast and skipReload options
@@ -469,13 +471,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
         await reload()
         logger.info('[useTasks] deleteTag END (no tasks to clear)')
       } catch (error) {
-        logger.error('[useTasks] deleteTag ERROR', {
-          error: formatError(error)
-        })
-        // Note: alert() may also be blocked - log instead
-        logger.error('[useTasks] deleteTag: Please fix this error', {
-          errorMessage: (error as Error).message
-        })
+        report('deleteTag ERROR', error, 'Failed to delete tag')
       }
       return
     }
@@ -495,10 +491,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
 
       logger.info('[useTasks] deleteTag END')
     } catch (error) {
-      logger.error('[useTasks] deleteTag ERROR', {
-        error: formatError(error)
-      })
-      alert((error as Error).message || 'Failed to remove tag from tasks')
+      report('deleteTag ERROR', error, 'Failed to remove tag from tasks')
     }
   }
 
@@ -546,10 +539,7 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
       await reload()
       logger.info('[useTasks] moveTasksToBoard END')
     } catch (error) {
-      logger.error('[useTasks] moveTasksToBoard ERROR', {
-        error: formatError(error)
-      })
-      alert((error as Error).message || 'Failed to move tasks')
+      report('moveTasksToBoard ERROR', error, 'Failed to move tasks')
     }
   }
 
@@ -651,7 +641,6 @@ export function useTasks({ userType, sessionId, onSyncError }: UseTasksProps) {
     rescheduleTask,
     completeTask,
     deleteTask,
-    addTagToTask,
     updateTaskTags,
     bulkUpdateTaskTags,
     deleteTag,

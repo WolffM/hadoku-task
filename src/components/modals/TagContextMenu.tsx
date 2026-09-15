@@ -32,11 +32,14 @@ export function TagContextMenu({ isOpen, tag, x, y, onClose, onDeleteTag }: TagC
       logger.info('[TagContextMenu] deleteTag completed successfully', { tag })
       onClose()
     } catch (err) {
+      // Defensive only: useTasks' deleteTag reports its own failures (as a
+      // toast) and resolves, so this branch does not fire on the live wiring.
+      // Never an alert() — a browser told to stop prompting for this page
+      // silently drops it.
       logger.error('[TagContextMenu] Failed to delete tag', {
         error: formatError(err),
         tag
       })
-      alert((err as Error).message || 'Failed to delete tag')
     }
   }
 

@@ -69,12 +69,15 @@ export function BoardButton({
             // Ignore selection clear errors
           }
         } catch (err) {
+          // Defensive only: moveTasksToBoard reports its own failures (as a
+          // toast) and resolves, so this branch does not fire on the live
+          // wiring. It must not raise a dialog — the browser can be told to
+          // stop drawing those, and then the message goes nowhere.
           logger.error('[BoardButton] Failed moving tasks to board', {
             error: formatError(err),
             boardId: board.id,
             taskCount: ids.length
           })
-          alert((err as Error).message || 'Failed to move tasks')
         }
       }}
     >

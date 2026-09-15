@@ -15,6 +15,13 @@ interface UseDragAndDropProps {
   // Marquee box-selection is a board-only interaction. When false (e.g. calendar
   // view) the global mouse listeners aren't attached, so native text selection works.
   enabled?: boolean
+  /**
+   * Report a failed drop to the user. Injected because this hook has no view;
+   * App wires it to a toast. Replaced `alert()`, which a browser told to stop
+   * prompting for this page no longer draws — so a refused drag silently put
+   * the card back with nothing said.
+   */
+  onError?: (message: string) => void
 }
 
 /**
@@ -44,8 +51,18 @@ export function useDragAndDrop({
   tasks,
   onTaskUpdate: _onTaskUpdate,
   onBulkUpdate,
-  enabled = true
+  enabled = true,
+  onError
 }: UseDragAndDropProps) {
+  // Ref, so a caller passing an unmemoised handler does not re-run the effects
+  // below that close over it.
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+
+  const report = (context: string, error: unknown, fallback: string) => {
+    logger.error(`[useDragAndDrop] ${context}`, { error: formatError(error) })
+    onErrorRef.current?.((error as Error)?.message || fallback)
+  }
   const [dragOverTag, setDragOverTag] = useState<string | null>(null)
   const [dragOverFilter, setDragOverFilter] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -406,10 +423,7 @@ export function useDragAndDrop({
         /* Intentionally ignore errors */
       }
     } catch (error) {
-      logger.error('[useDragAndDrop] Failed to add tag to one or more tasks', {
-        error: formatError(error)
-      })
-      alert((error as Error).message || 'Failed to add tags')
+      report('Failed to add tag to one or more tasks', error, 'Failed to add tags')
     }
     logger.info('[useDragAndDrop] onDrop END')
   }
@@ -464,10 +478,7 @@ export function useDragAndDrop({
         /* Intentionally ignore errors */
       }
     } catch (error) {
-      logger.error('[useDragAndDrop] Failed to add tag via filter drop', {
-        error: formatError(error)
-      })
-      alert((error as Error).message || 'Failed to add tag')
+      report('Failed to add tag via filter drop', error, 'Failed to add tag')
     }
   }
 

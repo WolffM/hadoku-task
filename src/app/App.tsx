@@ -183,6 +183,20 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     [showToast]
   )
 
+  /**
+   * Surface a FOREGROUND failure — an operation the user was waiting on.
+   *
+   * These used to be `alert()`. A browser told to "prevent this page from
+   * creating additional dialogs" returns from alert() without drawing anything,
+   * so a failed create / complete / delete / drop reported itself to nobody.
+   * A toast is ours to draw and cannot be switched off. 5s, matching
+   * reportSyncError: long enough to read a server's own wording.
+   */
+  const reportOperationError = React.useCallback(
+    (message: string) => showToast(message, 'error', 5000),
+    [showToast]
+  )
+
   // Task operations hook
   const {
     tasks,
@@ -212,7 +226,12 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     createTagOnBoard,
     deleteTagOnBoard,
     shareApi
-  } = useTasks({ userType, sessionId: effectiveSessionId, onSyncError: reportSyncError })
+  } = useTasks({
+    userType,
+    sessionId: effectiveSessionId,
+    onSyncError: reportSyncError,
+    onError: reportOperationError
+  })
 
   // Drag and drop hook
   const dragAndDrop = useDragAndDrop({
@@ -220,7 +239,8 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     onTaskUpdate: updateTaskTags,
     onBulkUpdate: bulkUpdateTaskTags,
     // Board-only interaction; disabling in calendar keeps text selectable/copyable.
-    enabled: currentView === 'board'
+    enabled: currentView === 'board',
+    onError: reportOperationError
   })
 
   // Sort hook

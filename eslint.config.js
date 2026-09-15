@@ -108,6 +108,7 @@ export default [
         MediaQueryList: 'readonly',
         MediaQueryListEvent: 'readonly',
         StorageEvent: 'readonly',
+        DOMException: 'readonly',
         // TypeScript/React
         React: 'readonly',
         NodeJS: 'readonly'
@@ -140,6 +141,15 @@ export default [
       'react-hooks/exhaustive-deps': 'warn',
 
       // General rules
+      //
+      // A browser can be told to stop drawing these ("prevent this page from
+      // creating additional dialogs"), and it then returns from them WITHOUT
+      // showing anything: confirm() and prompt() answer false/null, alert() is
+      // a no-op. Anything gated on one fails closed and silently — deleting a
+      // board was unreachable for exactly this reason. The app draws its own
+      // dialogs (ConfirmModal) and its own messages (toasts), so there is no
+      // remaining call site and no reason to add one.
+      'no-alert': 'error',
       'no-console': 'off', // Allow console for logging
       'no-debugger': 'warn',
       'no-unused-vars': 'off', // Use TypeScript version instead

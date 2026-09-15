@@ -549,8 +549,26 @@ function resetCurrentVar() {
   showToast(resetCount > 1 ? `Reset ${resetCount} variables to original` : 'Reset to original')
 }
 
+// Click-again-to-confirm, rather than window.confirm(): a browser told to stop
+// prompting for this page returns false from confirm() without drawing anything,
+// which would leave Reset All as a dead button with no explanation.
+let resetAllArmed = null
+
 function resetAll() {
-  if (!confirm('Reset all modifications?')) return
+  const count = Object.keys(modifications).length
+  if (!count) {
+    showToast('Nothing to reset')
+    return
+  }
+  if (!resetAllArmed) {
+    showToast(`Reset all ${count} modifications? Click Reset All again to confirm`)
+    resetAllArmed = setTimeout(() => {
+      resetAllArmed = null
+    }, 4000)
+    return
+  }
+  clearTimeout(resetAllArmed)
+  resetAllArmed = null
   Object.keys(modifications).forEach(varName => {
     document.documentElement.style.removeProperty(varName)
   })
