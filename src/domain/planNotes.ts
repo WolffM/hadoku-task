@@ -40,6 +40,34 @@ const FENCE = /^\s*(```|~~~)/
 const LIST_ITEM = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/
 
 /**
+ * TenHands' per-pass bookkeeping footer, which they render as the last line of
+ * every plan document:
+ *
+ *     — pass 1
+ *     — pass 2 · confidence 0.8
+ *
+ * It is THEIR state, not the human's text, and it has to come out before any
+ * sectioning happens. `## Questions` is the last section of any plan that
+ * proposes no acceptance criteria, so the footer lands inside the Questions
+ * body, where `parseQuestionsBody` reads a list, a blank line and then prose —
+ * the exact shape of a human's trailing reply. That mis-read is not just a bad
+ * badge: it makes `questionsAnswered` true the moment the plan is written, so
+ * the false → true transition `notesWriteClosesQuestions` fires the runner wake
+ * on never happens, and answering a prose question falls back to the ~15 minute
+ * cron instead of the ~18s dispatch. Their own `parse()` has always stripped
+ * this for the same reason; the predicates are newer and did not inherit it.
+ *
+ * Permissive on the VALUES on purpose. TenHands learned on their side that a
+ * strict pattern made the whole footer fail to match on a junk confidence, which
+ * silently reset the pass counter and let the planning loop run past its cap.
+ * So the pass token and everything after a separator are `\S+`/`.*`, while the
+ * STRUCTURE stays tight enough that a human sentence starting with a dash
+ * ("— pass the buck to legal") is not eaten: the tail must be absent or open
+ * with a separator.
+ */
+const PASS_FOOTER = /^[—–]\s*pass\s+\S+(?:\s*[·•|,]\s*.*)?$/
+
+/**
  * A GitHub-flavoured task-list item: `- [ ] text` / `- [x] text`.
  *
  * Captures the marker+bracket prefix, the box contents, and the text, so a
@@ -104,6 +132,14 @@ export function parsePlanNotes(notes: string | null | undefined): PlanSection[] 
 
   for (const line of notes.split('\n')) {
     if (FENCE.test(line)) inFence = !inFence
+    // Drop the emitter's own footer wherever it stands, outside a fence, so it
+    // can never be read back as content. Not just a trailing line: when
+    // Questions is the LAST section, `appendAnswerToNotes` puts the human's
+    // reply AFTER the footer, so a trailing-only rule would stop matching the
+    // moment someone answers and fold our bookkeeping into their reply text.
+    // Fence-aware like every other line rule here, so a plan quoting the format
+    // in a fenced example keeps it.
+    if (!inFence && PASS_FOOTER.test(line)) continue
     const heading = inFence ? null : HEADING.exec(line)
     // Only `##` starts a section; `###` and deeper belong to the current one.
     if (heading && heading[1].length === 2) {
