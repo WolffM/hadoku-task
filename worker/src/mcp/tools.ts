@@ -14,12 +14,15 @@ import type {
   Task,
   CreateTaskInput,
   UpdateTaskInput,
-  Lane
+  Lane,
+  TaskStatus
 } from '@wolffm/task/api'
 import {
   assertHumanLaneWrite,
   getBoardConfig,
   notifyLaneWrite,
+  notifyNotesWrite,
+  readTaskNotes,
   githubToken,
   runnerRepo
 } from '../routes/board-automation'
@@ -149,6 +152,42 @@ function wakeRunner(
       mode: r.mode,
       token: githubToken(ctx.env),
       runnerRepo: runnerRepo(ctx.env)
+    },
+    ctx.host
+  )
+}
+
+/**
+ * Wake the board's runner after a HUMAN answered the plan's open questions — the
+ * notes-write twin of {@link wakeRunner} (autoland v3 §5.1), and the MCP mirror
+ * of what handleBoardOperation does for the HTTP routes.
+ *
+ * `before` must be read BEFORE the write lands, which is why the caller passes it
+ * in rather than this reading it: by the time we're here the new notes are the
+ * only ones in the table. Never throws; no-ops unless the board is automated,
+ * wired to a repo, and the write actually closed the questions.
+ */
+function wakeRunnerOnAnswer(
+  r: ResolvedBoard,
+  ctx: ToolCtx,
+  taskId: string,
+  before: { notes: string | null; tag: string | null } | null,
+  nextNotes: string | null
+): Promise<void> {
+  if (!before) return Promise.resolve()
+  return notifyNotesWrite(
+    {
+      db: ctx.db,
+      ownerId: r.ownerId,
+      boardId: r.boardId,
+      taskId,
+      laneTag: before.tag,
+      lanes: r.lanes,
+      mode: r.mode,
+      token: githubToken(ctx.env),
+      runnerRepo: runnerRepo(ctx.env),
+      previousNotes: before.notes,
+      nextNotes
     },
     ctx.host
   )
@@ -304,8 +343,16 @@ export const TOOLS: ToolDef[] = [
       if (args.startTime !== undefined) input.startTime = str(args.startTime) ?? null
       if (args.endTime !== undefined) input.endTime = str(args.endTime) ?? null
       if (args.metadata !== undefined) input.metadata = obj(args.metadata) ?? null
+      // Snapshot the notes while they are still the OLD ones — the wake below is
+      // a before→after transition, not a state.
+      const before =
+        args.notes !== undefined && r.mode === 'automation'
+          ? await readTaskNotes(ctx.db, r.ownerId, r.boardId, id)
+          : null
       await TaskHandlers.updateTask(r.storage, r.auth, id, input, r.boardId)
       if (args.tag !== undefined) await wakeRunner(r, ctx, id, input.tag)
+      // Suppressed when the lane wake already fired: one call, one dispatch.
+      else if (before) await wakeRunnerOnAnswer(r, ctx, id, before, input.notes ?? null)
       return findTask(r, id)
     }
   },
@@ -329,7 +376,10 @@ export const TOOLS: ToolDef[] = [
       const id = requireId(args)
       const r = await resolveBoard(args, ctx, { write: true })
       const notes = str(args.notes) ?? ''
+      const before =
+        r.mode === 'automation' ? await readTaskNotes(ctx.db, r.ownerId, r.boardId, id) : null
       await TaskHandlers.updateTask(r.storage, r.auth, id, { notes }, r.boardId)
+      await wakeRunnerOnAnswer(r, ctx, id, before, notes)
       return findTask(r, id)
     }
   },
@@ -587,13 +637,24 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'set_lane',
     description:
-      "Move a task into a lane while holding its claim (§4) — the agent path, so `agent` lanes are allowed. LANE_UNKNOWN if the lane isn't on the board; LEASE_LOST if you no longer hold the claim.",
+      "Move a task into a lane while holding its claim (§4) — the agent path, so `agent` lanes are allowed. Also takes `status`, so a long job can report progress WITHOUT releasing and re-claiming (which would drop the lease in between). LANE_UNKNOWN if the lane isn't on the board; LEASE_LOST if you no longer hold the claim; STATUS_INVALID if `status` isn't the documented shape.",
     inputSchema: {
       type: 'object',
       properties: {
         taskId: { type: 'string' },
         token: { type: 'string' },
         lane: { type: 'string', description: 'Destination lane tag.' },
+        status: {
+          type: 'object',
+          description:
+            'Report what you are doing on this task — renders as a chip on the card. { kind: "working"|"waiting"|"blocked"|"done", label: <free text>, href?: <http(s) URL, usually the PR> }. Omit to leave it alone; pass null to clear it.',
+          properties: {
+            kind: { type: 'string', enum: ['working', 'waiting', 'blocked', 'done'] },
+            label: { type: 'string' },
+            href: { type: 'string' }
+          },
+          required: ['kind', 'label']
+        },
         ...boardProp
       },
       required: ['taskId', 'token', 'lane']
@@ -607,14 +668,15 @@ export const TOOLS: ToolDef[] = [
       const r = await resolveBoard(args, ctx, { write: true })
       return setLane(ctx.db, r.ownerId, r.boardId, taskId, token, lane ?? '', {
         mode: r.mode,
-        lanes: r.lanes
+        lanes: r.lanes,
+        status: args.status === undefined ? undefined : (args.status as TaskStatus | null)
       })
     }
   },
   {
     name: 'release_claim',
     description:
-      "Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan), merge `metadata`, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you. Pass `complete: true` to archive the task on release (still claim-gated) so a notification lane doesn't grow unbounded.",
+      "Release a claim (§4): move the task to `lane`, optionally write `notes` (the result/plan) and `status` (the chip), merge `metadata`, and unclaim. Idempotent on token. Pass `ifCurrentLane` to abort with LANE_CHANGED if a human retagged the task under you, and `ifNotesHash` to abort with NOTES_CHANGED if a human EDITED THE PLAN under you — without that second guard a release silently overwrites a reply typed while you worked, and the text is simply gone. Pass `complete: true` to archive the task on release (still claim-gated) so a notification lane doesn't grow unbounded.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -638,6 +700,23 @@ export const TOOLS: ToolDef[] = [
           type: 'string',
           description: 'Guard: abort (LANE_CHANGED) unless the task is still in this lane.'
         },
+        ifNotesHash: {
+          type: 'string',
+          description:
+            "Guard: abort (NOTES_CHANGED) unless the task's notes still hash to this. Lowercase hex SHA-256 of the UTF-8 notes; absent notes hash as the empty string. The error carries `currentNotesHash` to re-plan against."
+        },
+        status: {
+          type: 'object',
+          description:
+            'Report what you are doing on this task — renders as a chip on the card. { kind: "working"|"waiting"|"blocked"|"done", label: <free text>, href?: <http(s) URL, usually the PR> }. Omit to leave it alone; pass null to clear it.',
+          properties: {
+            kind: { type: 'string', enum: ['working', 'waiting', 'blocked', 'done'] },
+            label: { type: 'string' },
+            href: { type: 'string' }
+          },
+          required: ['kind', 'label']
+        },
+
         complete: {
           type: 'boolean',
           description: 'Archive the task on release (removes it from the active list).'
@@ -658,6 +737,8 @@ export const TOOLS: ToolDef[] = [
         outcome: str(args.outcome) ?? null,
         ifCurrentLane:
           args.ifCurrentLane !== undefined ? (str(args.ifCurrentLane) ?? '') : undefined,
+        ifNotesHash: args.ifNotesHash !== undefined ? (str(args.ifNotesHash) ?? '') : undefined,
+        status: args.status === undefined ? undefined : (args.status as TaskStatus | null),
         complete: args.complete === true,
         mode: r.mode,
         lanes: r.lanes

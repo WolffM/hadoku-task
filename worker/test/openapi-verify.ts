@@ -79,7 +79,7 @@ const REQUIRED_SCHEMAS = [
  * Error responses narrowed to the codes a single (route, status) can emit, so a
  * generated client gets one exception class per outcome. The value is the EXACT
  * enum the schema must carry — `/agent/heartbeat` 409 is only ever LEASE_LOST,
- * `/agent/release` 409 is genuinely either LEASE_LOST or LANE_CHANGED.
+ * `/agent/release` 409 is genuinely LEASE_LOST, LANE_CHANGED or NOTES_CHANGED.
  */
 const NARROWED_ERROR_SCHEMAS: Record<string, string[]> = {
   ForbiddenError: ['FORBIDDEN'],
@@ -87,8 +87,13 @@ const NARROWED_ERROR_SCHEMAS: Record<string, string[]> = {
   TaskOrBoardNotFoundError: ['BOARD_NOT_FOUND', 'TASK_NOT_FOUND'],
   ClaimHeldError: ['CLAIM_HELD'],
   LeaseLostError: ['LEASE_LOST'],
-  ReleaseConflictError: ['LEASE_LOST', 'LANE_CHANGED'],
+  // Three ways a release refuses, all of them writing nothing. NOTES_CHANGED is
+  // the autoland v3 §5.2 guard: the `notes` twin of ifCurrentLane.
+  ReleaseConflictError: ['LEASE_LOST', 'LANE_CHANGED', 'NOTES_CHANGED'],
   LaneUnknownError: ['LANE_UNKNOWN'],
+  // set-lane and release validate `status` as well as the lane, so their 422 is
+  // genuinely either code.
+  LaneOrStatusInvalidError: ['LANE_UNKNOWN', 'STATUS_INVALID'],
   NotesTooLargeError: ['NOTES_TOO_LARGE'],
   DigestMismatchError: ['DIGEST_MISMATCH'],
   LaneSetInvalidError: ['LANE_SET_INVALID'],
@@ -102,8 +107,10 @@ const RESPONSE_SCHEMA_REFS: Array<[string, string, string, string]> = [
   ['/task/api/agent/claim', 'post', '422', 'LaneUnknownError'],
   ['/task/api/agent/heartbeat', 'post', '409', 'LeaseLostError'],
   ['/task/api/agent/set-lane', 'post', '409', 'LeaseLostError'],
+  ['/task/api/agent/set-lane', 'post', '422', 'LaneOrStatusInvalidError'],
   ['/task/api/agent/release', 'post', '409', 'ReleaseConflictError'],
   ['/task/api/agent/release', 'post', '413', 'NotesTooLargeError'],
+  ['/task/api/agent/release', 'post', '422', 'LaneOrStatusInvalidError'],
   ['/task/api/boards/{ref}/activate-automation', 'post', '409', 'DigestMismatchError'],
   ['/task/api/boards/{ref}/shares', 'post', '409', 'NoUserIdError'],
   ['/task/api/boards/{ref}/calendar', 'get', '404', 'BoardNotFoundError']

@@ -300,6 +300,39 @@
   margin-bottom: 0;
 }
 
+/* ── Task-list items (autoland v3 §4) ──────────────────────────────
+   `- [ ]` / `- [x]` rows are the approval control. The box hangs into the
+   list's own indent so a checklist lines up with the bullets around it rather
+   than stepping right, and the whole row is the label so the tap target is the
+   text, not a 13px square. */
+.plan-md__task-item {
+  list-style: none;
+  margin-left: calc(-1 * var(--hdk-space-2xl));
+}
+
+.plan-md__task-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hdk-space-sm);
+  cursor: pointer;
+}
+
+.plan-md__checkbox {
+  /* Nudged down to sit on the text's first line rather than its box top. */
+  margin-top: 0.25em;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.plan-md__checkbox:disabled {
+  cursor: default;
+}
+
+.plan-md__checkbox:disabled + span {
+  opacity: 0.7;
+}
+
 .plan-md__subheading {
   margin: var(--hdk-space-lg) 0 var(--hdk-space-sm) 0;
   font-size: var(--hdk-text-sm);

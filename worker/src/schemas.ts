@@ -10,6 +10,7 @@ import {
   ValidationErrorResponseSchema,
   TaskApiHealthResponseSchema
 } from '@wolffm/worker-utils'
+import { TASK_STATUS_KINDS, MAX_STATUS_LABEL_LENGTH } from '@wolffm/task/api'
 
 // Re-export shared schemas for convenience
 export { ValidationErrorResponseSchema }
@@ -75,7 +76,25 @@ export const TaskSchema = z
       .optional()
       .openapi({
         example: { scheduledBy: 'jane@example.com', platform: 'discord' }
+      }),
+    // What an agent working this task is doing right now (autoland v3 §3.1).
+    // A first-class field, not `metadata.<pipeline>.status`: a card renderer must
+    // not need to know one pipeline's metadata key to draw a chip.
+    status: z
+      .object({
+        kind: z.enum(TASK_STATUS_KINDS).openapi({ example: 'working' }),
+        label: z
+          .string()
+          .max(MAX_STATUS_LABEL_LENGTH)
+          .openapi({ example: 'implementing · 3 files' }),
+        href: z.string().optional()
       })
+      .nullable()
+      .optional()
+      .openapi({ description: 'Agent status chip. Written by the claim holder.' }),
+    // TRANSIENT: a live lease holds this task. Attached by the board reads from
+    // task_claims; never stored on the task row.
+    claimed: z.boolean().optional().openapi({ description: 'A live lease holds this task.' })
   })
   .openapi('Task')
 

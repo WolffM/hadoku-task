@@ -32,6 +32,26 @@ export type { Storage as TaskStorage } from './storage.js'
 // SQL and must apply the identical rule rather than a lookalike.
 export { normalizeTag } from '../domain/utils/tags.js'
 
+// The plan-notes predicates. Exported because the WORKER needs them: the runner
+// wake (autoland v3 §5.1) fires on a notes write that closes an open question,
+// and it must use the same `questionsAnswered` the card badge does — a lookalike
+// in the route layer is how the two would drift.
+export {
+  parsePlanNotes,
+  questionsSection,
+  openQuestionCount,
+  questionsAnswered,
+  appendAnswerToNotes,
+  checklistItems,
+  toggleChecklistItem,
+  pendingApproval
+} from '../domain/planNotes.js'
+export type { PlanSection, ChecklistItem } from '../domain/planNotes.js'
+
+// The `ifNotesHash` digest (autoland v3 §5.2). Exported so a consumer hashing
+// notes to guard a release uses the same definition the server compares against.
+export { notesHash, EMPTY_NOTES_HASH } from '../domain/utils/notesHash.js'
+
 // Task lifecycle: ONE definition of "still on the board", shared by every
 // storage backend. The D1 adapter expresses it in SQL for perf, the localStorage
 // adapter applies isVisible() in JS — but the window is defined here, once.
@@ -52,7 +72,19 @@ export type {
   StatsEventType,
   UserType,
   ULID,
-  Lane
+  Lane,
+  TaskStatus,
+  TaskStatusKind
+} from '../domain/types.js'
+
+// Task status (autoland v3 §3.1): the closed `kind` set, its validator, and the
+// stored-column parser. A generic board primitive — "an agent reports status on
+// a task" — not one pipeline's metadata key.
+export {
+  TASK_STATUS_KINDS,
+  MAX_STATUS_LABEL_LENGTH,
+  normalizeTaskStatus,
+  parseStoredStatus
 } from '../domain/types.js'
 
 // API Input/Output Types
@@ -80,5 +112,7 @@ export {
   ClaimHeldError,
   LeaseLostError,
   LaneUnknownError,
-  LaneChangedError
+  LaneChangedError,
+  NotesChangedError,
+  TaskStatusInvalidError
 } from '../domain/types.js'

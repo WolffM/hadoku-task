@@ -15,6 +15,11 @@
  * Everything is built as React elements. No dangerouslySetInnerHTML — notes are
  * agent-authored text and get rendered verbatim, never as markup.
  *
+ * Task-list items (`- [ ]` / `- [x]`) render as real checkboxes, and ticking one
+ * writes the same bytes a human typing `- [x]` would — see toggleChecklistItem
+ * in planNotes.ts. That is the whole of plan approval in v3: no approvals table,
+ * no `metadata.approved`, one format that both repos already parse.
+ *
  * The one exception is a bare http(s) URL, which becomes an <a>. Notes carry
  * links worth following — a mirrored booking's join link, a PR — and a link you
  * have to select and copy is a link you don't follow. The URL pattern is the
@@ -29,6 +34,13 @@ const FENCE = /^\s*(?:```|~~~)(.*)$/
 const SUBHEADING = /^(#{3,})\s+(.*)$/
 const BULLET = /^(\s*)[-*+]\s+(.*)$/
 const ORDERED = /^(\s*)(\d+)[.)]\s+(.*)$/
+/**
+ * A task-list item's box, matched against an item's text AFTER the list marker
+ * has been stripped: `[ ] Approve this plan` / `[x] Approve this plan`.
+ * Mirrors TASK_ITEM in planNotes.ts, which matches the same thing against the
+ * raw line — one recognises, the other rewrites.
+ */
+const CHECKBOX = /^\[([ xX])\]\s*(.*)$/
 /**
  * Inline code, then bold, then emphasis, then bare URLs — code first so `**`
  * inside it is literal, and URLs last so an underscore in a path is not read as
@@ -76,11 +88,40 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
 interface ListItem {
   text: string
   ordered: boolean
+  /** Tick state when the item is `- [ ]` / `- [x]`; undefined for a plain item. */
+  checked?: boolean
 }
 
-export function PlanMarkdown({ body }: { body: string }) {
+export interface PlanMarkdownProps {
+  body: string
+  /**
+   * How many task-list items appear in the document BEFORE this body, so a
+   * checkbox here can name its position in the whole notes rather than in this
+   * section. The popout accumulates it section by section; a caller with no
+   * checkboxes to toggle can leave it at 0.
+   */
+  checkboxBase?: number
+  /**
+   * Toggle handler. Absent ⇒ boxes render read-only, which is what a viewer with
+   * no save capability gets — an enabled checkbox that silently does nothing is
+   * worse than a disabled one.
+   */
+  onToggleCheckbox?: (ordinal: number, checked: boolean) => void
+  /** Boxes are disabled while a save is in flight. */
+  busy?: boolean
+}
+
+export function PlanMarkdown({
+  body,
+  checkboxBase = 0,
+  onToggleCheckbox,
+  busy = false
+}: PlanMarkdownProps) {
   const lines = body.split('\n')
   const blocks: React.ReactNode[] = []
+  // Counts task-list items as they are emitted, so each one's ordinal is its
+  // position in document order — the same order planNotes.checklistItems walks.
+  let checkboxSeen = 0
 
   // Buffers for the two multi-line blocks we assemble as we scan.
   let paragraph: string[] = []
@@ -96,9 +137,28 @@ export function PlanMarkdown({ body }: { body: string }) {
   const flushList = () => {
     if (!list.length) return
     const ordered = list[0].ordered
-    const items = list.map((item, i) => (
-      <li key={i}>{renderInline(item.text, `l${blocks.length}-${i}`)}</li>
-    ))
+    const items = list.map((item, i) => {
+      const text = renderInline(item.text, `l${blocks.length}-${i}`)
+      if (item.checked === undefined) return <li key={i}>{text}</li>
+      // Ordinals are assigned here rather than at parse time because this is the
+      // only place that knows the emission order survived the list-splitting
+      // above (a marker change starts a new <ul>, but not a new document).
+      const ordinal = checkboxBase + checkboxSeen++
+      return (
+        <li key={i} className="plan-md__task-item">
+          <label className="plan-md__task-label">
+            <input
+              type="checkbox"
+              className="plan-md__checkbox"
+              checked={item.checked}
+              disabled={!onToggleCheckbox || busy}
+              onChange={e => onToggleCheckbox?.(ordinal, e.target.checked)}
+            />
+            <span>{text}</span>
+          </label>
+        </li>
+      )
+    })
     blocks.push(
       ordered ? (
         <ol key={`l-${blocks.length}`}>{items}</ol>
@@ -154,7 +214,13 @@ export function PlanMarkdown({ body }: { body: string }) {
       const isOrdered = !!ordered
       // A list that switches marker type is two lists, not one.
       if (list.length && list[0].ordered !== isOrdered) flushList()
-      list.push({ text: (ordered ? ordered[3] : (bullet?.[2] ?? '')).trim(), ordered: isOrdered })
+      const raw = (ordered ? ordered[3] : (bullet?.[2] ?? '')).trim()
+      const box = CHECKBOX.exec(raw)
+      list.push(
+        box
+          ? { text: box[2], ordered: isOrdered, checked: box[1] !== ' ' }
+          : { text: raw, ordered: isOrdered }
+      )
       continue
     }
 

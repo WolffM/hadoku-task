@@ -39,6 +39,26 @@ const FENCE = /^\s*(```|~~~)/
 /** `- item`, `* item`, `+ item`, `1. item`, `1) item`. */
 const LIST_ITEM = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/
 
+/**
+ * A GitHub-flavoured task-list item: `- [ ] text` / `- [x] text`.
+ *
+ * Captures the marker+bracket prefix, the box contents, and the text, so a
+ * toggle can rewrite ONE character of the original line and leave every other
+ * byte — indentation, marker style, spacing — exactly as the agent wrote it.
+ */
+const TASK_ITEM = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\]\s*)(.*)$/
+
+/**
+ * The tick state of a list item: `true` ticked, `false` unticked, `null` when the
+ * item isn't a task-list item at all. `null` is the interesting case — it is what
+ * keeps every existing prose question counting exactly as it did before.
+ */
+function taskItemState(item: string): boolean | null {
+  const m = TASK_ITEM.exec(item)
+  if (!m) return null
+  return m[2] !== ' '
+}
+
 function isQuestionsHeading(title: string): boolean {
   // Tolerate "Questions:", "Open questions", "## questions" — the heading is
   // written by an agent each pass and a strict match would silently lose the
@@ -165,6 +185,12 @@ function parseQuestionsBody(body: string): { items: string[]; reply: string | un
  * question(s) it answers are done — the count goes to 0 rather than nagging
  * forever. `questionsAnswered` is the signal for what to show instead.
  *
+ * A TASK-LIST item (`- [ ] Approve this plan`) is counted on its own terms: a
+ * reply does not tick a box, so an unticked one keeps counting after the prose
+ * questions have gone quiet, and a ticked one never counts at all. Its own state
+ * is the answer, which is why it is exempt from both the `?` rule and the reply
+ * rule. A section with no task-list items counts exactly as it always did.
+ *
  * It cannot be exact — free text is the point — but it errs toward the count
  * going quiet once you have answered rather than nagging forever.
  */
@@ -176,17 +202,34 @@ export function openQuestionCount(sections: PlanSection[]): number {
   if (!body || NO_QUESTIONS.test(stripSentinelMarkup(body))) return 0
 
   const { items, reply } = parseQuestionsBody(body)
-  if (reply !== undefined) return 0
+  const unticked = items.filter(item => taskItemState(item) === false).length
+  const prose = items.filter(item => taskItemState(item) === null)
 
-  if (!items.some(item => item.includes('?'))) return items.length
-  return items.filter(item => item.includes('?')).length
+  const openProse =
+    reply !== undefined
+      ? 0
+      : prose.some(item => item.includes('?'))
+        ? prose.filter(item => item.includes('?')).length
+        : prose.length
+
+  return unticked + openProse
 }
 
 /**
- * True once a human has replied to a Questions section that actually asked
- * something — the signal behind the "Answered questions" badge, which takes
- * over from "N open questions" the moment a reply lands and reverts the moment
- * a replan rewrites the section with a fresh, un-replied list.
+ * True once the human has done their part with a Questions section that actually
+ * asked something — the signal behind the "Answered questions" badge, which takes
+ * over from "N open questions" the moment the section goes quiet and reverts the
+ * moment a replan rewrites it with a fresh, un-answered list.
+ *
+ * "Their part" is two things, and BOTH must hold:
+ *   - every task-list item is ticked (an unticked box is an outstanding ask that
+ *     no amount of prose answers — ticking it is the answer);
+ *   - the prose questions, if there are any, have a reply trailing them.
+ *
+ * With no task-list items this is byte-for-byte the old rule. It is also the
+ * predicate the worker fires the runner wake on (`notifyNotesWrite`), so a tick
+ * and a typed reply are the same event to both repos — which is the whole point
+ * of not opening a second channel for approval.
  */
 export function questionsAnswered(sections: PlanSection[]): boolean {
   const section = questionsSection(sections)
@@ -196,7 +239,110 @@ export function questionsAnswered(sections: PlanSection[]): boolean {
   if (!body || NO_QUESTIONS.test(stripSentinelMarkup(body))) return false
 
   const { items, reply } = parseQuestionsBody(body)
-  return items.length > 0 && reply !== undefined
+  if (items.length === 0) return false
+
+  const boxes = items.map(taskItemState).filter((s): s is boolean => s !== null)
+  if (boxes.some(ticked => !ticked)) return false
+
+  const prose = items.filter(item => taskItemState(item) === null)
+  if (prose.length > 0) return reply !== undefined
+  return boxes.length > 0
+}
+
+/** One `- [ ] …` / `- [x] …` row, addressed by its position in the document. */
+export interface ChecklistItem {
+  /**
+   * Zero-based position among ALL task-list items in the notes, counted in
+   * document order. This is the item's identity for a toggle: the rendered text
+   * isn't unique (two `- [ ] Approve this plan` rows are legal) and a line number
+   * would shift the moment anything above it is edited.
+   */
+  ordinal: number
+  checked: boolean
+  /** The text after the box, with no marker and no brackets. */
+  text: string
+}
+
+/**
+ * Every task-list item in a body, in document order. Fence-aware, so a `- [ ]`
+ * inside a fenced example is text, not a checkbox — the same rule
+ * `parsePlanNotes` applies to headings.
+ *
+ * Callers pass either the whole notes or one section body; ordinals are relative
+ * to whatever was passed, which is why the popout accumulates a per-section base
+ * before handing them to the renderer.
+ */
+export function checklistItems(body: string | null | undefined): ChecklistItem[] {
+  if (!body) return []
+  const out: ChecklistItem[] = []
+  let inFence = false
+  for (const line of body.split('\n')) {
+    if (FENCE.test(line)) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
+    const m = TASK_ITEM.exec(line)
+    if (m) out.push({ ordinal: out.length, checked: m[2] !== ' ', text: m[4].trim() })
+  }
+  return out
+}
+
+/**
+ * Tick or untick the nth task-list item, returning the whole document back.
+ *
+ * Rewrites exactly the one character inside the brackets and copies every other
+ * byte through — indentation, marker style, the spacing after the `]`, the
+ * trailing newline (or its absence). That is the contract §4 of the v3 design
+ * asks for: tapping the box must produce the same bytes a human typing `- [x]`
+ * would, so there is one format and one predicate on both sides rather than an
+ * approvals table shadowing the notes.
+ *
+ * An out-of-range ordinal returns the notes unchanged — a stale render that
+ * addresses an item a replan has already removed must not corrupt the document.
+ */
+export function toggleChecklistItem(
+  notes: string | null | undefined,
+  ordinal: number,
+  checked: boolean
+): string {
+  const body = notes ?? ''
+  if (!body) return body
+  const lines = body.split('\n')
+  let inFence = false
+  let seen = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (FENCE.test(lines[i])) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
+    const m = TASK_ITEM.exec(lines[i])
+    if (!m) continue
+    if (seen === ordinal) {
+      lines[i] = `${m[1]}${checked ? 'x' : ' '}${m[3]}${m[4]}`
+      return lines.join('\n')
+    }
+    seen++
+  }
+  return body
+}
+
+/**
+ * An approval item is a task-list row whose text starts with "Approve" — the
+ * shape TenHands' plans end `## Questions` with (`- [ ] Approve this plan`).
+ *
+ * Matched structurally and case-insensitively on the leading word only, so the
+ * wording after it is theirs to change. Scanned across the WHOLE document rather
+ * than only the Questions section: the section is where it belongs by
+ * convention, but a plan that puts it elsewhere still gets the button, and
+ * nothing about approval depends on the heading being spelled right.
+ *
+ * Returns the first UNTICKED one. Once it is ticked there is nothing to approve
+ * and the button goes away — the notes are the only state.
+ */
+export function pendingApproval(notes: string | null | undefined): ChecklistItem | undefined {
+  return checklistItems(notes).find(item => !item.checked && /^approve\b/i.test(item.text))
 }
 
 /**

@@ -26,7 +26,7 @@ import type {
   Task
 } from '@wolffm/task/api'
 import { TaskUtils } from '@wolffm/task/api'
-import { VersionConflictError, completedCutoff } from '@wolffm/task/api'
+import { VersionConflictError, completedCutoff, parseStoredStatus } from '@wolffm/task/api'
 import { DEFAULT_BOARD_ID, DEFAULT_BOARD_NAME } from '../constants'
 import {
   getBoardStats as getD1BoardStats,
@@ -71,6 +71,7 @@ interface TaskRow {
   source: string | null
   source_id: string | null
   metadata: string | null
+  status: string | null
   created_at: string
   updated_at: string | null
   closed_at: string | null
@@ -113,7 +114,8 @@ function rowToTask(r: TaskRow): Task {
     endTime: r.end_time ?? null,
     source: r.source ?? null,
     sourceId: r.source_id ?? null,
-    metadata: r.metadata ? (JSON.parse(r.metadata) as Record<string, unknown>) : null
+    metadata: r.metadata ? (JSON.parse(r.metadata) as Record<string, unknown>) : null,
+    status: parseStoredStatus(r.status)
   }
 }
 
@@ -352,7 +354,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       const { results } = await db
         .prepare(
           `SELECT id, title, notes, tag, state, date, start_time, end_time, source, source_id,
-                  metadata, created_at, updated_at, closed_at
+                  metadata, status, created_at, updated_at, closed_at
              FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}
              ORDER BY created_at, id`
         )
@@ -541,8 +543,8 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
     .prepare(
       `INSERT INTO tasks
          (user_id, board_id, id, title, notes, tag, state, date, start_time, end_time,
-          source, source_id, metadata, created_at, updated_at, closed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          source, source_id, metadata, status, created_at, updated_at, closed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, id) DO UPDATE SET
          board_id = excluded.board_id,
          title = excluded.title,
@@ -555,6 +557,7 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
          source = excluded.source,
          source_id = excluded.source_id,
          metadata = excluded.metadata,
+         status = excluded.status,
          updated_at = excluded.updated_at,
          closed_at = excluded.closed_at`
     )
@@ -572,6 +575,7 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
       task.source ?? null,
       task.sourceId ?? null,
       task.metadata ? JSON.stringify(task.metadata) : null,
+      task.status ? JSON.stringify(task.status) : null,
       task.createdAt ?? nowIso(),
       task.updatedAt ?? null,
       task.closedAt ?? null

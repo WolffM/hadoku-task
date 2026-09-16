@@ -99,15 +99,15 @@ For **safe multi-agent work** on a board: claim a task (atomic — exactly one w
 heartbeat to hold the lease, move it between lanes, and release it to a destination lane
 with notes. See [Automation boards & the claim loop](#automation-boards--the-claim-loop).
 
-| Tool                | Arguments                                                                                              | Purpose                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `claim_task`        | `taskId`, `board?`, `agentId?`, `lane?`, `leaseSeconds?`                                               | Atomically claim; `CLAIM_HELD` if a live lease exists                          |
-| `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                           | Extend the lease; `LEASE_LOST` if it was taken                                 |
-| `set_lane`          | `taskId`, `token`, `lane`, `board?`                                                                    | Move a task while holding the claim (agent path — `agent` lanes ok)            |
-| `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `metadata?`, `outcome?`, `ifCurrentLane?`, `complete?`, `board?` | Move + write notes/metadata + unclaim; `complete:true` archives it; idempotent |
-| `cancel_claim`      | `taskId`, `board?`                                                                                     | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST`    |
-| `get_claim_history` | `taskId`, `board?`                                                                                     | Who claimed it when, and how each claim ended                                  |
-| `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                              | Change feed — poll instead of full-scanning; returns a `cursor`                |
+| Tool                | Arguments                                                                                                                         | Purpose                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `claim_task`        | `taskId`, `board?`, `agentId?`, `lane?`, `leaseSeconds?`                                                                          | Atomically claim; `CLAIM_HELD` if a live lease exists                                                     |
+| `heartbeat_claim`   | `taskId`, `token`, `board?`, `leaseSeconds?`                                                                                      | Extend the lease; `LEASE_LOST` if it was taken                                                            |
+| `set_lane`          | `taskId`, `token`, `lane`, `status?`, `board?`                                                                                    | Move while holding the claim (agent path — `agent` lanes ok); `status` reports progress without releasing |
+| `release_claim`     | `taskId`, `token`, `lane?`, `notes?`, `status?`, `metadata?`, `outcome?`, `ifCurrentLane?`, `ifNotesHash?`, `complete?`, `board?` | Move + write notes/status/metadata + unclaim; `complete:true` archives it; idempotent                     |
+| `cancel_claim`      | `taskId`, `board?`                                                                                                                | **Owner-only:** force-drop a stuck claim; the holder then gets `LEASE_LOST`                               |
+| `get_claim_history` | `taskId`, `board?`                                                                                                                | Who claimed it when, and how each claim ended                                                             |
+| `list_changes`      | `since?` (`"<updatedAt>,<id>"`), `limit?`                                                                                         | Change feed — poll instead of full-scanning; returns a `cursor`                                           |
 
 ### Scheduling model
 
@@ -157,10 +157,32 @@ The loop a runner drives:
    `CLAIM_HELD` (another agent has it — move on).
 4. `heartbeat_claim { taskId, token }` before `expiresAt` to keep the lease.
 5. `set_task_notes` / `set_lane` as the work progresses.
-6. `release_claim { taskId, token, lane: "<next-lane>", notes, ifCurrentLane: "<working-lane>" }`
-   → moves the task, writes your result, unclaims. `ifCurrentLane` aborts with `LANE_CHANGED`
-   if a human retagged it under you. Replaying `release_claim` with the same token is a safe
-   no-op.
+6. `release_claim { taskId, token, lane: "<next-lane>", notes, ifCurrentLane: "<working-lane>", ifNotesHash: "<sha256 of the notes you planned against>" }`
+   → moves the task, writes your result, unclaims. Replaying with the same token is a safe no-op.
+
+   **Use both guards.** `ifCurrentLane` aborts with `LANE_CHANGED` if a human retagged the task
+   under you; `ifNotesHash` aborts with `NOTES_CHANGED` if a human EDITED THE PLAN under you.
+   Without the second one, a release silently overwrites a reply typed while you worked, and that
+   text is not versioned anywhere — it is gone. Both check before writing anything and leave your
+   claim in place, so re-read and retry on the same token.
+
+   The digest is the **lowercase hex SHA-256 of the UTF-8 notes**, with absent notes hashed as the
+   empty string — `hashlib.sha256((notes or "").encode("utf-8")).hexdigest()`. The 409 carries
+   `currentNotesHash` so you can re-plan against what the task now holds without a second read
+   racing you too.
+
+### Reporting status
+
+`set_lane` and `release_claim` both take `status`, which renders as a chip on the card:
+
+```json
+{ "kind": "working" | "waiting" | "blocked" | "done", "label": "implementing · 3 files", "href": "https://github.com/o/r/pull/42" }
+```
+
+`kind` is a closed set (anything else → `STATUS_INVALID`); `label` is free text nobody parses;
+`href` is optional, http(s) only, and makes the chip a link. Omit `status` to leave it alone,
+pass `null` to clear it. Take it on `set_lane` when a job runs long — the alternative is
+release-then-reclaim, which drops your lease in between.
 
 If your lease expires, the claim simply drops — the task becomes claimable again and stays
 where it is. The worker runs no orchestration and holds no policy: it hands out leases and
@@ -170,24 +192,26 @@ records outcomes. There is no "eligible" query — you decide what's ready from 
 
 Tool failures return `isError: true` with a `structuredContent.code` you can act on:
 
-| Code                                 | HTTP | Do                                                                |
-| ------------------------------------ | ---- | ----------------------------------------------------------------- |
-| `CLAIM_HELD`                         | 409  | Another agent holds a live claim (`holder`, `expiresAt`). Move on |
-| `LEASE_LOST`                         | 409  | Your lease was taken. Abort immediately, write nothing            |
-| `LANE_NOT_EDITABLE`                  | 403  | Wrong path for this lane (human path → `agent` lane). Never retry |
-| `LANE_UNKNOWN`                       | 422  | Destination isn't a lane on this board. Fix the caller            |
-| `LANE_INVALID`                       | 422  | Task carried zero or two lane tags. Repair, don't retry           |
-| `LANE_CHANGED`                       | 409  | `ifCurrentLane` didn't match — a human retagged it. Re-read       |
-| `BOARD_SCHEMA_LOCKED`                | 409  | Lane structure is frozen on an automation board. Never retry      |
-| `DIGEST_MISMATCH`                    | 409  | Activation preview is stale. Re-run the dry-run                   |
-| `VERSION_CONFLICT`                   | 409  | Re-pull and retry                                                 |
-| `NOTES_TOO_LARGE`                    | 413  | 64 KB UTF-8 cap. Nothing written, claim kept — truncate + retry   |
-| `RATE_LIMITED`                       | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min        |
-| `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404  | Abort; treat as already handled                                   |
-| `FORBIDDEN`                          | 403  | Readonly access, or an owner-only action. Never retry             |
-| `LANE_SET_INVALID`                   | 422  | Activation payload is malformed. Fix the lane set, don't retry    |
-| `NAME_NOT_FOUND`                     | 404  | No registered key with that display name (share grant)            |
-| `NO_USER_ID`                         | 409  | That key never signed in, so there's no id to grant against       |
+| Code                                 | HTTP | Do                                                                                                                                        |
+| ------------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAIM_HELD`                         | 409  | Another agent holds a live claim (`holder`, `expiresAt`). Move on                                                                         |
+| `LEASE_LOST`                         | 409  | Your lease was taken. Abort immediately, write nothing                                                                                    |
+| `LANE_NOT_EDITABLE`                  | 403  | Wrong path for this lane (human path → `agent` lane). Never retry                                                                         |
+| `LANE_UNKNOWN`                       | 422  | Destination isn't a lane on this board. Fix the caller                                                                                    |
+| `LANE_INVALID`                       | 422  | Task carried zero or two lane tags. Repair, don't retry                                                                                   |
+| `LANE_CHANGED`                       | 409  | `ifCurrentLane` didn't match — a human retagged it. Re-read                                                                               |
+| `NOTES_CHANGED`                      | 409  | `ifNotesHash` didn't match — a human edited the plan. Nothing was written and your claim is kept; re-read (`currentNotesHash`) and decide |
+| `STATUS_INVALID`                     | 422  | `status` isn't `{ kind: working\|waiting\|blocked\|done, label, href? }`. Fix the caller                                                  |
+| `BOARD_SCHEMA_LOCKED`                | 409  | Lane structure is frozen on an automation board. Never retry                                                                              |
+| `DIGEST_MISMATCH`                    | 409  | Activation preview is stale. Re-run the dry-run                                                                                           |
+| `VERSION_CONFLICT`                   | 409  | Re-pull and retry                                                                                                                         |
+| `NOTES_TOO_LARGE`                    | 413  | 64 KB UTF-8 cap. Nothing written, claim kept — truncate + retry                                                                           |
+| `RATE_LIMITED`                       | 429  | Back off per `retryAfter` (seconds). Service tier: 600/min                                                                                |
+| `TASK_NOT_FOUND` / `BOARD_NOT_FOUND` | 404  | Abort; treat as already handled                                                                                                           |
+| `FORBIDDEN`                          | 403  | Readonly access, or an owner-only action. Never retry                                                                                     |
+| `LANE_SET_INVALID`                   | 422  | Activation payload is malformed. Fix the lane set, don't retry                                                                            |
+| `NAME_NOT_FOUND`                     | 404  | No registered key with that display name (share grant)                                                                                    |
+| `NO_USER_ID`                         | 409  | That key never signed in, so there's no id to grant against                                                                               |
 
 This table is the same closed set the OpenAPI spec publishes as the `DomainErrorCode` enum
 (`components.schemas.DomainErrorCode` in `/task/api/openapi.json`) — generate your client from

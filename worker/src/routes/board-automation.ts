@@ -16,7 +16,9 @@ import {
   LaneSetInvalidError,
   ActivationDigestMismatchError,
   BoardNotFoundError,
-  DomainError
+  DomainError,
+  parsePlanNotes,
+  questionsAnswered
 } from '@wolffm/task/api'
 import { logger } from '../logger'
 import type { Access } from './board-sharing'
@@ -209,6 +211,15 @@ export interface LaneWriteNotice {
   taskId: string
   /** The lane tag this write landed the task in. */
   laneTag: string | null | undefined
+  /**
+   * WHY the runner is being woken, carried through to the dispatch payload so a
+   * run's log answers it without inference. `lane` (the default) is a human
+   * landing a task in a `user` lane; `questions-answered` is a human closing the
+   * plan's open questions in the notes — the v3 handoff, where the task never
+   * moves at all. Additive and ignorable: a consumer that only sweeps on wake
+   * needs no change.
+   */
+  reason?: 'lane' | 'questions-answered'
   /** The board's lane set, already resolved by the caller — saves a re-read. */
   lanes: Lane[]
   /** 'standard' | 'automation', as resolved for the write. */
@@ -305,6 +316,7 @@ async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<voi
     handle: cfg.handle,
     taskId: n.taskId,
     lane: (n.laneTag ?? '').trim(),
+    reason: n.reason ?? 'lane',
     // The board's OWN repo, which is not necessarily where this dispatch went.
     // Carried so a run's log answers "which board woke me" without the reader
     // having to know that the two can differ — the thing nobody knew before.
@@ -352,6 +364,96 @@ export async function notifyLaneWrite(n: LaneWriteNotice, host: unknown): Promis
     return
   }
   await pending
+}
+
+/**
+ * Does this notes write CLOSE the plan's open questions?
+ *
+ * A transition, not a state: false → true. The state alone would re-fire on
+ * every autosave after the human answered, and every keystroke in the editor is
+ * a save — which is exactly the dispatch storm TenHands asked us not to build.
+ * The transition happens once, on the write that actually changes the answer.
+ *
+ * `questionsAnswered` is the predicate, unchanged and unwrapped: the same
+ * function the card badge and the popout header use, and the same one TenHands
+ * ports on their side. A ticked `- [ ] Approve this plan` satisfies it for the
+ * same reason a typed reply does — see planNotes.ts — so the Approve button
+ * gets this wake for free rather than needing a second channel.
+ */
+export function notesWriteClosesQuestions(
+  previous: string | null | undefined,
+  next: string | null | undefined
+): boolean {
+  if (questionsAnswered(parsePlanNotes(previous))) return false
+  return questionsAnswered(parsePlanNotes(next))
+}
+
+/** What a hook site supplies to {@link notifyNotesWrite}. */
+export interface NotesWriteNotice extends LaneWriteNotice {
+  /** The notes as they stood BEFORE this write. */
+  previousNotes: string | null | undefined
+  /** The notes this write is landing. */
+  nextNotes: string | null | undefined
+}
+
+/**
+ * Wake the runner: a human just answered the plan's open questions.
+ *
+ * This is the v3 handoff. In v1/v2 every human handoff was a drag, so
+ * `notifyLaneWrite` covered all of them and a notes-only edit dispatching
+ * nothing was invisible. With lanes as REPOS the task doesn't move when a human
+ * replies — answering IS the handoff — and without this the pipeline waits on
+ * its backstop cron (~15 min median) instead of the dispatch path (~18s).
+ *
+ * Deliberately NOT gated on `isUserLaneWrite`: the lane isn't changing, and which
+ * lane a task happens to sit in says nothing about whether a human just answered
+ * a question in it. The gate is the transition, which is a human act by
+ * construction — an agent writes notes through the claim protocol, not here.
+ *
+ * Same guarantees as the lane wake: never throws, never retries, the cron is the
+ * delivery guarantee.
+ */
+export async function notifyNotesWrite(n: NotesWriteNotice, host: unknown): Promise<void> {
+  if (n.mode !== 'automation') return
+  if (!n.token) return
+  if (!notesWriteClosesQuestions(n.previousNotes, n.nextNotes)) return
+
+  const pending = dispatchLaneWrite({ ...n, reason: 'questions-answered' }, n.token)
+
+  let waitUntil: ((p: Promise<unknown>) => void) | null = null
+  try {
+    const ctx = (host as { executionCtx?: { waitUntil(p: Promise<unknown>): void } }).executionCtx
+    if (ctx && typeof ctx.waitUntil === 'function') waitUntil = ctx.waitUntil.bind(ctx)
+  } catch {
+    // No ExecutionContext here — fall through and await inline (see notifyLaneWrite).
+  }
+  if (waitUntil) {
+    waitUntil(pending)
+    return
+  }
+  await pending
+}
+
+/**
+ * The notes and lane a task holds right now, in the OWNER's scope. Read at the
+ * route edge BEFORE a notes write commits, so the wake can compare before against
+ * after — and so the dispatch can still name the lane the task is sitting in, which
+ * a notes-only update never mentions.
+ *
+ * Null ⇒ no active row: nothing to compare, and no wake.
+ */
+export async function readTaskNotes(
+  db: D1Like,
+  ownerId: string,
+  boardId: string,
+  taskId: string
+): Promise<{ notes: string | null; tag: string | null } | null> {
+  return db
+    .prepare(
+      `SELECT notes, tag FROM tasks WHERE user_id = ? AND board_id = ? AND id = ? AND state = 'Active' LIMIT 1`
+    )
+    .bind(ownerId, boardId, taskId)
+    .first<{ notes: string | null; tag: string | null }>()
 }
 
 /** A stable FNV-1a hex digest — content fingerprint, not a security hash. */

@@ -10,7 +10,10 @@ import { resolveBoardAccess, type Access } from './board-sharing'
 import {
   parseLanes,
   assertHumanLaneWrite,
+  isUserLaneWrite,
   notifyLaneWrite,
+  notifyNotesWrite,
+  readTaskNotes,
   githubToken,
   runnerRepo
 } from './board-automation'
@@ -254,6 +257,11 @@ export async function withBoardLock<T>(boardsKey: string, operation: () => Promi
  * and it's validated against the board's lanes (throws 403/422). Omit the key
  * for writes that don't touch the tag (complete, delete, schedule). It also
  * arms the outbound wake dispatch, which needs `taskId` to name what moved.
+ *
+ * `notesWrite` arms the OTHER wake (autoland v3 §5.1): the notes this write is
+ * landing. A human answering the plan's open questions is the handoff when lanes
+ * are repos and the task never moves, and a notes-only update reaches no lane
+ * hook at all. Costs one extra read, and only on an automation board.
  */
 export async function handleBoardOperation<T>(
   c: Context<AppContext>,
@@ -275,6 +283,12 @@ export async function handleBoardOperation<T>(
      * bring a board into being.
      */
     mustExist?: boolean
+    /**
+     * The notes this write lands, present only when the update writes `notes`.
+     * `undefined` (the key absent) ⇒ this write doesn't touch them, so there is
+     * nothing to compare and no wake to consider.
+     */
+    notesWrite?: string | null
   } = {}
 ) {
   const ctx = await getBoardContext(c, boardId)
@@ -291,6 +305,16 @@ export async function handleBoardOperation<T>(
     assertHumanLaneWrite(ctx.lanes, opts.laneTag)
   }
   const { storage, auth } = ctx
+
+  // The notes wake compares before against after, so `before` has to be read
+  // while it still IS before. Gated on the board being automated so an ordinary
+  // board's notes edit pays nothing for a dispatch it could never send.
+  const armNotesWake =
+    'notesWrite' in opts && !!opts.taskId && ctx.mode === 'automation' && !!githubToken(c.env)
+  const before = armNotesWake
+    ? await readTaskNotes(c.env.DB, ctx.ownerId, ctx.boardId, opts.taskId as string)
+    : null
+
   // Lock on the OWNER's namespace so concurrent writes from owner + grantees to
   // the same shared board serialise on the same key, whatever tier each caller is.
   const boardsKey = boardLockKey(ctx.ownerId, ctx.boardId)
@@ -302,18 +326,38 @@ export async function handleBoardOperation<T>(
   // Wake the board's runner AFTER the write commits — a dispatch for a write that
   // then threw would send the pipeline looking for a task that never moved. A
   // failed dispatch never fails the human's write: notifyLaneWrite can't throw.
+  const wake = {
+    db: c.env.DB,
+    ownerId: ctx.ownerId,
+    boardId: ctx.boardId,
+    taskId: opts.taskId as string,
+    laneTag: opts.laneTag,
+    lanes: ctx.lanes,
+    mode: ctx.mode,
+    token: githubToken(c.env),
+    runnerRepo: runnerRepo(c.env)
+  }
+  // Did the lane wake already fire for this write? One gesture, one dispatch —
+  // an update that moves a task AND answers its questions is still one thing the
+  // human did, and the runner re-reads the whole task either way.
+  const laneWoke =
+    'laneTag' in opts &&
+    !!opts.taskId &&
+    ctx.mode === 'automation' &&
+    isUserLaneWrite(ctx.lanes, opts.laneTag)
+
   if ('laneTag' in opts && opts.taskId) {
-    await notifyLaneWrite(
+    await notifyLaneWrite(wake, c)
+  }
+  if (armNotesWake && before && !laneWoke) {
+    await notifyNotesWrite(
       {
-        db: c.env.DB,
-        ownerId: ctx.ownerId,
-        boardId: ctx.boardId,
-        taskId: opts.taskId,
-        laneTag: opts.laneTag,
-        lanes: ctx.lanes,
-        mode: ctx.mode,
-        token: githubToken(c.env),
-        runnerRepo: runnerRepo(c.env)
+        ...wake,
+        // A notes-only write never mentions a lane, so report the one the task
+        // is actually in rather than the empty string `laneTag` would give.
+        laneTag: 'laneTag' in opts ? opts.laneTag : before.tag,
+        previousNotes: before.notes,
+        nextNotes: opts.notesWrite
       },
       c
     )

@@ -46,11 +46,13 @@ import {
   LeaseLostErrorSchema,
   ReleaseConflictErrorSchema,
   LaneUnknownErrorSchema,
+  LaneOrStatusInvalidErrorSchema,
   NotesTooLargeErrorSchema
 } from '../schemas-agent'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { Context } from 'hono'
 import type { AppContext } from '../types'
+import type { TaskStatus } from '@wolffm/task/api'
 
 // Each error response is typed to the codes THAT route+status can actually emit,
 // so a generated client gets one exception class per outcome rather than a single
@@ -62,6 +64,7 @@ const claimHeld = { 'application/json': { schema: ClaimHeldErrorSchema } }
 const leaseLost = { 'application/json': { schema: LeaseLostErrorSchema } }
 const releaseConflict = { 'application/json': { schema: ReleaseConflictErrorSchema } }
 const laneUnknown = { 'application/json': { schema: LaneUnknownErrorSchema } }
+const laneOrStatusInvalid = { 'application/json': { schema: LaneOrStatusInvalidErrorSchema } }
 const notesTooLarge = { 'application/json': { schema: NotesTooLargeErrorSchema } }
 
 /**
@@ -178,7 +181,10 @@ export function createAgentRoutes() {
       403: { description: 'Read-only access (FORBIDDEN)', content: forbidden },
       404: { description: 'Board not found (BOARD_NOT_FOUND)', content: boardNotFound },
       409: { description: 'Lease was taken (LEASE_LOST)', content: leaseLost },
-      422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
+      422: {
+        description: 'Unknown lane (LANE_UNKNOWN) or bad status (STATUS_INVALID)',
+        content: laneOrStatusInvalid
+      }
     }
   })
   app.openapi(setLaneRoute, async c => {
@@ -187,6 +193,7 @@ export function createAgentRoutes() {
       taskId: string
       token: string
       lane: string
+      status?: TaskStatus | null
     }
     const ctx = await boardForWrite(c, body.board)
     if (ctx instanceof Response) return ctx
@@ -199,7 +206,8 @@ export function createAgentRoutes() {
       body.lane,
       {
         mode: ctx.mode,
-        lanes: ctx.lanes
+        lanes: ctx.lanes,
+        status: body.status
       }
     )
     return c.json(result, 200)
@@ -210,7 +218,7 @@ export function createAgentRoutes() {
     method: 'post',
     path: '/agent/release',
     tags: ['Agent'],
-    summary: 'Release a claim (move + notes + unclaim)',
+    summary: 'Release a claim (move + notes + status + unclaim)',
     request: { body: { content: { 'application/json': { schema: ReleaseInputSchema } } } },
     responses: {
       200: {
@@ -223,14 +231,18 @@ export function createAgentRoutes() {
         content: taskOrBoardNotFound
       },
       409: {
-        description: 'Lease taken (LEASE_LOST) or lane changed (LANE_CHANGED)',
+        description:
+          'Lease taken (LEASE_LOST), lane changed (LANE_CHANGED) or notes changed (NOTES_CHANGED)',
         content: releaseConflict
       },
       413: {
         description: '`notes` exceeds the 64 KB limit (NOTES_TOO_LARGE) — nothing written',
         content: notesTooLarge
       },
-      422: { description: 'Unknown lane (LANE_UNKNOWN)', content: laneUnknown }
+      422: {
+        description: 'Unknown lane (LANE_UNKNOWN) or bad status (STATUS_INVALID)',
+        content: laneOrStatusInvalid
+      }
     }
   })
   app.openapi(releaseRoute, async c => {
@@ -242,6 +254,8 @@ export function createAgentRoutes() {
       notes?: string | null
       outcome?: string | null
       ifCurrentLane?: string
+      ifNotesHash?: string
+      status?: TaskStatus | null
       metadata?: Record<string, unknown> | null
       complete?: boolean
     }
@@ -252,6 +266,8 @@ export function createAgentRoutes() {
       notes: body.notes,
       outcome: body.outcome ?? null,
       ifCurrentLane: body.ifCurrentLane,
+      ifNotesHash: body.ifNotesHash,
+      status: body.status,
       metadata: body.metadata,
       complete: body.complete === true,
       mode: ctx.mode,
