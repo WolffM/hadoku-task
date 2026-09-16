@@ -233,11 +233,18 @@ filter on `tag` rather than assuming the feed is already narrowed.
 
 ## Operational notes
 
-- **The `status` column needs a hand-applied production migration.**
+- **DEPLOY ORDER IS HARD: migration 0007 must be applied to production D1 BEFORE this ships.**
   `worker/migrations/0007_task_status.sql` is `ALTER TABLE tasks ADD COLUMN status TEXT`. Nothing
-  in CI runs migrations here — they're applied by hand from `hadoku_site` via vault + wrangler.
-  Until it's applied, a release carrying `status` will 500 in production. The rest of this work
-  is unaffected by it.
+  in CI runs migrations here — they're applied by hand from `hadoku_site` via vault + wrangler,
+  and the worker does NOT self-migrate (`ensureInitialized` only scaffolds a user's rows).
+
+  This is not "the status field won't work until then". `status` is in the `SELECT` list of every
+  task read, so against a pre-0007 database **`GET /boards` answers 500 and the app does not
+  load at all**. Measured, not assumed: the real worker booted against migrations 0002–0006
+  returns `500 {"error":"Internal server error"}` with `ERR_SQLITE_ERROR` underneath.
+
+  Apply the migration first, then deploy. The rest of this work has no schema dependency.
+
 - **`NOTES_CHANGED` and `STATUS_INVALID`** are in the `DomainErrorCode` enum in the OpenAPI spec,
   so regenerate your client and you'll get them as real variants. `/agent/release` 409 is now
   `LEASE_LOST | LANE_CHANGED | NOTES_CHANGED`; `/agent/release` and `/agent/set-lane` 422 is

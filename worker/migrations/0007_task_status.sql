@@ -27,5 +27,12 @@
 -- Re-runnable by hand: SQLite has no ADD COLUMN IF NOT EXISTS, so a second run
 -- errors with "duplicate column name: status" and changes nothing. That is the
 -- safe failure, not a silent partial apply.
+--
+-- ⚠ APPLY THIS BEFORE DEPLOYING THE WORKER THAT READS IT. `status` is in the
+-- SELECT list of every task read, so a worker carrying it against a database
+-- without the column answers 500 on GET /boards and the app does not load at
+-- all — this is not a feature that degrades, it is a hard ordering dependency.
+-- Nothing in CI runs migrations here; they go on by hand from hadoku_site via
+-- vault + wrangler, and the worker does not self-migrate.
 
 ALTER TABLE tasks ADD COLUMN status TEXT;
