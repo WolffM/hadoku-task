@@ -6,7 +6,7 @@ import React from 'react'
 import type { Task, BoardsFile } from '../domain/types'
 import { Toaster, type ToastState } from '@wolffm/task-ui-components'
 import {
-  ClearTagModal,
+  ConfirmModal,
   CreateBoardModal,
   EditBoardsModal,
   ShareBoardModal,
@@ -76,6 +76,8 @@ interface AppModalsProps {
   onCloseTagContextMenu: () => void
 
   onDismissToast: (id: number) => void
+  /** Report a failure to the user. See ConfirmModal on why this is not alert(). */
+  onError: (message: string) => void
 }
 
 export function AppModals({
@@ -118,16 +120,30 @@ export function AppModals({
   onCloseBoardContextMenu,
   onDeleteBoard,
   onCloseTagContextMenu,
-  onDismissToast
+  onDismissToast,
+  onError
 }: AppModalsProps) {
   return (
     <>
-      <ClearTagModal
-        tag={confirmClearTag?.tag || null}
-        count={confirmClearTag?.count || 0}
+      <ConfirmModal
         isOpen={!!confirmClearTag}
-        onClose={onCloseConfirmClearTag}
-        onConfirm={onConfirmDeleteTag}
+        title={`Clear tag #${confirmClearTag?.tag ?? ''}?`}
+        message={
+          <>
+            This removes <strong>#{confirmClearTag?.tag}</strong> from{' '}
+            <strong>
+              {confirmClearTag?.count ?? 0} task{confirmClearTag?.count === 1 ? '' : 's'}
+            </strong>{' '}
+            and deletes the tag from the board.
+          </>
+        }
+        confirmLabel="Clear tag"
+        onCancel={onCloseConfirmClearTag}
+        onConfirm={async () => {
+          if (!confirmClearTag) return
+          await onConfirmDeleteTag(confirmClearTag.tag)
+          onCloseConfirmClearTag()
+        }}
       />
 
       <CreateBoardModal
@@ -154,6 +170,7 @@ export function AppModals({
         shareApi={shareApi}
         onReloadBoards={onReloadBoards}
         validateBoardName={validateBoardName}
+        onError={onError}
       />
 
       <ShareBoardModal

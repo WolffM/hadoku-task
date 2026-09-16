@@ -201,3 +201,103 @@
   color: var(--color-text-secondary);
   font-weight: 600;
 }
+
+/* ── Bulk selection ────────────────────────────────────────────────────
+   Deleting boards one dialog at a time is what sent a user to Chrome's
+   "stop prompting" checkbox in the first place, so the list can select and
+   act on many at once. The checkbox column is present on every row — a
+   spacer where there is no destructive action — so names stay aligned. */
+.edit-boards__check {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+.edit-boards__check:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.edit-boards__check--empty {
+  display: inline-block;
+  cursor: default;
+}
+
+.edit-boards__row.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+.edit-boards__row.is-selected .edit-boards__name {
+  color: var(--color-on-primary-bg);
+}
+
+.edit-boards__bulk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hdk-space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--hdk-space-sm);
+  padding: var(--hdk-space-xs) var(--hdk-space-lg);
+}
+
+.edit-boards__bulk-all {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-sm);
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.edit-boards__bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-sm);
+}
+
+.edit-boards__bulk-count {
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text-secondary);
+}
+.edit-boards__bulk-hidden {
+  font-style: italic;
+}
+
+.edit-boards__bulk-btn {
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-sm);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.edit-boards__bulk-btn.is-danger {
+  border-color: transparent;
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+}
+.edit-boards__bulk-btn.is-danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+}
+.edit-boards__bulk-btn:disabled,
+.edit-boards__bulk-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-boards__bulk-clear {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
+  cursor: pointer;
+  padding: var(--hdk-space-xs);
+}
+.edit-boards__bulk-clear:hover:not(:disabled) {
+  color: var(--color-text);
+}

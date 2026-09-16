@@ -648,6 +648,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           onDeleteBoard={deleteBoard}
           onCloseTagContextMenu={() => modals.setTagContextMenu(null)}
           onDismissToast={dismissToast}
+          onError={reportOperationError}
         />
       </div>
     </div>

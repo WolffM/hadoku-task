@@ -43,6 +43,44 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 - **Never** `var(--color-x, #hex)` fallbacks, `text-white`/hex literals on a filled bg, or a hand-written `@theme` color block — import `@wolffm/themes/tailwind-colors.css` instead. Import `style.css` **unlayered** or every color resolves to nothing.
 - Verify with `pnpm run lint:css` (runs the token/contrast/usage gates). Contracts: `docs/THEME_SYSTEM_RULES.md`.
 
+## Dialogs and user feedback
+
+**Never call `alert()`, `confirm()` or `prompt()`.** `no-alert` is an eslint ERROR, so
+lint (which CI runs) is the gate.
+
+A browser can be told to stop drawing them — Chrome offers "prevent this page from
+creating additional dialogs" after a couple in a row, which is exactly what someone
+deleting several boards gets shown. After that the calls return WITHOUT rendering:
+`confirm()` gives `false`, `prompt()` gives `null`, `alert()` is a no-op. Anything
+gated on one fails closed and silently, with no log and no way back short of clearing
+the site's settings in Chrome. Board deletion was unreachable this way.
+
+What to use instead:
+
+- **Confirm a destructive action** -> `<ConfirmModal>` (`src/components/modals/`). It
+  takes `boards`-style lists, so a bulk action is ONE dialog naming everything it will
+  destroy, not N dialogs. `error` keeps the dialog open with the reason on a failure.
+- **Report a foreground failure** (something the user is waiting on) -> a toast.
+  Hooks take an injected `onError`; `App.reportOperationError` wires it to
+  `showToast(msg, 'error', 5000)`. Never let a hook render or reach for a dialog.
+- **Report a background sync failure** -> `onSyncError`, which already exists and is
+  a different thing: the write already looked like it succeeded.
+- **A dev tool with no React** (`themes/dev/editor.js`) -> click-again-to-confirm.
+
+`Modal`'s Escape handling is stack-aware: only the top-most open dialog answers, which
+is what makes a confirm nested inside another modal usable. Both listeners are live, so
+without the stack one keypress closes both.
+
+Specs that cover this pin BOTH halves: they run with the dialogs neutered the way the
+browser neuters them, and fail if a native dialog is raised at all
+(`e2e/board-delete-confirm.spec.ts`, `e2e/error-reporting.spec.ts`,
+`e2e/board-bulk-delete.spec.ts`).
+
+Note which failures actually reach the foreground path: every write here is optimistic
+(localStorage first, server fire-and-forget), so a server refusal goes to `onSyncError`.
+The foreground `catch` fires when the LOCAL write fails — a full quota, blocked site
+data. That is what the specs inject.
+
 ## Icons
 
 **Never render an emoji as an icon.** Platform emoji fonts draw the same codepoint

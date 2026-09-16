@@ -37,14 +37,98 @@ export interface EditBoardsModalProps {
   /** Reload boards from the server (after activate/deactivate changes a board's mode). */
   onReloadBoards: () => Promise<void>
   validateBoardName: (name: string) => string | null
+  /** Report a failure to the user (a toast). See ConfirmModal on why not alert(). */
+  onError: (message: string) => void
 }
 
 const isOwned = (b: Board): boolean => !b.access || b.access === 'owner'
 
-/** A destructive action waiting on its confirmation dialog. */
+/**
+ * What a row's destructive action IS. Owned boards are deleted, boards shared
+ * with you are left, and `main` is neither — it cannot be removed at all, which
+ * is why this returns null rather than a disabled 'delete'.
+ *
+ * Selection, the bulk bar and the confirmation dialog all key off this one
+ * function, so a row can never offer a checkbox for an action its button does
+ * not have.
+ */
+type ActionKind = 'delete' | 'leave'
+
+const actionFor = (b: Board): ActionKind | null => {
+  if (!isOwned(b)) return 'leave'
+  return b.id === 'main' ? null : 'delete'
+}
+
+/** Both verbs, in every form the UI needs them. One place to read them from. */
+const VERB: Record<ActionKind, { button: string; title: string; bulk: (n: number) => string }> = {
+  delete: {
+    button: 'Delete board',
+    title: 'Delete board?',
+    bulk: n => `Delete ${n} board${n === 1 ? '' : 's'}`
+  },
+  leave: {
+    button: 'Leave board',
+    title: 'Leave shared board?',
+    bulk: n => `Leave ${n} board${n === 1 ? '' : 's'}`
+  }
+}
+
+/**
+ * A destructive action waiting on its confirmation dialog.
+ *
+ * ALWAYS a list, even for the single row button — one path to confirm, one to
+ * execute, one to report. A batch is not a second code path with its own bugs.
+ */
 interface PendingAction {
-  kind: 'delete' | 'leave'
-  board: Board
+  kind: ActionKind
+  boards: Board[]
+}
+
+type Selection = Record<ActionKind, Set<string>>
+
+const EMPTY_SELECTION: Selection = { delete: new Set(), leave: new Set() }
+
+/** How many names the dialog spells out before it starts counting instead. */
+const NAMES_SHOWN = 6
+
+function confirmTitle({ kind, boards }: PendingAction): string {
+  if (boards.length === 1) return VERB[kind].title
+  return kind === 'delete' ? `Delete ${boards.length} boards?` : `Leave ${boards.length} boards?`
+}
+
+/**
+ * Name what is about to go. A bulk confirm that only says "3 boards" asks the
+ * user to trust a count they cannot check — and the whole reason this dialog
+ * exists is that the batch is irreversible.
+ */
+function confirmMessage({ kind, boards }: PendingAction): React.ReactNode {
+  const shown = boards.slice(0, NAMES_SHOWN)
+  const rest = boards.length - shown.length
+  const names = (
+    <>
+      {shown.map((b, i) => (
+        <React.Fragment key={b.id}>
+          {i > 0 && ', '}
+          <strong>{b.name}</strong>
+        </React.Fragment>
+      ))}
+      {rest > 0 && ` and ${rest} more`}
+    </>
+  )
+
+  if (kind === 'leave') {
+    return (
+      <>
+        You will lose access to {names}. The owner can share {boards.length === 1 ? 'it' : 'them'}{' '}
+        with you again.
+      </>
+    )
+  }
+  return (
+    <>
+      {names} and all {boards.length === 1 ? 'its' : 'their'} tasks will be permanently deleted.
+    </>
+  )
 }
 
 export function EditBoardsModal({
@@ -59,7 +143,8 @@ export function EditBoardsModal({
   onSetPinned,
   shareApi,
   onReloadBoards,
-  validateBoardName
+  validateBoardName,
+  onError
 }: EditBoardsModalProps) {
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
@@ -75,6 +160,10 @@ export function EditBoardsModal({
   // false from confirm() without showing anything, which turned Delete into a
   // dead button with no way back short of clearing site settings.
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  // Checked rows, kept per verb. Deleting boards you own and leaving boards
+  // someone shared with you are different consequences, so they never end up in
+  // one ambiguous "3 selected" that could mean either.
+  const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION)
 
   // The favorited set the toggle operates on. Defaults to the first N standard
   // boards when nothing is explicitly favorited yet (effectivePinnedIds), so the
@@ -148,20 +237,162 @@ export function EditBoardsModal({
 
   const createInvalid = !newName.trim() || validateBoardName(newName) !== null
 
+  // ── Selection ──────────────────────────────────────────────────────────
+  // Keyed by board ID, not by index: the list re-sorts on pin and re-filters on
+  // search, and a selection addressed by position would silently follow the row
+  // that moved into the slot.
+
+  const toggleSelected = (kind: ActionKind, id: string) =>
+    setSelection(prev => {
+      const next = new Set(prev[kind])
+      if (!next.delete(id)) next.add(id)
+      return { ...prev, [kind]: next }
+    })
+
+  const clearSelected = (kind: ActionKind) =>
+    setSelection(prev => (prev[kind].size ? { ...prev, [kind]: new Set<string>() } : prev))
+
+  /**
+   * Resolve a selection back to boards, in the order they are shown.
+   *
+   * Reads from `boards`, NOT from the filtered list: a board selected before the
+   * user typed in the search box is still selected, and must still be acted on.
+   * It also drops IDs that no longer exist, so a board deleted in another tab
+   * cannot leave a phantom in the count.
+   */
+  const selectedBoards = (kind: ActionKind) =>
+    boards.filter(b => selection[kind].has(b.id) && actionFor(b) === kind)
+
+  const ask = (kind: ActionKind, targets: Board[]) => {
+    if (targets.length === 0) return
+    setPendingAction({ kind, boards: targets })
+  }
+
+  /**
+   * Run the confirmed action over every target, then repaint once.
+   *
+   * SEQUENTIAL, and it keeps going after a failure. Each delete ends in a
+   * reload, and those reloads share a sequence guard that discards superseded
+   * results — firing them concurrently would leave the last one to win by
+   * timing. Going one at a time also means a board that fails is the only one
+   * reported, instead of the whole batch dying on the first error with the rest
+   * in an unknown state.
+   */
   const runPendingAction = async () => {
     const action = pendingAction
     if (!action) return
     setPendingAction(null)
+
+    const failed: Board[] = []
     await run(async () => {
-      if (action.kind === 'delete') await onDelete(action.board.id)
-      else await shareApi.revokeShare(boardRef(action.board), 'me')
+      for (const board of action.boards) {
+        try {
+          if (action.kind === 'delete') await onDelete(board.id)
+          else await shareApi.revokeShare(boardRef(board), 'me')
+        } catch {
+          failed.push(board)
+        }
+      }
     })
+
+    // Exactly the boards that failed stay checked, so a retry is one more click
+    // on the bulk button rather than hunting them back out of the list.
+    setSelection(prev => ({ ...prev, [action.kind]: new Set(failed.map(b => b.id)) }))
+
+    if (failed.length) {
+      const verb = action.kind === 'delete' ? 'delete' : 'leave'
+      const names = failed.map(b => b.name)
+      onError(
+        names.length === 1
+          ? `Could not ${verb} "${names[0]}"`
+          : `Could not ${verb} ${names.length} boards: ${names.join(', ')}`
+      )
+    }
+  }
+
+  /**
+   * Select-all plus the bulk action, for one group.
+   *
+   * Only rendered when the group has at least two actionable rows: with one,
+   * the row's own button already is the bulk action, and a bar above it is
+   * noise. Hidden entirely while a row is being renamed, so the bar cannot
+   * steal the click that commits the edit.
+   */
+  const renderBulkBar = (kind: ActionKind, rows: Board[]) => {
+    const actionable = rows.filter(b => actionFor(b) === kind)
+    const chosen = selectedBoards(kind)
+    // Against the WHOLE group, not the filtered rows: "all" has to mean all, or
+    // a search would quietly turn select-all into select-some.
+    const allOfGroup = boards.filter(b => actionFor(b) === kind)
+
+    // A live selection ALWAYS keeps its bar, even when a search has filtered the
+    // selected rows off screen — otherwise the only control that can act on it,
+    // or clear it, disappears and the selection is stranded.
+    if (allOfGroup.length < 2 && chosen.length === 0) return null
+
+    const allChosen = chosen.length === allOfGroup.length && allOfGroup.length > 0
+    const hidden = chosen.length - actionable.filter(b => selection[kind].has(b.id)).length
+
+    return (
+      <div className="edit-boards__bulk">
+        <label className="edit-boards__bulk-all">
+          <input
+            type="checkbox"
+            className="edit-boards__check"
+            checked={allChosen}
+            ref={el => {
+              // Some-but-not-all is its own state, and a plain checked/unchecked
+              // box cannot show it — the box would read "none selected" while
+              // three are.
+              if (el) el.indeterminate = chosen.length > 0 && !allChosen
+            }}
+            onChange={() =>
+              setSelection(prev => ({
+                ...prev,
+                [kind]: allChosen ? new Set<string>() : new Set(allOfGroup.map(b => b.id))
+              }))
+            }
+            disabled={busy}
+            aria-label={`Select all boards to ${kind}`}
+          />
+          <span>Select all</span>
+        </label>
+
+        {chosen.length > 0 && (
+          <div className="edit-boards__bulk-actions">
+            <span className="edit-boards__bulk-count">
+              {chosen.length} selected
+              {/* A count that does not match what is on screen needs saying, or
+                  it reads as a bug in the search. */}
+              {hidden > 0 && (
+                <span className="edit-boards__bulk-hidden"> ({hidden} not shown)</span>
+              )}
+            </span>
+            <button
+              className={`edit-boards__bulk-btn${kind === 'delete' ? ' is-danger' : ''}`}
+              onClick={() => ask(kind, chosen)}
+              disabled={busy}
+            >
+              {VERB[kind].bulk(chosen.length)}
+            </button>
+            <button
+              className="edit-boards__bulk-clear"
+              onClick={() => clearSelected(kind)}
+              disabled={busy}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+    )
   }
 
   const renderRow = (b: Board) => {
     const isPinned = pinnedSet.has(b.id)
     const isMain = b.id === 'main'
     const owns = isOwned(b)
+    const kind = actionFor(b)
     const draggable = isPinned && !editingId
     return (
       <React.Fragment key={b.id}>
@@ -171,6 +402,7 @@ export function EditBoardsModal({
             'hdk-advanced-surface',
             'hdk-advanced-surface--shift',
             b.id === currentBoardId ? 'is-current' : '',
+            kind && selection[kind].has(b.id) ? 'is-selected' : '',
             draggable ? 'is-draggable' : '',
             dragId === b.id ? 'is-dragging' : '',
             dragOverId === b.id ? 'is-drag-over' : ''
@@ -215,6 +447,21 @@ export function EditBoardsModal({
             </span>
           ) : (
             <span className="edit-boards__grip edit-boards__grip--empty" aria-hidden="true" />
+          )}
+
+          {kind ? (
+            <input
+              type="checkbox"
+              className="edit-boards__check"
+              checked={selection[kind].has(b.id)}
+              onChange={() => toggleSelected(kind, b.id)}
+              disabled={busy}
+              aria-label={`Select ${b.name}`}
+            />
+          ) : (
+            // `main` has no destructive action, so it gets no checkbox — and a
+            // spacer, or its row's columns would not line up with the rest.
+            <span className="edit-boards__check edit-boards__check--empty" aria-hidden="true" />
           )}
 
           <button
@@ -290,7 +537,7 @@ export function EditBoardsModal({
                 {!isMain && (
                   <button
                     className="edit-boards__delete"
-                    onClick={() => setPendingAction({ kind: 'delete', board: b })}
+                    onClick={() => ask('delete', [b])}
                     disabled={busy}
                     title="Delete board"
                     aria-label={`Delete ${b.name}`}
@@ -302,7 +549,7 @@ export function EditBoardsModal({
             ) : (
               <button
                 className="edit-boards__leave"
-                onClick={() => setPendingAction({ kind: 'leave', board: b })}
+                onClick={() => ask('leave', [b])}
                 disabled={busy}
                 title="Leave this shared board"
                 aria-label={`Leave ${b.name}`}
@@ -381,32 +628,28 @@ export function EditBoardsModal({
         />
       )}
 
+      {renderBulkBar('delete', owned)}
       <ul className="edit-boards__list">{owned.map(renderRow)}</ul>
 
       {shared.length > 0 && (
         <>
           <p className="edit-boards__group-label">Shared with me</p>
+          {renderBulkBar('leave', shared)}
           <ul className="edit-boards__list">{shared.map(renderRow)}</ul>
         </>
       )}
 
       <ConfirmModal
         isOpen={pendingAction !== null}
-        title={pendingAction?.kind === 'leave' ? 'Leave shared board?' : 'Delete board?'}
-        message={
-          pendingAction?.kind === 'leave' ? (
-            <>
-              You will lose access to <strong>{pendingAction?.board.name}</strong>. The owner can
-              share it with you again.
-            </>
-          ) : (
-            <>
-              <strong>{pendingAction?.board.name}</strong> and all its tasks will be permanently
-              deleted.
-            </>
-          )
+        title={pendingAction ? confirmTitle(pendingAction) : ''}
+        message={pendingAction ? confirmMessage(pendingAction) : null}
+        confirmLabel={
+          pendingAction
+            ? pendingAction.boards.length === 1
+              ? VERB[pendingAction.kind].button
+              : VERB[pendingAction.kind].bulk(pendingAction.boards.length)
+            : ''
         }
-        confirmLabel={pendingAction?.kind === 'leave' ? 'Leave board' : 'Delete board'}
         onCancel={() => setPendingAction(null)}
         onConfirm={runPendingAction}
       />
