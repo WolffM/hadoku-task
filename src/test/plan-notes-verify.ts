@@ -241,6 +241,51 @@ console.log("\n5. TenHands' `— pass N` footer is bookkeeping, not a human's re
   check('a human sentence opening with a dash is their reply', answered(human), true)
 }
 
+console.log('\n6. The footer contract, matched the same way on both sides')
+{
+  // Since 2026-09-16 the shape is written down (TenHands' autoland-v3.md §11)
+  // and both parsers strike the same bargain: permissive on the values, tight on
+  // the shape. These cases are the agreed boundary — each was checked against
+  // their implementation, and the two sides return the same answer.
+  const asked = (line: string) => `## Questions\n\n- Which branch?\n\n${line}\n`
+
+  // Bookkeeping to both of us, whatever the values say.
+  for (const line of ['— pass 2', '— pass 2 · confidence 0.8', '— pass ? · confidence junk']) {
+    check(`bookkeeping: ${line}`, answered(asked(line)), false)
+  }
+
+  // The human's words to both of us. A wildcard tail used to eat the third of
+  // these — a line THEY keep — which is the divergence running in the direction
+  // that loses a human's answer rather than merely mis-badging it.
+  for (const line of [
+    '— pass the buck to legal',
+    '— pass 2 extra words',
+    '— pass 2 · confidence 0.8 and then some'
+  ]) {
+    check(`the human's words: ${line}`, answered(asked(line)), true)
+  }
+
+  // A comma is not a separator — human prose is full of them.
+  check('a comma does not make it bookkeeping', answered(asked('— pass 2, some note')), true)
+
+  // Trailing whitespace is still bookkeeping: an editor that adds or trims a
+  // space must not decide whether the runner wake fires.
+  check('trailing spaces do not save it', answered(asked('— pass 1   ')), false)
+
+  // MORE THAN ONE footer in a document is legal — a human can paste an older one
+  // back above the current one. That shape ran TenHands' own pass counter
+  // BACKWARDS, because their reader took the FIRST footer and their writer the
+  // LAST. Nothing here reads the number, so there is no authoritative-footer
+  // question to get wrong; the requirement is only that NONE survives to be
+  // counted as a reply.
+  const multi = `## Questions\n\n- Which branch?\n\n— pass 1\n\n— pass 3\n`
+  check('every footer is removed, not just one', count(multi), 1)
+  check('…so a doubled footer is still not an answer', answered(multi), false)
+
+  const multiReplied = `## Questions\n\n- Which branch?\n\n— pass 1\n\nLand it on main.\n\n— pass 3\n`
+  check('a reply between two footers is still the reply', answered(multiReplied), true)
+}
+
 console.log(`\n${checks - failures}/${checks} checks passed`)
 // Throw rather than process.exit: the runner spawns this as a child process and
 // asserts on the exit code.

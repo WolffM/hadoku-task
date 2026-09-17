@@ -57,15 +57,37 @@ const LIST_ITEM = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/
  * cron instead of the ~18s dispatch. Their own `parse()` has always stripped
  * this for the same reason; the predicates are newer and did not inherit it.
  *
- * Permissive on the VALUES on purpose. TenHands learned on their side that a
- * strict pattern made the whole footer fail to match on a junk confidence, which
- * silently reset the pass counter and let the planning loop run past its cap.
- * So the pass token and everything after a separator are `\S+`/`.*`, while the
- * STRUCTURE stays tight enough that a human sentence starting with a dash
- * ("— pass the buck to legal") is not eaten: the tail must be absent or open
- * with a separator.
+ * Since 2026-09-16 the shape is a written contract (their autoland-v3.md §11),
+ * and this pattern is deliberately the same bargain theirs strikes: **permissive
+ * on the values, tight on the shape.**
+ *
+ * Permissive on values because TenHands learned that a strict `[0-9.]+` made the
+ * whole footer fail to match on a junk confidence, silently resetting the pass
+ * counter and letting the planning loop run past its cap. Every value is
+ * therefore `\S+` — `— pass ? · confidence junk` still strips.
+ *
+ * Tight on shape because the other failure is worse and just as silent: eating a
+ * line the human actually typed. Their pattern is `$`-anchored per line, so the
+ * WHOLE line must match; this one takes at most `separator label value` after
+ * the pass token and then requires end-of-line, which lands on the same answers.
+ * Both sides keep `— pass the buck to legal` and `— pass 2 extra words` as the
+ * human's words, and both strip `— pass 2`, `— pass 2 · confidence 0.8` and
+ * `— pass ? · confidence junk`.
+ *
+ * An earlier version ended `[separator].*`, which also swallowed
+ * `— pass 2 · confidence 0.8 and then some` — a line THEY keep. That divergence
+ * ran in the dangerous direction (our correspondent's format eating our human's
+ * reply), which is why the tail is two tokens rather than a wildcard, and why
+ * `,` is not a separator: human prose is full of commas.
+ *
+ * Every matching line is removed, not just the first or the last. A document can
+ * legitimately carry more than one — a human pasting an older footer back above
+ * the current one is the shape that ran TenHands' own pass counter BACKWARDS
+ * when their reader took the first and their writer the last. Nothing here reads
+ * the pass number, so there is no authoritative-footer question to get wrong;
+ * the only requirement is that none survives to be read as a reply.
  */
-const PASS_FOOTER = /^[—–]\s*pass\s+\S+(?:\s*[·•|,]\s*.*)?$/
+const PASS_FOOTER = /^[—–]\s*pass\s+\S+(?:\s*[·•]\s*\S+\s+\S+)?\s*$/
 
 /**
  * A GitHub-flavoured task-list item: `- [ ] text` / `- [x] text`.
