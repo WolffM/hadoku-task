@@ -82,6 +82,10 @@ export default [
         prompt: 'readonly',
         getComputedStyle: 'readonly',
         crypto: 'readonly',
+        // WHATWG encoding, used by notesHash(). Present in browsers, Workers and
+        // Node 18+ alike — the same three runtimes `crypto` above is listed for.
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         BroadcastChannel: 'readonly',

@@ -76,6 +76,15 @@ async function createTask(
 ) {
   const res = await request.post(API, { data: { boardId, tag: 'plan-review', ...task } })
   expect(res.ok()).toBe(true)
+  // `boardId` is derived from `testId`, which is stable ACROSS runs, and the dev
+  // stack's D1 outlives the suite — so a re-run finds these rows already there
+  // and the POST above leaves them as they are. Any test that writes to a task
+  // (answering one, ticking a box) would then hand its successor a fixture that
+  // is already half-answered, and the failure looks exactly like a parser bug.
+  // Patching declared state back over the row makes each run start where the
+  // fixture says, whatever the last one did to it.
+  const reset = await request.patch(`${API}/${task.id}`, { data: { boardId, notes: task.notes } })
+  expect(reset.ok()).toBe(true)
 }
 
 /** Open the board and wait for its lanes to render. */
@@ -125,6 +134,19 @@ test.describe('plan review', () => {
       id: `${boardId}-e`,
       title: 'Sentinel as a bullet',
       notes: '## Questions\n\n- No open questions.\n'
+    })
+    // A plan as TenHands actually renders it: their `— pass N` bookkeeping
+    // footer on the last line. With no acceptance criteria to propose,
+    // `## Questions` IS the last section, so the footer lands in its body.
+    await createTask(request, boardId, {
+      id: `${boardId}-f`,
+      title: 'Footed plan',
+      notes: `## Questions\n\n- Which branch should this land on?\n\n— pass 2 · confidence 0.8\n`
+    })
+    await createTask(request, boardId, {
+      id: `${boardId}-g`,
+      title: 'Footed sentinel',
+      notes: `## Questions\n\n_No open questions._\n\n— pass 1\n`
     })
     await signIn(page)
     await openBoard(page, boardId)
@@ -261,6 +283,35 @@ test.describe('plan review', () => {
     await openBoard(page, boardId)
     await expect(card(page, 'Plan under review').locator('.task-app__item-questions')).toHaveText(
       '2 open questions'
+    )
+  })
+
+  test("the emitter's own pass footer is not read back as a reviewer's answer", async ({
+    page
+  }) => {
+    // The footer is an item, a blank line, then prose — byte-for-byte the shape
+    // of a human's trailing reply, which is why it read as one. A plan nobody
+    // has touched must still be asking.
+    await expect(card(page, 'Footed plan').locator('.task-app__item-questions')).toHaveText(
+      '1 open question'
+    )
+    await expect(card(page, 'Footed plan').locator('.task-app__item-questions')).not.toHaveClass(
+      /task-app__item-questions--answered/
+    )
+    // The sentinel asks nothing; footed, it was reading as "answered" instead,
+    // which is the opposite meaning rather than a near miss.
+    await expect(card(page, 'Footed sentinel').locator('.task-app__item-questions')).toHaveCount(0)
+
+    // And the transition the runner wake hangs on (§5.1) is the REVIEWER's
+    // reply — false → true here, not already-true before anyone typed.
+    await card(page, 'Footed plan').getByRole('button', { name: 'Open notes' }).click()
+    await expect(page.locator('.notes-popout__question-count')).toHaveText('1 open question')
+    await page.locator('#notes-popout-reply').fill('Land it on main.')
+    await page.getByRole('button', { name: 'Add answer' }).click()
+    await expect(page.locator('.notes-popout__question-count')).toHaveText('Answered questions')
+    await page.locator('.notes-popout__close').click()
+    await expect(card(page, 'Footed plan').locator('.task-app__item-questions')).toHaveText(
+      'Answered questions'
     )
   })
 

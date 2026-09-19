@@ -9,6 +9,7 @@ import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
 import { annotatedSharesByBoard } from './share-registry'
+import { liveClaimedTaskIds, liveClaimedTaskIdsForUser } from './board-claims'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
 import type { AppContext } from '../types'
@@ -61,11 +62,14 @@ export function createBoardRoutes() {
         if (!board.access || board.access === 'owner') return
         const ctx = await resolveBoardCtx(c.env, authContext, board.id)
         if (!ctx) return
-        const [tasksFile, statsFile] = await Promise.all([
+        const [tasksFile, statsFile, claimed] = await Promise.all([
           ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
-          ctx.storage.getStats(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId)
+          ctx.storage.getStats(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
+          // A shared board's claims live under the OWNER's id, like its tasks, so
+          // the caller-scoped sweep below cannot see them.
+          liveClaimedTaskIds(c.env.DB, ctx.ownerId, ctx.boardId)
         ])
-        board.tasks = tasksFile.tasks
+        board.tasks = tasksFile.tasks.map(t => (claimed.has(t.id) ? { ...t, claimed: true } : t))
         board.stats = statsFile
         // The calendar descriptor counts the board's dated tasks, so it has to be
         // recomputed against the tasks we just swapped in — the handler built it
@@ -73,6 +77,30 @@ export function createBoardRoutes() {
         board.calendar = TaskHandlers.boardCalendar(board)
       })
     )
+
+    // Flag the tasks an agent is holding right now (§5.5). One query for every
+    // owned board rather than one per board, and only where claims can exist at
+    // all — `task_claims` is written solely by the claim protocol, so a user who
+    // has never run an agent gets an empty set for the cost of one indexed read.
+    //
+    // TRANSIENT by design: it is attached here, never stored on the task row, so
+    // a cached copy is exactly as old as the read it came with. That is what it
+    // claims to be — "was claimed when we last looked" — and the next board sync
+    // corrects it.
+    if (auth.sessionId) {
+      try {
+        const claimed = await liveClaimedTaskIdsForUser(c.env.DB, auth.sessionId)
+        if (claimed.size > 0) {
+          for (const board of boardsData.boards) {
+            if (board.access && board.access !== 'owner') continue
+            board.tasks = board.tasks.map(t => (claimed.has(t.id) ? { ...t, claimed: true } : t))
+          }
+        }
+      } catch (err) {
+        // Non-fatal: a board that can't report claim state still renders.
+        logError('GET', '/task/api/boards', `claim hydration failed: ${String(err)}`)
+      }
+    }
 
     // Attach each OWNED board's grantees (§7.3) so the Edit Boards / Share UI
     // has them up front instead of fetching per board when a panel opens. One

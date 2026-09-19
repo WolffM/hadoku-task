@@ -37,6 +37,41 @@ export interface Task {
   sourceId?: string | null // the event id within that provider
   // Arbitrary provider-specific detail (who scheduled it, intro, meeting link, …).
   metadata?: Record<string, unknown> | null
+  // What an agent working this task is doing right now — the chip on the card.
+  // Its own column rather than `metadata.<pipeline>.status` on purpose: "an agent
+  // reports status on a task" is a generic board primitive, and a card renderer
+  // must not have to know one pipeline's metadata key to draw it.
+  status?: TaskStatus | null
+  // TRANSIENT, never stored: a live lease holds this task (§5.5). Attached at the
+  // route edge by the board reads, from task_claims. A cached copy is as stale as
+  // the read it came with, which is exactly what it claims to be — "was claimed
+  // when we last looked".
+  claimed?: boolean
+}
+
+/**
+ * The `kind`s a task status may carry. A CLOSED set, and deliberately small:
+ * four is what a human distinguishes at a glance — it's moving / it wants me /
+ * it's stuck / it's finished.
+ *
+ * The worker checks against this list (STATUS_INVALID) and the UI styles a chip
+ * per kind. Both of those are code, not data, which is why this is a constant
+ * here rather than a vocabulary fetched from the provider: a `kind` nobody has a
+ * stylesheet rule for renders no better for having been downloaded. `label` is
+ * the half that IS the provider's — free text, rendered verbatim, never parsed.
+ */
+export const TASK_STATUS_KINDS = ['working', 'waiting', 'blocked', 'done'] as const
+
+export type TaskStatusKind = (typeof TASK_STATUS_KINDS)[number]
+
+/** An agent's report of where it is on a task (§3.1 of the autoland v3 design). */
+export interface TaskStatus {
+  /** One of TASK_STATUS_KINDS. Styled by the UI; validated on write. */
+  kind: TaskStatusKind
+  /** Free text the agent writes, e.g. "implementing · 3 files". Never parsed. */
+  label: string
+  /** Optional — makes the chip a link. The PR, most of the time. */
+  href?: string
 }
 
 export interface TasksFile {
@@ -569,5 +604,101 @@ export class LaneChangedError extends DomainError {
       409
     )
     this.name = 'LaneChangedError'
+  }
+}
+
+/**
+ * A release's optional `ifNotesHash` guard didn't match the task's current notes —
+ * a human edited the plan mid-claim. The release wrote NOTHING; the runner re-reads
+ * and decides what to do with the new text.
+ *
+ * The twin of {@link LaneChangedError}, and it exists for the same reason. With
+ * every lane `editableBy: user` (autoland v3) there is no agent lane left to give
+ * `notes` mutual exclusion, so the hazard `ifCurrentLane` was built for moves to
+ * the notes: the agent reads a plan, works, and releases a rewritten document over
+ * the reply a human typed while it worked. Hash-compare-then-write in the runner
+ * is a race, not a guard — only the server can compare and write atomically.
+ *
+ * The body carries `currentNotesHash` so the caller can re-guard against what it
+ * now sees without a second read racing it too.
+ * HTTP status: 409 Conflict
+ */
+export class NotesChangedError extends DomainError {
+  constructor(public readonly currentNotesHash: string) {
+    super('Task notes changed since claim; nothing was written', 'NOTES_CHANGED', 409)
+    this.name = 'NotesChangedError'
+  }
+}
+
+/**
+ * A write carried a `status` that isn't the documented shape — an unknown `kind`,
+ * a missing/oversized `label`, or an `href` that isn't http(s).
+ *
+ * Checked rather than carried, so a typo'd kind fails at the write instead of
+ * rendering as a blank chip nobody can explain — the same reason LANE_INVALID is
+ * a real check rather than a convention.
+ * HTTP status: 422 Unprocessable Entity
+ */
+export class TaskStatusInvalidError extends DomainError {
+  constructor(detail: string) {
+    super(`Invalid status: ${detail}`, 'STATUS_INVALID', 422)
+    this.name = 'TaskStatusInvalidError'
+  }
+}
+
+/** Longest `label` a status chip will carry. A phrase on a card, not a log line. */
+export const MAX_STATUS_LABEL_LENGTH = 120
+
+/**
+ * Validate and narrow an agent-supplied status, or `null` to clear it.
+ *
+ * Returns a NEW object holding only the three documented fields, so nothing a
+ * caller hangs off the side is stored and handed back as if we honoured it —
+ * unlike a lane, where preserving unknown keys is the documented contract.
+ * `href` is restricted to http(s) because the chip renders it as an `<a href>`,
+ * and that is the whole allowlist: no other scheme can reach the attribute.
+ */
+export function normalizeTaskStatus(value: unknown): TaskStatus | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new TaskStatusInvalidError('expected an object or null')
+  }
+  const v = value as Record<string, unknown>
+
+  const kind = v.kind
+  if (typeof kind !== 'string' || !(TASK_STATUS_KINDS as readonly string[]).includes(kind)) {
+    throw new TaskStatusInvalidError(
+      `kind must be one of ${TASK_STATUS_KINDS.join(' | ')}, got ${JSON.stringify(kind)}`
+    )
+  }
+
+  const label = v.label
+  if (typeof label !== 'string' || label.trim() === '') {
+    throw new TaskStatusInvalidError('label must be a non-empty string')
+  }
+  if (label.length > MAX_STATUS_LABEL_LENGTH) {
+    throw new TaskStatusInvalidError(`label exceeds ${MAX_STATUS_LABEL_LENGTH} characters`)
+  }
+
+  const out: TaskStatus = { kind: kind as TaskStatusKind, label: label.trim() }
+
+  if (v.href !== undefined && v.href !== null) {
+    if (typeof v.href !== 'string' || !/^https?:\/\//i.test(v.href)) {
+      throw new TaskStatusInvalidError('href must be an http(s) URL')
+    }
+    out.href = v.href
+  }
+
+  return out
+}
+
+/** Parse a stored `status` JSON column back to a TaskStatus (bad/blank ⇒ null). */
+export function parseStoredStatus(json: string | null | undefined): TaskStatus | null {
+  if (!json) return null
+  try {
+    return normalizeTaskStatus(JSON.parse(json))
+  } catch {
+    // A row written before a validation rule tightened must not break the read.
+    return null
   }
 }

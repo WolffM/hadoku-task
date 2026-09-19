@@ -1,0 +1,38 @@
+-- Migration: a task carries an agent-reported `status`
+-- Created: 2026-09-15
+--
+-- Autoland v3 turns the lane axis ninety degrees: lanes become REPOS, and the
+-- pipeline state that used to BE the lane has to live somewhere else. A task
+-- carries exactly one tag and it must be a lane (assertHumanLaneWrite /
+-- agentLaneTag both enforce it independently), so state cannot move to a second
+-- tag — it leaves the tag system entirely and lands here.
+--
+-- A column rather than a key inside `metadata`:
+--
+--   * `metadata` is a JSON blob replaced wholesale on write, so two writers of
+--     two different keys clobber each other; `status` is written by the claim
+--     holder on release/set-lane while `metadata.<pipeline>` is written by the
+--     pipeline's own reconciler.
+--   * `metadata` only renders in the calendar agenda view. A card renderer that
+--     had to reach into `metadata.autoland.status` to draw a chip would be a
+--     generic renderer coupled to one pipeline's key — the next pipeline would
+--     need a second branch for the same fact.
+--
+-- Stored as the JSON text of { kind, label, href? }. `kind` is a closed set
+-- validated on write (STATUS_INVALID); `label` is free text the agent writes and
+-- nobody parses. NULL means the task has no status, which is every task that no
+-- agent has worked — so the column is nullable with no default and the migration
+-- backfills nothing.
+--
+-- Re-runnable by hand: SQLite has no ADD COLUMN IF NOT EXISTS, so a second run
+-- errors with "duplicate column name: status" and changes nothing. That is the
+-- safe failure, not a silent partial apply.
+--
+-- ⚠ APPLY THIS BEFORE DEPLOYING THE WORKER THAT READS IT. `status` is in the
+-- SELECT list of every task read, so a worker carrying it against a database
+-- without the column answers 500 on GET /boards and the app does not load at
+-- all — this is not a feature that degrades, it is a hard ordering dependency.
+-- Nothing in CI runs migrations here; they go on by hand from hadoku_site via
+-- vault + wrangler, and the worker does not self-migrate.
+
+ALTER TABLE tasks ADD COLUMN status TEXT;

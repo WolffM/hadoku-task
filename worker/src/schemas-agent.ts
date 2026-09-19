@@ -7,6 +7,7 @@
  */
 import { z } from '@hono/zod-openapi'
 import { TaskSchema } from './schemas'
+import { TASK_STATUS_KINDS, MAX_STATUS_LABEL_LENGTH } from '@wolffm/task/api'
 
 // ============================================================================
 // Shared
@@ -39,6 +40,7 @@ export const DOMAIN_ERROR_CODES = [
   'CLAIM_HELD', // 409 — a live lease exists (carries `holder` + `expiresAt`)
   'LEASE_LOST', // 409 — your token no longer holds the claim; abort
   'LANE_CHANGED', // 409 — `ifCurrentLane` guard missed (carries `currentLane`)
+  'NOTES_CHANGED', // 409 — `ifNotesHash` guard missed (carries `currentNotesHash`)
   // Lanes / automation (§5)
   'LANE_UNKNOWN', // 422 — destination isn't a lane on this board
   'LANE_INVALID', // 422 — a task's tag isn't exactly one lane
@@ -48,7 +50,8 @@ export const DOMAIN_ERROR_CODES = [
   'DIGEST_MISMATCH', // 409 — stale activation digest (carries `currentDigest`)
   // Writes (§6)
   'VERSION_CONFLICT', // 409 — If-Match lost (carries `currentVersion`)
-  'NOTES_TOO_LARGE' // 413 — notes exceed MAX_NOTES_BYTES
+  'NOTES_TOO_LARGE', // 413 — notes exceed MAX_NOTES_BYTES
+  'STATUS_INVALID' // 422 — `status` isn't { kind: <closed set>, label, href? }
 ] as const
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number]
@@ -71,6 +74,9 @@ const domainErrorFields = {
   currentVersion: z.number().optional(),
   currentLane: z.string().nullable().optional(),
   currentDigest: z.string().optional().openapi({ description: 'Live digest on DIGEST_MISMATCH.' }),
+  currentNotesHash: z.string().optional().openapi({
+    description: 'The notes digest as it now stands, on NOTES_CHANGED. Re-plan against this.'
+  }),
   retryAfter: z.number().optional().openapi({ example: 60 })
 }
 
@@ -163,18 +169,25 @@ export const LeaseLostErrorSchema = narrowError(
   'Your lease expired and was taken. Abort and write nothing.'
 )
 
-/** 409 on /agent/release — LEASE_LOST or the `ifCurrentLane` guard missing. */
+/** 409 on /agent/release — LEASE_LOST, or either optional guard missing. */
 export const ReleaseConflictErrorSchema = narrowError(
   'ReleaseConflictError',
-  ['LEASE_LOST', 'LANE_CHANGED'],
-  'LEASE_LOST: another agent holds the claim. LANE_CHANGED: a human retagged the task under you (`currentLane` carries where it is now). Both wrote nothing.'
+  ['LEASE_LOST', 'LANE_CHANGED', 'NOTES_CHANGED'],
+  'LEASE_LOST: another agent holds the claim. LANE_CHANGED: a human retagged the task under you (`currentLane` carries where it is now). NOTES_CHANGED: a human edited the plan under you (`currentNotesHash` carries the digest it now has). All three wrote nothing.'
 )
 
-/** 422 on claim / set-lane / release — always LANE_UNKNOWN. */
+/** 422 on claim — always LANE_UNKNOWN. */
 export const LaneUnknownErrorSchema = narrowError(
   'LaneUnknownError',
   ['LANE_UNKNOWN'],
   'The destination lane is not on this board (e.g. a re-activation removed it).'
+)
+
+/** 422 on set-lane / release, which also validate `status`. */
+export const LaneOrStatusInvalidErrorSchema = narrowError(
+  'LaneOrStatusInvalidError',
+  ['LANE_UNKNOWN', 'STATUS_INVALID'],
+  'LANE_UNKNOWN: the destination lane is not on this board. STATUS_INVALID: `status` is not { kind: working|waiting|blocked|done, label, href? }. Both wrote nothing.'
 )
 
 /** 413 on /agent/release — always NOTES_TOO_LARGE. */
@@ -651,12 +664,31 @@ export const HeartbeatResponseSchema = z
   .object({ ok: z.boolean(), expiresAt: z.string() })
   .openapi('HeartbeatResponse')
 
+/**
+ * `{ kind, label, href? }` — what an agent is doing on a task right now (§3.1).
+ * `kind` is a closed set the UI styles; `label` is free text nobody parses.
+ */
+export const TaskStatusSchema = z
+  .object({
+    kind: z.enum(TASK_STATUS_KINDS).openapi({ example: 'working' }),
+    label: z.string().max(MAX_STATUS_LABEL_LENGTH).openapi({ example: 'implementing · 3 files' }),
+    href: z.string().optional().openapi({
+      description: 'http(s) only — makes the chip a link. Usually the PR.',
+      example: 'https://github.com/WolffM/hadoku-conjure/pull/42'
+    })
+  })
+  .openapi('TaskStatus')
+
 export const SetLaneInputSchema = z
   .object({
     board: z.string(),
     taskId: z.string(),
     token: z.string(),
-    lane: z.string()
+    lane: z.string(),
+    status: TaskStatusSchema.nullable().optional().openapi({
+      description:
+        'Report progress without releasing. Omit to leave the status alone, null to clear it.'
+    })
   })
   .openapi('SetLaneInput')
 
@@ -675,6 +707,19 @@ export const ReleaseInputSchema = z
     outcome: z.string().nullable().optional(),
     ifCurrentLane: z.string().optional().openapi({
       description: 'Abort with 409 LANE_CHANGED unless the task is still in this lane.'
+    }),
+    ifNotesHash: z
+      .string()
+      .optional()
+      .openapi({
+        description:
+          "Abort with 409 NOTES_CHANGED unless the task's notes still hash to this. " +
+          'Lowercase hex SHA-256 of the UTF-8 notes; absent notes hash as the empty string. ' +
+          'The 409 body carries `currentNotesHash` to re-plan against.',
+        example: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+      }),
+    status: TaskStatusSchema.nullable().optional().openapi({
+      description: 'The agent status chip. Omit to leave it alone, null to clear it.'
     }),
     complete: z
       .boolean()

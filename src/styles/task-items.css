@@ -141,6 +141,29 @@
   margin-left: auto;
   padding-left: var(--hdk-space-md);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-xs);
+}
+
+/* An agent holds a live lease on this task. A tint tile, not a bare coloured
+   glyph: `--color-primary` is a FILL colour, and painting it straight onto the
+   card surface fails contrast in most themes (the usage gate says so). It stays
+   small and unlabelled because it asks nothing of you — unlike the question
+   badge, which does. */
+.task-app__item-claimed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 999px;
+  background-color: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+
+.task-app__item-claimed svg {
+  width: 0.9em;
+  height: 0.9em;
 }
 
 .task-app__item-tag {
@@ -202,6 +225,72 @@
 }
 
 .task-app__item-questions--answered {
+  background-color: var(--color-success-bg);
+  color: var(--color-on-success-bg);
+}
+
+/* ── Agent status chip (autoland v3 §3.1) ──────────────────────────
+   A tint badge: `--color-<family>-bg` behind `--color-on-<family>-bg`, never
+   `--color-<family>` as text, which fails AA on most themes. One rule per
+   `kind`, which is the whole reason `kind` is a closed set — see StatusChip.tsx
+   for why the vocabulary is code here rather than fetched. */
+.task-app__status-chip {
+  margin-top: var(--hdk-space-xs);
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hdk-space-xs);
+  max-width: 100%;
+  padding: 0 var(--hdk-space-sm);
+  border-radius: 999px;
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  /* The tint is the same neutral in every theme until a kind rule overrides it,
+     so an unrecognised kind still reads as a chip rather than as bare text. */
+  background-color: var(--color-neutral-bg);
+  color: var(--color-on-neutral-bg);
+}
+
+.task-app__status-chip svg {
+  width: 0.9em;
+  height: 0.9em;
+  flex-shrink: 0;
+}
+
+.task-app__status-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-app__status-chip--link {
+  text-decoration: none;
+}
+
+.task-app__status-chip--link:hover {
+  text-decoration: underline;
+}
+
+/* It is moving. */
+.task-app__status-chip--working {
+  background-color: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+
+/* It wants you — same tint as an open question, because it is the same ask. */
+.task-app__status-chip--waiting {
+  background-color: var(--color-warning-bg);
+  color: var(--color-on-warning-bg);
+}
+
+/* It is stuck. */
+.task-app__status-chip--blocked {
+  background-color: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
+}
+
+/* It is finished. */
+.task-app__status-chip--done {
   background-color: var(--color-success-bg);
   color: var(--color-on-success-bg);
 }

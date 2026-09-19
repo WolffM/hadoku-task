@@ -8,6 +8,7 @@ import { formatAge } from '../utils/formatters'
 import { formatTagsForDisplay } from '../domain/utils/tags'
 import { openQuestionCount, parsePlanNotes, questionsAnswered } from '../domain/planNotes'
 import { NotesPopout } from './NotesPopout'
+import { StatusChip } from './StatusChip'
 import { TagIcon } from '@wolffm/task-ui-components'
 import { Icon } from '@wolffm/themes'
 
@@ -203,11 +204,29 @@ export function TaskItem({
             <div />
           )}
           <div className="task-app__item-age">
+            {/* An agent holds a live lease on this task right now. The board read
+                has carried this flag since v1 and nothing rendered it; with
+                pipeline state leaving the lanes, "someone is on this one" would
+                otherwise have no representation on the card at all. */}
+            {task.claimed && (
+              <span
+                className="task-app__item-claimed"
+                title="An agent is working on this task right now"
+                aria-label="Claimed by an agent"
+              >
+                <Icon name="robot" />
+              </span>
+            )}
             <span className="task-app__item-text" onMouseDown={suppressDragForText}>
               {formatAge(task.createdAt)}
             </span>
           </div>
         </div>
+
+        {/* What the agent says it is doing. Distinct from `claimed`: the lease is
+            ours to observe, the status is the agent's to report, and a task can
+            carry a finished status with no live claim. */}
+        {task.status && <StatusChip status={task.status} />}
 
         {openQuestions > 0 ? (
           <div className="task-app__item-questions">

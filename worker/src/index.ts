@@ -355,11 +355,13 @@ This API provides endpoints for:
       message?: string
       currentVersion?: unknown
       // Extra actionable fields carried by specific DomainErrors (§4.3): the
-      // claim holder + expiry on CLAIM_HELD, the current lane on LANE_CHANGED.
+      // claim holder + expiry on CLAIM_HELD, the current lane on LANE_CHANGED,
+      // the current notes digest on NOTES_CHANGED.
       holder?: unknown
       expiresAt?: unknown
       currentLane?: unknown
       currentDigest?: unknown
+      currentNotesHash?: unknown
     }
     if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
       const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
@@ -368,7 +370,10 @@ This API provides endpoints for:
       if (typeof domain.expiresAt === 'string') body.expiresAt = domain.expiresAt
       if (domain.currentLane !== undefined) body.currentLane = domain.currentLane
       if (typeof domain.currentDigest === 'string') body.currentDigest = domain.currentDigest
-      return c.json(body, domain.httpStatus as 400 | 404 | 409 | 500)
+      if (typeof domain.currentNotesHash === 'string') {
+        body.currentNotesHash = domain.currentNotesHash
+      }
+      return c.json(body, domain.httpStatus as 400 | 404 | 409 | 422 | 500)
     }
     return errorHandler(err, c)
   })

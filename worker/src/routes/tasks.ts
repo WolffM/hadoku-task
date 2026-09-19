@@ -219,6 +219,11 @@ export function createTaskRoutes() {
     // Only enforce lanes when this update actually changes the tag (§5.2); an
     // edit that leaves `tag` untouched must not be gated by the board's lanes.
     const laneOpts = 'tag' in input ? { laneTag: (input as { tag?: string }).tag ?? null } : {}
+    // Arm the notes wake (autoland v3 §5.1) on the same terms, for the other
+    // half of the handoff: with lanes as repos the human answers in the notes and
+    // the task never moves, so a notes-only update used to reach no hook at all.
+    const notesOpts =
+      'notes' in input ? { notesWrite: (input as { notes?: string | null }).notes ?? null } : {}
     return handleBoardOperation(
       c,
       boardId,
@@ -231,7 +236,7 @@ export function createTaskRoutes() {
           bid,
           expectedVersion
         ),
-      { write: true, mustExist: true, taskId: id, ...laneOpts }
+      { write: true, mustExist: true, taskId: id, ...laneOpts, ...notesOpts }
     )
   })
 

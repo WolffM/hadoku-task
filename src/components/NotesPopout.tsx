@@ -27,9 +27,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   appendAnswerToNotes,
+  checklistItems,
   openQuestionCount,
   parsePlanNotes,
+  pendingApproval,
   questionsAnswered,
+  toggleChecklistItem,
   type PlanSection
 } from '../domain/planNotes'
 import { PlanMarkdown } from './PlanMarkdown'
@@ -62,6 +65,20 @@ export function NotesPopout({
   const sections = useMemo(() => parsePlanNotes(notes), [notes])
   const questionCount = useMemo(() => openQuestionCount(sections), [sections])
   const answered = useMemo(() => questionsAnswered(sections), [sections])
+  // Each section's starting ordinal in the document-wide checkbox sequence, so a
+  // box the renderer draws in section 3 addresses the right line when toggled.
+  const checkboxBases = useMemo(() => {
+    let running = 0
+    return sections.map(section => {
+      const base = running
+      running += checklistItems(section.body).length
+      return base
+    })
+  }, [sections])
+  // The plan's own approval row, if it has an unticked one. This is the whole of
+  // the approval state: there is no approvals table and no `metadata.approved`,
+  // so ticking the box IS approving and the notes are the only record.
+  const approval = useMemo(() => pendingApproval(notes), [notes])
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Keep focus inside the dialog: on open, and again whenever the mode flips.
@@ -107,6 +124,13 @@ export function NotesPopout({
   const startEdit = () => {
     setDraft(notes ?? '')
     setEditing(true)
+  }
+
+  // Ticking a box writes the same bytes a human typing `- [x]` would — an
+  // ordinary notes update, which means it inherits the runner wake (§5.1) for
+  // free rather than needing a second channel to announce approval.
+  const toggleCheckbox = (ordinal: number, checked: boolean) => {
+    void commit(toggleChecklistItem(notes, ordinal, checked))
   }
 
   // Escape backs out one level at a time: editor first, then the dialog. Losing
@@ -198,6 +222,8 @@ export function NotesPopout({
                     onReplySubmit={() => void sendReply()}
                     canReply={!!onSave}
                     saving={saving}
+                    checkboxBase={checkboxBases[i]}
+                    onToggleCheckbox={onSave ? toggleCheckbox : undefined}
                   />
                 ))
               ) : (
@@ -209,11 +235,22 @@ export function NotesPopout({
                 Close
               </button>
               {onSave && (
+                <button className="notes-popout__btn" onClick={startEdit}>
+                  {hasNotes ? 'Edit' : 'Add notes'}
+                </button>
+              )}
+              {/* Approval is a control in the item, not a lane to drag to. The
+                  button is a typing shortcut over the checkbox it ticks — same
+                  bytes, same predicate, same wake — so it can sit here as the
+                  primary action without becoming a second source of truth. */}
+              {onSave && approval && (
                 <button
                   className="notes-popout__btn notes-popout__btn--primary"
-                  onClick={startEdit}
+                  onClick={() => toggleCheckbox(approval.ordinal, true)}
+                  disabled={saving}
+                  title={approval.text}
                 >
-                  {hasNotes ? 'Edit' : 'Add notes'}
+                  {saving ? 'Approving…' : 'Approve'}
                 </button>
               )}
             </footer>
@@ -232,6 +269,10 @@ interface PlanSectionViewProps {
   onReplySubmit: () => void
   canReply: boolean
   saving: boolean
+  /** This section's offset in the document-wide checkbox sequence. */
+  checkboxBase: number
+  /** Absent ⇒ boxes render read-only (no save capability). */
+  onToggleCheckbox?: (ordinal: number, checked: boolean) => void
 }
 
 function PlanSectionView({
@@ -240,14 +281,23 @@ function PlanSectionView({
   onReplyChange,
   onReplySubmit,
   canReply,
-  saving
+  saving,
+  checkboxBase,
+  onToggleCheckbox
 }: PlanSectionViewProps) {
   return (
     <section
       className={`notes-popout__section ${section.isQuestions ? 'notes-popout__section--questions' : ''}`}
     >
       {section.title && <h3 className="notes-popout__section-title">{section.title}</h3>}
-      {section.body && <PlanMarkdown body={section.body} />}
+      {section.body && (
+        <PlanMarkdown
+          body={section.body}
+          checkboxBase={checkboxBase}
+          onToggleCheckbox={onToggleCheckbox}
+          busy={saving}
+        />
+      )}
 
       {section.isQuestions && canReply && (
         <div className="notes-popout__reply">

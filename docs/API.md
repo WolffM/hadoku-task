@@ -1143,20 +1143,83 @@ Body: `{ board, taskId, token, leaseSeconds? }`. Extends the lease → `{ ok, ex
 
 ### POST `/agent/set-lane`
 
-Body: `{ board, taskId, token, lane }`. Move while holding the claim → `{ ok, lane }`.
+Body: `{ board, taskId, token, lane, status? }`. Move while holding the claim → `{ ok, lane }`.
 `422 LANE_UNKNOWN` if the lane isn't on the board; `409 LEASE_LOST` without the claim.
+
+`status` is accepted here as well as on release so a long job can report progress **without**
+releasing — the alternative is release-then-reclaim, which drops the lease in between. See
+[Task status](#task-status) for the shape.
 
 ### POST `/agent/release`
 
-Body: `{ board, taskId, token, lane?, notes?, metadata?, outcome?, ifCurrentLane?, complete? }`.
-Moves the task, writes `notes`, merges `metadata` (claim-gated), closes the claim, records
-history. Idempotent on token. `ifCurrentLane` guards against a human retag → `409 LANE_CHANGED`.
-`complete: true` archives the task (removes it from the active list) — still claim-gated and
-audited; otherwise `state` is never changed.
+Body:
+`{ board, taskId, token, lane?, notes?, status?, metadata?, outcome?, ifCurrentLane?, ifNotesHash?, complete? }`.
+Moves the task, writes `notes` and `status`, merges `metadata` (claim-gated), closes the claim,
+records history. Idempotent on token. `complete: true` archives the task (removes it from the
+active list) — still claim-gated and audited; otherwise `state` is never changed.
 
 `notes` is capped at **64 KB of UTF-8** (not characters — multibyte content is measured on its
 encoded length). Over it → `413 NOTES_TOO_LARGE`, and **nothing is written and your claim is not
 dropped**, so truncate or link out and retry on the same token. Don't retry unchanged.
+
+#### The two optimistic guards
+
+Both are optional, both are checked **before anything is written**, and both leave your claim in
+place so you can re-read and retry on the same token.
+
+| Guard           | Compares           | Mismatch →          | Body carries       |
+| --------------- | ------------------ | ------------------- | ------------------ |
+| `ifCurrentLane` | the task's `tag`   | `409 LANE_CHANGED`  | `currentLane`      |
+| `ifNotesHash`   | the task's `notes` | `409 NOTES_CHANGED` | `currentNotesHash` |
+
+`ifNotesHash` exists because a human can edit the plan **mid-claim**. With every lane
+`editableBy: user` there is no agent lane left to give `notes` mutual exclusion, so a release that
+rewrote the document would silently destroy a reply typed while you worked — and the previous text
+is not versioned anywhere, so it is simply gone. Read-hash-compare-then-write in the runner is a
+race with a window the size of the round trip; only the server can compare and write atomically.
+
+The digest, precisely, because the other half of this contract is written in Python:
+
+> **lowercase hex SHA-256 of the UTF-8 encoding of the notes, with null/absent notes hashed as the
+> EMPTY STRING.**
+
+No canonicalisation, no trimming, no newline normalisation — the bytes as stored are the bytes
+hashed. The empty-string rule is the one convention, and it is what lets you guard "this task had
+no plan when I claimed it" without a nullable hash.
+
+```python
+hashlib.sha256((notes or "").encode("utf-8")).hexdigest()
+```
+
+```ts
+import { notesHash } from '@wolffm/task/api'
+await notesHash(task.notes) // same digest, same definition
+```
+
+### Task status
+
+A first-class field on the task, written by the **claim holder** on `set-lane` or `release`:
+
+```json
+{ "kind": "working" | "waiting" | "blocked" | "done", "label": "implementing · 3 files", "href": "https://github.com/o/r/pull/42" }
+```
+
+- `kind` is a **closed set**, validated on write → `422 STATUS_INVALID` for anything else. The UI
+  styles a chip per kind, so an unknown kind has no rendering either way; failing at the write
+  turns a typo into an error instead of a blank chip nobody can explain.
+- `label` is free text you write. Never parsed, rendered verbatim.
+- `href` is optional and makes the chip a link. **http(s) only** — it is validated because it
+  reaches an `href` attribute.
+
+Three-way, like `notes` and `metadata`: **omit** to leave it alone, `null` to clear it. It is a
+generic board primitive — "an agent reports status on a task" — deliberately not
+`metadata.<pipeline>.status`, so a card renderer never has to know one pipeline's metadata key.
+
+### Board reads carry `claimed`
+
+`GET /boards` and `GET /boards/{ref}` flag each task `claimed: true` when a **live** lease holds
+it. Transient — computed from `task_claims` at read time, never stored on the task row, and
+absent rather than `false` when there is no claim.
 
 ### POST `/agent/cancel`
 
@@ -1228,7 +1291,7 @@ All endpoints return errors in this format:
 - `500` - Server error
 
 Domain errors carry a machine-readable `code` (and, where useful, extra fields like `holder`,
-`expiresAt`, `currentVersion`, `currentLane`, `currentDigest`). **Branch on the `code`, not the
+`expiresAt`, `currentVersion`, `currentLane`, `currentDigest`, `currentNotesHash`). **Branch on the `code`, not the
 status** — a 409 is `CLAIM_HELD` (someone else has the task; move on) or `LEASE_LOST` (your claim
 is gone; abort and write nothing), which need opposite behaviour.
 
@@ -1237,7 +1300,8 @@ generated client gets a real enum rather than a bare string. Where a status maps
 the response schema is narrowed further (`/agent/heartbeat` 409 → `LeaseLostError`, `/agent/claim`
 409 → `ClaimHeldError`), so codegen yields one exception type per outcome. Full set, with what to
 do about each: [MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`,
-`LANE_UNKNOWN`, `LANE_INVALID`, `LANE_CHANGED`, `LANE_SET_INVALID`, `BOARD_SCHEMA_LOCKED`,
+`LANE_UNKNOWN`, `LANE_INVALID`, `LANE_CHANGED`, `NOTES_CHANGED`, `LANE_SET_INVALID`,
+`BOARD_SCHEMA_LOCKED`, `STATUS_INVALID`,
 `DIGEST_MISMATCH`, `VERSION_CONFLICT`, `NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`,
 `BOARD_NOT_FOUND`, `NAME_NOT_FOUND`, `NO_USER_ID`, `FORBIDDEN`.
 

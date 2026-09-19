@@ -19,9 +19,13 @@ import {
   LeaseLostError,
   LaneUnknownError,
   LaneChangedError,
+  NotesChangedError,
   TaskNotFoundError,
   assertNotesWithinLimit,
-  normalizeTag
+  normalizeTag,
+  normalizeTaskStatus,
+  notesHash,
+  type TaskStatus
 } from '@wolffm/task/api'
 
 interface D1Like {
@@ -71,19 +75,42 @@ function agentLaneTag(mode: string, lanes: Lane[], lane: string | null | undefin
   return t
 }
 
-/** Read a task's current tag (owner scope). Null result ⇒ no active task row. */
-async function currentTaskTag(
+/**
+ * Read the fields a claim operation guards on (owner scope): the current tag for
+ * `ifCurrentLane`, and the current notes for `ifNotesHash`. Null ⇒ no active task
+ * row.
+ *
+ * Both come back in ONE read, inside the same request that then writes, because
+ * the guards only mean anything if the value compared is the value that was about
+ * to be overwritten. Two reads would reintroduce the window the guards exist to
+ * close.
+ */
+async function currentTaskRow(
   db: D1Like,
   ownerId: string,
   boardId: string,
   taskId: string
-): Promise<{ tag: string | null } | null> {
+): Promise<{ tag: string | null; notes: string | null } | null> {
   return db
     .prepare(
-      `SELECT tag FROM tasks WHERE user_id = ? AND board_id = ? AND id = ? AND state = 'Active' LIMIT 1`
+      `SELECT tag, notes FROM tasks WHERE user_id = ? AND board_id = ? AND id = ? AND state = 'Active' LIMIT 1`
     )
     .bind(ownerId, boardId, taskId)
-    .first<{ tag: string | null }>()
+    .first<{ tag: string | null; notes: string | null }>()
+}
+
+/**
+ * Validate an agent's `status` and return the JSON to store, or the sentinel for
+ * "leave the column alone".
+ *
+ * `undefined` ⇒ the write doesn't touch status; `null` ⇒ clear it. Same
+ * three-way shape as `notes` and `metadata` on release, so a runner that omits
+ * the field never has its chip silently wiped by an unrelated write.
+ */
+function statusJson(status: TaskStatus | null | undefined): string | null | undefined {
+  if (status === undefined) return undefined
+  const normalized = normalizeTaskStatus(status)
+  return normalized === null ? null : JSON.stringify(normalized)
 }
 
 export interface ClaimHolder {
@@ -129,7 +156,7 @@ export async function claimTask(
   agentId: string,
   opts: { lane?: string | null; leaseSeconds?: number; mode: string; lanes: Lane[] }
 ): Promise<ClaimResult> {
-  const task = await currentTaskTag(db, ownerId, boardId, taskId)
+  const task = await currentTaskRow(db, ownerId, boardId, taskId)
   if (!task) throw new TaskNotFoundError(taskId)
   const lane = agentLaneTag(opts.mode, opts.lanes, opts.lane)
 
@@ -201,7 +228,15 @@ export async function heartbeatClaim(
   return { expiresAt }
 }
 
-/** Move a task's lane while holding the claim (§4.2). Agent path. */
+/**
+ * Move a task's lane while holding the claim (§4.2). Agent path.
+ *
+ * Also accepts `status`, so a long job can report progress WITHOUT releasing.
+ * Without that the only way to say "still going, now on pass 3" is to release
+ * and re-claim, which drops the lease in between — the exact window another
+ * runner would take the task in. Claim-gated on the same terms as everything
+ * else here: the lease authorises the write, not the lane.
+ */
 export async function setLane(
   db: D1Like,
   ownerId: string,
@@ -209,17 +244,23 @@ export async function setLane(
   taskId: string,
   token: string,
   lane: string,
-  opts: { mode: string; lanes: Lane[] }
+  opts: { mode: string; lanes: Lane[]; status?: TaskStatus | null }
 ): Promise<{ ok: true; lane: string }> {
   const now = nowIso()
   const claim = await liveClaim(db, ownerId, taskId, now)
   if (!claim || claim.token !== token || !claim.live) throw new LeaseLostError()
   const t = agentLaneTag(opts.mode, opts.lanes, lane)
+  const status = statusJson(opts.status)
+
+  const sets = ['tag = ?', 'updated_at = ?']
+  const binds: unknown[] = [t === '' ? null : t, now]
+  if (status !== undefined) {
+    sets.push('status = ?')
+    binds.push(status)
+  }
   await db
-    .prepare(
-      `UPDATE tasks SET tag = ?, updated_at = ? WHERE user_id = ? AND board_id = ? AND id = ?`
-    )
-    .bind(t === '' ? null : t, now, ownerId, boardId, taskId)
+    .prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE user_id = ? AND board_id = ? AND id = ?`)
+    .bind(...binds, ownerId, boardId, taskId)
     .run()
   return { ok: true, lane: t }
 }
@@ -232,10 +273,16 @@ export interface ReleaseResult {
 }
 
 /**
- * Release a claim (§4.2): move the task to `lane`, write `notes`, drop the claim,
- * close the log. Idempotent on token — a replay after the claim is gone is a
- * no-op success. LEASE_LOST if a DIFFERENT agent now holds it; LANE_CHANGED if
- * the optional `ifCurrentLane` guard doesn't match (a human retagged mid-claim).
+ * Release a claim (§4.2): move the task to `lane`, write `notes` / `status`, drop
+ * the claim, close the log. Idempotent on token — a replay after the claim is
+ * gone is a no-op success.
+ *
+ * Three ways it refuses, all of them writing nothing:
+ *   - LEASE_LOST   — a DIFFERENT agent now holds the claim;
+ *   - LANE_CHANGED — the optional `ifCurrentLane` guard didn't match (a human
+ *                    retagged the task mid-claim);
+ *   - NOTES_CHANGED — the optional `ifNotesHash` guard didn't match (a human
+ *                    edited the plan mid-claim).
  */
 export async function releaseClaim(
   db: D1Like,
@@ -248,6 +295,15 @@ export async function releaseClaim(
     notes?: string | null
     outcome?: string | null
     ifCurrentLane?: string
+    /**
+     * Guard the notes the same way `ifCurrentLane` guards the lane: the digest
+     * the runner planned against. A mismatch throws NotesChangedError (409) and
+     * NOTHING is written — see notesHash.ts for why only the server can do this.
+     */
+    ifNotesHash?: string
+    // The agent's status chip (§3.1). Claim-gated like notes/metadata, and the
+    // same three-way shape: omit to leave it, null to clear it.
+    status?: TaskStatus | null
     // Merge into the task's metadata while holding the claim (§6 confirmation 1).
     // The claim is what authorises the write; a non-holder still can't reach here.
     metadata?: Record<string, unknown> | null
@@ -266,6 +322,10 @@ export async function releaseClaim(
   // validity doesn't depend on claim state, and the agent should get a clean
   // 413 to retry against while it still holds the lease.
   assertNotesWithinLimit(opts.notes)
+  // Same reasoning as the notes cap: validate the payload BEFORE anything is
+  // read or written, so a bad `status` is a clean 422 the agent can retry
+  // against while it still holds the lease — not a half-applied release.
+  const status = statusJson(opts.status)
 
   const now = nowIso()
   const claim = await liveClaim(db, ownerId, taskId, now)
@@ -275,7 +335,7 @@ export async function releaseClaim(
   // A different token holds it ⇒ our lease was taken. Abort, write nothing.
   if (claim.token !== token) throw new LeaseLostError()
 
-  const task = await currentTaskTag(db, ownerId, boardId, taskId)
+  const task = await currentTaskRow(db, ownerId, boardId, taskId)
   if (!task) {
     // The task was deleted under us; clear the orphan claim and report 404.
     await db
@@ -288,6 +348,15 @@ export async function releaseClaim(
   if (opts.ifCurrentLane !== undefined) {
     const current = task.tag ?? ''
     if (current !== opts.ifCurrentLane) throw new LaneChangedError(task.tag)
+  }
+
+  // The notes guard. Checked here — after the claim is confirmed ours, before a
+  // single statement is queued — so a mismatch costs the caller nothing and
+  // leaves the human's edit exactly as they left it. The current digest goes
+  // back in the error so the runner can re-plan against what it now sees.
+  if (opts.ifNotesHash !== undefined) {
+    const current = await notesHash(task.notes)
+    if (current !== opts.ifNotesHash) throw new NotesChangedError(current)
   }
 
   const lane = agentLaneTag(opts.mode, opts.lanes, opts.lane)
@@ -304,6 +373,10 @@ export async function releaseClaim(
   if (opts.metadata !== undefined) {
     sets.push('metadata = ?')
     binds.push(opts.metadata === null ? null : JSON.stringify(opts.metadata))
+  }
+  if (status !== undefined) {
+    sets.push('status = ?')
+    binds.push(status)
   }
   if (opts.complete) {
     sets.push("state = 'Completed'", 'closed_at = ?')
@@ -382,6 +455,25 @@ export async function liveClaimedTaskIds(
       `SELECT task_id FROM task_claims WHERE user_id = ? AND board_id = ? AND expires_at > ?`
     )
     .bind(ownerId, boardId, now)
+    .all<{ task_id: string }>()
+  return new Set(results.map(r => r.task_id))
+}
+
+/**
+ * Every task of this user's that currently holds a LIVE claim, across ALL their
+ * boards. One read for the whole board list, where the per-board
+ * {@link liveClaimedTaskIds} would be one per board.
+ *
+ * `claimed` has been on the hydrated agent read since v1 and nothing in the UI
+ * has ever rendered it. That was tolerable while the lane said what the agent was
+ * doing; with autoland v3 moving state out of the lanes, "an agent is on this one
+ * right now" would otherwise have no representation on the board at all.
+ */
+export async function liveClaimedTaskIdsForUser(db: D1Like, ownerId: string): Promise<Set<string>> {
+  const now = nowIso()
+  const { results } = await db
+    .prepare(`SELECT task_id FROM task_claims WHERE user_id = ? AND expires_at > ?`)
+    .bind(ownerId, now)
     .all<{ task_id: string }>()
   return new Set(results.map(r => r.task_id))
 }

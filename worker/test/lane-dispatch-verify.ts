@@ -27,6 +27,10 @@
  *   - `agent`-lane writes fire nothing (the pipeline's own writes);
  *   - a standard board, an automation board with no repo, and a write that
  *     doesn't touch the tag all fire nothing;
+ *   - a notes write that CLOSES the plan's open questions fires one dispatch
+ *     (autoland v3 §5.1) — including when the closing act is ticking
+ *     `- [x] Approve this plan` — while a save that leaves them open, a further
+ *     save that keeps them closed, and an AGENT's release all fire nothing;
  *   - with no token binding, and with GitHub answering 404 (the shape of an
  *     under-scoped PAT) or hanging, the board write STILL SUCCEEDS;
  *   - the batch endpoint enforces lanes — a drag can't land a task in an `agent`
@@ -157,6 +161,7 @@ const app = createTaskHandler()
 
 interface Body {
   tasks?: Array<{ id: string; tag?: string | null }>
+  token?: string
   ok?: boolean
   code?: string
   error?: string
@@ -546,11 +551,7 @@ async function main() {
   await drag('flow', ['d4'], 'approved')
   out = drained()
   check('binding unset → one dispatch still', out.length === 1, `count=${out.length}`)
-  check(
-    'and it falls back to the board’s own repo',
-    out[0]?.url === BOARD_REPO_URL,
-    out[0]?.url
-  )
+  check('and it falls back to the board’s own repo', out[0]?.url === BOARD_REPO_URL, out[0]?.url)
 
   // A typo'd binding must NOT quietly fall back — that is the same silent-death
   // failure mode wearing a different hat.
@@ -567,6 +568,143 @@ async function main() {
   await drag('flow', ['d4'], 'approved')
   out = drained()
   check('restored → aimed at the runner again', out[0]?.url === DISPATCH_URL, out[0]?.url)
+
+  // ---------------------------------------------------------------------
+  section('11. A notes write that CLOSES the open questions (autoland v3 §5.1)')
+  // ---------------------------------------------------------------------
+  // In v1/v2 every human handoff was a drag, so a notes-only edit dispatching
+  // nothing was invisible. With lanes as repos the human answers IN THE NOTES
+  // and the task never moves — so without this the pipeline waits out a
+  // ~15-minute cron instead of an ~18-second dispatch.
+  //
+  // The predicate is a TRANSITION, not a state. That distinction is the whole
+  // test: the popout autosaves, so "questions are answered" is true on every
+  // keystroke after the first reply, and firing on the state would be a
+  // dispatch storm aimed at GitHub.
+  const ASKED = '## Questions\n\n- Which branch?\n'
+  await req('POST', '/task/api', {
+    id: 'w1',
+    title: 'Answer me',
+    boardId: 'flow',
+    tag: 'approved',
+    notes: ASKED
+  })
+  drained() // the create's own lane dispatch
+
+  await req('PATCH', '/task/api/w1', { board: 'flow', notes: `${ASKED}\n` })
+  check('a notes write that leaves them open fires nothing', drained().length === 0)
+
+  await req('PATCH', '/task/api/w1', { board: 'flow', notes: `${ASKED}\nUse main.\n` })
+  out = drained()
+  check('answering fires exactly one dispatch', out.length === 1, `count=${out.length}`)
+  check('…aimed at the runner', out[0]?.url === DISPATCH_URL, out[0]?.url)
+  check(
+    '…saying WHY it woke',
+    out[0]?.body?.client_payload?.reason === 'questions-answered',
+    JSON.stringify(out[0]?.body?.client_payload)
+  )
+  check(
+    '…and naming the lane the task is still sitting in',
+    out[0]?.body?.client_payload?.lane === 'approved',
+    JSON.stringify(out[0]?.body?.client_payload)
+  )
+
+  // The autosave case. This is the one TenHands explicitly asked us not to build.
+  await req('PATCH', '/task/api/w1', { board: 'flow', notes: `${ASKED}\nUse main, please.\n` })
+  check('a further save while still answered fires NOTHING', drained().length === 0)
+
+  // A replan re-opens the questions; answering again is a new transition.
+  await req('PATCH', '/task/api/w1', { board: 'flow', notes: '## Questions\n\n- Which base?\n' })
+  check('a replan that re-asks fires nothing', drained().length === 0)
+  await req('PATCH', '/task/api/w1', {
+    board: 'flow',
+    notes: '## Questions\n\n- Which base?\n\nmain.\n'
+  })
+  check('answering the new question fires again', drained().length === 1)
+
+  // Ticking the approval box is the other way to close them, and it must reach
+  // the same wake — otherwise the Approve button is a no-op with a 15-minute tail.
+  await req('POST', '/task/api', {
+    id: 'w2',
+    title: 'Approve me',
+    boardId: 'flow',
+    tag: 'approved',
+    notes: '## Questions\n\n- [ ] Approve this plan\n'
+  })
+  drained()
+  await req('PATCH', '/task/api/w2', {
+    board: 'flow',
+    notes: '## Questions\n\n- [x] Approve this plan\n'
+  })
+  out = drained()
+  check('ticking `- [x] Approve this plan` fires the wake', out.length === 1, `count=${out.length}`)
+  check(
+    '…through the same questions-answered path',
+    out[0]?.body?.client_payload?.reason === 'questions-answered'
+  )
+
+  // One gesture, one dispatch — the same property a multi-card drag has.
+  await req('POST', '/task/api', {
+    id: 'w3',
+    title: 'Move and answer',
+    boardId: 'flow',
+    tag: 'replan',
+    notes: ASKED
+  })
+  drained()
+  await req('PATCH', '/task/api/w3', {
+    board: 'flow',
+    tag: 'approved',
+    notes: `${ASKED}\nmain.\n`
+  })
+  out = drained()
+  check(
+    'a write that moves AND answers fires one dispatch',
+    out.length === 1,
+    `count=${out.length}`
+  )
+  check(
+    '…the lane one, because the task moved',
+    out[0]?.body?.client_payload?.reason === 'lane',
+    JSON.stringify(out[0]?.body?.client_payload)
+  )
+
+  // The MCP surface the agents and I both use.
+  await req('POST', '/task/api', {
+    id: 'w4',
+    title: 'Via MCP',
+    boardId: 'flow',
+    tag: 'approved',
+    notes: ASKED
+  })
+  drained()
+  await mcp('set_task_notes', { board: 'flow', id: 'w4', notes: `${ASKED}\nmain.\n` })
+  check('MCP set_task_notes fires it too', drained().length === 1)
+
+  // An AGENT writing notes is not a human answering. The claim path writes the
+  // task with direct SQL and must stay off this hook entirely.
+  const claimRes = await req('POST', '/task/api/agent/claim', {
+    board: 'flow',
+    taskId: 'w4',
+    agentId: 'tenhands'
+  })
+  const claimToken = (claimRes.json as unknown as { token?: string }).token
+  drained()
+  await req('POST', '/task/api/agent/release', {
+    board: 'flow',
+    taskId: 'w4',
+    token: claimToken,
+    lane: 'approved',
+    notes: '## Questions\n\n- Anything else?\n\nNo.\n'
+  })
+  check('an agent release writing an "answered" plan fires nothing', drained().length === 0)
+
+  // A standard board has no runner to wake. `plain` already exists from §7 —
+  // creating it again would 409 and print an unhandled-error stack that reads
+  // like a real failure in an otherwise green run.
+  await req('POST', '/task/api', { id: 'w5', title: 'Plain notes', boardId: 'plain', notes: ASKED })
+  await req('PATCH', '/task/api/w5', { board: 'plain', notes: `${ASKED}\nsure.\n` })
+  check('a standard board fires nothing', drained().length === 0)
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
