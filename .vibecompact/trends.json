@@ -7,7 +7,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 313,
       "perLane": {
@@ -49,7 +51,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 317,
       "perLane": {
@@ -91,7 +95,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 352,
       "perLane": {
@@ -133,7 +139,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 359,
       "perLane": {
@@ -175,7 +183,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 367,
       "perLane": {
@@ -217,7 +227,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 373,
       "perLane": {
@@ -259,7 +271,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 380,
       "perLane": {
@@ -301,7 +315,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 384,
       "perLane": {
@@ -343,7 +359,9 @@
       "scc": "3.7.0"
     },
     "floors": {},
-    "saturated": ["arrival"],
+    "saturated": [
+      "arrival"
+    ],
     "aggregates": {
       "candidateFiles": 390,
       "perLane": {
@@ -369,6 +387,50 @@
         },
         "consistency": {
           "filesAssessed": 217,
+          "filesFlagged": 0
+        }
+      },
+      "gatePassing": 0,
+      "offenders": 0,
+      "suppressedByFloor": 0
+    }
+  },
+  {
+    "at": "2026-09-15T21:53:24-07:00",
+    "sha": "d8054e55c8bc15e5583e78a08c7bfa1753bb97f5",
+    "dirty": false,
+    "toolVersions": {
+      "scc": "3.7.0"
+    },
+    "floors": {},
+    "saturated": [
+      "arrival"
+    ],
+    "aggregates": {
+      "candidateFiles": 394,
+      "perLane": {
+        "size": {
+          "filesAssessed": 327,
+          "filesFlagged": 1
+        },
+        "arrival": {
+          "filesAssessed": 115,
+          "filesFlagged": 0
+        },
+        "deadcode": {
+          "filesAssessed": 276,
+          "filesFlagged": 1
+        },
+        "duplication": {
+          "filesAssessed": 327,
+          "filesFlagged": 0
+        },
+        "smells": {
+          "filesAssessed": 242,
+          "filesFlagged": 0
+        },
+        "consistency": {
+          "filesAssessed": 219,
           "filesFlagged": 0
         }
       },
