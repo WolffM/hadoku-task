@@ -17,8 +17,7 @@ import {
   ActivationDigestMismatchError,
   BoardNotFoundError,
   DomainError,
-  parsePlanNotes,
-  questionsAnswered
+  notesWriteClosesQuestions
 } from '@wolffm/task/api'
 import { logger } from '../logger'
 import type { Access } from './board-sharing'
@@ -364,28 +363,6 @@ export async function notifyLaneWrite(n: LaneWriteNotice, host: unknown): Promis
     return
   }
   await pending
-}
-
-/**
- * Does this notes write CLOSE the plan's open questions?
- *
- * A transition, not a state: false → true. The state alone would re-fire on
- * every autosave after the human answered, and every keystroke in the editor is
- * a save — which is exactly the dispatch storm TenHands asked us not to build.
- * The transition happens once, on the write that actually changes the answer.
- *
- * `questionsAnswered` is the predicate, unchanged and unwrapped: the same
- * function the card badge and the popout header use, and the same one TenHands
- * ports on their side. A ticked `- [ ] Approve this plan` satisfies it for the
- * same reason a typed reply does — see planNotes.ts — so the Approve button
- * gets this wake for free rather than needing a second channel.
- */
-export function notesWriteClosesQuestions(
-  previous: string | null | undefined,
-  next: string | null | undefined
-): boolean {
-  if (questionsAnswered(parsePlanNotes(previous))) return false
-  return questionsAnswered(parsePlanNotes(next))
 }
 
 /** What a hook site supplies to {@link notifyNotesWrite}. */

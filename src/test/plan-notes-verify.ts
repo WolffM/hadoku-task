@@ -25,13 +25,13 @@
 import {
   appendAnswerToNotes,
   checklistItems,
+  notesWriteClosesQuestions,
   openQuestionCount,
   parsePlanNotes,
   pendingApproval,
   questionsAnswered,
   toggleChecklistItem
 } from '../domain/planNotes'
-import { notesWriteClosesQuestions } from '../../worker/src/routes/board-automation'
 
 let failures = 0
 let checks = 0

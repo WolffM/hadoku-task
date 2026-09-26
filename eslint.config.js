@@ -208,6 +208,40 @@ export default [
     }
   },
 
+  // The app tree may not reach into worker/.
+  //
+  // `tsconfig.json` includes only `src`, but an import is not bounded by
+  // `include` — it PULLS the target into the program. worker/ sources arriving
+  // that way are then checked WITHOUT `worker/tsconfig.json`, whose `paths` is
+  // the only place `@wolffm/task/api` is mapped to `src/server/index.ts`. In the
+  // app program that specifier resolves solely through this package's own
+  // `exports`, into the gitignored `dist/` — so it typechecks on any machine
+  // that has run a build and fails in CI, which builds the workspace packages
+  // but never the root `dist/`. That is how main sat red from 2026-09-19:
+  // src/test/plan-notes-verify.ts imported `notesWriteClosesQuestions` from
+  // worker/src/routes/board-automation.ts, and the ONE error CI reported named a
+  // worker file no worker tsc had looked at.
+  //
+  // Code both trees need belongs in src/domain/ and travels through the
+  // `@wolffm/task/api` barrel, which is the contract the worker already imports.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/worker/*', '**/worker/**'],
+              message:
+                'src/ must not import from worker/ — it drags worker sources into the app tsconfig, where @wolffm/task/api has no path mapping and resolves only into the gitignored dist/. Move shared code to src/domain/ and export it from src/server/index.ts.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+
   // Prettier config (must be last)
   prettierConfig
 ]

@@ -41,6 +41,7 @@ export {
   questionsSection,
   openQuestionCount,
   questionsAnswered,
+  notesWriteClosesQuestions,
   appendAnswerToNotes,
   checklistItems,
   toggleChecklistItem,
