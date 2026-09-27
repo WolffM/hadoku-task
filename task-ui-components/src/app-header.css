@@ -107,6 +107,11 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 100;
+  /* These apps ship without a Tailwind preflight, so box-sizing is content-box
+   * unless a rule says otherwise: without this, `width: 300px` renders 334px
+   * (+32 padding +2 border) and `max-width` clamps the CONTENT box, leaving the
+   * popout 2px wider than a 320px viewport. */
+  box-sizing: border-box;
   width: 300px;
   max-width: calc(100vw - 32px);
   /* Cap height so an app that adds its own preferences section stays on screen;
@@ -159,10 +164,22 @@
   color: var(--color-text);
 }
 
+/* Label + control pair on the right of a row. `min-width: 0` is load-bearing:
+ * as a flex item of __row it otherwise floors at its own min-content width, and
+ * that includes the input's default `size=20` intrinsic width (195px in Chrome).
+ * Pair + gap + Save came to 251.4px against a 300px row that also has to hold
+ * the label — so the name row overflowed the panel the moment Edit was clicked,
+ * and __panel's `overflow-y: auto` computes overflow-x to `auto`, turning that
+ * into a horizontal scrollbar rather than a clip. */
 .settings-popout__inline {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  /* Claim the row's free space rather than shrink-wrapping, so the input below
+   * has something to grow into now that its basis is 0. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .settings-popout__tier {
@@ -181,8 +198,12 @@
 }
 
 .settings-popout__input {
-  flex: 1 1 auto;
+  /* `1 1 0` + `width: 0`, not `1 1 auto`: the basis must not come from the
+   * input's `size`-derived intrinsic width, or the row cannot shrink below it. */
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
+  box-sizing: border-box;
   font-size: 0.85rem;
   padding: 5px 8px;
   border-radius: 7px;
