@@ -28,9 +28,9 @@ export const THEME_FAMILIES = [
     icon: 'sun',
     darkIcon: 'moon',
     lightPrimary: '#2563eb',
-    darkPrimary: '#d8b4fe',
+    darkPrimary: '#b793ff',
     lightBg: '#f8fafc',
-    darkBg: '#0f172a'
+    darkBg: '#151618'
   },
   {
     lightTheme: 'strawberry-light',
@@ -39,9 +39,9 @@ export const THEME_FAMILIES = [
     icon: 'strawberry',
     darkIcon: 'strawberry',
     lightPrimary: '#ff6b9d',
-    darkPrimary: '#ff6b9d',
+    darkPrimary: '#f6526f',
     lightBg: '#fffbfc',
-    darkBg: '#1a0d14'
+    darkBg: '#0a1a13'
   },
   {
     lightTheme: 'ocean-light',
@@ -83,9 +83,9 @@ export const THEME_FAMILIES = [
     icon: 'flower',
     darkIcon: 'flower',
     lightPrimary: '#c084fc',
-    darkPrimary: '#c084fc',
+    darkPrimary: '#cba1fa',
     lightBg: '#fafafa',
-    darkBg: '#1a0f1e'
+    darkBg: '#0e172f'
   },
   {
     lightTheme: 'nature-light',
@@ -94,9 +94,9 @@ export const THEME_FAMILIES = [
     icon: 'leaf',
     darkIcon: 'leaf',
     lightPrimary: '#6bbe4e',
-    darkPrimary: '#5faf4b',
+    darkPrimary: '#5ac041',
     lightBg: '#f9f7ee',
-    darkBg: '#1e1c17'
+    darkBg: '#1e1811'
   },
   {
     lightTheme: 'pink-light',
@@ -105,9 +105,9 @@ export const THEME_FAMILIES = [
     icon: 'heart',
     darkIcon: 'heart',
     lightPrimary: '#ff69b4',
-    darkPrimary: '#ff10f0',
+    darkPrimary: '#f799be',
     lightBg: '#fffafc',
-    darkBg: '#0d0012'
+    darkBg: '#1d1217'
   },
   {
     lightTheme: 'izakaya-light',
@@ -116,9 +116,9 @@ export const THEME_FAMILIES = [
     icon: 'spa',
     darkIcon: 'spa',
     lightPrimary: '#41baae',
-    darkPrimary: '#41baae',
+    darkPrimary: '#04c5b5',
     lightBg: '#f2e6cd',
-    darkBg: '#101d26'
+    darkBg: '#14191e'
   }
 ]
 
