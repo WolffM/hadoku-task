@@ -106,15 +106,22 @@ jobs:
       # runner user cannot write: `EACCES: permission denied, symlink
       # '../lib/node_modules/corepack/dist/yarn.js' -> '/usr/bin/yarn'`.
       # setup-node puts node in the writable tool cache first.
-      - uses: WolffM/hadoku-actions/setup-pnpm@v1
+      #
+      # The registry token comes from the vault at job time (vault-key); the GH
+      # Secret is only the fallback for an unreachable broker. Pinned to a SHA
+      # while this job is the canary for that path; moves back to @v1 once v1
+      # carries it.
+      - uses: WolffM/hadoku-actions/setup-pnpm@21a6d0b272e76c96bf10b60337de59efb3d39059
+        id: pnpm
         with:
           npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
 
       - name: Install
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
 
       # `typecheck` covers the workspace packages, the app (tsc --noEmit) and
       # the worker. The workspace packages must be BUILT first — the app's tsc
@@ -124,7 +131,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm run build:packages
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
 
       - name: Typecheck
         if: steps.scope.outputs.run == 'true'
