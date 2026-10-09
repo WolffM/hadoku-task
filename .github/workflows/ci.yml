@@ -108,10 +108,8 @@ jobs:
       # setup-node puts node in the writable tool cache first.
       #
       # The registry token comes from the vault at job time (vault-key); the GH
-      # Secret is only the fallback for an unreachable broker. Pinned to a SHA
-      # while this job is the canary for that path; moves back to @v1 once v1
-      # carries it.
-      - uses: WolffM/hadoku-actions/setup-pnpm@21a6d0b272e76c96bf10b60337de59efb3d39059
+      # Secret is only the fallback for an unreachable broker.
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
         id: pnpm
         with:
           npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
@@ -197,11 +195,20 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.5.0 --activate
 
+      - name: Registry token from the vault
+        uses: WolffM/hadoku-actions/vault-fetch@v1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          keys: HADOKU_NPM_READ_TOKEN
+        env:
+          HADOKU_VAULT_KEY: ${{ secrets.KEY_SERVICE_TASK }}
+          VAULT_FALLBACK_HADOKU_NPM_READ_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+
       - name: Install
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ env.HADOKU_NPM_READ_TOKEN }}
 
       - name: ESLint
         if: steps.scope.outputs.run == 'true'
@@ -272,11 +279,20 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.5.0 --activate
 
+      - name: Registry token from the vault
+        uses: WolffM/hadoku-actions/vault-fetch@v1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          keys: HADOKU_NPM_READ_TOKEN
+        env:
+          HADOKU_VAULT_KEY: ${{ secrets.KEY_SERVICE_TASK }}
+          VAULT_FALLBACK_HADOKU_NPM_READ_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+
       - name: Install
         if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ env.HADOKU_NPM_READ_TOKEN }}
 
       # Boots the REAL worker (createTaskHandler) in-process against an
       # in-memory KV. Each harness runs in its own child process and asserts by
