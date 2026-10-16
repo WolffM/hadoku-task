@@ -51,7 +51,7 @@ export interface Env {
   // shares.ts). Binding it here would hand this worker the automation runner's
   // identity, which every automation board grants `contributor`; a bug in this
   // file would then be able to write to those boards as the runner. A service
-  // presents itself. Same reasoning as contact-api's CONTACTUI_SERVICE_KEY, and
+  // presents itself. Same reasoning as contact-api's own HADOKU_SERVICE_KEY, and
   // as the admin-tier CONTACT_SYNC_KEY that was deleted for impersonating.
   //
   // Not the CALLER's key either: forwarding a person's credential to another
@@ -60,7 +60,7 @@ export interface Env {
   // Absent ⇒ the scan still calls, unauthenticated, and reports whatever the
   // provider says (a 401 on a gated route, a result if it's public). Nothing
   // else degrades.
-  TASK_SERVICE_KEY?: string
+  HADOKU_SERVICE_KEY?: string
   // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
   // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
   // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board

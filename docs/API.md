@@ -979,7 +979,7 @@ already dropped the pipeline's own `taskauto/*` PRs and bot authors — so this 
 filed, not the pipeline's output looping back. The `base` is derived from the `tenhands` entry in
 `AUTOMATION_PRESET_SOURCES` (its URL minus `/automation/presets`); the credential is **not**
 shared with presets — a lane vocabulary is public, an issue list is not — and comes from
-`TASK_SERVICE_KEY`, this worker's own service-tier registry identity, sent as `X-User-Key`.
+`HADOKU_SERVICE_KEY` (the fleet's canonical binding for a worker's own identity; `TASK_SERVICE_KEY` before 2026-10-16), this worker's own service-tier registry identity, sent as `X-User-Key`.
 
 Note what that binding is **not**. It is not `TENHANDS_SERVICE_KEY`, the vault item holding the key
 TenHands' own worker presents: that identity is granted `contributor` on every automation board, so

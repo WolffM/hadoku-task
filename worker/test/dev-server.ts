@@ -192,7 +192,7 @@ const env = {
   GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN || process.env.HADOKU_SITE_TOKEN,
   // Our identity at the provider for the open-items scan. The stub above checks
   // it, so the dev stack proves the credential is actually sent.
-  TASK_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
+  HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────

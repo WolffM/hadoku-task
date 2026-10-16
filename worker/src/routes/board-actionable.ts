@@ -14,7 +14,7 @@
  * sync — one provider, one URL, one place to change when it moves. What is NOT
  * shared with presets is the credential: a lane vocabulary is public, and this
  * is a repo's issue list, so it needs a key. We send our OWN service identity
- * (TASK_SERVICE_KEY — this repo's registry key, not TenHands' own, and not the
+ * (HADOKU_SERVICE_KEY — this repo's registry key, not TenHands' own, and not the
  * caller's: forwarding a person's key to another origin hands that origin the
  * ability to act as them).
  *
@@ -121,7 +121,7 @@ function toItem(raw: unknown): ActionableItem | null {
  * load and a board must still load.
  */
 export async function fetchActionable(
-  env: { AUTOMATION_PRESET_SOURCES?: string; TASK_SERVICE_KEY?: string },
+  env: { AUTOMATION_PRESET_SOURCES?: string; HADOKU_SERVICE_KEY?: string },
   boardRef: string
 ): Promise<ActionableScan> {
   const base = taskautoBase(env.AUTOMATION_PRESET_SOURCES)
@@ -132,7 +132,7 @@ export async function fetchActionable(
   // would make a public route look permanently broken to anyone who hadn't
   // bound a secret they didn't need. Unauthenticated against a gated route is
   // simply a 401, reported like any other provider answer.
-  const key = (env.TASK_SERVICE_KEY ?? '').trim()
+  const key = (env.HADOKU_SERVICE_KEY ?? '').trim()
 
   const url = `${base}/api/taskauto/actionable?board=${encodeURIComponent(boardRef)}`
   try {

@@ -109,7 +109,7 @@ const env: Record<string, unknown> = {
   AUTOMATION_PRESET_SOURCES: JSON.stringify([
     { id: 'tenhands', label: 'TenHands', url: PRESETS_URL }
   ]),
-  TASK_SERVICE_KEY: SERVICE_KEY,
+  HADOKU_SERVICE_KEY: SERVICE_KEY,
   // The read-only key registry. A share is granted by display NAME and the
   // registry is what turns that into an owner — there is no way to hand the
   // endpoint a userId any more, because an owner taken on faith from a request
@@ -377,7 +377,7 @@ async function main() {
     // No key bound: we still ASK — whether the route is credentialled is the
     // provider's call — and report what it answered rather than refusing locally.
     respond = () => ({ status: 401, body: { error: 'unauthorized' } })
-    const gated = await scan('auto-board', { env: envWithout('TASK_SERVICE_KEY') })
+    const gated = await scan('auto-board', { env: envWithout('HADOKU_SERVICE_KEY') })
     check('no key against a GATED route → the provider’s 401', gated.body.reason === 'provider_401')
     check(
       '…and the request carried no X-User-Key at all',
@@ -385,7 +385,7 @@ async function main() {
       `${calls[calls.length - 1]?.key}`
     )
     respond = () => ({ body: { success: true, repo: 'r', items: ITEMS } })
-    const open = await scan('auto-board', { env: envWithout('TASK_SERVICE_KEY') })
+    const open = await scan('auto-board', { env: envWithout('HADOKU_SERVICE_KEY') })
     check('no key against a PUBLIC route → it just works', open.body.ok === true, open.body.reason)
     check('…with the items', open.body.items.length === 2)
     const before2 = calls.length
