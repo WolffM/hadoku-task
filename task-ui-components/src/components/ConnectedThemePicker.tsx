@@ -22,6 +22,10 @@ export interface ConnectedThemePickerProps {
   onSettingsClick?: () => void
   /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
   dropdownPlacement?: DropdownPlacement
+  /** Whether the experimental theme families are unlocked. */
+  experimentalThemes?: boolean
+  /** Unlock or hide them; when given, the dropdown carries the checkbox. */
+  onExperimentalThemesChange?: (enabled: boolean) => void
 }
 
 /**
@@ -59,7 +63,9 @@ export function ConnectedThemePicker({
   getThemeIcon,
   className,
   onSettingsClick,
-  dropdownPlacement
+  dropdownPlacement,
+  experimentalThemes,
+  onExperimentalThemesChange
 }: ConnectedThemePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -74,6 +80,8 @@ export function ConnectedThemePicker({
       className={className}
       onSettingsClick={onSettingsClick}
       dropdownPlacement={dropdownPlacement}
+      experimentalThemes={experimentalThemes}
+      onExperimentalThemesChange={onExperimentalThemesChange}
     />
   )
 }

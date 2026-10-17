@@ -21,6 +21,11 @@
  * AppHeader renders this internally. An app with no header renders it directly.
  * Both get the identical control, because there is no way to ask for a
  * different one.
+ *
+ * The experimental-themes opt-in lives in this dropdown, in every app. It is a
+ * per-person pref (`experimentalThemes`, shared across apps); when the task
+ * app's own checkbox went away with the header refactor nothing anywhere could
+ * turn it on, so a person who had not migrated it saw the list stop at nature.
  */
 import React from 'react'
 import { ConnectedThemePicker } from './ConnectedThemePicker'
@@ -34,6 +39,8 @@ export function HadokuThemePicker() {
       currentTheme={t.theme}
       onThemeChange={t.setTheme}
       getThemeIcon={t.getThemeIcon}
+      experimentalThemes={t.experimentalThemes ?? false}
+      onExperimentalThemesChange={t.setExperimentalThemes}
     />
   )
 }
