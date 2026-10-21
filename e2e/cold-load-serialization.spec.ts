@@ -21,6 +21,13 @@ const HANDSHAKE_MS = 575 // prod median
 const PREFS_MS = 170 // prod median
 const BOARDS_MS = 400 // prod median
 
+/**
+ * How long the handshake may be held open waiting for prefs and boards to be
+ * issued. Only a re-serialised chain ever reaches it: those requests are then
+ * waiting on the handshake itself, so nothing arrives and the hold times out.
+ */
+const HANDSHAKE_HOLD_CAP_MS = 15000
+
 const SESSION_ID = 'perf-test-session'
 const USER_TYPE = 'friend'
 const TASK_TITLE = 'SERVER-TASK'
@@ -43,6 +50,12 @@ function boardsPayload() {
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+/** Resolves once `ready()` holds, or after `capMs` — whichever comes first. */
+async function until(ready: () => boolean, capMs: number) {
+  const deadline = Date.now() + capMs
+  while (!ready() && Date.now() < deadline) await delay(10)
+}
+
 /** Ordered log of observable events, so assertions are about causality, not wall-clock. */
 type Marks = {
   handshakeSent?: number
@@ -56,7 +69,16 @@ type Marks = {
 async function stubApiWithProdLatency(page: Page, marks: Marks, t0: () => number) {
   await page.route('**/task/api/session/handshake', async route => {
     marks.handshakeSent ??= t0()
+    // Prod latency, AND held until prefs and boards have both been issued.
+    //
+    // A fixed 575ms alone made the ordering assertions below a race against the
+    // browser's own speed: on a loaded machine the JS between issuing the
+    // handshake and issuing prefs took over a second, the timer fired first, and
+    // concurrent code failed as if it were serial. Holding the response makes the
+    // check pure causality — concurrent code always gets its requests out while
+    // the handshake is open; a serial chain cannot issue them until it closes.
     await delay(HANDSHAKE_MS)
+    await until(() => marks.prefsSent != null && marks.boardsSent != null, HANDSHAKE_HOLD_CAP_MS)
     marks.handshakeDelivered ??= t0()
     await route.fulfill({
       status: 200,
@@ -96,8 +118,11 @@ test.describe('Cold-load critical path', () => {
       },
       { userType: USER_TYPE, sessionId: SESSION_ID }
     )
-    const start = Date.now()
-    const t0 = () => Date.now() - start
+    // performance.now(), not Date.now(): the handshake hold releases on the same
+    // tick that marks prefs as sent, so at millisecond resolution the two marks
+    // can tie and a strict `<` reads a correct order as a failure.
+    const start = performance.now()
+    const t0 = () => performance.now() - start
     const marks: Marks = {}
     await stubApiWithProdLatency(page, marks, t0)
 
@@ -133,9 +158,9 @@ test.describe('Cold-load critical path', () => {
       )
     }
 
-    const rel = (v: number) => `+${v - handshakeSent}ms`
+    const rel = (v: number) => `+${Math.round(v - handshakeSent)}ms`
     console.log(
-      `[cold-load] boot=${handshakeSent}ms | sent: handshake=${rel(handshakeSent)} ` +
+      `[cold-load] boot=${Math.round(handshakeSent)}ms | sent: handshake=${rel(handshakeSent)} ` +
         `prefs=${rel(prefsSent)} boards=${rel(boardsSent)}`
     )
     console.log(
@@ -145,8 +170,9 @@ test.describe('Cold-load critical path', () => {
     )
 
     // Assert on request ORDERING only — pure causality, immune to how loaded the
-    // machine is. If the chain re-serialises, both of these get issued only after
-    // the handshake response arrives, and both assertions fail.
+    // machine is, because the handshake stub holds its response until both have
+    // been issued. If the chain re-serialises, neither can be issued until the
+    // hold times out and the handshake returns, and both assertions fail.
     //
     // Deliberately NOT asserting on mount/paint times: those also depend on React
     // render speed, so under a loaded parallel suite they cross the handshake

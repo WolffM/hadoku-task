@@ -133,9 +133,12 @@ test.describe('autoland v3 card surface', () => {
     await boxes.first().check()
     await expect(boxes.first()).toBeChecked()
 
-    // The whole point: the same bytes, and nothing else disturbed.
-    const notes = await storedNotes(request, boardId, `${boardId}-plan`)
-    expect(notes).toContain('- [x] Approve this plan')
+    // The whole point: the same bytes, and nothing else disturbed. The tick is
+    // optimistic — the box checks locally and the server write follows in the
+    // background — so wait for the write to land before reading what it wrote.
+    const plan = () => storedNotes(request, boardId, `${boardId}-plan`)
+    await expect.poll(plan).toContain('- [x] Approve this plan')
+    const notes = await plan()
     expect(notes).not.toContain('- [ ] Approve this plan')
     expect(notes).toContain('- Should the TTL apply to negative lookups too?')
     expect(notes).toContain('## What I think you want\n\nCache the lookups.')
@@ -151,11 +154,12 @@ test.describe('autoland v3 card surface', () => {
     await expect(approve).toBeVisible()
     await approve.click()
 
-    // It writes through the checkbox, not around it.
+    // It writes through the checkbox, not around it. Optimistic, so poll the
+    // server until the background write lands.
     await expect(page.locator('.plan-md__checkbox').first()).toBeChecked()
-    expect(await storedNotes(request, boardId, `${boardId}-plan`)).toContain(
-      '- [x] Approve this plan'
-    )
+    await expect
+      .poll(() => storedNotes(request, boardId, `${boardId}-plan`))
+      .toContain('- [x] Approve this plan')
 
     // Nothing left to approve ⇒ no button. The notes are the only state.
     await expect(approve).toHaveCount(0)

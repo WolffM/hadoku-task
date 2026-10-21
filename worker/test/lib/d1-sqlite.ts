@@ -57,6 +57,14 @@ class BoundStatement {
     }
   }
 
+  /** What D1's batch() returns per statement: `results` on EVERY one — the rows
+   *  for anything that yields them (a SELECT, or a write with RETURNING), and an
+   *  empty array for a plain write. */
+  batchResult(): D1AllResult {
+    if (this.prepared().columns().length > 0) return this.all()
+    return { results: [], ...this.run() }
+  }
+
   all<T = Record<string, unknown>>(): D1AllResult<T> {
     const rows = this.prepared().all(...(this.params as never[])) as T[]
     return {
@@ -101,7 +109,7 @@ class PreparedStatement {
 
 export interface FakeD1 {
   prepare(sql: string): PreparedStatement
-  batch(statements: BoundStatement[]): Promise<Array<D1RunResult | D1AllResult>>
+  batch(statements: BoundStatement[]): Promise<D1AllResult[]>
   exec(sql: string): Promise<{ count: number; duration: number }>
   /** test-only escape hatch */
   __raw: DatabaseSync
@@ -143,11 +151,11 @@ export function makeSqliteD1(migrationSqlPath?: string): FakeD1 {
     async batch(statements: BoundStatement[]) {
       db.exec('BEGIN IMMEDIATE;')
       try {
-        // D1 batch runs each statement and returns each result. We can't know
-        // ahead whether a statement reads or writes, so execute as .run() unless
-        // it's a bare SELECT — mirroring how storage code consumes batch results
-        // (it only ever reads .meta.changes off writes).
-        const results = statements.map(s => s.run())
+        // D1 batch runs each statement and returns each result, with `results`
+        // on every one. Running them all as .run() dropped the rows of every
+        // batched SELECT, so prefs-api's GET — which reads `results[0]` off one —
+        // threw on each call and the dev stack served 500s where prod serves prefs.
+        const results = statements.map(s => s.batchResult())
         db.exec('COMMIT;')
         return results
       } catch (e) {

@@ -232,11 +232,15 @@ test.describe('plan review', () => {
     // The box clears on success, which is what tells the reviewer it landed.
     await expect(page.locator('#notes-popout-reply')).toHaveValue('')
 
-    const board = await (await request.get(`${API}/tasks?boardId=${boardId}`)).json()
-    const tasks = board.tasks ?? board
-    const notes: string = tasks.find((t: { id: string }) => t.id === `${boardId}-a`).notes
-
-    expect(notes).toContain('Under Questions, and yes to Cmd+Enter.')
+    // Landed locally, that is: the write is optimistic and reaches the server in
+    // the background, so poll the server until it has the answer.
+    const storedNotes = async (): Promise<string> => {
+      const board = await (await request.get(`${API}/tasks?boardId=${boardId}`)).json()
+      const tasks = board.tasks ?? board
+      return tasks.find((t: { id: string }) => t.id === `${boardId}-a`).notes
+    }
+    await expect.poll(storedNotes).toContain('Under Questions, and yes to Cmd+Enter.')
+    const notes = await storedNotes()
     // Placed inside the Questions section...
     expect(notes.indexOf('Under Questions, and yes')).toBeGreaterThan(notes.indexOf('## Questions'))
     expect(notes.indexOf('Under Questions, and yes')).toBeLessThan(notes.indexOf('## Settled'))
