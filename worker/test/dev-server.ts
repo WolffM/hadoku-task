@@ -22,6 +22,7 @@ import { createServer } from 'node:http'
 import { join } from 'node:path'
 import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
+import { NO_IDLE_CLOSE } from './lib/dev-http'
 
 const API_PORT = Number(process.env.DEV_API_PORT ?? 3001)
 const PROVIDER_PORT = Number(process.env.DEV_PROVIDER_PORT ?? 3002)
@@ -196,7 +197,7 @@ const env = {
 } as Record<string, unknown>
 
 // ── Provider stub ───────────────────────────────────────────────────────────
-createServer((req, res) => {
+createServer(NO_IDLE_CLOSE, (req, res) => {
   // The open-items scan (§5.6). Credentialled, unlike presets.
   if (req.url?.startsWith('/api/taskauto/actionable')) {
     const key = req.headers['x-user-key']
@@ -223,7 +224,7 @@ createServer((req, res) => {
 }).listen(PROVIDER_PORT, () => console.log(`[provider] :${PROVIDER_PORT}/automation/presets`))
 
 // ── Worker, behind an edge-router shim ──────────────────────────────────────
-createServer(async (req, res) => {
+createServer(NO_IDLE_CLOSE, async (req, res) => {
   try {
     const chunks: Buffer[] = []
     for await (const chunk of req) chunks.push(chunk as Buffer)

@@ -45,6 +45,7 @@ import { createServer } from 'node:http'
 // this specifier at it.
 import prefsApi from 'hadoku-site-prefs-api'
 import { makeSqliteD1 } from './lib/d1-sqlite'
+import { NO_IDLE_CLOSE } from './lib/dev-http'
 
 const PREFS_PORT = Number(process.env.DEV_PREFS_PORT ?? 3003)
 const EDGE_SECRET = 'dev-edge-secret'
@@ -89,7 +90,7 @@ const env = {
   EDGE_AUTH_SECRET: EDGE_SECRET
 } as unknown as Record<string, unknown>
 
-createServer(async (req, res) => {
+createServer(NO_IDLE_CLOSE, async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', 'http://localhost')
 
