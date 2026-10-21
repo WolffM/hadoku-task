@@ -136,7 +136,7 @@ export { EMOJI_TO_ICON } from './registry.generated'
 function stripPresentation(s: string): string {
   return [...s]
     .filter(c => {
-      const p = c.codePointAt(0)!
+      const p = c.codePointAt(0) ?? 0
       return p !== 0xfe0f && p !== 0xfe0e && !(p >= 0x1f3fb && p <= 0x1f3ff)
     })
     .join('')

@@ -58,7 +58,7 @@ test.describe('icon registry', () => {
     const result = await page.evaluate(() => {
       const bad: { name: string; reason: string }[] = []
       for (const host of Array.from(document.querySelectorAll('[data-icon]'))) {
-        const name = host.getAttribute('data-icon')!
+        const name = host.getAttribute('data-icon') ?? ''
         const svg = host.querySelector('svg')
         if (!svg) {
           bad.push({ name, reason: 'no <svg> rendered' })
@@ -99,11 +99,18 @@ test.describe('icon registry', () => {
         `<div id="ctx2">${getIconSvg('check')}</div>`
     )
 
-    const { forced, inherited, bodyText } = await page.evaluate(() => ({
-      forced: getComputedStyle(document.querySelector('#ctx svg')!).stroke,
-      inherited: getComputedStyle(document.querySelector('#ctx2 svg')!).stroke,
-      bodyText: getComputedStyle(document.body).color
-    }))
+    const { forced, inherited, bodyText } = await page.evaluate(() => {
+      const stroke = (sel: string) => {
+        const el = document.querySelector(sel)
+        if (!el) throw new Error(`${sel} not rendered`)
+        return getComputedStyle(el).stroke
+      }
+      return {
+        forced: stroke('#ctx svg'),
+        inherited: stroke('#ctx2 svg'),
+        bodyText: getComputedStyle(document.body).color
+      }
+    })
 
     // stroke="currentColor" must resolve to the inherited colour, not a baked value.
     expect(forced).toBe('rgb(255, 0, 0)')
@@ -143,11 +150,16 @@ test.describe('consumer-controlled colouring', () => {
     const mismatches = await page.evaluate(() => {
       const bad: string[] = []
       for (const host of Array.from(document.querySelectorAll('[data-accent]'))) {
-        const key = host.getAttribute('data-accent')!
-        const stroke = getComputedStyle(host.querySelector('svg')!).stroke
+        const key = host.getAttribute('data-accent') ?? ''
+        const svg = host.querySelector('svg')
         // The token's own computed value, read off a sibling — so this asserts the
         // glyph resolves to the TOKEN, not to some colour that merely looks right.
-        const ref = document.querySelector(`[data-token="${key}"]`)!
+        const ref = document.querySelector(`[data-token="${key}"]`)
+        if (!svg || !ref) {
+          bad.push(`${key}: ${svg ? 'token reference' : '<svg>'} not rendered`)
+          continue
+        }
+        const stroke = getComputedStyle(svg).stroke
         const expected = getComputedStyle(ref).color
         if (stroke !== expected) bad.push(`${key}: ${stroke} != ${expected}`)
       }
@@ -169,12 +181,19 @@ test.describe('consumer-controlled colouring', () => {
         `<span id="own">${getIconSvg('warning', { family: 'danger' })}</span>` +
         `<span id="ref" style="color:var(--color-danger)"></span>`
     )
-    const r = await page.evaluate(() => ({
-      inButton: getComputedStyle(document.querySelector('#btn svg')!).stroke,
-      buttonText: getComputedStyle(document.querySelector('#btn')!).color,
-      own: getComputedStyle(document.querySelector('#own svg')!).stroke,
-      danger: getComputedStyle(document.querySelector('#ref')!).color
-    }))
+    const r = await page.evaluate(() => {
+      const style = (sel: string) => {
+        const el = document.querySelector(sel)
+        if (!el) throw new Error(`${sel} not rendered`)
+        return getComputedStyle(el)
+      }
+      return {
+        inButton: style('#btn svg').stroke,
+        buttonText: style('#btn').color,
+        own: style('#own svg').stroke,
+        danger: style('#ref').color
+      }
+    })
     expect(r.inButton).toBe(r.buttonText)
     expect(r.own).toBe(r.danger)
     expect(r.own).not.toBe(r.inButton)

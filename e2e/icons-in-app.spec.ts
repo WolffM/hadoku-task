@@ -104,9 +104,11 @@ test.describe('migrated icons in the running app', () => {
     // <html> and the container, but the container is the closer ancestor and also
     // what the app's own theme sync rewrites — poking <html> too makes the app
     // reassert its old theme and the switch silently no-ops.
-    await page.evaluate(() =>
-      document.querySelector('.task-app-container')!.setAttribute('data-theme', 'ocean-dark')
-    )
+    await page.evaluate(() => {
+      const container = document.querySelector('.task-app-container')
+      if (!container) throw new Error('.task-app-container not mounted')
+      container.setAttribute('data-theme', 'ocean-dark')
+    })
 
     // Theme changes animate through a CSS colour transition, so the first frame
     // after the attribute flips is a blend of the two themes, not either one.
@@ -131,7 +133,7 @@ test.describe('migrated icons in the running app', () => {
       const isEmoji = (s: string) =>
         EMOJI.test(s) &&
         [...s].some(c => {
-          const p = c.codePointAt(0)!
+          const p = c.codePointAt(0) ?? 0
           return p > 0x2100 && !(p >= 0x2190 && p <= 0x21ff)
         })
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
