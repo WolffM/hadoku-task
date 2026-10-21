@@ -20,7 +20,7 @@
  * Per-field scope split (locked decision):
  *   device-scoped (differs per device): theme, themeMode, alwaysVerticalLayout,
  *     showNotesButton, showCompleteButton, showDeleteButton, showTagButton
- *   user-scoped (syncs across devices): displayName, experimentalThemes
+ *   user-scoped (syncs across devices): displayName
  *
  * The public surface mirrors the shapes usePreferences/useSessionInitialization
  * already call: loadTaskPreferences() and saveTaskPreferences().
@@ -37,7 +37,6 @@ import { resolvePrefsApiBase } from '@wolffm/themes'
 // per-row versioning + timestamps server-side; we synthesize them in
 // toUserPreferences() purely for type-compat with the existing UI.
 export const TaskPrefsSchema = z.object({
-  experimentalThemes: z.boolean().optional(),
   alwaysVerticalLayout: z.boolean().optional(),
   displayName: z.string().optional(),
   themeMode: z.enum(['simple', 'advanced']).optional(),
@@ -60,7 +59,7 @@ const DEVICE_FIELDS = [
   'showTagButton'
 ] as const
 
-const USER_FIELDS = ['displayName', 'experimentalThemes'] as const
+const USER_FIELDS = ['displayName'] as const
 
 function getDefaultTheme(): string {
   const prefersDark =
@@ -92,8 +91,7 @@ function getClient(): PrefsClient<TaskPrefs> {
       showNotesButton: true,
       showCompleteButton: true,
       showDeleteButton: true,
-      showTagButton: false,
-      experimentalThemes: false
+      showTagButton: false
     },
     migrations: [
       // Legacy simpleMode → themeMode (mirrors utils/preferences.migrateLegacyKeys).
@@ -135,7 +133,6 @@ function getClient(): PrefsClient<TaskPrefs> {
 export const DEFAULT_TASK_PREFERENCES: UserPreferences = {
   version: 1,
   updatedAt: new Date().toISOString(),
-  experimentalThemes: false,
   alwaysVerticalLayout: false,
   themeMode: 'simple',
   theme: getDefaultTheme(),

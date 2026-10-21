@@ -27,7 +27,7 @@
  * mints `hadoku_device_id` into localStorage on first use, and every Playwright
  * test gets a fresh context, so each test is a brand-new DEVICE. Device-scoped
  * prefs — theme, themeMode, everything these specs assert on — are therefore
- * isolated for free. USER-scoped values (experimentalThemes) are shared across
+ * isolated for free. USER-scoped values (displayName) are shared across
  * the run; a spec that writes one must not assume it starts unset.
  */
 import type { APIRequestContext, Page } from '@playwright/test'

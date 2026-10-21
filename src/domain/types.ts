@@ -341,7 +341,6 @@ export interface UpdateTaskInput {
 export interface UserPreferences {
   version: 1
   updatedAt: string
-  experimentalThemes?: boolean
   alwaysVerticalLayout?: boolean
   displayName?: string // Display name for user
   themeMode?: 'simple' | 'advanced' // Toggle the theme's advanced visuals

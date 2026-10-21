@@ -31,13 +31,7 @@ z.config({ jitless: true })
 
 export const ThemePrefsSchema = z.object({
   theme: z.string().optional(),
-  themeMode: z.enum(['simple', 'advanced']).optional(),
-  // Unlocks the experimental theme families in the picker. This lived in the
-  // TASK app's own prefs, which meant the extra themes existed for exactly one
-  // app — a per-app fork of a control that is supposed to be identical
-  // everywhere. It is a property of the theme, and of the person, so it lives
-  // with the other two.
-  experimentalThemes: z.boolean().optional()
+  themeMode: z.enum(['simple', 'advanced']).optional()
 })
 
 export type ThemePrefs = z.infer<typeof ThemePrefsSchema>

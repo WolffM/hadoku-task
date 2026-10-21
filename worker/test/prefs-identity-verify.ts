@@ -198,7 +198,7 @@ async function main() {
   // reachable ONLY through the authKey → sessionIds mapping.
   kv.seed('prefs:dead-session-1', {
     theme: 'ocean-dark',
-    experimentalThemes: true,
+    displayName: 'Ada',
     lastUpdated: '2026-01-01T00:00:00.000Z'
   })
   kv.seed('session-map:raw-key-2', {
@@ -211,7 +211,7 @@ async function main() {
 
   r = await req('GET', '/task/api/preferences', u2)
   check('recovered theme from dead session', r.json?.theme === 'ocean-dark', JSON.stringify(r.json))
-  check('recovered all fields', r.json?.experimentalThemes === true, JSON.stringify(r.json))
+  check('recovered all fields', r.json?.displayName === 'Ada', JSON.stringify(r.json))
   check(
     'copied forward to prefs:{userId}',
     (kv.raw('prefs:uuid-user-2') as Record<string, unknown> | null)?.theme === 'ocean-dark',
@@ -303,7 +303,7 @@ async function main() {
   const u6 = { key: 'raw-key-6', userId: 'uuid-user-6', sessionId: 'fresh-6' }
   kv.seed('prefs:stranded-6', {
     theme: 'keep-me',
-    experimentalThemes: true,
+    displayName: 'Ada',
     lastUpdated: '2026-01-01T00:00:00.000Z'
   })
   kv.seed('session-map:raw-key-6', {
@@ -321,11 +321,7 @@ async function main() {
   const merged = kv.raw('prefs:uuid-user-6') as Record<string, unknown> | null
   check('patch applied', merged?.alwaysVerticalLayout === true, JSON.stringify(merged))
   check('recovered field survived the patch', merged?.theme === 'keep-me', JSON.stringify(merged))
-  check(
-    'other recovered field survived too',
-    merged?.experimentalThemes === true,
-    JSON.stringify(merged)
-  )
+  check('other recovered field survived too', merged?.displayName === 'Ada', JSON.stringify(merged))
 
   // The custom keys must survive the PUBLISHED contract, not just KV.
   //
@@ -347,7 +343,7 @@ async function main() {
   )
   check(
     'and so does one that arrived from a recovered blob',
-    throughSchema.experimentalThemes === true,
+    throughSchema.displayName === 'Ada',
     JSON.stringify(throughSchema)
   )
   check(

@@ -40,9 +40,4 @@ export interface ThemePickerProps {
   className?: string
   /** Optional: Direction the dropdown opens. Defaults to 'auto' (edge detection) */
   dropdownPlacement?: DropdownPlacement
-  /** Whether the experimental theme families are unlocked. */
-  experimentalThemes?: boolean
-  /** Unlock or hide the experimental families. When given, the dropdown carries the
-   *  "Experimental themes" checkbox — always, so a person can turn them on from any app. */
-  onExperimentalThemesChange?: (enabled: boolean) => void
 }

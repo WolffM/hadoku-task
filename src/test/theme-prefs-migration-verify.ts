@@ -15,8 +15,7 @@ import type { ThemePrefs } from '@wolffm/themes'
 
 const DEFAULTS = {
   theme: 'light',
-  themeMode: 'simple' as const,
-  experimentalThemes: false
+  themeMode: 'simple' as const
 }
 
 let failures = 0
@@ -40,19 +39,15 @@ function plan(shared: ThemePrefs, source: TaskThemeSource) {
 
 console.log('\n1. A real choice is carried across')
 {
-  const p = plan({}, { theme: 'coffee-dark', themeMode: 'advanced', experimentalThemes: true })
-  check('theme + themeMode land on the device scope', p.device, {
-    theme: 'coffee-dark',
-    themeMode: 'advanced'
-  })
-  check('experimentalThemes lands on the user scope', p.user, { experimentalThemes: true })
+  const p = plan({}, { theme: 'coffee-dark', themeMode: 'advanced' })
+  check('theme + themeMode both migrate', p, { theme: 'coffee-dark', themeMode: 'advanced' })
 }
 
 console.log('\n2. The shared row always wins')
 {
   const p = plan(
-    { theme: 'ocean-light', themeMode: 'simple', experimentalThemes: false },
-    { theme: 'coffee-dark', themeMode: 'advanced', experimentalThemes: true }
+    { theme: 'ocean-light', themeMode: 'simple' },
+    { theme: 'coffee-dark', themeMode: 'advanced' }
   )
   check('nothing is overwritten', isEmptyPlan(p), true)
 }
@@ -60,40 +55,31 @@ console.log('\n2. The shared row always wins')
 console.log('\n3. Per-field, not all-or-nothing')
 {
   const p = plan({ theme: 'ocean-light' }, { theme: 'coffee-dark', themeMode: 'advanced' })
-  check('the absent field migrates', p.device, { themeMode: 'advanced' })
+  check('the absent field migrates', p, { themeMode: 'advanced' })
 }
 
 console.log('\n4. A default-valued field carries no information and is skipped')
 {
   // read() applies defaults, so these are indistinguishable from "never set".
-  const p = plan({}, { theme: 'light', themeMode: 'simple', experimentalThemes: false })
+  const p = plan({}, { theme: 'light', themeMode: 'simple' })
   check('nothing is written', isEmptyPlan(p), true)
 }
 
 console.log('\n5. A non-default value is migrated even when its siblings are default')
 {
-  const p = plan({}, { theme: 'light', themeMode: 'advanced', experimentalThemes: false })
-  check('only themeMode moves', p.device, { themeMode: 'advanced' })
-  check('user scope stays empty', p.user, {})
+  const p = plan({}, { theme: 'light', themeMode: 'advanced' })
+  check('only themeMode moves', p, { themeMode: 'advanced' })
 }
 
-console.log('\n6. experimentalThemes=true is migrated (false is the default, true is a choice)')
-{
-  const p = plan({}, { experimentalThemes: true })
-  check('true migrates', p.user, { experimentalThemes: true })
-  const q = plan({ experimentalThemes: false }, { experimentalThemes: true })
-  check('an explicit false in the shared row still wins', isEmptyPlan(q), true)
-}
-
-console.log('\n7. An empty source produces no writes')
+console.log('\n6. An empty source produces no writes')
 {
   check('nothing to do', isEmptyPlan(plan({}, {})), true)
 }
 
-console.log('\n8. Idempotence: re-running against the migrated row is a no-op')
+console.log('\n7. Idempotence: re-running against the migrated row is a no-op')
 {
   const first = plan({}, { theme: 'coffee-dark', themeMode: 'advanced' })
-  const migrated: ThemePrefs = { ...first.device }
+  const migrated: ThemePrefs = { ...first }
   check(
     'second run writes nothing',
     isEmptyPlan(plan(migrated, { theme: 'coffee-dark', themeMode: 'advanced' })),

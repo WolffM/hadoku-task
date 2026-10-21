@@ -172,7 +172,7 @@ GitHub issues or a terminal — those systems cannot render an SVG. Waive those 
 
 - Test isolation is per-DEVICE: the SDK mints `hadoku_device_id` into localStorage, and each
   Playwright context is a fresh browser, so device-scoped prefs (theme, themeMode) can't collide
-  across tests. USER-scoped values (experimentalThemes) are shared for the whole run.
+  across tests. USER-scoped values (displayName) are shared for the whole run.
 
 - Serve from correct root so relative paths resolve.
 - Use cache-busting query params when debugging.

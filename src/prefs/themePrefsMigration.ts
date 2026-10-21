@@ -12,8 +12,7 @@
  *     `themeMode: 'simple'` cannot be told apart from "never chose a mode".
  *     Copying it would convert "unset" into "explicitly set" across every app
  *     the user touches, while changing nothing about what they see.
- *   - scopes differ per field and must match both schemas: theme and themeMode
- *     are per-DEVICE, experimentalThemes is per-USER (it follows the person).
+ *   - both fields are per-DEVICE, matching both schemas.
  *
  * See useThemePrefsMigration for why this migration exists at all.
  */
@@ -26,18 +25,13 @@ import type { UserPreferences } from '../domain/types'
 export interface TaskThemeSource {
   theme?: string
   themeMode?: 'simple' | 'advanced'
-  experimentalThemes?: boolean
 }
 
-export interface MigrationPlan {
-  /** Per-device fields to write. Empty object means nothing to do. */
-  device: Partial<ThemePrefs>
-  /** Per-user fields to write. */
-  user: Partial<ThemePrefs>
-}
+/** Per-device fields to write. Empty object means nothing to do. */
+export type MigrationPlan = Partial<ThemePrefs>
 
 export function isEmptyPlan(plan: MigrationPlan): boolean {
-  return Object.keys(plan.device).length === 0 && Object.keys(plan.user).length === 0
+  return Object.keys(plan).length === 0
 }
 
 /**
@@ -50,10 +44,9 @@ export function isEmptyPlan(plan: MigrationPlan): boolean {
 export function planThemePrefsMigration(
   shared: ThemePrefs,
   source: TaskThemeSource,
-  defaults: Pick<UserPreferences, 'theme' | 'themeMode' | 'experimentalThemes'>
+  defaults: Pick<UserPreferences, 'theme' | 'themeMode'>
 ): MigrationPlan {
-  const device: Partial<ThemePrefs> = {}
-  const user: Partial<ThemePrefs> = {}
+  const device: MigrationPlan = {}
 
   if (shared.theme === undefined && source.theme && source.theme !== defaults.theme) {
     device.theme = source.theme
@@ -67,13 +60,5 @@ export function planThemePrefsMigration(
     device.themeMode = source.themeMode
   }
 
-  if (
-    shared.experimentalThemes === undefined &&
-    source.experimentalThemes !== undefined &&
-    source.experimentalThemes !== defaults.experimentalThemes
-  ) {
-    user.experimentalThemes = source.experimentalThemes
-  }
-
-  return { device, user }
+  return device
 }

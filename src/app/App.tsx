@@ -139,9 +139,9 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   // picker as every other app in the ecosystem.
   const { isThemeReady, isInitialThemeLoad } = useHadokuTheme()
 
-  // This app used to persist theme / themeMode / experimentalThemes in its OWN
-  // prefs row; the shared hook reads the platform row. Carries them across once,
-  // so adopting the shared picker does not silently reset anyone's theme.
+  // This app used to persist theme / themeMode in its OWN prefs row; the shared
+  // hook reads the platform row. Carries them across once, so adopting the
+  // shared picker does not silently reset anyone's theme.
   useThemePrefsMigration(preferences, preferencesLoaded)
 
   // Compute mobile layout

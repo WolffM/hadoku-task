@@ -77,21 +77,10 @@ export function HadokuThemeRoot({
       themeFamilies: t.themeFamilies,
       getThemeIcon,
       isDarkTheme: t.isDarkTheme,
-      experimentalThemes: t.experimentalThemes,
-      setExperimentalThemes: t.setExperimentalThemes,
       isThemeReady: t.isThemeReady,
       isInitialThemeLoad: t.isInitialThemeLoad
     }),
-    [
-      t.theme,
-      t.setTheme,
-      t.themeFamilies,
-      t.isDarkTheme,
-      t.experimentalThemes,
-      t.setExperimentalThemes,
-      t.isThemeReady,
-      t.isInitialThemeLoad
-    ]
+    [t.theme, t.setTheme, t.themeFamilies, t.isDarkTheme, t.isThemeReady, t.isInitialThemeLoad]
   )
 
   return <HadokuThemeProvider value={value}>{children}</HadokuThemeProvider>

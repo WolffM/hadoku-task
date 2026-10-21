@@ -3,10 +3,10 @@
  *
  * WHY
  * ---
- * Until @wolffm/task-ui-components 3.0.0, this app persisted `theme`,
- * `themeMode` and `experimentalThemes` in its OWN prefs row (appId `task`,
- * via taskPrefs) — its private useTheme hook took `savePreferences` and wrote
- * them there. Every other app in the ecosystem wrote the same three fields to
+ * Until @wolffm/task-ui-components 3.0.0, this app persisted `theme` and
+ * `themeMode` in its OWN prefs row (appId `task`, via taskPrefs) — its
+ * private useTheme hook took `savePreferences` and wrote them there. Every
+ * other app in the ecosystem wrote the same fields to
  * the shared platform row (appId `portfolio`, via @wolffm/themes' themePrefs).
  *
  * The header lockdown moved this app onto the shared hook, which reads the
@@ -32,8 +32,7 @@
  * cross-app choice or a completed migration; either way this app's older copy
  * must not overwrite it.
  *
- * SCOPES match both schemas: theme and themeMode are per-device, and
- * experimentalThemes is per-user (it follows the person across devices).
+ * SCOPE matches both schemas: theme and themeMode are per-device.
  *
  * Idempotent by construction — once a field exists in the shared row the
  * `=== undefined` guard fails forever. The ref only prevents a duplicate write
@@ -76,30 +75,16 @@ export function useThemePrefsMigration(
 
     // The rules live in planThemePrefsMigration and are pinned by
     // src/test/theme-prefs-migration-verify.ts — they are subtle enough
-    // (shared-wins, default-means-unset, split scopes) to be worth asserting
-    // rather than re-deriving here.
-    const { device, user } = planThemePrefsMigration(
-      shared ?? {},
-      preferences,
-      DEFAULT_TASK_PREFERENCES
-    )
-    if (isEmptyPlan({ device, user })) return
-
-    const writes: Promise<void>[] = []
-    if (Object.keys(device).length > 0) {
-      writes.push(saveShared(device, { scope: 'device' }))
-    }
-    if (Object.keys(user).length > 0) {
-      writes.push(saveShared(user, { scope: 'user' }))
-    }
-    if (writes.length === 0) return
+    // (shared-wins, default-means-unset) to be worth asserting rather than
+    // re-deriving here.
+    const device = planThemePrefsMigration(shared ?? {}, preferences, DEFAULT_TASK_PREFERENCES)
+    if (isEmptyPlan(device)) return
 
     logger.info('[themePrefsMigration] carrying task theme prefs to the shared row', {
-      device: Object.keys(device),
-      user: Object.keys(user)
+      device: Object.keys(device)
     })
 
-    Promise.all(writes).catch((err: unknown) => {
+    saveShared(device, { scope: 'device' }).catch((err: unknown) => {
       // Not swallowed: a failure here means the user's theme silently reverts
       // to the platform default, which reads as "the app forgot my settings".
       // The ref stays set for this session, but the migration retries on the

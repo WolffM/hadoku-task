@@ -98,26 +98,6 @@
   flex-direction: row-reverse;
 }
 
-/* The experimental-themes opt-in, under the tower: in every app's picker. */
-.theme-picker__experimental {
-  display: flex;
-  align-items: center;
-  gap: var(--hdk-space-sm);
-  padding: var(--hdk-space-sm) var(--hdk-space-md);
-  border-radius: 12px;
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  box-shadow: var(--hdk-shadow-md);
-  font-size: 0.8125rem;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.theme-picker__experimental input {
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
-
 /* Theme pill tower - has the shadow */
 .theme-picker__pills {
   display: flex;

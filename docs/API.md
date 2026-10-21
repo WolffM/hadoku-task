@@ -552,7 +552,7 @@ Get user preferences (synced for non-public users).
 {
   "version": 1,
   "updatedAt": "2025-10-27T12:00:00Z",
-  "experimentalThemes": false,
+  "displayName": "Ada",
   "alwaysVerticalLayout": false
 }
 ```
@@ -574,7 +574,7 @@ Save user preferences (syncs for non-public users).
 
 ```json
 {
-  "experimentalThemes": true,
+  "displayName": "Ada",
   "alwaysVerticalLayout": false
 }
 ```
@@ -678,7 +678,7 @@ X-Session-Id: current-session-id
   "userType": "friend",
   "migrated": false,
   "preferences": {
-    "experimentalThemes": false,
+    "displayName": "Ada",
     "alwaysVerticalLayout": false
   }
 }

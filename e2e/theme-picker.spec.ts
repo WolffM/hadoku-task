@@ -37,27 +37,15 @@ test.describe('Theme Picker', () => {
     expect(pillCount).toBeGreaterThan(0)
   })
 
-  // 2026-10-17: "experimental themes checkbox must show on all apps all the time. one of my
-  // users can only see themes to nature and not the other two." The opt-in is the shared
-  // picker's own, so every app that renders the picker carries it.
-  test('carries the experimental-themes checkbox, which unlocks the families after nature', async ({
-    page
-  }) => {
+  // 2026-10-20: the experimental-themes opt-in is gone — every family is offered to everyone,
+  // with no checkbox to gate them.
+  test('offers every theme family, with no experimental opt-in', async ({ page }) => {
     await page.locator('.theme-toggle-btn').click()
-    const box = page.getByRole('checkbox', { name: 'Experimental themes' })
-    await expect(box).toBeVisible()
-    await expect(box).not.toBeChecked()
-    const pills = page.locator('.theme-pill')
-    await expect(pills).toHaveCount(6)
-    await expect(page.getByRole('button', { name: /pink/i })).toHaveCount(0)
-
-    await box.check()
-    await expect(pills).toHaveCount(9)
+    await expect(page.locator('.theme-pill')).toHaveCount(9)
+    await expect(page.getByRole('button', { name: /cyberpunk/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /pink/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /izakaya/i }).first()).toBeVisible()
-
-    await box.uncheck()
-    await expect(pills).toHaveCount(6)
+    await expect(page.getByRole('checkbox')).toHaveCount(0)
   })
 
   test('should close dropdown when overlay is clicked', async ({ page }) => {

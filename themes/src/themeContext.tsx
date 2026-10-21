@@ -35,10 +35,6 @@ export interface HadokuThemeValue {
   getThemeIcon: (theme: string) => React.ReactNode
   /** True when the active theme is a dark variant. */
   isDarkTheme: boolean
-  /** Whether the experimental theme families are unlocked for this person.
-   *  A shared preference, not an app setting — see @wolffm/themes themePrefs. */
-  experimentalThemes?: boolean
-  setExperimentalThemes?: (enabled: boolean) => void
   /** False until the theme has been applied to the DOM. Apps gate their first
    *  paint on this to avoid a flash of unstyled content. */
   isThemeReady: boolean

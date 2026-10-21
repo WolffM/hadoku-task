@@ -27,11 +27,11 @@
  * not yank the user back to the previously persisted theme if they've already
  * picked a new one this session.
  */
-import { useState, useEffect, useRef, useMemo, useCallback, type RefObject } from 'react'
+import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import { usePrefs } from '@wolffm/prefs-client/react'
 import { setTheme as applyTheme, saveTheme, setThemeMode } from './index'
 import type { Theme } from './index'
-import { THEME_FAMILIES, EXPERIMENTAL_THEMES } from './metadata'
+import { THEME_FAMILIES } from './metadata'
 import { themePrefs } from './themePrefs'
 
 export interface UseThemeOptions {
@@ -129,39 +129,6 @@ export function useTheme(options: UseThemeOptions = {}) {
   // resolve doesn't overwrite their choice.
   const userOverrodeRef = useRef(false)
 
-  // Experimental families are opt-in, per person, across every app. Gating
-  // them here (rather than in one app's themeConfig) is what makes the picker
-  // the same control everywhere: same list, same order, same rule.
-  const experimentalEnabled = persisted?.experimentalThemes ?? false
-  const themeFamilies = useMemo(
-    () =>
-      experimentalEnabled
-        ? THEME_FAMILIES
-        : THEME_FAMILIES.filter(
-            f => !EXPERIMENTAL_THEMES.has(f.lightTheme) && !EXPERIMENTAL_THEMES.has(f.darkTheme)
-          ),
-    [experimentalEnabled]
-  )
-
-  const setExperimentalThemes = useCallback((enabled: boolean) => {
-    savePrefsRef
-      .current({ experimentalThemes: enabled }, { scope: 'user' })
-      .catch((err: unknown) => {
-        console.error('[useTheme] prefs save failed', {
-          error: (err as Error)?.message ?? String(err),
-          experimentalThemes: enabled
-        })
-      })
-  }, [])
-
-  // Validity is checked against ALL families, never the filtered picker list.
-  //
-  // Those are different questions: `themeFamilies` controls what the picker
-  // OFFERS, while this controls whether an already-active theme is real. Tying
-  // validity to the filtered list would force anyone sitting on an experimental
-  // theme back to 'light' — and it would do it on EVERY load, because
-  // `persisted` resolves async, so `experimentalThemes` reads false for the
-  // first frames of every single boot regardless of what the user chose.
   const isThemeAvailable = useCallback(
     (name: string) => THEME_FAMILIES.some(f => f.lightTheme === name || f.darkTheme === name),
     []
@@ -264,9 +231,7 @@ export function useTheme(options: UseThemeOptions = {}) {
   return {
     theme,
     setTheme,
-    themeFamilies,
-    experimentalThemes: experimentalEnabled,
-    setExperimentalThemes,
+    themeFamilies: THEME_FAMILIES,
     isDarkTheme: theme.endsWith('-dark') || theme === 'dark',
     isThemeReady,
     isInitialThemeLoad

@@ -38,9 +38,7 @@ export function ThemePicker({
   onSettingsClick,
   getThemeIcon,
   className = '',
-  dropdownPlacement = 'auto',
-  experimentalThemes = false,
-  onExperimentalThemesChange
+  dropdownPlacement = 'auto'
 }: ThemePickerProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [resolvedPlacement, setResolvedPlacement] = useState<'left' | 'right'>('right')
@@ -138,16 +136,6 @@ export function ThemePicker({
               </button>
             )}
           </div>
-          {onExperimentalThemesChange && (
-            <label className="theme-picker__experimental">
-              <input
-                type="checkbox"
-                checked={experimentalThemes}
-                onChange={e => onExperimentalThemesChange(e.target.checked)}
-              />
-              Experimental themes
-            </label>
-          )}
         </div>
       )}
       {isOpen && <div className="theme-picker__overlay" onClick={onToggle} />}
