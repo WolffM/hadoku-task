@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "5.16.1",
+  "version": "5.16.2",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "repository": {
@@ -54,6 +54,7 @@
     "test:worker": "node scripts/run-worker-verify.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "test:e2e": "pw-isolated playwright test",
+    "test:e2e:ci": "PLAYWRIGHT_JSON_OUTPUT_NAME=e2e-report.json playwright test --reporter=json",
     "test:e2e:ui": "pw-isolated playwright test --ui",
     "test:e2e:debug": "pw-isolated playwright test --debug",
     "profile": "node scripts/profile-cold-load.mjs",

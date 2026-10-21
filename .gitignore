@@ -80,6 +80,7 @@ themes/dev/save-server.js
 playwright-report/
 test-results/
 .playwright-mcp/
+e2e-report.json
 
 # Tooling caches (under node_modules/.cache/* but list explicitly for clarity)
 .eslintcache

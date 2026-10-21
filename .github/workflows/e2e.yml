@@ -1,0 +1,76 @@
+name: e2e
+
+# Fleet nightly e2e (hadoku_site programme 3). Dispatched by hadoku_site's
+# nightly-e2e.yml with nightly_run_id set, or run by hand for a first proof.
+# The suite is route-mocked (e2e/helpers/mock-api.ts) — no backend, no key —
+# per the wave-3 design's settled call to keep that pattern. A smaller set of
+# specs needs the local dev stack (`pnpm run dev:api`) or a sibling
+# ../hadoku_site checkout for prefs-api; neither is started here, so those
+# skip themselves (see e2e.json's e2eSkipAllow — each has its own reason, read
+# off the suite's own `test.skip()` messages, not guessed).
+on:
+  workflow_dispatch:
+    inputs:
+      nightly_run_id:
+        description: The orchestrator's run id, so results group by night
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ${{ fromJSON(vars.CI_RUNNER) }}
+    # From e2e.json's timeoutMinutes.
+    timeout-minutes: 20
+    steps:
+      - name: Mark the start, so the reported duration is real
+        run: echo "JOB_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v6
+
+      - uses: WolffM/hadoku-actions/setup-pnpm@v1
+        id: pnpm
+        with:
+          node-version: '24'
+          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
+          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
+
+      - name: Install
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+        run: pnpm install --frozen-lockfile
+
+      # dist/ for @wolffm/themes and @wolffm/task-ui-components is gitignored;
+      # the app imports their BUILT entrypoints (same reason new-worktree.mjs
+      # builds them for a fresh worktree — see this repo's AGENTS.md).
+      - name: Build workspace packages
+        run: pnpm run build:packages
+
+      # Idempotent on a self-hosted runner where chromium is already cached.
+      - name: Install browser
+        run: pnpm exec playwright install chromium
+
+      - name: e2e (route-mocked, no backend, no key)
+        run: pnpm run test:e2e:ci
+
+      - name: Report results to the fleet e2e store
+        if: always()
+        uses: WolffM/hadoku-actions/report-e2e@v1
+        with:
+          report: e2e-report.json
+          runner: playwright
+          app: task
+          nightly-run-id: ${{ inputs.nightly_run_id }}
+          key: ${{ secrets.KEY_SERVICE_TASK }}
+
+      - name: Report the outcome so a silent failure can't hide
+        if: always()
+        uses: WolffM/hadoku-actions/report-job@v1
+        with:
+          job-name: task:e2e
+          service-key: ${{ secrets.KEY_SERVICE_TASK }}
+          started-at: ${{ env.JOB_STARTED_AT }}

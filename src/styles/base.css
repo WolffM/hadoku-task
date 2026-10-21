@@ -103,14 +103,26 @@ body {
    LOADING SKELETON & ANIMATIONS
    ============================================ */
 
-/* Smooth fade-in animation when content loads */
+/* Smooth fade-in animation when content loads.
+ *
+ * `from` is deliberately NOT `opacity: 0` (hadoku-task#96). Chromium's paint
+ * timing excludes a candidate frame whose element has opacity exactly 0 at
+ * the moment it is evaluated, and — in a backgrounded/headless renderer,
+ * which is exactly what Lighthouse and an automated probe are — nothing
+ * forces a later compositor frame once the animation progresses past that
+ * first frame, so first-contentful-paint is never recorded at all for an
+ * anonymous visitor measured that way. Starting just above zero keeps the
+ * same visible fade (0.01 is imperceptible) while staying outside that
+ * exclusion. Confirmed empirically: an opacity-0 start never produced an FCP
+ * entry in 20+ production and route-mocked repro runs; a non-zero start did,
+ * every time. */
 .task-app-fade-in {
   animation: fadeIn 0.3s ease-in;
 }
 
 @keyframes fadeIn {
   from {
-    opacity: 0;
+    opacity: 0.01;
   }
   to {
     opacity: 1;
