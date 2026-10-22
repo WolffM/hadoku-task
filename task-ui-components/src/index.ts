@@ -71,7 +71,7 @@ export {
   FlowerIcon,
   HeartIcon,
   LeafIcon,
-  SpaIcon
+  LanternIcon
 } from '@wolffm/themes'
 
 // Types

@@ -137,41 +137,16 @@ export const LeafIcon = () => (
   </svg>
 )
 
-export const SpaIcon = () => (
+export const LanternIcon = () => (
   <svg {...iconProps}>
-    {/* Steam wisps */}
-    <path
-      d="M8 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      opacity="0.6"
-    />
-    <path
-      d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      opacity="0.6"
-    />
-    <path
-      d="M16 2c0 1.5-1 2.5-1 4s1 2.5 1 4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      opacity="0.6"
-    />
-    {/* Hot spring bowl */}
-    <path
-      d="M4 14c0-3 1.5-4 4-4s4 1 4 4v4c0 2-1 2-4 2s-4 0-4-2v-4z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
-    <ellipse cx="8" cy="14" rx="4" ry="1.5" fill="currentColor" opacity="0.3" />
-    {/* Stones */}
-    <circle cx="17" cy="18" r="2" fill="currentColor" opacity="0.4" />
-    <circle cx="20" cy="16" r="1.5" fill="currentColor" opacity="0.4" />
+    {/* Paper lantern (chōchin): hook, caps, body and two ribs */}
+    <path d="M12 1.5v2" />
+    <path d="M9 3.5h6" />
+    <path d="M8.5 5.5h7c3 1.8 4.5 4 4.5 6.5s-1.5 4.7-4.5 6.5h-7C5.5 16.7 4 14.5 4 12s1.5-4.7 4.5-6.5z" />
+    <path d="M5 9.5q7 1.6 14 0" strokeWidth="1.5" />
+    <path d="M5 14.5q7 -1.6 14 0" strokeWidth="1.5" />
+    <path d="M9 20.5h6" />
+    <path d="M12 20.5v2" />
   </svg>
 )
 

@@ -175,7 +175,7 @@ export {
   FlowerIcon,
   HeartIcon,
   LeafIcon,
-  SpaIcon
+  LanternIcon
 } from './ThemeIcons'
 export type { ThemeName, ThemeFamily } from './theme-types'
 export type { HadokuThemeRootProps } from './HadokuThemeRoot'

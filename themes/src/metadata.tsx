@@ -15,7 +15,7 @@ import {
   FlowerIcon,
   HeartIcon,
   LeafIcon,
-  SpaIcon
+  LanternIcon
 } from './ThemeIcons'
 
 /**
@@ -92,8 +92,8 @@ export const THEME_FAMILIES: ThemeFamily[] = [
     darkTheme: 'izakaya-dark',
     lightLabel: 'Izakaya Light',
     darkLabel: 'Izakaya Dark',
-    lightIcon: <SpaIcon />,
-    darkIcon: <SpaIcon />
+    lightIcon: <LanternIcon />,
+    darkIcon: <LanternIcon />
   }
 ]
 
@@ -118,6 +118,6 @@ export const THEME_ICON_MAP = {
   'nature-dark': LeafIcon,
   'pink-light': HeartIcon,
   'pink-dark': HeartIcon,
-  'izakaya-light': SpaIcon,
-  'izakaya-dark': SpaIcon
+  'izakaya-light': LanternIcon,
+  'izakaya-dark': LanternIcon
 } as const
