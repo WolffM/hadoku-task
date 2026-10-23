@@ -9,13 +9,21 @@
  *   <div className="task-app-container hdk-scroll">…</div>
  *
  * `.hdk-scroll` styles the element it is on AND every scroller inside it, so
- * one class on an app's root covers the whole app. Modifiers sit on the same
- * element and reach down through the custom properties below:
+ * one class on an app's root covers the whole app. The thumb is the theme's
+ * primary colour. Modifiers sit on the same element:
  *
+ *   --subtle    neutral thumb instead of the accent
  *   --thin      narrower bar
- *   --accent    thumb in the primary colour
  *   --rail      visible track, so the scroll extent reads at a glance
- *   --autohide  thumb appears only while the scroller is hovered or focused
+ *   --autohide  thumb appears only while that scroller is hovered or focused
+ *
+ * The colours are declared on EVERY element under the root (`.hdk-scroll *`),
+ * not once on it. A custom property inherits its RESOLVED value, so a thumb
+ * colour set only on the root would carry the root's theme down into a nested
+ * `[data-theme]` scope: a cyberpunk preview inside a coffee app would scroll
+ * with coffee's accent. Declared per element, each scroller resolves the
+ * tokens of the theme it actually sits in. Sizes are theme-independent and
+ * simply inherit.
  *
  * Two engines, two mechanisms. Firefox only knows the standard
  * `scrollbar-color`/`scrollbar-width`. Chromium and Safari support the
@@ -29,8 +37,12 @@
 .hdk-scroll {
   --hdk-scrollbar-size: 10px;
   --hdk-scrollbar-pad: 2px;
-  --hdk-scrollbar-thumb: var(--color-border);
-  --hdk-scrollbar-thumb-hover: var(--color-text-muted);
+}
+
+.hdk-scroll,
+.hdk-scroll * {
+  --hdk-scrollbar-thumb: var(--color-primary);
+  --hdk-scrollbar-thumb-hover: var(--color-primary-dark);
   --hdk-scrollbar-track: transparent;
 }
 
@@ -39,30 +51,34 @@
   --hdk-scrollbar-pad: 1px;
 }
 
-.hdk-scroll--accent {
-  --hdk-scrollbar-thumb: var(--color-primary);
-  --hdk-scrollbar-thumb-hover: var(--color-primary-dark);
+.hdk-scroll--subtle,
+.hdk-scroll--subtle * {
+  --hdk-scrollbar-thumb: var(--color-border);
+  --hdk-scrollbar-thumb-hover: var(--color-text-muted);
 }
 
 .hdk-scroll--rail {
   --hdk-scrollbar-size: 12px;
   --hdk-scrollbar-pad: 3px;
-  --hdk-scrollbar-thumb: var(--color-text-muted);
-  --hdk-scrollbar-thumb-hover: var(--color-text-tertiary);
+}
+
+.hdk-scroll--rail,
+.hdk-scroll--rail * {
   --hdk-scrollbar-track: var(--color-bg-hover);
 }
 
-.hdk-scroll--autohide {
+.hdk-scroll--autohide,
+.hdk-scroll--autohide * {
   --hdk-scrollbar-thumb: transparent;
 }
 
-/* Re-declared on the hovered/focused element itself, so only that scroller's
- * thumb shows — not every scroller inside an autohide root at once. */
+/* On the hovered/focused element itself, so only that scroller's thumb shows —
+ * not every scroller inside an autohide root at once. */
 .hdk-scroll--autohide:hover,
 .hdk-scroll--autohide:focus-within,
 .hdk-scroll--autohide :hover,
 .hdk-scroll--autohide :focus-within {
-  --hdk-scrollbar-thumb: var(--color-border);
+  --hdk-scrollbar-thumb: var(--color-primary);
 }
 
 @supports not selector(::-webkit-scrollbar) {

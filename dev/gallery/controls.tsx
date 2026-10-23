@@ -45,14 +45,14 @@ import './controls.css'
 const VARIANTS: ButtonVariant[] = ['solid', 'gradient', 'soft', 'outline', 'ghost']
 const FAMILIES: ButtonFamily[] = ['primary', 'success', 'warning', 'danger', 'neutral']
 const SELECT_VARIANTS: SelectVariant[] = ['outline', 'filled', 'ghost', 'underline']
-const TIP_VARIANTS: TooltipVariant[] = ['inverse', 'card', 'primary']
+const TIP_VARIANTS: TooltipVariant[] = ['card', 'inverse', 'primary']
 const PLACEMENTS: TooltipPlacement[] = ['top', 'right', 'bottom', 'left']
 
 const SCROLL_SAMPLES: { label: string; className: string | null; note: string }[] = [
   { label: 'Browser default', className: null, note: 'what we get today' },
-  { label: 'Default', className: 'hdk-scroll', note: 'hdk-scroll' },
+  { label: 'Default', className: 'hdk-scroll', note: 'hdk-scroll · theme accent' },
+  { label: 'Subtle', className: 'hdk-scroll hdk-scroll--subtle', note: '--subtle' },
   { label: 'Thin', className: 'hdk-scroll hdk-scroll--thin', note: '--thin' },
-  { label: 'Accent', className: 'hdk-scroll hdk-scroll--accent', note: '--accent' },
   { label: 'Rail', className: 'hdk-scroll hdk-scroll--rail', note: '--rail' },
   {
     label: 'Autohide',
@@ -317,7 +317,9 @@ function ButtonsSection() {
           >
             {loading ? 'Saving…' : 'Click to load'}
           </Button>
-          <Button disabled>Disabled</Button>
+          <Tooltip content="Nothing to save yet">
+            <Button disabled>Disabled</Button>
+          </Tooltip>
           <Button variant="outline" disabled>
             Disabled outline
           </Button>
@@ -532,7 +534,9 @@ function CompareSection() {
     <section className="gallery__card">
       <h2 className="gallery__h2">Side by side</h2>
       <p className="gallery__note">
-        Nested <code>data-theme</code> containers — pick any themes to line up.
+        Nested <code>data-theme</code> containers — pick any themes to line up. One{' '}
+        <code>hdk-scroll</code> sits on the whole strip, and each box still scrolls in its own
+        cell&rsquo;s accent; tooltips and dropdowns open in the cell&rsquo;s theme too.
       </p>
       <div className="gallery__pills controls__compare-pills">
         {THEMES.map(t => (
@@ -546,7 +550,9 @@ function CompareSection() {
           </button>
         ))}
       </div>
-      <div className="controls__compare">
+      {/* ONE hdk-scroll on the strip, outside every cell's data-theme: each box
+          must still scroll in its own cell's accent, not the page theme's. */}
+      <div className="controls__compare hdk-scroll" data-testid="compare">
         {picked.map(t => (
           <div className="controls__compare-cell" data-theme={t} key={t}>
             <div className="controls__compare-name">{t}</div>
@@ -570,7 +576,7 @@ function CompareSection() {
               options={STATUS_OPTIONS}
             />
             <div className="controls__compare-scroll">
-              <ScrollBox className="hdk-scroll" />
+              <ScrollBox className={null} />
             </div>
           </div>
         ))}

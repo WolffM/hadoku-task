@@ -26,6 +26,7 @@
  */
 
 import React from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import type { TaskStatus, TaskStatusKind } from '../domain/types'
 import { Icon, type IconName } from '@wolffm/themes'
 
@@ -59,22 +60,23 @@ export function StatusChip({ status }: { status: TaskStatus | null | undefined }
   // `href` is validated http(s)-only on write (normalizeTaskStatus), so nothing
   // else can reach this attribute.
   return status.href ? (
-    <a
-      className={`${className} task-app__status-chip--link`}
-      href={status.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={status.label}
-      // The card is draggable; a link inside it must not start an HTML5 drag of
-      // its own href when the user is trying to click it.
-      onDragStart={e => e.preventDefault()}
-      onClick={e => e.stopPropagation()}
-    >
-      {inner}
-    </a>
+    <Tooltip content={status.label} delay={700}>
+      <a
+        className={`${className} task-app__status-chip--link`}
+        href={status.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        // The card is draggable; a link inside it must not start an HTML5 drag of
+        // its own href when the user is trying to click it.
+        onDragStart={e => e.preventDefault()}
+        onClick={e => e.stopPropagation()}
+      >
+        {inner}
+      </a>
+    </Tooltip>
   ) : (
-    <span className={className} title={status.label}>
-      {inner}
-    </span>
+    <Tooltip content={status.label} delay={700}>
+      <span className={className}>{inner}</span>
+    </Tooltip>
   )
 }

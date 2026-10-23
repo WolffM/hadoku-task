@@ -408,7 +408,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   return (
     <div
       ref={containerRef}
-      className="task-app-container task-app-fade-in hdk-advanced-page"
+      className="task-app-container task-app-fade-in hdk-advanced-page hdk-scroll"
       data-dark-theme={isDarkTheme ? 'true' : 'false'}
       data-mobile-app={isInMobileApp ? 'true' : undefined}
       // Marquee box-selection is a board-only interaction; disable it in calendar view.

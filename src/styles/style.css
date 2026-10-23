@@ -21,3 +21,6 @@
 @import '@wolffm/task-ui-components/theme-picker.css';
 @import '@wolffm/task-ui-components/app-header.css';
 @import '@wolffm/task-ui-components/toaster.css';
+@import '@wolffm/task-ui-components/select.css';
+@import '@wolffm/task-ui-components/tooltip.css';
+@import '@wolffm/task-ui-components/scrollbar.css';

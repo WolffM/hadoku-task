@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { Modal } from './Modal'
+import { Select } from './Select'
 
 export interface SettingsSection {
   id: string
@@ -170,19 +171,14 @@ export function SettingsModal({
               {field.label}
             </label>
             {field.description && <p className="settings-field-description">{field.description}</p>}
-            <select
+            <Select
               id={field.id}
               className="settings-select"
               value={field.value}
-              onChange={e => field.onChange(e.target.value)}
+              onChange={field.onChange}
+              options={field.options}
               disabled={field.disabled}
-            >
-              {field.options.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         )
 

@@ -7,6 +7,7 @@
  */
 
 import React, { useState } from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import type { Task } from '../../domain/types'
 import type { SyncState } from '../../hooks/useTasks'
 import { CalendarAgendaItem } from './CalendarAgendaItem'
@@ -160,22 +161,16 @@ export function CalendarDayView({
       {/* Header: navigation + date + new-task actions */}
       <div className="calendar-header">
         <div className="calendar-header__nav">
-          <button
-            className="calendar-nav-btn"
-            onClick={handlePrevDay}
-            title="Previous day"
-            aria-label="Previous day"
-          >
-            ‹
-          </button>
-          <button
-            className="calendar-nav-btn"
-            onClick={handleNextDay}
-            title="Next day"
-            aria-label="Next day"
-          >
-            ›
-          </button>
+          <Tooltip content="Previous day">
+            <button className="calendar-nav-btn" onClick={handlePrevDay} aria-label="Previous day">
+              ‹
+            </button>
+          </Tooltip>
+          <Tooltip content="Next day">
+            <button className="calendar-nav-btn" onClick={handleNextDay} aria-label="Next day">
+              ›
+            </button>
+          </Tooltip>
         </div>
 
         <div className="calendar-header__date">

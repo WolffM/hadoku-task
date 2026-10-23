@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import type { Board, AutomationPreset, PresetSourceStatus, PresetUpdate } from '../../domain/types'
 import { boardRef, type ShareApi } from './shareApi'
 import { ConfirmModal } from './ConfirmModal'
@@ -229,9 +230,11 @@ export function AutomationPanel({
         </span>
       )}
       {!repoChecking && repoStatus && !repoStatus.valid && (
-        <span className="automation-panel__repo-status is-bad" title={repoStatus.message}>
-          ✗ {repoStatus.message ?? 'not found'}
-        </span>
+        <Tooltip content={repoStatus.message}>
+          <span className="automation-panel__repo-status is-bad">
+            ✗ {repoStatus.message ?? 'not found'}
+          </span>
+        </Tooltip>
       )}
     </div>
   )
@@ -325,22 +328,23 @@ export function AutomationPanel({
             const agentLanes = p.lanes.filter(l => l.editableBy === 'agent').length
             return (
               <li key={key}>
-                <button
-                  type="button"
-                  className={`automation-panel__preset${chosen === key ? ' is-chosen' : ''}`}
-                  onClick={() => choosePreset(p)}
-                  title={p.description ?? undefined}
-                  aria-pressed={chosen === key}
-                  disabled={busy}
-                >
-                  <span className="automation-panel__preset-label">{p.label}</span>
-                  <span className="automation-panel__preset-meta">
-                    {p.providerLabel} · {p.schemaId}
-                    {p.schemaVersion !== null ? ` v${p.schemaVersion}` : ''} · {p.lanes.length}{' '}
-                    lanes
-                    {agentLanes > 0 ? ` (${agentLanes} agent)` : ''}
-                  </span>
-                </button>
+                <Tooltip content={p.description ?? undefined}>
+                  <button
+                    type="button"
+                    className={`automation-panel__preset${chosen === key ? ' is-chosen' : ''}`}
+                    onClick={() => choosePreset(p)}
+                    aria-pressed={chosen === key}
+                    disabled={busy}
+                  >
+                    <span className="automation-panel__preset-label">{p.label}</span>
+                    <span className="automation-panel__preset-meta">
+                      {p.providerLabel} · {p.schemaId}
+                      {p.schemaVersion !== null ? ` v${p.schemaVersion}` : ''} · {p.lanes.length}{' '}
+                      lanes
+                      {agentLanes > 0 ? ` (${agentLanes} agent)` : ''}
+                    </span>
+                  </button>
+                </Tooltip>
               </li>
             )
           })}
@@ -378,14 +382,15 @@ export function AutomationPanel({
       {err && <p className="share-panel__msg is-err">{err}</p>}
 
       <div className="automation-panel__actions">
-        <button
-          className="automation-panel__activate-btn"
-          onClick={applyManual}
-          disabled={busy || !raw.trim()}
-          title="Activate (destructive)"
-        >
-          Activate
-        </button>
+        <Tooltip content="Activate (destructive)">
+          <button
+            className="automation-panel__activate-btn"
+            onClick={applyManual}
+            disabled={busy || !raw.trim()}
+          >
+            Activate
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

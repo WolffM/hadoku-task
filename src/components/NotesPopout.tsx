@@ -24,6 +24,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import { createPortal } from 'react-dom'
 import {
   appendAnswerToNotes,
@@ -244,14 +245,15 @@ export function NotesPopout({
                   bytes, same predicate, same wake — so it can sit here as the
                   primary action without becoming a second source of truth. */}
               {onSave && approval && (
-                <button
-                  className="notes-popout__btn notes-popout__btn--primary"
-                  onClick={() => toggleCheckbox(approval.ordinal, true)}
-                  disabled={saving}
-                  title={approval.text}
-                >
-                  {saving ? 'Approving…' : 'Approve'}
-                </button>
+                <Tooltip content={approval.text}>
+                  <button
+                    className="notes-popout__btn notes-popout__btn--primary"
+                    onClick={() => toggleCheckbox(approval.ordinal, true)}
+                    disabled={saving}
+                  >
+                    {saving ? 'Approving…' : 'Approve'}
+                  </button>
+                </Tooltip>
               )}
             </footer>
           </>

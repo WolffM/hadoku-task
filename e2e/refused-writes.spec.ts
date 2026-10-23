@@ -151,7 +151,7 @@ test.describe('a refused optimistic write is rolled back', () => {
       route.request().method() === 'DELETE' ? route.fulfill(FORBIDDEN) : route.continue()
     )
 
-    await card(page, 'Existing task').getByRole('button', { name: '×' }).click()
+    await card(page, 'Existing task').getByRole('button', { name: 'Delete task' }).click()
 
     await expect(undoneToast(page).first()).toBeVisible({ timeout: 5000 })
     // Rebuilt from the snapshot the local delete handed back — the card returns

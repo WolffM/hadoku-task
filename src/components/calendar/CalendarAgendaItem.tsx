@@ -7,6 +7,7 @@
  */
 
 import React, { useState } from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import type { Task } from '../../domain/types'
 import { formatTimeFromISO, getDurationMinutes, formatDuration } from '../../domain/utils/calendar'
 import { formatTagsForDisplay } from '../../domain/utils/tags'
@@ -81,9 +82,9 @@ export function CalendarAgendaItem({
       >
         <div className="calendar-agenda__card-row">
           <div className="calendar-agenda__main">
-            <div className="calendar-agenda__title" title={task.title}>
-              {task.title}
-            </div>
+            <Tooltip content={task.title} delay={700}>
+              <div className="calendar-agenda__title">{task.title}</div>
+            </Tooltip>
             <div className="calendar-agenda__meta">
               {!isAllDay && (
                 <span>
@@ -97,41 +98,44 @@ export function CalendarAgendaItem({
 
           <div className="calendar-agenda__actions">
             {hasMetadata && (
+              <Tooltip content={expanded ? 'Hide details' : 'Show details'}>
+                <button
+                  className={`calendar-agenda__btn ${expanded ? 'calendar-agenda__btn--on' : ''}`}
+                  onClick={e => {
+                    e.stopPropagation()
+                    setExpanded(v => !v)
+                  }}
+                  aria-label={expanded ? 'Hide details' : 'Show details'}
+                  aria-expanded={expanded}
+                >
+                  {expanded ? '▾' : 'ⓘ'}
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip content="Edit tags">
               <button
-                className={`calendar-agenda__btn ${expanded ? 'calendar-agenda__btn--on' : ''}`}
+                className="calendar-agenda__btn"
                 onClick={e => {
                   e.stopPropagation()
-                  setExpanded(v => !v)
+                  onEditTag(task.id)
                 }}
-                title={expanded ? 'Hide details' : 'Show details'}
-                aria-label={expanded ? 'Hide details' : 'Show details'}
-                aria-expanded={expanded}
+                aria-label="Edit tags"
               >
-                {expanded ? '▾' : 'ⓘ'}
+                #
               </button>
-            )}
-            <button
-              className="calendar-agenda__btn"
-              onClick={e => {
-                e.stopPropagation()
-                onEditTag(task.id)
-              }}
-              title="Edit tags"
-              aria-label="Edit tags"
-            >
-              #
-            </button>
-            <button
-              className="calendar-agenda__btn calendar-agenda__btn--delete"
-              onClick={e => {
-                e.stopPropagation()
-                onDelete(task.id)
-              }}
-              title="Delete"
-              aria-label="Delete task"
-            >
-              ×
-            </button>
+            </Tooltip>
+            <Tooltip content="Delete">
+              <button
+                className="calendar-agenda__btn calendar-agenda__btn--delete"
+                onClick={e => {
+                  e.stopPropagation()
+                  onDelete(task.id)
+                }}
+                aria-label="Delete task"
+              >
+                ×
+              </button>
+            </Tooltip>
           </div>
         </div>
 

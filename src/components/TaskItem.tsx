@@ -9,7 +9,7 @@ import { formatTagsForDisplay } from '../domain/utils/tags'
 import { openQuestionCount, parsePlanNotes, questionsAnswered } from '../domain/planNotes'
 import { NotesPopout } from './NotesPopout'
 import { StatusChip } from './StatusChip'
-import { TagIcon } from '@wolffm/task-ui-components'
+import { TagIcon, Tooltip } from '@wolffm/task-ui-components'
 import { Icon } from '@wolffm/themes'
 
 interface TaskItemProps {
@@ -172,25 +172,26 @@ export function TaskItem({
             aria-label="Task title"
           />
         ) : (
-          <div
-            className={`task-app__item-title ${onRenameTask ? 'is-editable' : ''}`}
-            title={onRenameTask ? 'Click to rename' : task.title}
-            role={onRenameTask ? 'button' : undefined}
-            tabIndex={onRenameTask ? 0 : undefined}
-            onClick={startEditTitle}
-            onKeyDown={
-              onRenameTask
-                ? e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      startEditTitle()
+          <Tooltip content={onRenameTask ? 'Click to rename' : task.title} delay={700}>
+            <div
+              className={`task-app__item-title ${onRenameTask ? 'is-editable' : ''}`}
+              role={onRenameTask ? 'button' : undefined}
+              tabIndex={onRenameTask ? 0 : undefined}
+              onClick={startEditTitle}
+              onKeyDown={
+                onRenameTask
+                  ? e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        startEditTitle()
+                      }
                     }
-                  }
-                : undefined
-            }
-          >
-            {task.title}
-          </div>
+                  : undefined
+              }
+            >
+              {task.title}
+            </div>
+          </Tooltip>
         )}
 
         <div className="task-app__item-meta-row">
@@ -209,13 +210,11 @@ export function TaskItem({
                 pipeline state leaving the lanes, "someone is on this one" would
                 otherwise have no representation on the card at all. */}
             {task.claimed && (
-              <span
-                className="task-app__item-claimed"
-                title="An agent is working on this task right now"
-                aria-label="Claimed by an agent"
-              >
-                <Icon name="robot" />
-              </span>
+              <Tooltip content="An agent is working on this task right now">
+                <span className="task-app__item-claimed" aria-label="Claimed by an agent">
+                  <Icon name="robot" />
+                </span>
+              </Tooltip>
             )}
             <span className="task-app__item-text" onMouseDown={suppressDragForText}>
               {formatAge(task.createdAt)}
@@ -246,47 +245,53 @@ export function TaskItem({
       </div>
       <div className="task-app__item-actions">
         {onSetNotes && showNotesButton && (
-          <button
-            className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''} ${openQuestions === 0 && answered ? 'has-answered-questions' : ''}`}
-            onClick={() => setNotesOpen(true)}
-            title={hasNotes ? 'Open notes' : 'Add notes'}
-            aria-label={hasNotes ? 'Open notes' : 'Add notes'}
-            aria-haspopup="dialog"
-          >
-            <Icon name="note" />
-          </button>
+          <Tooltip content={hasNotes ? 'Open notes' : 'Add notes'}>
+            <button
+              className={`task-app__action-btn task-app__notes-toggle ${hasNotes ? 'has-notes' : ''} ${openQuestions > 0 ? 'has-questions' : ''} ${openQuestions === 0 && answered ? 'has-answered-questions' : ''}`}
+              onClick={() => setNotesOpen(true)}
+              aria-label={hasNotes ? 'Open notes' : 'Add notes'}
+              aria-haspopup="dialog"
+            >
+              <Icon name="note" />
+            </button>
+          </Tooltip>
         )}
         {showTagButton && (
-          <button
-            className="task-app__action-btn task-app__edit-tag-btn"
-            onClick={() => onEditTag(task.id)}
-            title="Edit tags"
-            disabled={isCompleting || isDeleting}
-          >
-            <TagIcon />
-          </button>
+          <Tooltip content="Edit tags">
+            <button
+              aria-label="Edit tags"
+              className="task-app__action-btn task-app__edit-tag-btn"
+              onClick={() => onEditTag(task.id)}
+              disabled={isCompleting || isDeleting}
+            >
+              <TagIcon />
+            </button>
+          </Tooltip>
         )}
         {showCompleteButton && (
-          <button
-            className={`task-app__action-btn task-app__complete-btn ${isCompleted ? 'is-completed' : ''}`}
-            onClick={() => onComplete(task.id)}
-            title={isCompleted ? 'Reopen task' : 'Complete task'}
-            aria-label={isCompleted ? 'Reopen task' : 'Complete task'}
-            aria-pressed={isCompleted}
-            disabled={isCompleting || isDeleting}
-          >
-            {isCompleting ? <Icon name="hourglass" /> : isCompleted ? '↺' : '✓'}
-          </button>
+          <Tooltip content={isCompleted ? 'Reopen task' : 'Complete task'}>
+            <button
+              className={`task-app__action-btn task-app__complete-btn ${isCompleted ? 'is-completed' : ''}`}
+              onClick={() => onComplete(task.id)}
+              aria-label={isCompleted ? 'Reopen task' : 'Complete task'}
+              aria-pressed={isCompleted}
+              disabled={isCompleting || isDeleting}
+            >
+              {isCompleting ? <Icon name="hourglass" /> : isCompleted ? '↺' : '✓'}
+            </button>
+          </Tooltip>
         )}
         {showDeleteButton && (
-          <button
-            className="task-app__action-btn task-app__delete-btn"
-            onClick={() => onDelete(task.id)}
-            title="Delete task"
-            disabled={isCompleting || isDeleting}
-          >
-            {isDeleting ? <Icon name="hourglass" /> : '×'}
-          </button>
+          <Tooltip content="Delete task">
+            <button
+              aria-label="Delete task"
+              className="task-app__action-btn task-app__delete-btn"
+              onClick={() => onDelete(task.id)}
+              disabled={isCompleting || isDeleting}
+            >
+              {isDeleting ? <Icon name="hourglass" /> : '×'}
+            </button>
+          </Tooltip>
         )}
       </div>
 

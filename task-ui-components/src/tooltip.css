@@ -7,12 +7,6 @@
  * theme's own text contrast in every theme.
  */
 
-/* The anchor must not change layout: the wrapped element lays out as if the
- * span were not there, and the fixed bubble takes no space. */
-.hdk-tooltip-anchor {
-  display: contents;
-}
-
 .hdk-tooltip {
   --_tip-bg: var(--color-text);
   --_tip-fg: var(--color-bg);

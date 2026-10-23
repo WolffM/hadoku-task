@@ -5,6 +5,7 @@
  */
 
 import React, { useRef, useLayoutEffect, useState } from 'react'
+import { Tooltip } from './Tooltip'
 import type { ThemePickerProps } from '../types'
 import { SettingsIcon, getFallbackIcon } from './ThemeIcons'
 // MoonIcon is a theme-family icon and lives with the theme model now.
@@ -75,14 +76,15 @@ export function ThemePicker({
 
   return (
     <div className={`theme-picker ${openLeftClass} ${className}`.trim()}>
-      <button
-        className="app-header__icon-btn theme-toggle-btn"
-        onClick={onToggle}
-        aria-label="Choose theme"
-        title="Choose theme"
-      >
-        {currentIcon}
-      </button>
+      <Tooltip content="Choose theme">
+        <button
+          className="app-header__icon-btn theme-toggle-btn"
+          onClick={onToggle}
+          aria-label="Choose theme"
+        >
+          {currentIcon}
+        </button>
+      </Tooltip>
       {isOpen && (
         <div
           ref={dropdownRef}
@@ -99,41 +101,44 @@ export function ThemePicker({
                 return (
                   <div key={idx} className="theme-pill">
                     {/* Light variant button */}
-                    <button
-                      className={`theme-pill__btn theme-pill__btn--light ${currentTheme === family.lightTheme ? 'active' : ''}`}
-                      onClick={() => onThemeChange(family.lightTheme)}
-                      title={family.lightLabel}
-                      aria-label={family.lightLabel}
-                    >
-                      <div className="theme-pill__icon">{lightIcon}</div>
-                    </button>
+                    <Tooltip content={family.lightLabel}>
+                      <button
+                        className={`theme-pill__btn theme-pill__btn--light ${currentTheme === family.lightTheme ? 'active' : ''}`}
+                        onClick={() => onThemeChange(family.lightTheme)}
+                        aria-label={family.lightLabel}
+                      >
+                        <div className="theme-pill__icon">{lightIcon}</div>
+                      </button>
+                    </Tooltip>
 
                     {/* Dark variant button */}
-                    <button
-                      className={`theme-pill__btn theme-pill__btn--dark ${currentTheme === family.darkTheme ? 'active' : ''}`}
-                      onClick={() => onThemeChange(family.darkTheme)}
-                      title={family.darkLabel}
-                      aria-label={family.darkLabel}
-                    >
-                      <div className="theme-pill__icon">{darkIcon}</div>
-                    </button>
+                    <Tooltip content={family.darkLabel}>
+                      <button
+                        className={`theme-pill__btn theme-pill__btn--dark ${currentTheme === family.darkTheme ? 'active' : ''}`}
+                        onClick={() => onThemeChange(family.darkTheme)}
+                        aria-label={family.darkLabel}
+                      >
+                        <div className="theme-pill__icon">{darkIcon}</div>
+                      </button>
+                    </Tooltip>
                   </div>
                 )
               })}
             </div>
             {/* Settings button - separate column on the right */}
             {onSettingsClick && (
-              <button
-                className="theme-picker__settings-icon"
-                onClick={() => {
-                  onSettingsClick()
-                  onToggle() // Close picker after opening settings
-                }}
-                aria-label="Settings"
-                title="Settings"
-              >
-                <SettingsIcon />
-              </button>
+              <Tooltip content="Settings">
+                <button
+                  className="theme-picker__settings-icon"
+                  onClick={() => {
+                    onSettingsClick()
+                    onToggle() // Close picker after opening settings
+                  }}
+                  aria-label="Settings"
+                >
+                  <SettingsIcon />
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>

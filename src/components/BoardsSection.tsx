@@ -4,6 +4,7 @@
  */
 
 import React from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import { BoardButton } from './BoardButton'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { BoardsFile } from '../domain/types'
@@ -115,14 +116,11 @@ export function BoardsSection({
             </button>
           )}
 
-          <button
-            className="board-edit-btn"
-            onClick={onEditBoardsClick}
-            title="Edit boards"
-            aria-label="Edit boards"
-          >
-            <Icon name="gear" />
-          </button>
+          <Tooltip content="Edit boards">
+            <button className="board-edit-btn" onClick={onEditBoardsClick} aria-label="Edit boards">
+              <Icon name="gear" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

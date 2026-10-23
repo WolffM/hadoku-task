@@ -102,19 +102,20 @@ import { Button, Select, NativeSelect, Tooltip } from '@wolffm/task-ui-component
 </div>
 ```
 
-- **Scrollbars** — CSS only. `hdk-scroll` styles its element and every scroller inside it;
-  modifiers `--thin`, `--accent`, `--rail`, `--autohide`.
+- **Scrollbars** — CSS only. `hdk-scroll` styles its element and every scroller inside it, thumb in the theme's primary
+  colour (resolved per element, so nested `data-theme` scopes get their own);
+  modifiers `--subtle`, `--thin`, `--rail`, `--autohide`.
 - **Button** — `variant` solid | gradient | soft | outline | ghost × `family` primary | success |
   warning | danger | neutral; `size`, `shape` (rounded | pill | square), `icon`, `iconEnd`,
   `loading`, `block`. An icon with no children is a square icon button — give it `aria-label`.
 - **Select** — ARIA listbox with arrows, Home/End, Enter, Escape and typeahead; `variant`
   outline | filled | ghost | underline. **NativeSelect** keeps the OS popup with the same trigger.
 - **Tooltip** — replaces `title=`. Hover and keyboard focus, Escape dismisses, hoverable bubble;
-  `variant` inverse | card | primary, `placement` with viewport flip.
+  `variant` card (default) | inverse | primary, `placement` with viewport flip.
 
-Select and Tooltip render their popups in place with `position: fixed`, not in a portal, so they
-keep the theme tokens scoped to `.task-app-container`. That escapes `overflow: hidden`, but not an
-ancestor with a `transform`.
+Select and Tooltip portal their popups into the anchor's nearest `[data-theme]` scope (the app
+container, or a nested theme preview inside it), so a popup always paints in its anchor's theme
+and escapes `overflow: hidden` and transformed ancestors.
 
 ## Usage
 

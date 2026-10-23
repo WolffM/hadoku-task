@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Select, type SelectOption, Tooltip } from '@wolffm/task-ui-components'
 import type { Board } from '../../domain/types'
 import { boardRef, type ShareApi, type ShareLevel, type ShareRow } from './shareApi'
+
+const LEVEL_OPTIONS: SelectOption<ShareLevel>[] = [
+  { value: 'contributor', label: 'Contributor' },
+  { value: 'readonly', label: 'Read-only' }
+]
 
 /**
  * The per-board share panel: autocomplete a display name, pick an access level,
@@ -129,26 +135,28 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
           />
         </div>
 
-        <select
+        <Select<ShareLevel>
           className="share-panel__level"
           value={level}
-          onChange={e => setLevel(e.target.value as ShareLevel)}
+          onChange={setLevel}
+          options={LEVEL_OPTIONS}
           aria-label="Access level"
-        >
-          <option value="contributor">Contributor</option>
-          <option value="readonly">Read-only</option>
-        </select>
+          size="sm"
+        />
 
-        <button
-          className="share-panel__grant-btn"
-          onClick={grant}
-          disabled={!effectivePick || busy}
-          title={
+        <Tooltip
+          content={
             effectivePick ? `Share with ${effectivePick.name}` : 'Pick a real display name first'
           }
         >
-          Share
-        </button>
+          <button
+            className="share-panel__grant-btn"
+            onClick={grant}
+            disabled={!effectivePick || busy}
+          >
+            Share
+          </button>
+        </Tooltip>
       </div>
 
       {results.length > 0 && !picked && (
@@ -183,15 +191,16 @@ export function SharePanel({ board, shareApi }: { board: Board; shareApi: ShareA
                 {g.tier && <span className="share-panel__grantee-tier">{g.tier}</span>}
               </span>
               <span className="share-panel__grantee-level">{g.level}</span>
-              <button
-                className="share-panel__revoke"
-                onClick={() => revoke(g)}
-                disabled={busy}
-                title={`Revoke ${g.name ?? 'access'}`}
-                aria-label={`Revoke ${g.name ?? g.granteeUserId}`}
-              >
-                ✕
-              </button>
+              <Tooltip content={`Revoke ${g.name ?? 'access'}`}>
+                <button
+                  className="share-panel__revoke"
+                  onClick={() => revoke(g)}
+                  disabled={busy}
+                  aria-label={`Revoke ${g.name ?? g.granteeUserId}`}
+                >
+                  ✕
+                </button>
+              </Tooltip>
             </li>
           ))}
         </ul>

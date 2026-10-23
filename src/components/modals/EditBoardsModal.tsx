@@ -12,7 +12,7 @@
  * group separately and offer Leave instead of Share/Delete.
  */
 import React, { useMemo, useState } from 'react'
-import { Modal } from '@wolffm/task-ui-components'
+import { Modal, Tooltip } from '@wolffm/task-ui-components'
 import type { Board } from '../../domain/types'
 import { effectivePinnedIds } from '../../domain/utils/boardPins'
 import { TOPBAR_BOARD_SLOTS } from '../../app/constants'
@@ -442,9 +442,11 @@ export function EditBoardsModal({
           }}
         >
           {isPinned ? (
-            <span className="edit-boards__grip" title="Drag to reorder" aria-hidden="true">
-              ⠿
-            </span>
+            <Tooltip content="Drag to reorder">
+              <span className="edit-boards__grip" aria-hidden="true">
+                ⠿
+              </span>
+            </Tooltip>
           ) : (
             <span className="edit-boards__grip edit-boards__grip--empty" aria-hidden="true" />
           )}
@@ -464,16 +466,17 @@ export function EditBoardsModal({
             <span className="edit-boards__check edit-boards__check--empty" aria-hidden="true" />
           )}
 
-          <button
-            className={`edit-boards__pin ${isPinned ? 'is-pinned' : ''}`}
-            onClick={() => togglePin(b.id)}
-            disabled={busy}
-            title={isPinned ? 'Unpin from top bar' : 'Pin to top bar'}
-            aria-label={isPinned ? `Unpin ${b.name}` : `Pin ${b.name}`}
-            aria-pressed={isPinned}
-          >
-            {isPinned ? '★' : '☆'}
-          </button>
+          <Tooltip content={isPinned ? 'Unpin from top bar' : 'Pin to top bar'}>
+            <button
+              className={`edit-boards__pin ${isPinned ? 'is-pinned' : ''}`}
+              onClick={() => togglePin(b.id)}
+              disabled={busy}
+              aria-label={isPinned ? `Unpin ${b.name}` : `Pin ${b.name}`}
+              aria-pressed={isPinned}
+            >
+              {isPinned ? '★' : '☆'}
+            </button>
+          </Tooltip>
 
           {editingId === b.id ? (
             <input
@@ -490,72 +493,79 @@ export function EditBoardsModal({
               aria-label={`Rename ${b.name}`}
             />
           ) : (
-            <button
-              className="edit-boards__name"
-              onClick={() => (owns ? startEdit(b) : undefined)}
-              title={owns ? 'Rename' : `Shared by someone else · ${b.access}`}
-              disabled={!owns}
-            >
-              {b.name}
-              {!owns && <span className="edit-boards__badge">{b.access}</span>}
-            </button>
+            <Tooltip content={owns ? 'Rename' : `Shared by someone else · ${b.access}`}>
+              <button
+                className="edit-boards__name"
+                onClick={() => (owns ? startEdit(b) : undefined)}
+                disabled={!owns}
+              >
+                {b.name}
+                {!owns && <span className="edit-boards__badge">{b.access}</span>}
+              </button>
+            </Tooltip>
           )}
 
           <div className="edit-boards__actions">
             {owns ? (
               <>
-                <button
-                  className={`edit-boards__share ${sharingId === b.id ? 'is-open' : ''}`}
-                  onClick={() => {
-                    setSharingId(sharingId === b.id ? null : b.id)
-                    setAutomatingId(null)
-                  }}
-                  disabled={busy}
-                  title="Share this board"
-                  aria-label={`Share ${b.name}`}
-                  aria-expanded={sharingId === b.id}
-                >
-                  <ShareIcon />
-                </button>
-                <button
-                  className={`edit-boards__automate ${automatingId === b.id ? 'is-open' : ''}`}
-                  onClick={() => {
-                    setAutomatingId(automatingId === b.id ? null : b.id)
-                    setSharingId(null)
-                  }}
-                  disabled={busy}
-                  title={
+                <Tooltip content="Share this board">
+                  <button
+                    className={`edit-boards__share ${sharingId === b.id ? 'is-open' : ''}`}
+                    onClick={() => {
+                      setSharingId(sharingId === b.id ? null : b.id)
+                      setAutomatingId(null)
+                    }}
+                    disabled={busy}
+                    aria-label={`Share ${b.name}`}
+                    aria-expanded={sharingId === b.id}
+                  >
+                    <ShareIcon />
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  content={
                     b.mode === 'automation'
                       ? 'Automation settings'
                       : 'Convert to an automation board'
                   }
-                  aria-label={`Automation for ${b.name}`}
-                  aria-expanded={automatingId === b.id}
                 >
-                  <Icon name="robot" />
-                </button>
-                {!isMain && (
                   <button
-                    className="edit-boards__delete"
-                    onClick={() => ask('delete', [b])}
+                    className={`edit-boards__automate ${automatingId === b.id ? 'is-open' : ''}`}
+                    onClick={() => {
+                      setAutomatingId(automatingId === b.id ? null : b.id)
+                      setSharingId(null)
+                    }}
                     disabled={busy}
-                    title="Delete board"
-                    aria-label={`Delete ${b.name}`}
+                    aria-label={`Automation for ${b.name}`}
+                    aria-expanded={automatingId === b.id}
                   >
-                    <Icon name="trash" />
+                    <Icon name="robot" />
                   </button>
+                </Tooltip>
+                {!isMain && (
+                  <Tooltip content="Delete board">
+                    <button
+                      className="edit-boards__delete"
+                      onClick={() => ask('delete', [b])}
+                      disabled={busy}
+                      aria-label={`Delete ${b.name}`}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </Tooltip>
                 )}
               </>
             ) : (
-              <button
-                className="edit-boards__leave"
-                onClick={() => ask('leave', [b])}
-                disabled={busy}
-                title="Leave this shared board"
-                aria-label={`Leave ${b.name}`}
-              >
-                Leave
-              </button>
+              <Tooltip content="Leave this shared board">
+                <button
+                  className="edit-boards__leave"
+                  onClick={() => ask('leave', [b])}
+                  disabled={busy}
+                  aria-label={`Leave ${b.name}`}
+                >
+                  Leave
+                </button>
+              </Tooltip>
             )}
           </div>
         </li>

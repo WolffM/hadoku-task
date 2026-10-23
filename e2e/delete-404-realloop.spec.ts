@@ -64,7 +64,7 @@ test('a second delete of an already-deleted task is accepted, not undone', async
   const okDelete = pageA.waitForResponse(
     r => r.request().method() === 'DELETE' && r.url().includes(taskId)
   )
-  await card(pageA, title).getByRole('button', { name: '×' }).click()
+  await card(pageA, title).getByRole('button', { name: 'Delete task' }).click()
   expect((await okDelete).status()).toBe(200)
   await expect.poll(() => card(pageA, title).count(), { timeout: 10000 }).toBe(0)
 
@@ -72,7 +72,7 @@ test('a second delete of an already-deleted task is accepted, not undone', async
   const staleDelete = pageB.waitForResponse(
     r => r.request().method() === 'DELETE' && r.url().includes(taskId)
   )
-  await card(pageB, title).getByRole('button', { name: '×' }).click()
+  await card(pageB, title).getByRole('button', { name: 'Delete task' }).click()
   const res = await staleDelete
   expect(res.status()).toBe(404)
   expect((await res.json()).code).toBe('TASK_NOT_FOUND')
@@ -114,7 +114,7 @@ test("Erin's case: a delete aimed at the wrong board is refused as a missing BOA
   })
 
   const res = page.waitForResponse(r => r.request().method() === 'DELETE')
-  await card(page, title).getByRole('button', { name: '×' }).click()
+  await card(page, title).getByRole('button', { name: 'Delete task' }).click()
   const response = await res
   expect(response.status()).toBe(404)
   expect((await response.json()).code).toBe('BOARD_NOT_FOUND')

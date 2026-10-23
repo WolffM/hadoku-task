@@ -4,16 +4,17 @@
  * full keyboard support, so it can replace a native <select> wherever the
  * browser's own popup (unthemeable, OS-drawn) looks out of place.
  *
- * The list renders in place with `position: fixed`, NOT in a portal: theme
- * tokens are scoped to `.task-app-container`, so a list portalled to <body>
- * would lose every colour. Fixed positioning still escapes `overflow: hidden`
- * ancestors; it does not escape an ancestor with a `transform`.
+ * The list is portalled into the anchor's theme scope (see themeScopeOf) and
+ * positioned fixed from the trigger's rect, so it keeps the theme's tokens and
+ * escapes both `overflow: hidden` and transformed ancestors.
  */
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon, type IconName } from '@wolffm/themes'
 import '../select.css'
 import '../scrollbar.css'
+import { themeScopeOf } from '../lib/themeScope'
 
 export type SelectVariant = 'outline' | 'filled' | 'ghost' | 'underline'
 export type SelectSize = 'sm' | 'md' | 'lg'
@@ -75,6 +76,7 @@ export function Select<V extends string = string>({
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [position, setPosition] = useState<MenuPosition | null>(null)
+  const [scope, setScope] = useState<HTMLElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const typeahead = useRef({ text: '', at: 0 })
@@ -104,6 +106,7 @@ export function Select<V extends string = string>({
     if (start === 'first' || initial < 0) initial = edge(1)
     if (start === 'last') initial = edge(-1)
     setActive(initial)
+    setScope(themeScopeOf(triggerRef.current))
     setOpen(true)
   }
 
@@ -141,8 +144,8 @@ export function Select<V extends string = string>({
 
   // Measure once the list exists, then follow the trigger while open.
   useLayoutEffect(() => {
-    if (open) place()
-  }, [open, place])
+    if (open && scope) place()
+  }, [open, scope, place])
 
   // Focus only once placed: until then the list is visibility: hidden, and a
   // hidden element silently refuses focus — keys would stay on the trigger.
@@ -290,47 +293,52 @@ export function Select<V extends string = string>({
         <Icon name="chevron-down" size={iconSize} className="hdk-select__chevron" />
       </button>
 
-      {open && (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
-          tabIndex={-1}
-          aria-labelledby={triggerId}
-          aria-activedescendant={active >= 0 ? optionId(active) : undefined}
-          className="hdk-select__menu hdk-scroll hdk-scroll--thin"
-          style={style}
-          onKeyDown={onListKeyDown}
-        >
-          {options.map((o, i) => (
-            <li
-              key={o.value}
-              id={optionId(i)}
-              role="option"
-              aria-selected={i === selectedIndex}
-              aria-disabled={o.disabled || undefined}
-              className={[
-                'hdk-select__option',
-                i === active && 'hdk-select__option--active',
-                i === selectedIndex && 'hdk-select__option--selected'
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onPointerMove={() => !o.disabled && i !== active && setActive(i)}
-              onClick={() => choose(i)}
-            >
-              {o.icon && <Icon name={o.icon} size={iconSize} />}
-              <span className="hdk-select__option-text">
-                <span className="hdk-select__option-label">{o.label}</span>
-                {o.description && <span className="hdk-select__option-desc">{o.description}</span>}
-              </span>
-              {i === selectedIndex && (
-                <Icon name="check" size={iconSize} className="hdk-select__check" />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {open &&
+        scope &&
+        createPortal(
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            tabIndex={-1}
+            aria-labelledby={triggerId}
+            aria-activedescendant={active >= 0 ? optionId(active) : undefined}
+            className="hdk-select__menu hdk-scroll hdk-scroll--thin"
+            style={style}
+            onKeyDown={onListKeyDown}
+          >
+            {options.map((o, i) => (
+              <li
+                key={o.value}
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === selectedIndex}
+                aria-disabled={o.disabled || undefined}
+                className={[
+                  'hdk-select__option',
+                  i === active && 'hdk-select__option--active',
+                  i === selectedIndex && 'hdk-select__option--selected'
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onPointerMove={() => !o.disabled && i !== active && setActive(i)}
+                onClick={() => choose(i)}
+              >
+                {o.icon && <Icon name={o.icon} size={iconSize} />}
+                <span className="hdk-select__option-text">
+                  <span className="hdk-select__option-label">{o.label}</span>
+                  {o.description && (
+                    <span className="hdk-select__option-desc">{o.description}</span>
+                  )}
+                </span>
+                {i === selectedIndex && (
+                  <Icon name="check" size={iconSize} className="hdk-select__check" />
+                )}
+              </li>
+            ))}
+          </ul>,
+          scope
+        )}
     </div>
   )
 }

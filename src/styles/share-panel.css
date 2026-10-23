@@ -26,14 +26,6 @@
   min-width: 0;
 }
 .share-panel__input,
-.share-panel__level {
-  padding: var(--hdk-space-xs) var(--hdk-space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius-sm);
-  background: var(--color-bg-card);
-  color: var(--color-text);
-  font-size: var(--hdk-text-sm);
-}
 .share-panel__input {
   width: 100%;
 }

@@ -3,6 +3,7 @@
  */
 
 import React from 'react'
+import { Tooltip } from '@wolffm/task-ui-components'
 import type { Task } from '../domain/types'
 import type { BoardTypeConfig } from '../domain/boardType'
 import { STANDARD_BOARD } from '../domain/boardType'
@@ -121,13 +122,15 @@ export function TaskLayout({
     >
       <div className="task-app__tag-header-row">
         <h3 className="task-app__tag-header">#{tag}</h3>
-        <button
-          className="task-app__sort-btn task-app__sort-btn--active"
-          onClick={() => toggleSort(tag)}
-          title={getSortTitle(sortDirections[tag] || 'desc')}
-        >
-          {getSortIcon(sortDirections[tag] || 'desc')}
-        </button>
+        <Tooltip content={getSortTitle(sortDirections[tag] || 'desc')}>
+          <button
+            aria-label={getSortTitle(sortDirections[tag] || 'desc')}
+            className="task-app__sort-btn task-app__sort-btn--active"
+            onClick={() => toggleSort(tag)}
+          >
+            {getSortIcon(sortDirections[tag] || 'desc')}
+          </button>
+        </Tooltip>
       </div>
       <ul className="task-app__list task-app__list--column">
         {renderTaskItems(tagTasks, sortDirections[tag] || 'desc')}
@@ -228,13 +231,15 @@ export function TaskLayout({
       >
         <div className="task-app__tag-header-row">
           <h3 className="task-app__remaining-header">{boardType.untaggedLabel}</h3>
-          <button
-            className="task-app__sort-btn task-app__sort-btn--active"
-            onClick={() => toggleSort('other')}
-            title={getSortTitle(sortDirections['other'] || 'desc')}
-          >
-            {getSortIcon(sortDirections['other'] || 'desc')}
-          </button>
+          <Tooltip content={getSortTitle(sortDirections['other'] || 'desc')}>
+            <button
+              aria-label={getSortTitle(sortDirections['other'] || 'desc')}
+              className="task-app__sort-btn task-app__sort-btn--active"
+              onClick={() => toggleSort('other')}
+            >
+              {getSortIcon(sortDirections['other'] || 'desc')}
+            </button>
+          </Tooltip>
         </div>
         <ul className="task-app__list">
           {renderTaskItems(remainingTasks, sortDirections['other'] || 'desc')}
