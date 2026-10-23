@@ -151,9 +151,17 @@ async function main_() {
   // -------------------------------------------------------------------
   resetRepo()
   const base = gh.main
-  for (const tier of ['public', 'friend']) {
+  // The full ranked vocabulary, low to high — the gate is "rank ≥ service",
+  // so a tier added here is tested on whichever side of it it ranks.
+  const TIERS = ['public', 'friend', 'service', 'wife', 'admin'] as const
+  for (const [rank, tier] of TIERS.entries()) {
+    const allowed = rank >= TIERS.indexOf('service')
     gh.calls = []
     const src = await call('GET', '/themes/source', { tier })
+    if (allowed) {
+      check(`${tier}: source → 200`, src.status === 200, `status=${src.status}`)
+      continue
+    }
     check(`${tier}: source → 403`, src.status === 403, `status=${src.status}`)
     const sv = await save(
       { baseCommit: base, edits: { light: { '--color-bg': '#eeeeee' } } },
@@ -161,10 +169,6 @@ async function main_() {
     )
     check(`${tier}: save → 403`, sv.status === 403, `status=${sv.status}`)
     check(`${tier}: GitHub never called`, gh.calls.length === 0, gh.calls.join(', '))
-  }
-  for (const tier of ['service', 'wife', 'admin']) {
-    const src = await call('GET', '/themes/source', { tier })
-    check(`${tier}: source → 200`, src.status === 200, `status=${src.status}`)
   }
   check('main untouched by refused saves', gh.main === base)
 
