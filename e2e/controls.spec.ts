@@ -88,6 +88,31 @@ test.describe('themed scrollbars', () => {
     // Not vacuous: the cells really are different themes with different accents.
     expect(seen.size).toBeGreaterThan(1)
   })
+
+  // hadoku_site puts `hdk-scroll` on <html>, so these rules reach every
+  // micro-frontend. They must only fill in for scrollers an app left alone:
+  // an app's own one-class rule wins even when its sheet loads FIRST, which
+  // at equal specificity it would not.
+  test("an app's own scrollbar rules beat the fallback", async ({ page }) => {
+    await open(page)
+    const box = page.locator('[data-testid="compare"] .controls__scroll-box').first()
+    await page.evaluate(() => {
+      const style = document.createElement('style')
+      style.textContent = `
+        .app-hidden-bar { scrollbar-width: none; }
+        .app-red-thumb::-webkit-scrollbar-thumb { background-color: rgb(255, 0, 0); }`
+      document.head.prepend(style)
+    })
+
+    await box.evaluate(n => n.classList.add('app-hidden-bar'))
+    expect(await box.evaluate(n => getComputedStyle(n).scrollbarWidth)).toBe('none')
+
+    await box.evaluate(n => n.classList.replace('app-hidden-bar', 'app-red-thumb'))
+    const shot = await box.screenshot()
+    const { width } = (await box.boundingBox()) ?? { width: 0 }
+    const px = await pixelAt(page, shot, Math.round(width) - 1 - 5, 20)
+    expect(px.slice(0, 3)).toEqual([255, 0, 0])
+  })
 })
 
 test.describe('<Select>', () => {

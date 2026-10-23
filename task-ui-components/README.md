@@ -104,8 +104,9 @@ import { Button, Select, NativeSelect, Tooltip } from '@wolffm/task-ui-component
 
 - **Scrollbars** — CSS only. `hdk-scroll` styles its element and every scroller inside it, thumb in the theme's primary
   colour (resolved per element, so nested `data-theme` scopes get their own);
-  modifiers `--subtle`, `--thin`, `--rail`, `--autohide`.
-- **Button** — `variant` solid | gradient | soft | outline | ghost × `family` primary | success |
+  modifiers `--subtle`, `--thin`, `--rail`, `--autohide`. Zero specificity (`:where()`), so
+  any scrollbar rule an app writes itself wins.
+- **Button** — `variant` soft (default) | solid | gradient | outline | ghost × `family` primary | success |
   warning | danger | neutral; `size`, `shape` (rounded | pill | square), `icon`, `iconEnd`,
   `loading`, `block`. An icon with no children is a square icon button — give it `aria-label`.
 - **Select** — ARIA listbox with arrows, Home/End, Enter, Escape and typeahead; `variant`

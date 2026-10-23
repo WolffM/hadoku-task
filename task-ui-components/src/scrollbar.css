@@ -9,8 +9,15 @@
  *   <div className="task-app-container hdk-scroll">…</div>
  *
  * `.hdk-scroll` styles the element it is on AND every scroller inside it, so
- * one class on an app's root covers the whole app. The thumb is the theme's
- * primary colour. Modifiers sit on the same element:
+ * one class on an app's root covers the whole app — hadoku_site puts it on
+ * <html>, which covers every micro-frontend at once. The thumb is the theme's
+ * primary colour.
+ *
+ * Every selector is wrapped in `:where()`, so all of this has ZERO
+ * specificity: it is a fallback for scrollers nobody styled. Any rule an app
+ * writes for a scroller — `scrollbar-width: none` on a carousel, its own
+ * `::-webkit-scrollbar` thumb — wins, whatever order the sheets load in.
+ * Modifiers sit on the same element:
  *
  *   --subtle    neutral thumb instead of the accent
  *   --thin      narrower bar
@@ -34,90 +41,90 @@
  * sets `scrollbar-color` on <html> would silently switch all of this off.
  */
 
-.hdk-scroll {
+:where(.hdk-scroll) {
   --hdk-scrollbar-size: 10px;
   --hdk-scrollbar-pad: 2px;
 }
 
-.hdk-scroll,
-.hdk-scroll * {
+:where(.hdk-scroll),
+:where(.hdk-scroll *) {
   --hdk-scrollbar-thumb: var(--color-primary);
   --hdk-scrollbar-thumb-hover: var(--color-primary-dark);
   --hdk-scrollbar-track: transparent;
 }
 
-.hdk-scroll--thin {
+:where(.hdk-scroll--thin) {
   --hdk-scrollbar-size: 6px;
   --hdk-scrollbar-pad: 1px;
 }
 
-.hdk-scroll--subtle,
-.hdk-scroll--subtle * {
+:where(.hdk-scroll--subtle),
+:where(.hdk-scroll--subtle *) {
   --hdk-scrollbar-thumb: var(--color-border);
   --hdk-scrollbar-thumb-hover: var(--color-text-muted);
 }
 
-.hdk-scroll--rail {
+:where(.hdk-scroll--rail) {
   --hdk-scrollbar-size: 12px;
   --hdk-scrollbar-pad: 3px;
 }
 
-.hdk-scroll--rail,
-.hdk-scroll--rail * {
+:where(.hdk-scroll--rail),
+:where(.hdk-scroll--rail *) {
   --hdk-scrollbar-track: var(--color-bg-hover);
 }
 
-.hdk-scroll--autohide,
-.hdk-scroll--autohide * {
+:where(.hdk-scroll--autohide),
+:where(.hdk-scroll--autohide *) {
   --hdk-scrollbar-thumb: transparent;
 }
 
 /* On the hovered/focused element itself, so only that scroller's thumb shows —
  * not every scroller inside an autohide root at once. */
-.hdk-scroll--autohide:hover,
-.hdk-scroll--autohide:focus-within,
-.hdk-scroll--autohide :hover,
-.hdk-scroll--autohide :focus-within {
+:where(.hdk-scroll--autohide:hover),
+:where(.hdk-scroll--autohide:focus-within),
+:where(.hdk-scroll--autohide :hover),
+:where(.hdk-scroll--autohide :focus-within) {
   --hdk-scrollbar-thumb: var(--color-primary);
 }
 
 @supports not selector(::-webkit-scrollbar) {
-  .hdk-scroll,
-  .hdk-scroll * {
+  :where(.hdk-scroll),
+  :where(.hdk-scroll *) {
     scrollbar-width: thin;
     scrollbar-color: var(--hdk-scrollbar-thumb) var(--hdk-scrollbar-track);
   }
 
-  .hdk-scroll--thin,
-  .hdk-scroll--thin * {
+  :where(.hdk-scroll--thin),
+  :where(.hdk-scroll--thin *) {
     scrollbar-width: thin;
   }
 }
 
 @supports selector(::-webkit-scrollbar) {
-  .hdk-scroll,
-  .hdk-scroll * {
+  :where(.hdk-scroll),
+  :where(.hdk-scroll *) {
     scrollbar-width: auto;
     scrollbar-color: auto;
   }
 
-  .hdk-scroll::-webkit-scrollbar,
-  .hdk-scroll *::-webkit-scrollbar {
+  :where(.hdk-scroll)::-webkit-scrollbar,
+  :where(.hdk-scroll *)::-webkit-scrollbar {
     width: var(--hdk-scrollbar-size);
     height: var(--hdk-scrollbar-size);
     background-color: var(--hdk-scrollbar-track);
   }
 
-  .hdk-scroll::-webkit-scrollbar-track,
-  .hdk-scroll *::-webkit-scrollbar-track {
+  :where(.hdk-scroll)::-webkit-scrollbar-track,
+  :where(.hdk-scroll *)::-webkit-scrollbar-track {
     background-color: var(--hdk-scrollbar-track);
     border-radius: 999px;
   }
 
   /* The transparent border plus padding-box clip is what insets the thumb
    * from the track edge — a margin does nothing on a scrollbar part. */
-  .hdk-scroll::-webkit-scrollbar-thumb,
-  .hdk-scroll *::-webkit-scrollbar-thumb {
+  :where(.hdk-scroll)::-webkit-scrollbar-thumb,
+  :where(.hdk-scroll *)::-webkit-scrollbar-thumb {
     background-color: var(--hdk-scrollbar-thumb);
     background-clip: padding-box;
     border: var(--hdk-scrollbar-pad) solid transparent;
@@ -126,20 +133,20 @@
     min-width: 32px;
   }
 
-  .hdk-scroll::-webkit-scrollbar-thumb:hover,
-  .hdk-scroll *::-webkit-scrollbar-thumb:hover,
-  .hdk-scroll::-webkit-scrollbar-thumb:active,
-  .hdk-scroll *::-webkit-scrollbar-thumb:active {
+  :where(.hdk-scroll)::-webkit-scrollbar-thumb:hover,
+  :where(.hdk-scroll *)::-webkit-scrollbar-thumb:hover,
+  :where(.hdk-scroll)::-webkit-scrollbar-thumb:active,
+  :where(.hdk-scroll *)::-webkit-scrollbar-thumb:active {
     background-color: var(--hdk-scrollbar-thumb-hover);
   }
 
-  .hdk-scroll::-webkit-scrollbar-corner,
-  .hdk-scroll *::-webkit-scrollbar-corner {
+  :where(.hdk-scroll)::-webkit-scrollbar-corner,
+  :where(.hdk-scroll *)::-webkit-scrollbar-corner {
     background-color: transparent;
   }
 
-  .hdk-scroll::-webkit-scrollbar-button,
-  .hdk-scroll *::-webkit-scrollbar-button {
+  :where(.hdk-scroll)::-webkit-scrollbar-button,
+  :where(.hdk-scroll *)::-webkit-scrollbar-button {
     display: none;
   }
 }

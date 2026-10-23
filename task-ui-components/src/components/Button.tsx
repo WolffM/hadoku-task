@@ -31,7 +31,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const ICON_SIZE: Record<ButtonSize, number> = { sm: 14, md: 16, lg: 18 }
 
 export function Button({
-  variant = 'solid',
+  variant = 'soft',
   family = 'primary',
   size = 'md',
   shape = 'rounded',
