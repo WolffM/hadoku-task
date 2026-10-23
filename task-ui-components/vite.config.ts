@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [react()],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        // The shell's entry: must stay free of React (see titleTooltips.ts).
+        'lib/titleTooltips': resolve(__dirname, 'src/lib/titleTooltips.ts')
+      },
       formats: ['es']
     },
     rollupOptions: {

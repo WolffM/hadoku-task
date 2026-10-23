@@ -64,6 +64,12 @@
   box-shadow: var(--hdk-shadow-lg);
 }
 
+/* A `title=` string from installTitleTooltips: plain text, and its line
+ * breaks are real (a native title shows them too). */
+.hdk-tooltip--plain {
+  white-space: pre-line;
+}
+
 .hdk-tooltip--primary {
   --_tip-bg: var(--color-primary);
   --_tip-fg: var(--color-on-primary);

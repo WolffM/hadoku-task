@@ -19,8 +19,9 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { createPortal } from 'react-dom'
 import '../tooltip.css'
 import { themeScopeOf } from '../lib/themeScope'
+import { placeTooltip, type Placed, type TooltipPlacement } from '../lib/tooltipPlacement'
 
-export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right'
+export type { TooltipPlacement }
 export type TooltipVariant = 'inverse' | 'card' | 'primary'
 
 export interface TooltipProps {
@@ -58,47 +59,7 @@ function childRefOf(child: React.ReactElement<AnchorProps>): React.Ref<HTMLEleme
   return (child as unknown as { ref?: React.Ref<HTMLElement> }).ref ?? undefined
 }
 
-const GAP = 8
-const EDGE = 8
 const HIDE_GRACE_MS = 120
-
-const OPPOSITE: Record<TooltipPlacement, TooltipPlacement> = {
-  top: 'bottom',
-  bottom: 'top',
-  left: 'right',
-  right: 'left'
-}
-
-interface Placed {
-  side: TooltipPlacement
-  left: number
-  top: number
-  /** Arrow offset along the bubble edge, so it still points at the anchor after clamping. */
-  arrow: number
-}
-
-function fits(side: TooltipPlacement, a: DOMRect, w: number, h: number) {
-  if (side === 'top') return a.top - GAP - h >= EDGE
-  if (side === 'bottom') return a.bottom + GAP + h <= window.innerHeight - EDGE
-  if (side === 'left') return a.left - GAP - w >= EDGE
-  return a.right + GAP + w <= window.innerWidth - EDGE
-}
-
-function compute(preferred: TooltipPlacement, a: DOMRect, w: number, h: number): Placed {
-  const side =
-    fits(preferred, a, w, h) || !fits(OPPOSITE[preferred], a, w, h)
-      ? preferred
-      : OPPOSITE[preferred]
-  const clamp = (v: number, max: number) => Math.min(Math.max(v, EDGE), max - EDGE)
-  if (side === 'top' || side === 'bottom') {
-    const left = clamp(a.left + a.width / 2 - w / 2, window.innerWidth - w)
-    const top = side === 'top' ? a.top - GAP - h : a.bottom + GAP
-    return { side, left, top, arrow: a.left + a.width / 2 - left }
-  }
-  const top = clamp(a.top + a.height / 2 - h / 2, window.innerHeight - h)
-  const left = side === 'left' ? a.left - GAP - w : a.right + GAP
-  return { side, left, top, arrow: a.top + a.height / 2 - top }
-}
 
 export function Tooltip({
   content,
@@ -149,7 +110,12 @@ export function Tooltip({
     const bubble = bubbleRef.current
     if (!target || !bubble) return
     setPlaced(
-      compute(placement, target.getBoundingClientRect(), bubble.offsetWidth, bubble.offsetHeight)
+      placeTooltip(
+        placement,
+        target.getBoundingClientRect(),
+        bubble.offsetWidth,
+        bubble.offsetHeight
+      )
     )
   }, [placement])
 

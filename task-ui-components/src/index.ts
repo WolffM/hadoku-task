@@ -40,6 +40,10 @@ export { SettingsModal } from './components/SettingsModal'
 export { Button } from './components/Button'
 export { Select, NativeSelect } from './components/Select'
 export { Tooltip } from './components/Tooltip'
+// Framework-free; also its own entry, `@wolffm/task-ui-components/title-tooltips`,
+// so the site shell can install it without React.
+export { installTitleTooltips } from './lib/titleTooltips'
+export type { TitleTooltipOptions } from './lib/titleTooltips'
 
 // Bento components
 export { BentoGrid } from './components/BentoGrid'

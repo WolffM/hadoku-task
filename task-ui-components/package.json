@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task-ui-components",
-  "version": "4.16.1",
+  "version": "4.17.0",
   "description": "Reusable UI components with Bento grid and metallic gradient support",
   "type": "module",
   "main": "dist/index.js",
@@ -31,6 +31,10 @@
     "./tooltip.css": "./dist/tooltip.css",
     "./scrollbar.css": "./dist/scrollbar.css",
     "./icon-btn.css": "./dist/icon-btn.css",
+    "./title-tooltips": {
+      "types": "./dist/lib/titleTooltips.d.ts",
+      "import": "./dist/lib/titleTooltips.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

@@ -113,6 +113,8 @@ export default [
         MouseEvent: 'readonly',
         KeyboardEvent: 'readonly',
         PointerEvent: 'readonly',
+        FocusEvent: 'readonly',
+        EventTarget: 'readonly',
         TouchEvent: 'readonly',
         DataTransfer: 'readonly',
         // fetch's result type — the theme editor's API client names it

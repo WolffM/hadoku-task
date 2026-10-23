@@ -21,6 +21,7 @@ import {
   AppHeader,
   Button,
   HadokuThemePicker,
+  installTitleTooltips,
   NativeSelect,
   Select,
   Tooltip,
@@ -458,8 +459,9 @@ function TooltipsSection() {
       <p className="gallery__note">
         Shows on hover <em>and</em> keyboard focus (Tab through these), Escape dismisses, and you
         can move the pointer onto the bubble to select its text. It flips and clamps at the viewport
-        edge. Compare the native <code>title=</code> on the last button: a one-second wait,
-        OS-drawn, and never shown to keyboard users.
+        edge. The last row is plain <code>title=</code> markup with no component at all: hadoku_site
+        installs <code>installTitleTooltips()</code> once, and every app&rsquo;s titles turn into
+        the same card.
       </p>
 
       <div className="controls__rows">
@@ -511,10 +513,26 @@ function TooltipsSection() {
           </Tooltip>
         </div>
         <div className="controls__row">
-          <span className="gallery__label">Browser default</span>
-          <button type="button" title="Native title tooltip">
-            Hover me (title=)
-          </button>
+          <span className="gallery__label">Plain title=</span>
+          <div className="controls__row" data-testid="plain-titles">
+            <button type="button" className="pill-btn" title="Upgraded from a title attribute">
+              Hover me (title=)
+            </button>
+            <button type="button" className="pill-btn" title={'Two lines\nfrom one title'}>
+              Line break
+            </button>
+            <button type="button" className="pill-btn" title="Delete" aria-label="Delete">
+              <Icon name="trash" size={16} />
+            </button>
+            <button type="button" className="pill-btn" disabled title="Disabled, still explained">
+              Disabled
+            </button>
+            <span data-native-title>
+              <button type="button" className="pill-btn" title="Browser-drawn on purpose">
+                Opted out
+              </button>
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -567,6 +585,9 @@ function CompareSection() {
               <Tooltip content={`Tooltip in ${t}`}>
                 <Button size="sm" variant="ghost" family="neutral" icon="info" aria-label="Info" />
               </Tooltip>
+              <button type="button" className="pill-btn" title={`title= in ${t}`}>
+                title=
+              </button>
             </div>
             <Select
               aria-label={`Status in ${t}`}
@@ -640,6 +661,8 @@ function Gallery() {
 
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('controls gallery: #root is missing from index.html')
+
+installTitleTooltips()
 
 createRoot(rootEl).render(
   <React.StrictMode>
