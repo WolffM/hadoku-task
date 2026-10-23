@@ -34,8 +34,8 @@ export const THEME_FAMILIES: ThemeFamily[] = [
   {
     lightTheme: 'strawberry-light',
     darkTheme: 'strawberry-dark',
-    lightLabel: 'On the Vine Light',
-    darkLabel: 'On the Vine Dark',
+    lightLabel: 'Vine Light',
+    darkLabel: 'Vine Dark',
     lightIcon: <StrawberryIcon />,
     darkIcon: <StrawberryIcon />
   },
