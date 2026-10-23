@@ -50,8 +50,8 @@ export const THEME_FAMILIES: ThemeFamily[] = [
   {
     lightTheme: 'cyberpunk-light',
     darkTheme: 'cyberpunk-dark',
-    lightLabel: 'Cyberpunk Light',
-    darkLabel: 'Cyberpunk Dark',
+    lightLabel: 'Neon Light',
+    darkLabel: 'Neon Dark',
     lightIcon: <ZapIcon />,
     darkIcon: <ZapIcon />
   },

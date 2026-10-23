@@ -42,7 +42,7 @@ test.describe('Theme Picker', () => {
   test('offers every theme family, with no experimental opt-in', async ({ page }) => {
     await page.locator('.theme-toggle-btn').click()
     await expect(page.locator('.theme-pill')).toHaveCount(9)
-    await expect(page.getByRole('button', { name: /cyberpunk/i }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /neon/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /pink/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /izakaya/i }).first()).toBeVisible()
     await expect(page.getByRole('checkbox')).toHaveCount(0)

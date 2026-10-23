@@ -1137,9 +1137,9 @@
   --color-bg-hover: #36282e;
   --color-bg-overlay: rgba(0, 0, 0, 0.72);
 
-  --hdk-shadow-sm: 0 1px 2px rgba(255, 16, 240, 0.3);
-  --hdk-shadow-md: 0 2px 4px rgba(255, 16, 240, 0.4);
-  --hdk-shadow-lg: 0 8px 24px rgba(255, 16, 240, 0.5);
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
   --hdk-shadow-focus: 0 0 0 3px rgba(247, 153, 190, 0.4);
   --hdk-shadow-focus-sm: 0 0 0 2px rgba(247, 153, 190, 0.4);
   --hdk-shadow-focus-alt: 0 0 0 2px rgba(247, 153, 190, 0.3);
