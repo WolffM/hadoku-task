@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task",
-  "version": "5.19.2",
+  "version": "5.20.0",
   "description": "Minimalist, portable task manager - embeddable micro-frontend with framework-agnostic API handlers",
   "type": "module",
   "repository": {
@@ -29,12 +29,16 @@
       "types": "./dist/app/entry.d.ts",
       "default": "./dist/index.js"
     },
+    "./editor": {
+      "types": "./dist/editor/entry.d.ts",
+      "default": "./dist/editor.js"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "dev": "pnpm run build:packages && node ../hadoku_site/scripts/secrets/dev-vault.mjs -- vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.editor.config.ts",
     "build:server": "tsc -p tsconfig.server.json",
     "build:worker": "tsup --config tsup.worker.config.ts",
     "build:packages": "pnpm --filter @wolffm/themes run build && pnpm --filter @wolffm/task-ui-components run build && node scripts/verify-single-context.mjs",

@@ -61,6 +61,7 @@ import { createTaskRoutes } from './routes/tasks'
 import { handleMcp } from './mcp/handler'
 import { createTagsBatchRoutes } from './routes/tags-batch'
 import { createAdminRoutes } from './routes/admin'
+import { createThemeEditorRoutes } from './routes/theme-editor'
 import { createMiscRoutes } from './routes/misc'
 
 /**
@@ -292,6 +293,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // Admin endpoints
   app.route('/task/api', createAdminRoutes())
 
+  // Hosted theme editor (hadoku.me/task/editor) — read style.css, commit edits to main
+  app.route('/task/api', createThemeEditorRoutes())
+
   // ============================================================================
   // OpenAPI Spec Endpoint
   // ============================================================================
@@ -337,7 +341,11 @@ This API provides endpoints for:
         { name: 'Batch', description: 'Batch operations' },
         { name: 'Session', description: 'Session management' },
         { name: 'Preferences', description: 'User preferences' },
-        { name: 'Admin', description: 'Admin operations (requires admin access)' }
+        { name: 'Admin', description: 'Admin operations (requires admin access)' },
+        {
+          name: 'Theme editor',
+          description: 'Read and commit theme tokens for hadoku.me/task/editor (service tier+)'
+        }
       ]
     })
   )

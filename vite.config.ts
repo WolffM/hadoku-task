@@ -63,9 +63,11 @@ export default defineConfig({
     {
       name: 'copy-types',
       writeBundle() {
-        const dest = resolve(__dirname, 'dist/app/entry.d.ts')
-        mkdirSync(dirname(dest), { recursive: true })
-        copyFileSync(resolve(__dirname, 'src/app/entry.d.ts'), dest)
+        for (const entry of ['app', 'editor']) {
+          const dest = resolve(__dirname, `dist/${entry}/entry.d.ts`)
+          mkdirSync(dirname(dest), { recursive: true })
+          copyFileSync(resolve(__dirname, `src/${entry}/entry.d.ts`), dest)
+        }
       }
     },
     // Re-minify JS to strip whitespace (Vite preserves whitespace in ES lib mode)
@@ -120,6 +122,11 @@ export default defineConfig({
     // published package that nothing would ever read.
     copyPublicDir: false,
     lib: {
+      // ONE entry. The theme editor (@wolffm/task/editor) is built separately by
+      // vite.editor.config.ts: as a second entry here, rollup split the
+      // components the two share into a chunk that index.js then had to fetch —
+      // an extra round-trip on every /task cold load, for a page only service
+      // keys ever open.
       entry: 'src/app/entry.tsx',
       formats: ['es'],
       fileName: () => 'index.js'

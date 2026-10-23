@@ -310,39 +310,26 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 ```
 
-## Theme Editor (Development Tool)
+## Theme Editor
 
-A standalone theme editor is included for creating and customizing themes. It displays all 34 color variables and 6 shadow variables with interactive controls.
+Hosted at **https://hadoku.me/task/editor** (service tier and up). Pick a theme,
+drag sliders, and the app's real components recolour live; **Save** commits the
+change to `main` under a new version, which publishes.
 
-### Opening the Editor
+- **Per token** — brightness / saturation / hue / opacity sliders (OKLCH, so a
+  brightness step looks even across hues) plus a typed value
+- **Per group** — Surfaces, Text and each semantic family can be shifted at once
+- **Contract** — the same checks `lint:css` runs (`scripts/lib/contract.mjs`,
+  exported as `@wolffm/themes/contract`), live; a failure blocks Save, and the
+  save route re-checks before committing
+- **Comfort** — advisory meters for what AA cannot see: page glare, card-vs-page
+  separation, border visibility, text harshness, and whether `success` / `warning`
+  / `danger` still read as their meaning
 
-```bash
-# Open directly in browser (no server needed)
-open themes/dev/editor.html
-
-# Or use a local server
-npx serve themes/dev
-```
-
-### Features
-
-- **Theme Selector** - Switch between all 18 themes instantly
-- **Color Showcase** - See all variables organized by category (primary, success, warning, danger, neutral, text, border, backgrounds, shadows)
-- **Live Component Demo** - Buttons, badges, cards, and forms using all theme colors
-- **Click-to-Edit** - Click any color swatch to open the editor panel
-- **Color Controls** - HSL sliders (hue, saturation, lightness, alpha) plus hex input
-- **Live Preview** - Changes update instantly as you adjust values
-- **Export CSS** - Copy your modifications as a complete CSS theme block
-- **Reset** - Reset individual variables or all changes
-
-### Workflow
-
-1. Open `themes/dev/editor.html` in your browser
-2. Select a base theme to start from
-3. Click any color swatch to edit it
-4. Adjust using sliders or enter a hex value
-5. Click "Copy CSS Theme" to export your modifications
-6. Paste the CSS into `src/style.css` as a new theme
+The editor ships as `@wolffm/task/editor` (src/editor/ in the repo root); its
+save route is `worker/src/routes/theme-editor.ts`. Locally, `pnpm run dev:api`
+plus `vite` serve it at `/editor.html` against an in-memory GitHub — a local
+save never touches the real repo.
 
 ## API Reference
 

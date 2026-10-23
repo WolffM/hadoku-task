@@ -29,6 +29,7 @@ src/**/*.d.ts.map
 
 # Type definitions for package exports (used by vite.config.ts)
 !src/app/entry.d.ts
+!src/editor/entry.d.ts
 # Declares __HADOKU_APP_NAME__, the build-time app name vite injects
 !src/globals.d.ts
 
@@ -72,9 +73,6 @@ scratch/
 
 # Note: task/data is intentionally committed for personal backup/sync
 package-lock.json
-
-# Development-only tools
-themes/dev/save-server.js
 
 # Playwright test outputs
 playwright-report/

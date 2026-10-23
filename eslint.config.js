@@ -22,8 +22,7 @@ export default [
       // have checked out and reports THEIR files: 145 errors from one worktree,
       // none of them tracked in this tree. A gate that fails on someone else's
       // work-in-progress is one people stop reading. Mirrored in .prettierignore.
-      '.claude/worktrees/**',
-      'themes/dev/editor.bundle.js'
+      '.claude/worktrees/**'
     ]
   },
 
@@ -102,6 +101,8 @@ export default [
         HTMLUListElement: 'readonly',
         HTMLSelectElement: 'readonly',
         DOMRect: 'readonly',
+        // The theme editor injects its chrome stylesheet at mount (src/editor)
+        HTMLStyleElement: 'readonly',
         Element: 'readonly',
         Node: 'readonly',
         // SVG + tree-walking, used by the icon specs to measure painted geometry
@@ -114,6 +115,8 @@ export default [
         PointerEvent: 'readonly',
         TouchEvent: 'readonly',
         DataTransfer: 'readonly',
+        // fetch's result type — the theme editor's API client names it
+        Response: 'readonly',
         MediaQueryList: 'readonly',
         MediaQueryListEvent: 'readonly',
         StorageEvent: 'readonly',

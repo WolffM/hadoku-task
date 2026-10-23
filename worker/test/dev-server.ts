@@ -15,14 +15,22 @@
  *          behind "Automate open items" (§5.6), which unlike presets is
  *          credentialled — the stub 401s without the service key.
  *
+ * The theme editor's GitHub (/task/api/themes/*) is ALWAYS an in-memory repo
+ * seeded from this checkout (lib/fake-github.ts) — even when the real PAT is
+ * bound via dev-vault, because a local save must never commit to the real
+ * main. Inspect what a save "committed" at GET :3001/__dev/github, and start
+ * over with POST :3001/__dev/github/reset.
+ *
  * Not a *-verify.ts harness (it's a server, not an assertion run), so
  * run-worker-verify.mjs ignores it. Started by scripts/dev-api.mjs.
  */
+import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
 import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 import { NO_IDLE_CLOSE } from './lib/dev-http'
+import { FakeGitHub, type Files } from './lib/fake-github'
 
 const API_PORT = Number(process.env.DEV_API_PORT ?? 3001)
 const PROVIDER_PORT = Number(process.env.DEV_PROVIDER_PORT ?? 3002)
@@ -196,6 +204,45 @@ const env = {
   HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
 } as Record<string, unknown>
 
+// ── The theme editor's repo ─────────────────────────────────────────────────
+const THEME_FILES = [
+  'themes/src/style.css',
+  'themes/package.json',
+  'task-ui-components/package.json',
+  'package.json'
+]
+const themeSeed = (): Files =>
+  new Map(THEME_FILES.map(p => [p, readFileSync(join(process.cwd(), p), 'utf8')]))
+const themeRepo = new FakeGitHub('WolffM/hadoku-task', themeSeed())
+const realFetch = globalThis.fetch
+globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = input instanceof Request ? input.url : String(input)
+  return Promise.resolve(themeRepo.handle(url, init) ?? realFetch(input, init))
+}) as typeof fetch
+
+/** The theme routes need A token to run; theirs is never sent anywhere real. */
+const themeEnv = { ...env, GITHUB_READ_TOKEN: env.GITHUB_READ_TOKEN ?? 'dev-fake-github' }
+
+function serveThemeRepo(
+  req: import('node:http').IncomingMessage,
+  res: import('node:http').ServerResponse
+) {
+  if (req.method === 'POST' && req.url === '/__dev/github/reset') {
+    themeRepo.reset(themeSeed())
+    res.writeHead(204).end()
+    return
+  }
+  const head = themeRepo.head()
+  res.writeHead(200, { 'Content-Type': 'application/json' }).end(
+    JSON.stringify({
+      main: themeRepo.main,
+      parent: head.parent,
+      message: head.message,
+      files: Object.fromEntries(head.files)
+    })
+  )
+}
+
 // ── Provider stub ───────────────────────────────────────────────────────────
 createServer(NO_IDLE_CLOSE, (req, res) => {
   // The open-items scan (§5.6). Credentialled, unlike presets.
@@ -225,6 +272,10 @@ createServer(NO_IDLE_CLOSE, (req, res) => {
 
 // ── Worker, behind an edge-router shim ──────────────────────────────────────
 createServer(NO_IDLE_CLOSE, async (req, res) => {
+  if (req.url?.startsWith('/__dev/github')) {
+    serveThemeRepo(req, res)
+    return
+  }
   try {
     const chunks: Buffer[] = []
     for await (const chunk of req) chunks.push(chunk as Buffer)
@@ -241,8 +292,10 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
     // production these headers come from a signed session and this file is not
     // deployed.
     const as = typeof req.headers['x-dev-as'] === 'string' ? req.headers['x-dev-as'] : null
+    // `X-Dev-Tier: service` — the theme editor is service tier and up.
+    const tier = typeof req.headers['x-dev-tier'] === 'string' ? req.headers['x-dev-tier'] : null
     headers.set('X-Edge-Auth', EDGE_SECRET)
-    headers.set('X-Hadoku-Tier', USER.tier)
+    headers.set('X-Hadoku-Tier', tier ?? USER.tier)
     headers.set('X-User-Key', as ?? USER.key)
     headers.set('X-User-Id', as ?? USER.id)
 
@@ -261,7 +314,7 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
     const response = await app.request(
       `http://localhost${req.url}`,
       { method: req.method, headers, body: body as unknown as BodyInit },
-      env,
+      req.url?.startsWith('/task/api/themes/') ? themeEnv : env,
       executionCtx as unknown as ExecutionContext
     )
     const out = Buffer.from(await response.arrayBuffer())

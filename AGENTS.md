@@ -43,6 +43,23 @@ Read `themes/THEME_USAGE_GUIDE.md` before writing any styles. The rules:
 - **Never** `var(--color-x, #hex)` fallbacks, `text-white`/hex literals on a filled bg, or a hand-written `@theme` color block — import `@wolffm/themes/tailwind-colors.css` instead. Import `style.css` **unlayered** or every color resolves to nothing.
 - Verify with `pnpm run lint:css` (runs the token/contrast/usage gates). Contracts: `docs/THEME_SYSTEM_RULES.md`.
 
+### Theme editor (hadoku.me/task/editor)
+
+Service tier and up. **Save commits straight to `main` and publishes** — it is the
+normal way theme values change now, so expect `style(themes): theme editor — …`
+commits you didn't make.
+
+- The contract (AA pairs + token symmetry) lives once, in
+  `themes/scripts/lib/contract.mjs` (`@wolffm/themes/contract`). `check-contrast.mjs`,
+  the editor's live verdict and the save route all call it — change the rules there.
+- The save route (`worker/src/routes/theme-editor.ts`) skips the pre-commit hook, so it
+  re-does the hook's work: contract check, version bump mirroring `version-bump.mjs`,
+  and values re-serialized (never copied from the request). Pinned by
+  `worker/test/theme-editor-verify.ts`.
+- Locally the editor's GitHub is an in-memory repo (`worker/test/lib/fake-github.ts`),
+  even with the real PAT bound — `dev:api` + vite serve it at `/editor.html`; inspect a
+  "commit" at `:3001/__dev/github`.
+
 ## Dialogs and user feedback
 
 **Never call `alert()`, `confirm()` or `prompt()`.** `no-alert` is an eslint ERROR, so
@@ -65,7 +82,7 @@ What to use instead:
   `showToast(msg, 'error', 5000)`. Never let a hook render or reach for a dialog.
 - **Report a background sync failure** -> `onSyncError`, which already exists and is
   a different thing: the write already looked like it succeeded.
-- **A dev tool with no React** (`themes/dev/editor.js`) -> click-again-to-confirm.
+- **A dev tool with no React** -> click-again-to-confirm.
 
 `Modal`'s Escape handling is stack-aware: only the top-most open dialog answers, which
 is what makes a confirm nested inside another modal usable. Both listeners are live, so

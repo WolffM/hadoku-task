@@ -15,7 +15,7 @@ import {
   oklchToRgb,
   shiftLightness
 } from './color.mjs'
-import { FAMILIES } from './parse-themes.mjs'
+import { FAMILIES } from './tokens.mjs'
 
 /** Minimum WCAG ratio for text (§1, §2). Derived values aim slightly above. */
 export const AA_TEXT = 4.5

@@ -148,17 +148,16 @@ export function oklchToRgb({ L, C, H }) {
 }
 
 /**
- * Shift a color's OKLCH lightness by `delta` (positive = lighter), clamping
- * chroma so the result stays in sRGB gamut.
+ * OKLCH → sRGB with the chroma pulled in until the result is inside the sRGB
+ * gamut. Lightness and hue are kept exactly; only chroma gives way. This is
+ * what lets an editor slider move L or H freely without producing a color the
+ * screen cannot show.
  */
-export function shiftLightness(color, delta) {
-  const [r, g, b, alpha] = parseColor(color)
-  const { L, C, H } = rgbToOklch([r, g, b])
-  const target = Math.min(1, Math.max(0, L + delta))
-
+export function oklchToRgbInGamut({ L, C, H }) {
+  const target = Math.min(1, Math.max(0, L))
   // Binary-search chroma down until the result round-trips inside sRGB.
   let lo = 0
-  let hi = C
+  let hi = Math.max(0, C)
   let best = oklchToRgb({ L: target, C: 0, H })
   for (let i = 0; i < 24; i += 1) {
     const mid = (lo + hi) / 2
@@ -171,5 +170,15 @@ export function shiftLightness(color, delta) {
       hi = mid
     }
   }
-  return { rgb: best, alpha }
+  return best
+}
+
+/**
+ * Shift a color's OKLCH lightness by `delta` (positive = lighter), clamping
+ * chroma so the result stays in sRGB gamut.
+ */
+export function shiftLightness(color, delta) {
+  const [r, g, b, alpha] = parseColor(color)
+  const { L, C, H } = rgbToOklch([r, g, b])
+  return { rgb: oklchToRgbInGamut({ L: L + delta, C, H }), alpha }
 }

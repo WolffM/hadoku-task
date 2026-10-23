@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Theme editor - Dev</title>
+  <script>
+    // Same first-paint theme as index.html, so the chrome doesn't flash.
+    ;(function () {
+      var saved = null
+      try {
+        saved = sessionStorage.getItem('hadoku-theme')
+      } catch (err) {
+        console.warn('[theme-init] sessionStorage unavailable', err)
+      }
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'))
+    })()
+  </script>
+</head>
+<body style="margin: 0">
+  <div id="editor"></div>
+  <script type="module">
+    // Dev harness for @wolffm/task/editor, served by `vite` at /editor.html.
+    // The dev edge shim pins every request to `friend`; the editor is service
+    // tier, so ask for it (?tier= overrides, e.g. ?tier=friend to see the 403).
+    // What hadoku.me/task/editor gets from /mf/task/style.css.
+    import '@wolffm/themes/style.css'
+    import '@wolffm/themes/icons.css'
+    import './src/styles/style.css'
+    import { mount } from './src/editor/entry.tsx'
+
+    const params = new URLSearchParams(window.location.search)
+    mount(document.getElementById('editor'), {
+      theme: params.get('theme') || undefined,
+      devTier: params.get('tier') || 'service'
+    })
+  </script>
+</body>
+</html>
