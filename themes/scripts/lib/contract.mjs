@@ -14,7 +14,7 @@
  */
 
 import { parseColor, flatten, contrast, luminance, ratio, toHex, rgbToOklch } from './color.mjs'
-import { AA_TEXT } from './derive.mjs'
+import { AA_TEXT, SURFACE_STEP, BORDER_STEP, BORDER_LIGHT_STEP } from './derive.mjs'
 import {
   THEMES,
   FAMILIES,
@@ -112,6 +112,27 @@ export function checkTheme(theme, tk) {
       if (r < AA_TEXT) {
         problems.push(`${theme}: ${token} on ${s} is ${ratio(r)}:1 (needs ${AA_TEXT}:1)`)
       }
+    }
+  }
+
+  // 4. Surface separation. WCAG says nothing about page vs card, which is how
+  //    the light themes drifted to white-on-white with nobody noticing: every
+  //    pair above passed while the cards were invisible. Floors and their
+  //    measurement are documented beside SURFACE_STEP in derive.mjs.
+  const L = c => rgbToOklch(flatten(c, surface)).L
+  const mode = isDarkTheme(theme) ? 'dark' : 'light'
+  const steps = [
+    ['bg-card', 'bg', SURFACE_STEP],
+    ['border', 'bg-card', BORDER_STEP[mode]],
+    ['border-light', 'bg-card', BORDER_LIGHT_STEP[mode]]
+  ]
+  for (const [a, b, floor] of steps) {
+    const fa = tk[`--color-${a}`]
+    const fb = tk[`--color-${b}`]
+    if (!fa || !fb) continue
+    const d = Math.abs(L(fa) - L(fb))
+    if (d < floor) {
+      problems.push(`${theme}: ${a} vs ${b} is ΔL ${d.toFixed(3)} (needs ${floor} OKLCH)`)
     }
   }
   return problems

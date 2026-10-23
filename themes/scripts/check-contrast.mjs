@@ -20,5 +20,5 @@ if (problems.length) {
 }
 
 console.log(
-  `check-contrast: OK — ${THEMES.length} themes, symmetric token set, ${WCAG_PAIR_COUNT} WCAG pairs pass.`
+  `check-contrast: OK — ${THEMES.length} themes, symmetric token set, ${WCAG_PAIR_COUNT} WCAG pairs pass, surfaces separated.`
 )

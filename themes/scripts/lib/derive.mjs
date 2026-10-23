@@ -133,13 +133,129 @@ function deriveOnBg(base, tint, surfaces) {
 }
 
 /**
+ * Minimum OKLCH ΔL between the surfaces a boundary has to be seen across.
+ *
+ * Measured, not picked: every dark theme steps page → card by 0.052–0.098 and
+ * reads fine, while the light themes had drifted to 0.008–0.025 — white cards
+ * on a near-white page, with the 1px border left to carry the whole edge
+ * alone. Two of them (strawberry, lavender) even had the card DARKER than the
+ * page. Nothing gated it, because these tokens used to pass through untouched.
+ */
+export const SURFACE_STEP = 0.05 // page (`bg`) → raised (`bg-card`), both modes
+/**
+ * `border` / `border-light` against `bg-card`. The dark floor sits where the
+ * dark themes already were (0.104–0.215); only ocean-dark (0.007) and
+ * lavender-dark fell under it. The light floor is set above where the light
+ * themes were, because at those values the edges were reported unreadable.
+ */
+export const BORDER_STEP = { light: 0.13, dark: 0.1 }
+export const BORDER_LIGHT_STEP = { light: 0.075, dark: 0.05 }
+
+/** Aim this far past a floor so hex rounding can't land a value back under it. */
+const STEP_HEADROOM = 0.004
+
+/**
+ * A page pulled down off white has to carry the theme's hue, or it reads as
+ * dirty grey. Measured: the moved pages that looked right (ocean, coffee,
+ * nature) all sat at C ≥ 0.012; the ones that went dingy (strawberry,
+ * lavender, pink, cyberpunk) were at ≤ 0.005. Below this, a hue is noise.
+ */
+const PAGE_MIN_CHROMA = 0.012
+const ACHROMATIC = 0.002
+
+const L = c => rgbToOklch(parseColor(c)).L
+const withL = (color, target) => {
+  const { rgb, alpha } = shiftLightness(color, target - L(color))
+  return fmt(rgb, alpha)
+}
+
+/**
+ * Pull the surface ladder apart until each step clears its floor.
+ *
+ * Moves as little as possible and only the values that fail, keeping hue and
+ * chroma, so a theme that already holds is left alone: every dark theme but
+ * two borders, and izakaya-light but for a one-hex-step border nudge. A card
+ * is the lighter surface in both modes (§5: higher = lighter), unless an
+ * inverted ladder already clears the step. In a light theme the PAGE moves
+ * down rather than the card up — the card is already at or near white, and
+ * "too bright" was the complaint. `bg-alt` and `bg-hover` ride along with the
+ * page so their offsets from it are preserved, and all three are lifted to
+ * PAGE_MIN_CHROMA, in their own hue or, where they have none, the primary's.
+ *
+ * A darker page lowers the contrast of whatever text sits on it, so the body
+ * text tokens are then walked away from the surfaces until they clear AA again.
+ */
+function separateSurfaces(tokens, notes) {
+  const out = { ...tokens }
+  const set = (name, value) => {
+    if (value === out[name]) return
+    notes.push({ token: name, from: out[name], to: value, reason: 'separation' })
+    out[name] = value
+  }
+
+  const light = L(out['--color-bg']) > 0.5
+  const step = L(out['--color-bg-card']) - L(out['--color-bg'])
+  // An inverted ladder that still clears the step is a deliberate choice —
+  // izakaya-light's pink paper card on a cream page — and stays as authored.
+  if (Math.abs(step) < SURFACE_STEP) {
+    if (light) {
+      // Inverted (card darker than page): lift the card to the page first, so
+      // the step is measured down from a real top.
+      if (step < 0) set('--color-bg-card', withL(out['--color-bg-card'], L(out['--color-bg'])))
+      const shift = L(out['--color-bg-card']) - SURFACE_STEP - STEP_HEADROOM - L(out['--color-bg'])
+      const hueOf = c => rgbToOklch(parseColor(c))
+      const pageHue = [out['--color-bg'], out['--color-primary']]
+        .map(hueOf)
+        .find(o => o.C > ACHROMATIC).H
+      for (const n of ['--color-bg', '--color-bg-alt', '--color-bg-hover']) {
+        const own = hueOf(out[n])
+        const H = own.C > ACHROMATIC ? own.H : pageHue
+        const C = Math.max(own.C, PAGE_MIN_CHROMA)
+        set(n, toHex(oklchToRgb({ L: own.L + shift, C, H })))
+      }
+    } else {
+      const target = L(out['--color-bg']) + SURFACE_STEP + STEP_HEADROOM
+      set('--color-bg-card', withL(out['--color-bg-card'], target))
+    }
+  }
+
+  // Borders step away from the card toward the text: darker in a light
+  // theme, lighter in a dark one.
+  const card = out['--color-bg-card']
+  const away = light ? -1 : 1
+  const mode = light ? 'light' : 'dark'
+  for (const [name, floor] of [
+    ['--color-border', BORDER_STEP[mode]],
+    ['--color-border-light', BORDER_LIGHT_STEP[mode]]
+  ]) {
+    if (Math.abs(rgbToOklch(flatten(out[name], card)).L - L(card)) < floor) {
+      set(name, withL(out[name], L(card) + away * (floor + STEP_HEADROOM)))
+    }
+  }
+
+  const surfaces = ['--color-bg', '--color-bg-card', '--color-bg-alt'].map(n => out[n])
+  for (const name of ['--color-text', '--color-text-secondary']) {
+    for (let s = 0; s <= 0.3; s += 0.005) {
+      const candidate = s ? withL(out[name], L(out[name]) + away * s) : out[name]
+      if (surfaces.every(bg => contrast(candidate, bg, card) >= TARGET)) {
+        set(name, candidate)
+        break
+      }
+    }
+  }
+  return out
+}
+
+/**
  * Build the full canonical color token map for one theme from its current one.
  *
  * Renames carry values over verbatim (no visual change); only genuinely new
  * tokens are computed.
  */
-export function deriveTheme(tokens, notes = []) {
+export function deriveTheme(input, notes = []) {
   const out = {}
+  // Separate first: every surface-relative value below is solved against these.
+  const tokens = separateSurfaces(input, notes)
   // Every surface a translucent tint might composite over.
   const surfaces = ['--color-bg-card', '--color-bg', '--color-bg-alt']
     .map(n => tokens[n])

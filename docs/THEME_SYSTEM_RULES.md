@@ -106,7 +106,7 @@ Radix Colors defines the most rigorous scale structure in the industry. Key rule
 
 | Steps | Purpose                                          | Rule                                                       |
 | ----- | ------------------------------------------------ | ---------------------------------------------------------- |
-| 1–2   | App/card backgrounds                             | Must be near-white (light) or near-black (dark)            |
+| 1–2   | App/card backgrounds                             | Light-ish/dark-ish, and visibly apart (see below)          |
 | 3–5   | Component backgrounds (normal → hover → pressed) | Must be progressively darker/lighter                       |
 | 6–8   | Borders (subtle → interactive → strong)          | 6 for dividers, 7 for button borders, 8 for focus rings    |
 | 9–10  | Solid fills (normal → hover)                     | **Highest chroma step.** Used for buttons, badges, headers |
@@ -117,6 +117,15 @@ Radix Colors defines the most rigorous scale structure in the industry. Key rule
 - **Step 9 (solid fill) determines foreground color.** Most steps-9 use white text. Five exceptions use dark text: Sky, Mint, Lime, Yellow, Amber.
 - **Never use a solid-fill color for text.** Step 9 is for backgrounds, steps 11–12 are for text.
 - **Background steps (1–2) must have enough contrast with text steps (11–12) for readability.** This is guaranteed by Radix's math but must be manually verified in custom systems.
+- **Surfaces must be visibly apart, in OKLCH lightness.** WCAG has no rule for page vs card, so every text pair can pass while the cards are invisible — which is what the light themes drifted into (page→card ΔL 0.008–0.025, white cards on a near-white page). The floors, enforced by `check:contrast` and derived by `normalize:tokens`:
+
+  | pair                        | light | dark |
+  | --------------------------- | ----- | ---- |
+  | `bg-card` vs `bg`           | 0.05  | 0.05 |
+  | `border` vs `bg-card`       | 0.13  | 0.10 |
+  | `border-light` vs `bg-card` | 0.075 | 0.05 |
+
+  The 0.05 page step is where every dark theme already sat (0.052–0.098). "Near-white" is the card's job, not the page's: a light page sits around L 0.93–0.95, and carries the theme's hue at C ≥ 0.012 or it reads as dirty grey.
 
 ### Mapping to Our System:
 

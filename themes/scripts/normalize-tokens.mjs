@@ -146,7 +146,9 @@ if (changed.length) {
     const why =
       c.reason === 'contrast'
         ? 'authored value broke the on-<f> contract'
-        : `dead-zone nudge, ΔL -${c.shift.toFixed(3)}`
+        : c.reason === 'separation'
+          ? 'surface step under its floor'
+          : `dead-zone nudge, ΔL -${c.shift.toFixed(3)}`
     console.log(`  ${c.theme.padEnd(17)} ${c.token.padEnd(24)} ${c.from} → ${c.to}   (${why})`)
   }
 }
