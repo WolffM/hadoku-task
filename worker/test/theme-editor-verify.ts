@@ -72,6 +72,10 @@ const real: Files = new Map(
   [STYLE, ...PKGS].map(p => [p, readFileSync(join(process.cwd(), p), 'utf8')])
 )
 const gh = new FakeGitHub('WolffM/hadoku-task', real)
+// The light theme's values as main has them. Fixtures that need "the value
+// already there" read it here rather than restating a hex that goes stale the
+// next time the theme is tuned.
+const LIGHT = parseThemes(must(real.get(STYLE))).light
 const resetRepo = () => gh.reset(real)
 
 const realFetch = globalThis.fetch
@@ -244,7 +248,7 @@ async function main_() {
   check(
     'commit message lists every change and who saved',
     /theme editor — light, ocean-light \(3 tokens\)/.test(made.message) &&
-      made.message.includes('light --color-border: #d0d7de → #b8c2cf') &&
+      made.message.includes(`light --color-border: ${LIGHT['--color-border']} → #b8c2cf`) &&
       made.message.includes('Visible borders') &&
       made.message.includes('by matt'),
     made.message
@@ -297,12 +301,28 @@ async function main_() {
     gh.calls.join(', ')
   )
 
+  // Every AA pair still passes here — the page just goes back to near-white,
+  // so the cards vanish into it. That drift is what the separation floor stops.
+  resetRepo()
+  const headWashed = gh.main
+  r = await save({ baseCommit: gh.main, edits: { light: { '--color-bg': '#f8fafc' } } })
+  check('cards washed into the page → 422', r.status === 422, `status=${r.status}`)
+  check(
+    'the problem names the surface step',
+    (r.json.problems ?? []).some(p => p.startsWith('light: bg-card vs bg')),
+    JSON.stringify(r.json.problems)
+  )
+  check('nothing committed for the washed-out page', gh.main === headWashed)
+
   // -------------------------------------------------------------------
   section('7. A save that changes nothing commits nothing')
   // -------------------------------------------------------------------
   resetRepo()
   const head2 = gh.main
-  r = await save({ baseCommit: gh.main, edits: { light: { '--color-bg': '#F8FAFC' } } })
+  r = await save({
+    baseCommit: gh.main,
+    edits: { light: { '--color-bg': LIGHT['--color-bg'].toUpperCase() } }
+  })
   check(
     '200, committed: false',
     r.status === 200 && r.json.committed === false,
@@ -318,7 +338,10 @@ async function main_() {
   gh.pushOther(f =>
     f.set(
       STYLE,
-      must(f.get(STYLE)).replace('--color-border-light: #e2e8f0;', '--color-border-light: #d9e0e8;')
+      must(f.get(STYLE)).replace(
+        `--color-border-light: ${LIGHT['--color-border-light']};`,
+        '--color-border-light: #d9e0e8;'
+      )
     )
   )
   const theirs = gh.main
@@ -344,7 +367,13 @@ async function main_() {
   resetRepo()
   loaded = gh.main
   gh.pushOther(f =>
-    f.set(STYLE, must(f.get(STYLE)).replace('--color-border: #d0d7de;', '--color-border: #c0c7ce;'))
+    f.set(
+      STYLE,
+      must(f.get(STYLE)).replace(
+        `--color-border: ${LIGHT['--color-border']};`,
+        '--color-border: #c0c7ce;'
+      )
+    )
   )
   const theirs2 = gh.main
   check(
