@@ -22,6 +22,10 @@
  *      looks at accent-over-surface, so the pair passes by being unexamined.
  *      This is how `.app-header__title` shipped 1.92:1 in izakaya-light.
  *
+ *   5 and 6 run on markup too, as Tailwind classes (`text-success` on a card,
+ *   `bg-success-bg text-success`) — CSS-only, hadoku_site had 49 of them while
+ *   this gate reported OK.
+ *
  *   node themes/scripts/check-usage.mjs [paths...]   (default: cwd)
  */
 
@@ -155,6 +159,41 @@ for (const target of targets) {
           const token = `--color-${m[1]}`
           if (!known.has(token)) {
             add(rel, n, 'unknown-class', `${m[0]} → ${token} is not mapped by @wolffm/themes`)
+          }
+        }
+
+        // (4)/(5) in markup: the same two anti-patterns, written as Tailwind
+        // classes. `text-success` on a card is `color: var(--color-success)` on
+        // a card, and the CSS pass below never sees a .tsx. The scope is one
+        // quoted string — the class list — so a fill added conditionally in a
+        // separate clsx() argument does not excuse the unfilled case.
+        for (const q of line.matchAll(/(["'`])((?:(?!\1).)*)\1/g)) {
+          const classes = q[2]
+          for (const m of classes.matchAll(
+            /(?<![\w-])text-(primary|success|warning|danger|neutral)(-dark)?(?![\w-])/g
+          )) {
+            const family = m[1]
+            const has = re => new RegExp(`(?<![\\w-])${re}(?![\\w-])`).test(classes)
+            if (has(`bg-${family}-bg`)) {
+              add(
+                rel,
+                n,
+                'tint-pair',
+                `${m[0]} on bg-${family}-bg fails AA in most themes; use text-on-${family}-bg`
+              )
+              continue
+            }
+            // A filled backdrop of its own family is the class list choosing
+            // its surface, like rule (5)'s paintsOwnBg. A surface class
+            // (bg-bg-card) is not: that is exactly the unvalidated pair.
+            if (has(`bg-${family}(?:-dark|-hover)?`)) continue
+            add(
+              rel,
+              n,
+              'accent-as-text',
+              `${m[0]} is a fill colour, not a text colour; on a page or card surface it ` +
+                `fails contrast in most themes. Use text-text, or bg-${family}-bg + text-on-${family}-bg.`
+            )
           }
         }
       }

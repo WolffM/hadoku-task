@@ -67,7 +67,8 @@ every consuming app at once.
 Text on a surface is `text-text` (8.87–17.58 across all 18) or
 `text-text-secondary`. To carry an accent, either pair `bg-<f>-bg` with
 `text-on-<f>-bg`, or move the accent off the glyph entirely — a border, rule, or
-underline is unconstrained by text contrast. `check-usage` gates this.
+underline is unconstrained by text contrast. `check-usage` gates this, in CSS
+and as Tailwind classes in markup (`text-danger` with no `bg-danger` fill).
 
 ---
 
