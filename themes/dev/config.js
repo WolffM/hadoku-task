@@ -35,7 +35,7 @@ export const THEME_FAMILIES = [
   {
     lightTheme: 'strawberry-light',
     darkTheme: 'strawberry-dark',
-    label: 'Strawberry',
+    label: 'On the Vine',
     icon: 'strawberry',
     darkIcon: 'strawberry',
     lightPrimary: '#ff6b9d',

@@ -26,16 +26,16 @@ export const THEME_FAMILIES: ThemeFamily[] = [
   {
     lightTheme: 'light',
     darkTheme: 'dark',
-    lightLabel: 'Light',
-    darkLabel: 'Dark',
+    lightLabel: 'Sun',
+    darkLabel: 'Night',
     lightIcon: <SunIcon />,
     darkIcon: <MoonIcon />
   },
   {
     lightTheme: 'strawberry-light',
     darkTheme: 'strawberry-dark',
-    lightLabel: 'Strawberry Light',
-    darkLabel: 'Strawberry Dark',
+    lightLabel: 'On the Vine Light',
+    darkLabel: 'On the Vine Dark',
     lightIcon: <StrawberryIcon />,
     darkIcon: <StrawberryIcon />
   },
