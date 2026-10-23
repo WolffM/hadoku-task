@@ -178,7 +178,13 @@ const NEVER_VISITED = Date.now()
 function HeaderLink({ href, label }: { href: string; label: string }) {
   return (
     <Tooltip content={label}>
-      <a className="app-header__icon-btn" href={href} aria-label={label}>
+      <a
+        className="app-header__icon-btn"
+        href={href}
+        aria-label={label}
+        target="_blank"
+        rel="noreferrer"
+      >
         <Icon name="chat" size={16} />
       </a>
     </Tooltip>
@@ -186,10 +192,12 @@ function HeaderLink({ href, label }: { href: string; label: string }) {
 }
 
 function HeaderSection() {
-  // The current page is in history, so this link renders :visited; the query
-  // makes the other one a URL this browser has never been to.
-  const visited = window.location.pathname
-  const unvisited = `${window.location.pathname}?never-visited=${NEVER_VISITED}`
+  // Real external URLs, so the gallery also works when published as a static
+  // page. discord.com is likely in a reviewer's history (so it renders
+  // :visited); the query makes the other one a URL nobody has been to.
+  // e2e/header-icon-btn.spec.ts forces :visited itself and needs neither.
+  const visited = 'https://discord.com/'
+  const unvisited = `https://discord.com/?never-visited=${NEVER_VISITED}`
   const status = (
     <>
       <span className="controls__status">
