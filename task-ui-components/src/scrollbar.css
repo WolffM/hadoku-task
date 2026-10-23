@@ -1,0 +1,129 @@
+/* Themed scrollbars for @wolffm/task-ui-components.
+ *
+ * Without this, every scroller renders the platform's bar: a grey Windows
+ * gutter on a coffee or cyberpunk surface. `color-scheme` (set per theme in
+ * @wolffm/themes) only gets the bar to the right light/dark mode, not the
+ * theme's colours.
+ *
+ *   import '@wolffm/task-ui-components/scrollbar.css'
+ *   <div className="task-app-container hdk-scroll">…</div>
+ *
+ * `.hdk-scroll` styles the element it is on AND every scroller inside it, so
+ * one class on an app's root covers the whole app. Modifiers sit on the same
+ * element and reach down through the custom properties below:
+ *
+ *   --thin      narrower bar
+ *   --accent    thumb in the primary colour
+ *   --rail      visible track, so the scroll extent reads at a glance
+ *   --autohide  thumb appears only while the scroller is hovered or focused
+ *
+ * Two engines, two mechanisms. Firefox only knows the standard
+ * `scrollbar-color`/`scrollbar-width`. Chromium and Safari support the
+ * `::-webkit-scrollbar` pseudo-elements, which are the only way to get a
+ * rounded, inset thumb — but Chromium 121+ IGNORES them whenever
+ * `scrollbar-color` or `scrollbar-width` is non-auto, and `scrollbar-color`
+ * inherits. So the WebKit branch resets both to `auto`, or a host page that
+ * sets `scrollbar-color` on <html> would silently switch all of this off.
+ */
+
+.hdk-scroll {
+  --hdk-scrollbar-size: 10px;
+  --hdk-scrollbar-pad: 2px;
+  --hdk-scrollbar-thumb: var(--color-border);
+  --hdk-scrollbar-thumb-hover: var(--color-text-muted);
+  --hdk-scrollbar-track: transparent;
+}
+
+.hdk-scroll--thin {
+  --hdk-scrollbar-size: 6px;
+  --hdk-scrollbar-pad: 1px;
+}
+
+.hdk-scroll--accent {
+  --hdk-scrollbar-thumb: var(--color-primary);
+  --hdk-scrollbar-thumb-hover: var(--color-primary-dark);
+}
+
+.hdk-scroll--rail {
+  --hdk-scrollbar-size: 12px;
+  --hdk-scrollbar-pad: 3px;
+  --hdk-scrollbar-thumb: var(--color-text-muted);
+  --hdk-scrollbar-thumb-hover: var(--color-text-tertiary);
+  --hdk-scrollbar-track: var(--color-bg-hover);
+}
+
+.hdk-scroll--autohide {
+  --hdk-scrollbar-thumb: transparent;
+}
+
+/* Re-declared on the hovered/focused element itself, so only that scroller's
+ * thumb shows — not every scroller inside an autohide root at once. */
+.hdk-scroll--autohide:hover,
+.hdk-scroll--autohide:focus-within,
+.hdk-scroll--autohide :hover,
+.hdk-scroll--autohide :focus-within {
+  --hdk-scrollbar-thumb: var(--color-border);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .hdk-scroll,
+  .hdk-scroll * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--hdk-scrollbar-thumb) var(--hdk-scrollbar-track);
+  }
+
+  .hdk-scroll--thin,
+  .hdk-scroll--thin * {
+    scrollbar-width: thin;
+  }
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .hdk-scroll,
+  .hdk-scroll * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  .hdk-scroll::-webkit-scrollbar,
+  .hdk-scroll *::-webkit-scrollbar {
+    width: var(--hdk-scrollbar-size);
+    height: var(--hdk-scrollbar-size);
+    background-color: var(--hdk-scrollbar-track);
+  }
+
+  .hdk-scroll::-webkit-scrollbar-track,
+  .hdk-scroll *::-webkit-scrollbar-track {
+    background-color: var(--hdk-scrollbar-track);
+    border-radius: 999px;
+  }
+
+  /* The transparent border plus padding-box clip is what insets the thumb
+   * from the track edge — a margin does nothing on a scrollbar part. */
+  .hdk-scroll::-webkit-scrollbar-thumb,
+  .hdk-scroll *::-webkit-scrollbar-thumb {
+    background-color: var(--hdk-scrollbar-thumb);
+    background-clip: padding-box;
+    border: var(--hdk-scrollbar-pad) solid transparent;
+    border-radius: 999px;
+    min-height: 32px;
+    min-width: 32px;
+  }
+
+  .hdk-scroll::-webkit-scrollbar-thumb:hover,
+  .hdk-scroll *::-webkit-scrollbar-thumb:hover,
+  .hdk-scroll::-webkit-scrollbar-thumb:active,
+  .hdk-scroll *::-webkit-scrollbar-thumb:active {
+    background-color: var(--hdk-scrollbar-thumb-hover);
+  }
+
+  .hdk-scroll::-webkit-scrollbar-corner,
+  .hdk-scroll *::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+
+  .hdk-scroll::-webkit-scrollbar-button,
+  .hdk-scroll *::-webkit-scrollbar-button {
+    display: none;
+  }
+}

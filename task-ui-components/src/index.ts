@@ -34,6 +34,12 @@ export { Modal } from './components/Modal'
 export { ContextMenu } from './components/ContextMenu'
 export { LoadingSkeleton } from './components/LoadingSkeleton'
 export { SettingsModal } from './components/SettingsModal'
+// Themed replacements for the browser's default controls. Scrollbars are
+// CSS only: import '@wolffm/task-ui-components/scrollbar.css' and add
+// `hdk-scroll` to the app root.
+export { Button } from './components/Button'
+export { Select, NativeSelect } from './components/Select'
+export { Tooltip } from './components/Tooltip'
 
 // Bento components
 export { BentoGrid } from './components/BentoGrid'
@@ -88,6 +94,21 @@ export type { UseToastReturn } from './hooks/useToast'
 export type { ModalProps } from './components/Modal'
 export type { ContextMenuProps, ContextMenuItem } from './components/ContextMenu'
 export type { LoadingSkeletonProps } from './components/LoadingSkeleton'
+export type {
+  ButtonProps,
+  ButtonVariant,
+  ButtonFamily,
+  ButtonSize,
+  ButtonShape
+} from './components/Button'
+export type {
+  SelectProps,
+  SelectOption,
+  SelectVariant,
+  SelectSize,
+  NativeSelectProps
+} from './components/Select'
+export type { TooltipProps, TooltipPlacement, TooltipVariant } from './components/Tooltip'
 export type {
   SettingsModalProps,
   SettingsSection,

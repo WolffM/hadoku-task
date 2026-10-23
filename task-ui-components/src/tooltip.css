@@ -1,0 +1,127 @@
+/* Tooltip styles for @wolffm/task-ui-components.
+ *
+ *   import '@wolffm/task-ui-components/tooltip.css'
+ *
+ * `inverse` paints body text colour as the surface and the page background
+ * as the text — the same pair as body copy, flipped, so its contrast is the
+ * theme's own text contrast in every theme.
+ */
+
+/* The anchor must not change layout: the wrapped element lays out as if the
+ * span were not there, and the fixed bubble takes no space. */
+.hdk-tooltip-anchor {
+  display: contents;
+}
+
+.hdk-tooltip {
+  --_tip-bg: var(--color-text);
+  --_tip-fg: var(--color-bg);
+  --_tip-border: transparent;
+  /* Overwritten inline once placed: where the anchor's centre falls. */
+  --hdk-tooltip-arrow: 50%;
+
+  position: fixed;
+  z-index: 1100;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 6px 10px;
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  color: var(--_tip-fg);
+  background-color: var(--_tip-bg);
+  border: 1px solid var(--_tip-border);
+  border-radius: var(--hdk-radius);
+  box-shadow: var(--hdk-shadow-md);
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.hdk-tooltip--visible {
+  opacity: 1;
+  transform: none;
+}
+
+.hdk-tooltip--top:not(.hdk-tooltip--visible) {
+  transform: translateY(3px);
+}
+
+.hdk-tooltip--bottom:not(.hdk-tooltip--visible) {
+  transform: translateY(-3px);
+}
+
+.hdk-tooltip--left:not(.hdk-tooltip--visible) {
+  transform: translateX(3px);
+}
+
+.hdk-tooltip--right:not(.hdk-tooltip--visible) {
+  transform: translateX(-3px);
+}
+
+.hdk-tooltip--card {
+  --_tip-bg: var(--color-bg-card);
+  --_tip-fg: var(--color-text);
+  --_tip-border: var(--color-border);
+
+  box-shadow: var(--hdk-shadow-lg);
+}
+
+.hdk-tooltip--primary {
+  --_tip-bg: var(--color-primary);
+  --_tip-fg: var(--color-on-primary);
+}
+
+/* ── arrow ────────────────────────────────────────────────────────────── */
+
+/* A rotated square sharing the bubble's fill and border; only its two outer
+ * edges carry the border, so it reads as one shape with the bubble. */
+.hdk-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: var(--_tip-bg);
+  border: 1px solid var(--_tip-border);
+  border-top-color: transparent;
+  border-left-color: transparent;
+}
+
+.hdk-tooltip--top::after {
+  top: 100%;
+  left: var(--hdk-tooltip-arrow);
+  translate: -50% -50%;
+  rotate: 45deg;
+}
+
+.hdk-tooltip--bottom::after {
+  bottom: 100%;
+  left: var(--hdk-tooltip-arrow);
+  translate: -50% 50%;
+  rotate: -135deg;
+}
+
+.hdk-tooltip--left::after {
+  left: 100%;
+  top: var(--hdk-tooltip-arrow);
+  translate: -50% -50%;
+  rotate: -45deg;
+}
+
+.hdk-tooltip--right::after {
+  right: 100%;
+  top: var(--hdk-tooltip-arrow);
+  translate: 50% -50%;
+  rotate: 135deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hdk-tooltip,
+  .hdk-tooltip:not(.hdk-tooltip--visible) {
+    transform: none;
+    transition: opacity var(--transition-fast);
+  }
+}

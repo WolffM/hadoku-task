@@ -58,7 +58,8 @@
     "test:e2e:ui": "pw-isolated playwright test --ui",
     "test:e2e:debug": "pw-isolated playwright test --debug",
     "profile": "node scripts/profile-cold-load.mjs",
-    "gallery": "vite --port 5200 --open /dev/gallery/index.html"
+    "gallery": "vite --port 5200 --open /dev/gallery/index.html",
+    "gallery:controls": "vite --port 5200 --open /dev/gallery/controls.html"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.4.0",

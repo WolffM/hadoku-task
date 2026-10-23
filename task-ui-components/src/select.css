@@ -1,0 +1,242 @@
+/* Select / dropdown styles for @wolffm/task-ui-components.
+ *
+ *   import '@wolffm/task-ui-components/select.css'
+ *   import '@wolffm/task-ui-components/scrollbar.css'   (the open list uses it)
+ *
+ * The trigger variants differ only in their resting surface; the open list
+ * is one look everywhere, so a page mixing variants still has one menu.
+ */
+
+.hdk-select {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.hdk-select__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.hdk-select__trigger:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+.hdk-select__trigger:focus-visible,
+.hdk-select--open .hdk-select__trigger {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--hdk-shadow-focus-sm);
+}
+
+.hdk-select__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hdk-select__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hdk-select__value--placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.hdk-select__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.hdk-select--open .hdk-select__chevron {
+  transform: rotate(180deg);
+}
+
+/* ── trigger variants ─────────────────────────────────────────────────── */
+
+.hdk-select--filled .hdk-select__trigger {
+  background-color: var(--color-bg-hover);
+  border-color: transparent;
+}
+
+.hdk-select--filled .hdk-select__trigger:hover:not(:disabled) {
+  border-color: var(--color-border);
+}
+
+.hdk-select--ghost .hdk-select__trigger {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.hdk-select--ghost .hdk-select__trigger:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+  border-color: transparent;
+}
+
+.hdk-select--underline .hdk-select__trigger {
+  background-color: transparent;
+  border-color: transparent;
+  border-bottom-color: var(--color-border);
+  border-radius: 0;
+}
+
+.hdk-select--underline .hdk-select__trigger:focus-visible,
+.hdk-select--underline.hdk-select--open .hdk-select__trigger {
+  border-color: transparent;
+  border-bottom-color: var(--color-primary);
+  box-shadow: 0 1px 0 0 var(--color-primary);
+}
+
+/* ── sizes ────────────────────────────────────────────────────────────── */
+
+.hdk-select--sm .hdk-select__trigger {
+  font-size: var(--hdk-text-xs);
+  padding: 4px 8px;
+  min-height: 28px;
+}
+
+.hdk-select--md .hdk-select__trigger {
+  font-size: var(--hdk-text-sm);
+  padding: 7px 10px;
+  min-height: 34px;
+}
+
+.hdk-select--lg .hdk-select__trigger {
+  font-size: var(--hdk-text-base);
+  padding: 10px 12px;
+  min-height: 42px;
+}
+
+/* ── open list ────────────────────────────────────────────────────────── */
+
+.hdk-select__menu {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-y: auto;
+  max-width: min(420px, calc(100vw - 16px));
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  box-shadow: var(--hdk-shadow-lg);
+}
+
+.hdk-select__menu:focus {
+  outline: none;
+}
+
+.hdk-select--sm .hdk-select__menu {
+  font-size: var(--hdk-text-xs);
+}
+
+.hdk-select--md .hdk-select__menu {
+  font-size: var(--hdk-text-sm);
+}
+
+.hdk-select--lg .hdk-select__menu {
+  font-size: var(--hdk-text-base);
+}
+
+.hdk-select__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--hdk-radius);
+  cursor: pointer;
+}
+
+.hdk-select__option--active {
+  background-color: var(--color-bg-hover);
+}
+
+.hdk-select__option--selected {
+  background-color: var(--color-primary-bg);
+  color: var(--color-on-primary-bg);
+}
+
+.hdk-select__option--selected.hdk-select__option--active {
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.hdk-select__option[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hdk-select__option-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.hdk-select__option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hdk-select__option-desc {
+  font-size: 0.85em;
+  color: var(--color-text-tertiary);
+}
+
+.hdk-select__option--selected .hdk-select__option-desc {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.hdk-select__check {
+  flex-shrink: 0;
+}
+
+/* ── native ───────────────────────────────────────────────────────────── */
+
+/* Doubled class so the room for the chevron beats each size's `padding`
+ * shorthand above, which would otherwise draw the chevron over the text. */
+.hdk-select__trigger.hdk-select__native {
+  appearance: none;
+  padding-right: 32px;
+}
+
+.hdk-select--sm .hdk-select__trigger.hdk-select__native {
+  padding-right: 26px;
+}
+
+.hdk-select__chevron--native {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+/* The OS popup takes option colours from the <select>; without these, a dark
+ * theme can render dark-on-dark options in Chromium on Windows. */
+.hdk-select__native option {
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+}

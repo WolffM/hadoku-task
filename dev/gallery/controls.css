@@ -1,0 +1,194 @@
+/**
+ * Controls-gallery layout only. Every control's look comes from the shipped
+ * task-ui-components CSS; this file positions samples and nothing more.
+ */
+
+.controls__sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 8px 0;
+  background-color: var(--color-bg);
+}
+
+.controls__flipper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.controls__flipper-select {
+  width: 200px;
+}
+
+.controls__flipper-count {
+  color: var(--color-text-tertiary);
+  font-size: var(--hdk-text-xs);
+  margin-left: 4px;
+}
+
+.controls__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.controls__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.controls__row > .gallery__label:first-child {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+/* ── scrollbars ───────────────────────────────────────────────────────── */
+
+.controls__scroll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.controls__scroll-cell {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controls__scroll-cell figcaption {
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text);
+}
+
+.controls__scroll-cell code {
+  font-size: 0.8em;
+  color: var(--color-text-tertiary);
+}
+
+.controls__scroll-box {
+  height: 180px;
+  overflow: auto;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+}
+
+.controls__scroll-box:focus-visible {
+  outline: none;
+  box-shadow: var(--hdk-shadow-focus);
+}
+
+.controls__scroll-wide {
+  width: 520px;
+  padding: 8px 12px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.controls__scroll-row {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* ── buttons ──────────────────────────────────────────────────────────── */
+
+.controls__matrix {
+  display: grid;
+  grid-template-columns: 90px repeat(5, minmax(0, 1fr));
+  gap: 10px 8px;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.controls__matrix-head {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.controls__matrix-head--row {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--hdk-text-sm);
+  color: var(--color-text-secondary);
+}
+
+.controls__toolbar {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  background-color: var(--color-bg-card);
+}
+
+/* ── dropdowns ────────────────────────────────────────────────────────── */
+
+.controls__select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.controls__select-grid .hdk-select {
+  width: 100%;
+}
+
+.controls__wide-select {
+  width: 240px;
+}
+
+.controls__clip {
+  margin-top: 18px;
+  height: 64px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--hdk-radius);
+}
+
+/* ── side by side ─────────────────────────────────────────────────────── */
+
+.controls__compare-pills {
+  margin-bottom: 14px;
+}
+
+.controls__compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+/* Each cell carries its own data-theme, so it must paint its own surface. */
+.controls__compare-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+}
+
+.controls__compare-name {
+  font-size: var(--hdk-text-xs);
+  color: var(--color-text-tertiary);
+  font-family: ui-monospace, monospace;
+}
+
+.controls__compare-scroll .controls__scroll-box {
+  height: 120px;
+}

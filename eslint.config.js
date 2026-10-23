@@ -98,6 +98,10 @@ export default [
         HTMLLIElement: 'readonly',
         HTMLButtonElement: 'readonly',
         HTMLMetaElement: 'readonly',
+        HTMLSpanElement: 'readonly',
+        HTMLUListElement: 'readonly',
+        HTMLSelectElement: 'readonly',
+        DOMRect: 'readonly',
         Element: 'readonly',
         Node: 'readonly',
         // SVG + tree-walking, used by the icon specs to measure painted geometry
@@ -107,6 +111,7 @@ export default [
         Event: 'readonly',
         MouseEvent: 'readonly',
         KeyboardEvent: 'readonly',
+        PointerEvent: 'readonly',
         TouchEvent: 'readonly',
         DataTransfer: 'readonly',
         MediaQueryList: 'readonly',

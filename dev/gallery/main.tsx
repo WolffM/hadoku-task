@@ -52,7 +52,7 @@ function Gallery() {
               <h1 className="gallery__title">Icon gallery</h1>
               <p className="gallery__sub">
                 {ICON_NAMES.length} icons · @wolffm/themes · artwork vendored from lucide{' '}
-                {LUCIDE_VERSION} (ISC)
+                {LUCIDE_VERSION} (ISC) · <a href="./controls.html">controls gallery</a>
               </p>
             </div>
             {/* The real platform picker — takes no props by design. */}
