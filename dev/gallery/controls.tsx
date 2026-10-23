@@ -2,6 +2,10 @@
  * Controls gallery — scrollbars, buttons, dropdowns and tooltips from
  * @wolffm/task-ui-components, each beside the browser default it replaces.
  *
+ * Also the AppHeader bar, whose icon buttons share one class
+ * (.app-header__icon-btn) and which must hold four controls at 320px —
+ * e2e/header-icon-btn.spec.ts measures that here.
+ *
  * Same rules as the icon gallery: real theme root, real platform picker, the
  * shipped component CSS. Layout lives in gallery.css / controls.css; nothing
  * here paints a control by hand.
@@ -12,8 +16,9 @@
  */
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { HadokuThemeRoot, THEMES, useHadokuTheme, type IconName } from '@wolffm/themes'
+import { HadokuThemeRoot, Icon, THEMES, useHadokuTheme, type IconName } from '@wolffm/themes'
 import {
+  AppHeader,
   Button,
   HadokuThemePicker,
   NativeSelect,
@@ -164,6 +169,59 @@ function ThemeFlipper() {
         {index + 1} / {THEMES.length}
       </span>
     </div>
+  )
+}
+
+const NEVER_VISITED = Date.now()
+
+/** A link icon in the actions row, the way an app adds one (cardtable's Discord). */
+function HeaderLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Tooltip content={label}>
+      <a className="app-header__icon-btn" href={href} aria-label={label}>
+        <Icon name="chat" size={16} />
+      </a>
+    </Tooltip>
+  )
+}
+
+function HeaderSection() {
+  // The current page is in history, so this link renders :visited; the query
+  // makes the other one a URL this browser has never been to.
+  const visited = window.location.pathname
+  const unvisited = `${window.location.pathname}?never-visited=${NEVER_VISITED}`
+  const status = (
+    <>
+      <span className="controls__status">
+        <span className="controls__status-dot" /> API online
+      </span>
+      <HeaderLink href={visited} label="Visited link" />
+      <HeaderLink href={unvisited} label="Unvisited link" />
+    </>
+  )
+
+  return (
+    <section className="gallery__card" data-testid="header-section">
+      <h2 className="gallery__h2">App header</h2>
+      <p className="gallery__note">
+        The theme picker, the settings gear and both link icons are one class,{' '}
+        <code>.app-header__icon-btn</code> — the links are bare <code>&lt;a&gt;</code> elements, one
+        visited and one not. Below, the same bar squeezed into 320px: the long title truncates, the
+        icons keep their 32px targets.
+      </p>
+      <div className="controls__header-frame" data-testid="header-full">
+        <AppHeader title="Controls gallery" status={status} />
+      </div>
+      <div
+        className="controls__header-frame controls__header-frame--narrow"
+        data-testid="header-320"
+      >
+        <AppHeader
+          title="A board title long enough that it can never fit beside four controls"
+          status={status}
+        />
+      </div>
+    </section>
   )
 }
 
@@ -524,7 +582,7 @@ function Gallery() {
             <div>
               <h1 className="gallery__title">Controls gallery</h1>
               <p className="gallery__sub">
-                @wolffm/task-ui-components · scrollbars, buttons, dropdowns, tooltips ·{' '}
+                @wolffm/task-ui-components · header, scrollbars, buttons, dropdowns, tooltips ·{' '}
                 <a href="./index.html">icon gallery</a>
               </p>
             </div>
@@ -534,6 +592,8 @@ function Gallery() {
           <div className="controls__sticky">
             <ThemeFlipper />
           </div>
+
+          <HeaderSection />
 
           <section className="gallery__card">
             <h2 className="gallery__h2">Scrollbars</h2>

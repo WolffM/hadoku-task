@@ -40,12 +40,22 @@
   font-size: var(--hdk-text-lg);
   font-weight: 700;
   line-height: 1.2;
+  /* A flex item floors at its min-content width, so without `min-width: 0` a
+   * long title pushed the actions off a 320px screen instead of giving way. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Never shrinks: the controls keep their 32px hit areas and the title is what
+ * gives way. 0.5rem is enough between icons — the round hit areas already
+ * space them visually. */
 .app-header__actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-shrink: 0;
+  gap: 0.5rem;
 }
 
 /* In the header the theme picker sits directly left of the settings gear, and
@@ -60,38 +70,11 @@
 }
 
 /* ── ConnectedSettings: gear toggle ────────────────────────────────────────
- * Round toggle matched to .theme-toggle-btn so the gear sits flush next to the
- * theme button in the same row. */
+ * The gear itself is a .app-header__icon-btn (icon-btn.css, via
+ * theme-picker.css), the same rules as the picker trigger beside it. */
 .settings-popout {
   position: relative;
   display: inline-flex;
-}
-
-.settings-toggle-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--color-text);
-  opacity: 0.7;
-  transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease;
-  width: 32px;
-  height: 32px;
-  box-sizing: border-box;
-}
-.settings-toggle-btn:hover {
-  background-color: var(--color-primary-hover);
-  opacity: 1;
-}
-.settings-toggle-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 /* Full-viewport click-catcher, same trick ThemePicker uses. */

@@ -76,7 +76,7 @@ export function ThemePicker({
   return (
     <div className={`theme-picker ${openLeftClass} ${className}`.trim()}>
       <button
-        className="theme-toggle-btn"
+        className="app-header__icon-btn theme-toggle-btn"
         onClick={onToggle}
         aria-label="Choose theme"
         title="Choose theme"

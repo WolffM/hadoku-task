@@ -1,0 +1,64 @@
+/* The round 32px icon button on the AppHeader bar — the theme picker trigger,
+ * the settings gear, and any link an app puts in the actions row.
+ *
+ * Defined ONCE. The picker and the gear each used to carry their own copy and
+ * the two had already drifted (padding 8px vs --hdk-space-sm, a ring on every
+ * mouse click vs on :focus-visible, a min-size on one only). `.theme-toggle-btn`
+ * and `.settings-toggle-btn` survive as hooks with no values of their own.
+ *
+ * Lives in its own file because ThemePicker renders outside the header too
+ * (HadokuThemePicker on a video overlay), so its trigger cannot depend on
+ * app-header.css. The chain is app-header.css -> theme-picker.css -> this.
+ *
+ * Works on an <a>: child apps ship without a preflight, so a bare anchor would
+ * render UA blue, visited purple and underlined. */
+
+.app-header__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--hdk-text-lg);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0.7;
+  transition:
+    background-color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+/* Same colour visited or not, and no hover recolour from a host stylesheet's
+ * `a:hover` — the hover signal is the background below. */
+.app-header__icon-btn:link,
+.app-header__icon-btn:visited,
+.app-header__icon-btn:hover,
+.app-header__icon-btn:active {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.app-header__icon-btn:hover {
+  background-color: var(--color-primary-hover);
+  opacity: 1;
+}
+
+/* :focus-visible, not :focus — :focus rings on every mouse click. Full
+ * opacity too, so a keyboard user never lands on the dimmed resting state. */
+.app-header__icon-btn:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}

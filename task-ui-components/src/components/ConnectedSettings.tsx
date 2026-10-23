@@ -235,7 +235,7 @@ export function ConnectedSettings({
     <div className="settings-popout" ref={rootRef}>
       <button
         type="button"
-        className="settings-toggle-btn"
+        className="app-header__icon-btn settings-toggle-btn"
         aria-label="User settings"
         aria-expanded={open}
         onClick={() => setOpen(v => !v)}

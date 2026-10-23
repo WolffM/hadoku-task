@@ -163,6 +163,20 @@ gear renders a read-only shell — it never throws. Pass `settingsProps={{ userT
 name }}` when the app already knows the identity to skip the extra fetch, or
 `showSettings={false}` to omit the gear.
 
+The theme picker trigger and the gear are both `.app-header__icon-btn` (32px round,
+one `:focus-visible` ring), defined once in `icon-btn.css`. A link in the actions row
+uses the same class and nothing else — it stays `--color-text` visited or not, with no
+underline, even under a host page's `a:visited` rule:
+
+```tsx
+<a className="app-header__icon-btn" href="https://discord.gg/…" aria-label="Discord">
+  <Icon name="chat" size={16} />
+</a>
+```
+
+The title truncates with an ellipsis and the actions never shrink, so the bar holds a
+status and four icons at 320px (`e2e/header-icon-btn.spec.ts`).
+
 ### Quick Start with @wolffm/themes (Recommended)
 
 The easiest way to use the ThemePicker is with the `@wolffm/themes` package:

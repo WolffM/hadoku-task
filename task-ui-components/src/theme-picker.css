@@ -20,43 +20,15 @@
  * --font-weight-semibold (e.g., 600)
  */
 
+@import './icon-btn.css';
+
 .theme-picker {
   position: relative;
 }
 
-/* Theme toggle button */
-.theme-toggle-btn {
-  background: none;
-  border: none;
-  font-size: var(--hdk-text-lg);
-  cursor: pointer;
-  padding: var(--hdk-space-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--color-text);
-  opacity: 0.7;
-  transition:
-    background-color var(--transition-fast, 0.15s ease),
-    opacity var(--transition-fast, 0.15s ease);
-  line-height: 1;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  box-sizing: border-box;
-}
-
-.theme-toggle-btn:hover {
-  background-color: var(--color-primary-hover);
-  opacity: 1;
-}
-
-.theme-toggle-btn:focus {
-  outline: none;
-  box-shadow: var(--hdk-shadow-focus-sm);
-}
+/* Theme toggle button: styled by the shared .app-header__icon-btn
+ * (icon-btn.css). `.theme-toggle-btn` stays on the element as a hook only —
+ * giving it values again would be the second copy that drifts. */
 
 /* Theme picker overlay - covers entire viewport for click-outside detection */
 .theme-picker__overlay {
