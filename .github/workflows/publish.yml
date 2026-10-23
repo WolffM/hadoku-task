@@ -24,13 +24,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
-          # The bot pushes straight to a protected main. The default GITHUB_TOKEN
-          # is not an admin, so its push is rejected with "protected branch hook
-          # declined" — and only when there is actually something to push, which
-          # is why this can sit green for weeks. HADOKU_SITE_TOKEN is WolffM's
-          # PAT and the branch has enforce_admins=false, so it bypasses. Same
-          # pattern hadoku_site/update-packages.yml already uses.
-          token: ${{ secrets.HADOKU_SITE_TOKEN }}
+          # The DEFAULT token, deliberately. It cannot push protected main, and
+          # does not need to: the release commit goes to bot/release and mgmt-api
+          # fast-forwards main onto it (hadoku-actions repo-action), so this repo
+          # holds no credential that can push main or reach any other repo.
+
+      - uses: WolffM/hadoku-actions/repo-action-cli@v1
 
       - uses: WolffM/hadoku-actions/setup-pnpm@v1
         id: pnpm
@@ -460,11 +459,17 @@ jobs:
             git add -A
             git commit -m "chore(release):${BUMPED} [skip ci]"
 
-            # Explicit refspec: HEAD is what we just committed on, regardless of
-            # what the local branch/upstream config looks like after a reset.
-            if git push origin HEAD:main; then
+            # Publish the commit on bot/release, then ask mgmt-api to move main
+            # onto it. Exit 2 means main moved since this run read it: fall
+            # through and re-assign on top of the new main, as before.
+            git push -q --force origin HEAD:refs/heads/bot/release
+            rc=0
+            REPO_ACTION_VERB=promote REPO_ACTION_BODY='{"branch":"bot/release"}' bash "$REPO_ACTION" || rc=$?
+            if [ "$rc" -eq 0 ]; then
+              git push -q origin --delete bot/release || echo "::warning::could not delete bot/release; the next release force-pushes it"
               break
             fi
+            [ "$rc" -eq 2 ] || exit 1
 
             push_attempts=$((push_attempts + 1))
             if [ "$push_attempts" -ge "$max_push_attempts" ]; then
@@ -488,6 +493,7 @@ jobs:
           # implicitly off the literal token in .npmrc; with the placeholder the
           # step must declare its own, or every read resolves an empty token.
           NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+          REPO_ACTION_KEY: ${{ secrets.KEY_SERVICE_TASK }}
 
       - name: Rebuild after version bump
         if: steps.version_check.outputs.version_issues == '1'
@@ -556,72 +562,24 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
 
-      - name: Notify parent about package updates
+      # hadoku_site is told through mgmt-api with this repo's own service key
+      # (hadoku-actions/repo-action). A refused or unanswered notify FAILS the
+      # job: the old curl only warned, and a dropped dispatch is a release the
+      # site never picks up.
+      - name: Which packages were published, in dependency order
+        id: published
         if: steps.changes.outputs.ui == 'true' || steps.changes.outputs.themes == 'true' || steps.changes.outputs.task == 'true'
-        env:
-          HADOKU_SITE_TOKEN: ${{ secrets.HADOKU_SITE_TOKEN }}
         run: |
-          echo "Notifying hadoku_site about package updates..."
+          pkgs=()
+          [ "${{ steps.changes.outputs.ui }}" = "true" ] && pkgs+=('"@wolffm/task-ui-components"')
+          [ "${{ steps.changes.outputs.themes }}" = "true" ] && pkgs+=('"@wolffm/themes"')
+          [ "${{ steps.changes.outputs.task }}" = "true" ] && pkgs+=('"@wolffm/task"')
+          echo "packages=[$(IFS=,; echo "${pkgs[*]}")]" >> "$GITHUB_OUTPUT"
 
-          if [ -z "$HADOKU_SITE_TOKEN" ]; then
-            echo "⚠️  Warning: HADOKU_SITE_TOKEN not available, skipping notification"
-            exit 0
-          fi
-
-          # Build array of updated packages in dependency order
-          updated_packages="["
-          first=true
-
-          # UI Components first (no dependencies)
-          if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
-            updated_packages="${updated_packages}\"@wolffm/task-ui-components\""
-            first=false
-          fi
-
-          # Themes second (depends on UI Components)
-          if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
-            if [ "$first" = "false" ]; then
-              updated_packages="${updated_packages},"
-            fi
-            updated_packages="${updated_packages}\"@wolffm/themes\""
-            first=false
-          fi
-
-          # Task last (depends on both)
-          if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
-            if [ "$first" = "false" ]; then
-              updated_packages="${updated_packages},"
-            fi
-            updated_packages="${updated_packages}\"@wolffm/task\""
-          fi
-
-          updated_packages="${updated_packages}]"
-
-          echo "Updated packages: $updated_packages"
-
-          payload=$(cat <<EOF
-            {
-              "event_type": "packages_updated",
-              "client_payload": {
-                "packages": $updated_packages,
-                "sha": "${{ github.sha }}",
-                "ref": "${{ github.ref }}"
-              }
-            }
-          EOF
-          )
-
-          status_code=$(curl -sS \
-            -o /dev/null \
-            -w "%{http_code}" \
-            -X POST "https://api.github.com/repos/WolffM/hadoku_site/dispatches" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $HADOKU_SITE_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -d "$payload")
-
-          if [ "$status_code" = "204" ]; then
-            echo "✅ Notified hadoku_site about package updates"
-          else
-            echo "⚠️  Failed to notify hadoku_site (HTTP $status_code)"
-          fi
+      - name: Notify hadoku_site (packages_updated)
+        if: steps.published.outputs.packages != ''
+        uses: WolffM/hadoku-actions/repo-action@v1
+        with:
+          verb: notify
+          body: '{"event_type":"packages_updated","client_payload":{"packages":${{ steps.published.outputs.packages }},"sha":"${{ github.sha }}"}}'
+          service-key: ${{ secrets.KEY_SERVICE_TASK }}
