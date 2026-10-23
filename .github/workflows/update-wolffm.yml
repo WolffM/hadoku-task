@@ -31,7 +31,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: write   # GITHUB_TOKEN pushes bot/update-wolffm; it cannot push protected main
   packages: read
 
 jobs:
@@ -39,197 +39,20 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER) }}
     timeout-minutes: 10
     steps:
-      # Before checkout, so the outcome report has a start time even when the
-      # run dies in checkout itself.
-      - name: Stamp the start time
-        run: echo "RUN_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
+      - name: Mark the start, so the reported duration is real
+        run: echo "JOB_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
 
+      # The DEFAULT token, deliberately: the bump is pushed to bot/update-wolffm
+      # and mgmt-api fast-forwards main onto it (hadoku-actions/update-wolffm), so
+      # this repo holds no credential that can push main or reach another repo.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # The bot pushes straight to a protected main. The default GITHUB_TOKEN
-          # is not an admin, so its push is rejected with "protected branch hook
-          # declined" — and only when there is actually something to push, which
-          # is why this can sit green for weeks. HADOKU_SITE_TOKEN is WolffM's
-          # PAT and the branch has enforce_admins=false, so it bypasses. Same
-          # pattern hadoku_site/update-packages.yml already uses.
-          token: ${{ secrets.HADOKU_SITE_TOKEN }}
 
-      - uses: WolffM/hadoku-actions/setup-pnpm@v1
-        id: pnpm
+      - uses: WolffM/hadoku-actions/update-wolffm@v1
         with:
+          service-key: ${{ secrets.KEY_SERVICE_TASK }}
           npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
-          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
-
-      - name: Configure npm auth for GitHub Packages
-        # SINGLE quotes, and the literal ${NODE_AUTH_TOKEN} — never the value.
-        #
-        # This wrote the RAW TOKEN. `${{ secrets.X }}` is expanded by GitHub
-        # before the shell ever sees it, so the double-quoted form put a live PAT
-        # into ~/.npmrc — the SHARED home directory of a self-hosted runner,
-        # where it then clobbered the fleet's tokenless npmrc for every later job
-        # on that machine. Found on claw-1 (2026-08-26) and hokon (2026-08-27),
-        # same credential, written by this step on the daily @wolffm fan-out.
-        #
-        # pnpm expands ${NODE_AUTH_TOKEN} from the environment at install time,
-        # which is what `env:` below supplies — so the file on disk never holds a
-        # secret. This repo's own publish.yml already does it this way.
-        run: |
-          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > ~/.npmrc
-          echo "@wolffm:registry=https://npm.pkg.github.com" >> ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-
-      - name: Update @wolffm/* to latest (majors included)
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-        run: |
-          # -r so themes/ + task-ui-components/ workspace subpackages
-          # also pick up any external @wolffm/* dep updates.
-          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store update -r --latest "@wolffm/*"
-
-      # `pnpm update --latest "@wolffm/*"` matches WORKSPACE members too and
-      # rewrites their `workspace:*` ranges to registry carets. That is not a
-      # cosmetic diff: with a registry range, CI's fresh install nests a
-      # published tarball under the depending package, vite bundles TWO copies
-      # of the theme context module, and every mount dies with "No
-      # <HadokuThemeRoot> above this component" — the 2026-08-05 prod outage
-      # (docs/incident-2026-08-04-ci-failures.md). The bot reintroduced the bad
-      # range twice in one day (e73bcab, cea426e), so the restore lives HERE,
-      # in the only actor that rewrites it.
-      - name: Restore workspace:* for in-repo packages
-        run: |
-          node -e '
-            const {execSync}=require("child_process"), fs=require("fs");
-            const manifests=execSync("git ls-files \"*package.json\"").toString().trim().split("\n")
-              .filter(m => m && !m.includes("node_modules"));
-            const members=new Set(manifests.map(m => { try { return JSON.parse(fs.readFileSync(m,"utf8")).name } catch { return null } }).filter(Boolean));
-            let fixed=0;
-            for (const m of manifests) {
-              let pkg; try { pkg=JSON.parse(fs.readFileSync(m,"utf8")); } catch { continue; }
-              let changed=false;
-              for (const field of ["dependencies","devDependencies"]) {
-                for (const [name,range] of Object.entries(pkg[field]||{})) {
-                  if (members.has(name) && !String(range).startsWith("workspace:")) {
-                    console.log(`${m}: ${name} ${range} -> workspace:* (in-repo package)`);
-                    pkg[field][name]="workspace:*"; changed=true; fixed++;
-                  }
-                }
-              }
-              if (changed) fs.writeFileSync(m, JSON.stringify(pkg,null,2)+"\n");
-            }
-            process.exit(0);
-          '
-          # Resync the lockfile if anything was restored; harmless no-op otherwise.
-          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
-
-
-      # Always-latest is the policy, so "not at latest" is a failure, not a note.
-      # This runs AFTER the update above and re-reads the manifests, so it also
-      # catches an update that silently did nothing (a lost dispatch, a registry
-      # hiccup, a range pnpm declined to touch). The fan-out that triggers this
-      # workflow is best-effort; this step is what makes a missed one visible.
-      - name: Assert every @wolffm dependency is at latest
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-        run: |
-          node -e '
-            const {execSync}=require("child_process"), fs=require("fs");
-            const seen=new Set(); const stale=[]; const unchecked=[];
-            const manifests=execSync("git ls-files \"*package.json\"").toString().trim().split("\n");
-            for (const m of manifests) {
-              if (!m || m.includes("node_modules")) continue;
-              let pkg; try { pkg=JSON.parse(fs.readFileSync(m,"utf8")); } catch { continue; }
-              for (const field of ["dependencies","devDependencies"]) {
-                for (const [name,range] of Object.entries(pkg[field]||{})) {
-                  if (!name.startsWith("@wolffm/")) continue;
-                  // workspace: and * are not version claims — nothing to compare.
-                  const r=String(range);
-                  if (r.startsWith("workspace:") || r==="*") continue;
-                  // Key by FIELD too, not just name+manifest: a package can sit in
-                  // BOTH dependencies and devDependencies of one file with DIFFERENT
-                  // ranges, and deduping by name alone checked whichever came first
-                  // and silently skipped the stale one.
-                  const key=name+"@"+m+"#"+field; if (seen.has(key)) continue; seen.add(key);
-                  let latest; try {
-                    latest=execSync(`npm view ${name} version --registry=https://npm.pkg.github.com`,{stdio:["ignore","pipe","ignore"]}).toString().trim();
-                  } catch {
-                    // NOT `continue`. An unreachable registry is indistinguishable
-                    // from "at latest" if it is skipped, so a 401 here used to make
-                    // the whole step report success while checking nothing — which
-                    // is exactly what it happened to do wherever the .npmrc was not
-                    // in this step working directory.
-                    unchecked.push(`${name} in ${m}: could not read the registry`);
-                    continue;
-                  }
-                  const declared=(r.match(/(\d+\.\d+\.\d+)/)||[])[1];
-                  if (declared && latest && declared!==latest) {
-                    stale.push(`${name} in ${m}: declares ${r}, latest is ${latest}`);
-                  }
-                }
-              }
-            }
-            if (unchecked.length) {
-              for (const u of unchecked) console.log(`::error::${u}`);
-              console.error(`\n${unchecked.length} @wolffm package(s) could not be checked at all.`);
-              console.error("Usually the .npmrc is not in this step working directory.");
-              process.exit(1);
-            }
-            if (stale.length) {
-              for (const s of stale) console.log(`::error::${s}`);
-              console.error(`\n${stale.length} @wolffm dependency/ies are not at latest.`);
-              console.error("Every @wolffm package must track the newest version, majors included.");
-              console.error("If a major needs code changes, make them — do not pin back.");
-              process.exit(1);
-            }
-            console.log("All @wolffm dependencies are at latest.");
-          '
-      - name: Commit and push if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Scope the no-op check to exactly the files we commit. A repo-wide
-          # `git status` check would let any unrelated dirt fall through to an
-          # empty `git commit`, which exits non-zero and fails the run.
-          FILES="package.json pnpm-lock.yaml themes/package.json task-ui-components/package.json"
-
-          if [ -z "$(git status --porcelain -- $FILES)" ]; then
-            echo "✅ No @wolffm package updates available"
-            exit 0
-          fi
-
-          git add $FILES
-          git commit -m "chore: auto-update @wolffm/* to latest"
-
-          # No explicit publish.yml dispatch here. Checkout authenticates with
-          # HADOKU_SITE_TOKEN (a PAT), and a PAT push DOES trigger `on: push`
-          # workflows — only GITHUB_TOKEN pushes are loop-suppressed. The old
-          # dispatch dated from the GITHUB_TOKEN era; after the PAT switch it
-          # made every auto-update run publish.yml TWICE (push + dispatch, same
-          # second), which published two versions per dep bump — 4.0.1 and 4.0.2,
-          # nine seconds apart, on 2026-08-05.
-          for i in 1 2 3; do
-            push_out=$(git push 2>&1) && rc=0 || rc=$?
-            echo "$push_out"
-            if [ "$rc" -eq 0 ]; then
-              echo "✅ Pushed — the PAT push triggers publish.yml on its own"
-              exit 0
-            fi
-            # A branch-protection rejection (GH006 / "protected branch hook
-            # declined") is deterministic — rebasing and retrying cannot fix it,
-            # and on 2026-08-04 doing so buried the real cause under ten
-            # identical "race" retries. Name the fix and die on the first line.
-            if echo "$push_out" | grep -qiE "GH006|protected branch hook declined"; then
-              echo "::error::Push rejected by branch protection, not a race. The pushing credential cannot satisfy main's required checks — checkout must use a token that bypasses them (token: HADOKU_SITE_TOKEN, see the checkout step). See docs/incident-2026-08-04-ci-failures.md."
-              exit 1
-            fi
-            echo "Push failed (attempt $i), rebasing..."
-            git fetch origin main
-            git rebase origin/main || { git rebase --abort; exit 1; }
-          done
-          echo "❌ Push failed after retries"
-          exit 1
 
       - name: Report the outcome so a silent red streak screams
         # Why a job reports at all, and why this is referenced rather than
@@ -239,4 +62,4 @@ jobs:
         with:
           job-name: hadoku-task:update-wolffm
           service-key: ${{ secrets.KEY_SERVICE_TASK }}
-          started-at: ${{ env.RUN_STARTED_AT }}
+          started-at: ${{ env.JOB_STARTED_AT }}
