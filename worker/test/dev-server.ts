@@ -196,9 +196,10 @@ const env = {
     ]),
   // The lane-change wake dispatch (§5.2) skips silently with no token binding, so
   // a default dev/e2e run never POSTs to GitHub — deliberate: the specs must be
-  // hermetic. Supply the PAT to smoke-test the real outbound call end to end:
-  //   node ../hadoku_site/scripts/secrets/dev-vault.mjs -- pnpm run dev:api
-  GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN || process.env.HADOKU_SITE_TOKEN,
+  // hermetic. To smoke-test the real outbound call end to end, export a token
+  // with Actions write on the target repo as GITHUB_READ_TOKEN for that one run.
+  // This repo's dev-vault no longer serves the account-wide hadoku_site PAT.
+  GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN,
   // Our identity at the provider for the open-items scan. The stub above checks
   // it, so the dev stack proves the credential is actually sent.
   HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
