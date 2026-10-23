@@ -67,8 +67,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
       '@wolffm/catalogue':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^1.0.5
+        version: 1.0.5
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
@@ -939,8 +939,8 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
-  '@wolffm/catalogue@1.0.4':
-    resolution: {integrity: sha512-fN/P+0DHPnf2wnI8je+DoEGEYO1+zH4k4JkyiT2pwuSU5w/yry5gUt1mYVTbSuF58/l2C4KUUzAy3OimIQ7OOQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.4/827b40751bc8325e2d7049ee367333579ebb5652}
+  '@wolffm/catalogue@1.0.5':
+    resolution: {integrity: sha512-Q6sh6VywX+aXbAunlXvkEHOxkVsneU5QGq/5cvQb2coYsEeLI9FC6l1bM4KaWaTpZOVTtx3DnnvTCVsvEVthFQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.5/9fca09ef5d70d0fafc70918ffd66117da91a1c77}
     engines: {node: '>=18'}
 
   '@wolffm/logger@1.4.0':
@@ -3137,7 +3137,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@wolffm/catalogue@1.0.4': {}
+  '@wolffm/catalogue@1.0.5': {}
 
   '@wolffm/logger@1.4.0': {}
 
