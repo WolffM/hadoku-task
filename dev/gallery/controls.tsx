@@ -21,8 +21,10 @@ import {
   AppHeader,
   Button,
   HadokuThemePicker,
+  installSelectMenus,
   installTitleTooltips,
   NativeSelect,
+  NumberInput,
   Select,
   Tooltip,
   type ButtonFamily,
@@ -39,6 +41,8 @@ import '../../src/styles/style.css'
 import '@wolffm/task-ui-components/button.css'
 import '@wolffm/task-ui-components/select.css'
 import '@wolffm/task-ui-components/tooltip.css'
+import '@wolffm/task-ui-components/controls.css'
+import '@wolffm/task-ui-components/number-input.css'
 import '@wolffm/task-ui-components/scrollbar.css'
 import './gallery.css'
 import './controls.css'
@@ -539,6 +543,101 @@ function TooltipsSection() {
   )
 }
 
+/** Bare browser controls with no classes at all — what an app gets from the
+ *  shell's controls.css and installSelectMenus() without writing any CSS. */
+function NativeSection() {
+  const [status, setStatus] = useState('doing')
+  const [changes, setChanges] = useState(0)
+  const [qty, setQty] = useState('3')
+  return (
+    <section className="gallery__card" data-testid="native">
+      <h2 className="gallery__h2">Plain HTML controls</h2>
+      <p className="gallery__note">
+        No classes, no components: <code>controls.css</code> under{' '}
+        <code>&lt;html class=&quot;hdk-controls&quot;&gt;</code> and{' '}
+        <code>installSelectMenus()</code>, which hadoku_site installs for every app. Anything an app
+        styles itself wins over all of it.
+      </p>
+      <div className="controls__rows">
+        <div className="controls__row">
+          <label htmlFor="native-status" className="gallery__label">
+            Status
+          </label>
+          <select
+            id="native-status"
+            value={status}
+            onChange={e => {
+              setStatus(e.target.value)
+              setChanges(c => c + 1)
+            }}
+          >
+            <optgroup label="Open">
+              <option value="todo">To do</option>
+              <option value="doing">Doing</option>
+            </optgroup>
+            <optgroup label="Closed">
+              <option value="done">Done</option>
+              <option value="archived" disabled>
+                Archived
+              </option>
+            </optgroup>
+          </select>
+          <output data-testid="native-status-out">
+            {status} · {changes} change{changes === 1 ? '' : 's'}
+          </output>
+        </div>
+        <div className="controls__row">
+          <span className="gallery__label">Opted out</span>
+          <span data-native-select>
+            <select aria-label="Native list">
+              <option>OS list on purpose</option>
+              <option>Second</option>
+            </select>
+          </span>
+        </div>
+        <div className="controls__row">
+          <span className="gallery__label">Inputs</span>
+          <input type="text" placeholder="Placeholder text" aria-label="Text" />
+          <input type="number" defaultValue={5} aria-label="Bare number" />
+          <NumberInput
+            aria-label="Quantity"
+            min={0}
+            max={5}
+            value={qty}
+            onChange={e => setQty(e.target.value)}
+          />
+          <output data-testid="qty-out">{qty}</output>
+        </div>
+        <div className="controls__row">
+          <span className="gallery__label">Choices</span>
+          <label>
+            <input type="checkbox" defaultChecked /> Checkbox
+          </label>
+          <label>
+            <input type="radio" name="native-radio" defaultChecked /> One
+          </label>
+          <label>
+            <input type="radio" name="native-radio" /> Two
+          </label>
+          <input type="range" aria-label="Range" defaultValue={60} />
+          <progress value={0.4} aria-label="Progress" />
+        </div>
+        <div className="controls__row">
+          <span className="gallery__label">Other</span>
+          <input type="file" aria-label="File" />
+          <button type="button">Bare button</button>
+          <a href="#native">A plain link</a>
+        </div>
+        <details>
+          <summary>Details with a plain summary</summary>
+          <p>Opened.</p>
+        </details>
+        <textarea aria-label="Notes" placeholder="A plain textarea" rows={2} />
+      </div>
+    </section>
+  )
+}
+
 const DEFAULT_COMPARE = ['light', 'dark', 'izakaya-light', 'cyberpunk-dark']
 
 /** The same compact sample rendered under several themes at once. */
@@ -588,6 +687,10 @@ function CompareSection() {
               <button type="button" className="pill-btn" title={`title= in ${t}`}>
                 title=
               </button>
+              <select aria-label={`Native select in ${t}`} defaultValue="b">
+                <option value="a">Alpha</option>
+                <option value="b">Beta</option>
+              </select>
             </div>
             <Select
               aria-label={`Status in ${t}`}
@@ -652,6 +755,7 @@ function Gallery() {
           <ButtonsSection />
           <DropdownsSection />
           <TooltipsSection />
+          <NativeSection />
           <CompareSection />
         </div>
       </div>
@@ -662,7 +766,9 @@ function Gallery() {
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('controls gallery: #root is missing from index.html')
 
+document.documentElement.classList.add('hdk-controls')
 installTitleTooltips()
+installSelectMenus()
 
 createRoot(rootEl).render(
   <React.StrictMode>

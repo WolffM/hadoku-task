@@ -15,6 +15,7 @@ import { Icon, type IconName } from '@wolffm/themes'
 import '../select.css'
 import '../scrollbar.css'
 import { themeScopeOf } from '../lib/themeScope'
+import { placeMenu, type MenuPosition } from '../lib/menuPlacement'
 
 export type SelectVariant = 'outline' | 'filled' | 'ghost' | 'underline'
 export type SelectSize = 'sm' | 'md' | 'lg'
@@ -44,17 +45,7 @@ export interface SelectProps<V extends string = string> {
   className?: string
 }
 
-const MENU_GAP = 4
-const MENU_MAX_HEIGHT = 280
 const TYPEAHEAD_RESET_MS = 600
-
-interface MenuPosition {
-  left: number
-  width: number
-  top?: number
-  bottom?: number
-  maxHeight: number
-}
 
 export function Select<V extends string = string>({
   value,
@@ -126,20 +117,7 @@ export function Select<V extends string = string>({
   const place = useCallback(() => {
     const trigger = triggerRef.current
     if (!trigger) return
-    const rect = trigger.getBoundingClientRect()
-    const below = window.innerHeight - rect.bottom - MENU_GAP
-    const above = rect.top - MENU_GAP
-    // Flip up only when the list does not fit below AND there is more room above.
-    const flip =
-      below < Math.min(MENU_MAX_HEIGHT, listRef.current?.scrollHeight ?? 0) && above > below
-    setPosition({
-      left: rect.left,
-      width: rect.width,
-      ...(flip
-        ? { bottom: window.innerHeight - rect.top + MENU_GAP }
-        : { top: rect.bottom + MENU_GAP }),
-      maxHeight: Math.max(120, Math.min(MENU_MAX_HEIGHT, flip ? above : below) - 8)
-    })
+    setPosition(placeMenu(trigger.getBoundingClientRect(), listRef.current?.scrollHeight ?? 0))
   }, [])
 
   // Measure once the list exists, then follow the trigger while open.

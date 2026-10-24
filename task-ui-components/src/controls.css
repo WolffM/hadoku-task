@@ -1,0 +1,137 @@
+/* Themed fallbacks for the browser's own control styling, for
+ * @wolffm/task-ui-components.
+ *
+ *   import '@wolffm/task-ui-components/controls.css'
+ *   <html class="hdk-controls">
+ *
+ * hadoku_site puts `hdk-controls` on <html>, which covers every
+ * micro-frontend. Every selector is wrapped in `:where()`, so all of it has
+ * ZERO specificity: it only fills in where an app styled nothing. An app's
+ * own rule for the same property — any selector at all — wins, whatever order
+ * the sheets load in. An author rule of any specificity still beats the
+ * browser's stylesheet, which is all this needs to.
+ *
+ * What it covers, each the browser default it replaces:
+ *   - focus ring        Chrome's two-tone `outline: auto`  -> the accent
+ *   - links             -webkit-link blue / visited purple -> the text around it
+ *   - checkbox, radio, range, progress  system blue        -> accent-color
+ *   - text selection    system highlight                   -> the accent tint
+ *   - placeholder       darkgray                           -> tertiary text
+ *   - <summary> marker  text-colour triangle               -> secondary text
+ *   - file picker       OS "Choose file" button            -> a soft button
+ *   - number spinners   OS up/down arrows                  -> removed (arrow keys
+ *                       still step; <NumberInput> is the themed stepper)
+ *   - text fields and textarea, buttons, a select's closed box: the system
+ *     field/button chrome -> the theme's card surface and border
+ *
+ * The open list of a <select> is not CSS-reachable at all; installSelectMenus()
+ * replaces it. Date and time pickers stay OS-drawn: apps own those.
+ *
+ * Everything sits in `@layer hdk-fallbacks`. A rule in a cascade layer loses
+ * to every unlayered rule and to every layer declared after it — whatever
+ * either's specificity — and Tailwind ships its utilities in layers. Unlayered,
+ * even a zero-specificity rule here would beat `bg-primary`. The page must
+ * declare the layer FIRST, before any other, so it ranks lowest:
+ *
+ *   @layer hdk-fallbacks, base, theme, utilities;
+ *
+ * hadoku_site's global.css does that. A sheet that never names it just gets
+ * these rules below its own unlayered ones, which is also correct.
+ */
+
+@layer hdk-fallbacks {
+  /* accent-color inherits, so it is declared once per theme scope rather than
+   * per element: an app's accent-color on a container still reaches its
+   * children, and a nested [data-theme] still resolves its own accent. */
+  :where(.hdk-controls),
+  :where(.hdk-controls [data-theme]) {
+    accent-color: var(--color-primary);
+  }
+
+  :where(.hdk-controls) :where(:focus-visible) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* The browser colours a link directly rather than letting it inherit, so a
+   * link nobody styled is blue on any surface. `inherit` is what an app means
+   * when it styles the surface and not the link (Tailwind's preflight does the
+   * same); the underline keeps it reading as a link. */
+  :where(.hdk-controls) :where(a:any-link) {
+    color: inherit;
+  }
+
+  :where(.hdk-controls) ::selection {
+    background-color: var(--color-primary-bg);
+    color: var(--color-on-primary-bg);
+  }
+
+  :where(.hdk-controls) ::placeholder {
+    color: var(--color-text-tertiary);
+    opacity: 1;
+  }
+
+  :where(.hdk-controls) :where(summary)::marker {
+    color: var(--color-text-secondary);
+  }
+
+  :where(.hdk-controls) :where(input[type='file'])::file-selector-button {
+    margin-inline-end: 8px;
+    padding: 4px 10px;
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-on-neutral-bg);
+    background-color: var(--color-neutral-bg);
+    border: 1px solid transparent;
+    border-radius: var(--hdk-radius);
+    cursor: pointer;
+  }
+
+  :where(.hdk-controls) :where(input[type='file'])::file-selector-button:hover {
+    border-color: var(--color-neutral);
+  }
+
+  :where(.hdk-controls) :where(input[type='number']) {
+    appearance: textfield;
+  }
+
+  :where(.hdk-controls) :where(input[type='number'])::-webkit-inner-spin-button,
+  :where(.hdk-controls) :where(input[type='number'])::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  /* Field chrome: only the properties that make up the system look. No padding,
+   * radius, font or size: those decide layout and shape, and an app that
+   * styled a field's background but not its padding must not see it move. */
+  :where(.hdk-controls)
+    :where(
+      input:not(
+        [type='checkbox'],
+        [type='radio'],
+        [type='range'],
+        [type='file'],
+        [type='color'],
+        [type='button'],
+        [type='submit'],
+        [type='reset'],
+        [type='image']
+      ),
+      textarea,
+      select
+    ) {
+    color: var(--color-text);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+  }
+
+  :where(.hdk-controls)
+    :where(button, input[type='button'], input[type='submit'], input[type='reset']) {
+    /* inherit, not a token: an app that coloured a button's surface and not
+     * its text, or draws with currentColor inside it, keeps the colour it
+     * had from the page instead of jumping to the neutral tint's ink. */
+    color: inherit;
+    background-color: var(--color-neutral-bg);
+    border: 1px solid transparent;
+  }
+}

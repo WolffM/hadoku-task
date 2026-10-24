@@ -181,6 +181,15 @@
   box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 
+/* An <optgroup> label in a list installSelectMenus builds from a native select. */
+.hdk-select__group {
+  padding: 8px 10px 2px;
+  font-size: 0.85em;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
 .hdk-select__option[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;

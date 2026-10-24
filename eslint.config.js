@@ -114,6 +114,8 @@ export default [
         KeyboardEvent: 'readonly',
         PointerEvent: 'readonly',
         FocusEvent: 'readonly',
+        HTMLOptionElement: 'readonly',
+        HTMLOptGroupElement: 'readonly',
         EventTarget: 'readonly',
         TouchEvent: 'readonly',
         DataTransfer: 'readonly',

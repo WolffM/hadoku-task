@@ -39,11 +39,15 @@ export { SettingsModal } from './components/SettingsModal'
 // `hdk-scroll` to the app root.
 export { Button } from './components/Button'
 export { Select, NativeSelect } from './components/Select'
+export { NumberInput } from './components/NumberInput'
 export { Tooltip } from './components/Tooltip'
 // Framework-free; also its own entry, `@wolffm/task-ui-components/title-tooltips`,
 // so the site shell can install it without React.
 export { installTitleTooltips } from './lib/titleTooltips'
 export type { TitleTooltipOptions } from './lib/titleTooltips'
+// Same, `@wolffm/task-ui-components/select-menus`: the themed list for every
+// native <select>.
+export { installSelectMenus } from './lib/selectMenus'
 
 // Bento components
 export { BentoGrid } from './components/BentoGrid'

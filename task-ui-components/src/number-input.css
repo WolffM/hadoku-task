@@ -1,0 +1,131 @@
+/* NumberInput styles for @wolffm/task-ui-components.
+ *
+ *   import '@wolffm/task-ui-components/number-input.css'
+ *
+ * One bordered box holding the field and a stacked up/down stepper, so the
+ * focus ring and the border belong to the whole control, as on <Select>.
+ */
+
+.hdk-number {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 0;
+  vertical-align: middle;
+  color: var(--color-text);
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  overflow: hidden;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.hdk-number:hover:not(.hdk-number--disabled) {
+  border-color: var(--color-text-muted);
+}
+
+.hdk-number:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--hdk-shadow-focus-sm);
+}
+
+.hdk-number--disabled {
+  opacity: 0.5;
+}
+
+.hdk-number__input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  appearance: textfield;
+}
+
+.hdk-number__input:focus {
+  outline: none;
+}
+
+.hdk-number__input::-webkit-inner-spin-button,
+.hdk-number__input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.hdk-number__steps {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.hdk-number__step {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.hdk-number__step + .hdk-number__step {
+  border-top: 1px solid var(--color-border);
+}
+
+.hdk-number__step:hover:not(:disabled) {
+  color: var(--color-on-primary-bg);
+  background-color: var(--color-primary-bg);
+}
+
+.hdk-number__step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hdk-number--sm {
+  font-size: var(--hdk-text-xs);
+  min-height: 28px;
+}
+
+.hdk-number--sm .hdk-number__input {
+  padding: 4px 8px;
+}
+
+.hdk-number--sm .hdk-number__step {
+  width: 18px;
+}
+
+.hdk-number--md {
+  font-size: var(--hdk-text-sm);
+  min-height: 34px;
+}
+
+.hdk-number--md .hdk-number__input {
+  padding: 7px 10px;
+}
+
+.hdk-number--md .hdk-number__step {
+  width: 22px;
+}
+
+.hdk-number--lg {
+  font-size: var(--hdk-text-base);
+  min-height: 42px;
+}
+
+.hdk-number--lg .hdk-number__input {
+  padding: 10px 12px;
+}
+
+.hdk-number--lg .hdk-number__step {
+  width: 26px;
+}

@@ -104,19 +104,41 @@ import { Button, Select, NativeSelect, Tooltip } from '@wolffm/task-ui-component
 
 - **Scrollbars** — CSS only. `hdk-scroll` styles its element and every scroller inside it, thumb in the theme's primary
   colour (resolved per element, so nested `data-theme` scopes get their own);
-  modifiers `--subtle`, `--thin`, `--rail`, `--autohide`. Zero specificity (`:where()`), so
-  any scrollbar rule an app writes itself wins.
+  modifiers `--subtle`, `--thin`, `--rail`, `--autohide`. Zero specificity (`:where()`) inside
+  `@layer hdk-fallbacks`, so any scrollbar rule an app writes itself wins — see below.
 - **Button** — `variant` soft (default) | solid | gradient | outline | ghost × `family` primary | success |
   warning | danger | neutral; `size`, `shape` (rounded | pill | square), `icon`, `iconEnd`,
   `loading`, `block`. An icon with no children is a square icon button — give it `aria-label`.
 - **Select** — ARIA listbox with arrows, Home/End, Enter, Escape and typeahead; `variant`
-  outline | filled | ghost | underline. **NativeSelect** keeps the OS popup with the same trigger.
+  outline | filled | ghost | underline. **NativeSelect** is a real `<select>` with the same
+  trigger; under the hadoku.me shell its list is the themed one too (see `installSelectMenus`).
+- **NumberInput** — a real `<input type="number">` (all input props pass through, controlled or
+  not) with a themed up/down stepper in place of the OS spinner; hold to repeat; `size`.
 - **Tooltip** — replaces `title=`. Hover and keyboard focus, Escape dismisses, hoverable bubble;
   `variant` card (default) | inverse | primary, `placement` with viewport flip.
 
 Select and Tooltip portal their popups into the anchor's nearest `[data-theme]` scope (the app
 container, or a nested theme preview inside it), so a popup always paints in its anchor's theme
 and escapes `overflow: hidden` and transformed ancestors.
+
+### Page-wide fallbacks (hadoku_site installs these once, for every app)
+
+These restyle what an app left to the browser, without touching its markup. An app does not
+install them itself; they are listed here so it knows what it gets and how to opt out.
+
+- `controls.css` + `<html class="hdk-controls">` — focus ring, link colour, accent colour on
+  checkboxes/radios/ranges/progress, selection, placeholder, `<summary>` marker, the file-picker
+  button, no number spinners, and field/button chrome.
+- `scrollbar.css` + `<html class="hdk-scroll">` — every scroller.
+- `installTitleTooltips()` (`/title-tooltips`) — every `title=` as the card tooltip.
+  Opt out: `data-native-title`.
+- `installSelectMenus()` (`/select-menus`) — the themed list for every native `<select>`;
+  touch keeps the phone's picker. Opt out: `data-native-select`.
+
+Both sheets are zero-specificity **and** sit in `@layer hdk-fallbacks`, so ANY rule an app writes
+wins, including Tailwind utilities, which live in layers and would otherwise lose to an unlayered
+rule of any specificity. That only holds if the page declares the layer first:
+`@layer hdk-fallbacks, base, theme, utilities;` — hadoku_site's `global.css` does.
 
 ## Usage
 
