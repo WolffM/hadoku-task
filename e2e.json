@@ -84,6 +84,10 @@
     "--advanced-gradient does not leak from light into other themes": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
     "a persisted themeMode=advanced does not resurrect the advanced visuals": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
     "legacy simpleMode=true is migrated to themeMode=simple on load": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
-    "legacy simpleMode=false migrates to themeMode=advanced but still renders simple": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner"
+    "legacy simpleMode=false migrates to themeMode=advanced but still renders simple": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
+    "every scroller in the app takes the active theme accent": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
+    "no native title tooltips remain in the app chrome": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
+    "task action buttons show card tooltips and keep their DOM shape": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
+    "the theme picker trigger has a tooltip and a press dismisses it": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner"
   }
 }
