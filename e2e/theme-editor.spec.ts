@@ -12,7 +12,7 @@ import { apiUp } from './helpers/stack'
  * banner claiming one happened.
  */
 
-const DEV = 'http://127.0.0.1:3001/__dev/github'
+const DEV = `http://127.0.0.1:${process.env.DEV_API_PORT ?? 3001}/__dev/github`
 
 interface DevRepo {
   main: string

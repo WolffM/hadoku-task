@@ -40,7 +40,7 @@ import {
   type TokenEdits
 } from '@wolffm/themes/contract'
 import { logger } from '../logger'
-import { ErrorResponseSchema } from '../schemas'
+import { ErrorResponseSchema } from '../schemas-common'
 import type { AppContext } from '../types'
 import { githubToken } from './board-automation'
 

@@ -14,7 +14,7 @@ import {
   boardRefFrom,
   withoutBoardRef
 } from './route-utils'
-import { boardErrorResponses, boardNotFoundResponse } from '../schemas-agent'
+import { boardErrorResponses, boardNotFoundResponse } from '../schemas-errors'
 import type { AppContext } from '../types'
 import {
   GetTasksResponseSchema,
@@ -24,9 +24,9 @@ import {
   UpdateTaskResponseSchema,
   CompleteTaskResponseSchema,
   DeleteTaskResponseSchema,
-  GetStatsResponseSchema,
-  ErrorResponseSchema
+  GetStatsResponseSchema
 } from '../schemas'
+import { ErrorResponseSchema } from '../schemas-common'
 
 /**
  * Every task route takes the board reference the SAME way (§7.1): `board` (or

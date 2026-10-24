@@ -220,6 +220,18 @@ export default [
     }
   },
 
+  // A plain-node verify harness (run as-is by run-worker-verify.mjs, not
+  // bundled) — it drives esbuild and child processes itself.
+  {
+    files: ['worker/test/*-verify.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly'
+      }
+    }
+  },
+
   // The app tree may not reach into worker/.
   //
   // `tsconfig.json` includes only `src`, but an import is not bounded by

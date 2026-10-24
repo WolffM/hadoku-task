@@ -149,10 +149,29 @@ GitHub issues or a terminal — those systems cannot render an SVG. Waive those 
 - Cold-load profiler: `pnpm run profile` (authenticated, measures timing + API waterfall + duplicate requests, writes `.profiler/latest.json`).
 - Full method, deeper techniques (CDP initiator stacks, render counts, simulated-KV server timing), regression guards, and the current baseline: `docs/PROFILING.md`. Start there whenever the ask is "profile" / "perf" / "why is it slow".
 
+## Worker route groups load lazily
+
+Cold isolates are task-api's typical request, and zod schemas built at module scope were most of
+their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest row is a stub that
+`import()`s its group on first use and forwards the request. `/health` loads no group at all.
+
+- **Added, removed or reordered a route? Run `pnpm run gen:routes`.** It regenerates
+  `worker/src/route-manifest.ts`; `route-manifest-verify.ts` fails if you forget, and an
+  unlisted route is a 404. Row order is match precedence — group order is set in `route-groups.ts`.
+- **Root must not statically import anything that builds a schema.** `cold-start-verify.mjs`
+  pins it: a cold `/health` evaluates no group and no `schemas*.ts`, a core UI route never
+  evaluates `schemas-agent.ts`.
+- Schemas are split by who uses them (`schemas-common`, `-errors`, `-shares`, `-session`,
+  `-preferences`, `-admin`, `-agent`, and `schemas.ts` for task/board entities). Import from the
+  narrowest one; pulling `schemas-agent.ts` into a core group puts the agent schemas back on
+  every board page.
+- A group runs as its own app, so it gets root's `authContext` by hand-off (`forwardedAuth`) and
+  its own copy of the error mapping. A group must not register middleware (the generator refuses).
+
 ## MCP (agent task/calendar management)
 
 - Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).
-- Source: `worker/src/mcp/` — `tools.ts` (transport-agnostic tool defs) + `handler.ts` (JSON-RPC handler), mounted in `worker/src/index.ts`.
+- Source: `worker/src/mcp/` — `tools.ts` (transport-agnostic tool defs) + `handler.ts` (JSON-RPC handler), mounted (lazily imported) in `worker/src/index.ts`.
 - Tools wrap the in-process `TaskHandlers`; scoped by `X-User-Key` (same auth as `/task/api/*`). Add a tool = add to `TOOLS` in `tools.ts`.
 - Full docs: `docs/MCP.md`.
 
@@ -175,6 +194,10 @@ GitHub issues or a terminal — those systems cannot render an SVG. Waive those 
   edge-router shim, a stub automation-preset provider on :3002, and the REAL prefs-api worker on
   :3003 against a real sqlite D1. Needed by any e2e spec that exercises the server path — those
   specs skip themselves when it isn't up.
+
+- **Another worktree holding :3001–:3003?** Move the whole stack: `DEV_API_PORT`, `DEV_PROVIDER_PORT`
+  and `DEV_PREFS_PORT` are read by `scripts/dev-api.mjs`, the vite proxy and the e2e helpers alike.
+  Set the same three (plus `E2E_PORT`) for both `dev:api` and `playwright test`.
 
 - **Prefs are not mocked.** `@wolffm/prefs-client` defaults to `https://hadoku.me/prefs`; specs
   point it at :3003 via `pointPrefsAtLocalStack()` (`e2e/helpers/prefs.ts`), which sets the

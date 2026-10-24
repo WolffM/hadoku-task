@@ -10,8 +10,9 @@ import type { APIRequestContext, Page } from '@playwright/test'
  * and thirteen copies is thirteen places to miss when any of those change.
  */
 
-/** The REAL worker on :3001, behind the edge-router shim (see scripts/dev-api.mjs). */
-export const API = 'http://127.0.0.1:3001/task/api'
+/** The REAL worker on :3001 (or DEV_API_PORT), behind the edge-router shim (see
+ * scripts/dev-api.mjs). */
+export const API = `http://127.0.0.1:${process.env.DEV_API_PORT ?? 3001}/task/api`
 
 /**
  * Sign in the way the key-swap flow does: the app reads these on boot.

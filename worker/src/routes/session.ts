@@ -8,11 +8,8 @@ import { maskKey, maskSessionId } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { handleSessionHandshake } from '../session'
 import type { AppContext } from '../types'
-import {
-  SessionHandshakeInputSchema,
-  SessionHandshakeResponseSchema,
-  ApiErrorSchema
-} from '../schemas'
+import { ApiErrorSchema } from '../schemas-common'
+import { SessionHandshakeInputSchema, SessionHandshakeResponseSchema } from '../schemas-session'
 
 /** The timestamp worker-utils' badRequest() puts on the wire — kept identical. */
 const now = () => new Date().toISOString()

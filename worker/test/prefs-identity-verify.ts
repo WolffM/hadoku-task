@@ -16,7 +16,8 @@
  * Run: pnpm run test:worker
  */
 import { createTaskHandler } from '../src/index'
-import { SessionHandshakeResponseSchema, UserPreferencesSchema } from '../src/schemas'
+import { SessionHandshakeResponseSchema } from '../src/schemas-session'
+import { UserPreferencesSchema } from '../src/schemas-preferences'
 
 const EDGE_SECRET = 'test-edge-secret'
 

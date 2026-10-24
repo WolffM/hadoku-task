@@ -19,7 +19,7 @@ import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { getBoardConfig } from './board-automation'
 import { GetBoardCalendarResponseSchema } from '../schemas'
-import { BoardNotFoundErrorSchema, boardRefParam } from '../schemas-agent'
+import { BoardNotFoundErrorSchema, boardRefParam } from '../schemas-errors'
 import type { AppContext } from '../types'
 
 /** Inclusive day bound. Validated here so a bad one is the shared 400, not a silent no-op. */

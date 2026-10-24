@@ -16,12 +16,12 @@ import {
 } from '../throttle'
 import { getSessionMapping } from '../session'
 import type { AppContext } from '../types'
+import { ErrorResponseSchema } from '../schemas-common'
 import {
   GetThrottleStatusResponseSchema,
   GetSessionsResponseSchema,
-  UnblacklistResponseSchema,
-  ErrorResponseSchema
-} from '../schemas'
+  UnblacklistResponseSchema
+} from '../schemas-admin'
 
 export function createAdminRoutes() {
   const app = new OpenAPIHono<AppContext>()

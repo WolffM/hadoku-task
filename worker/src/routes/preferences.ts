@@ -14,12 +14,12 @@ import {
 import { resolvePrefsIdentity } from '../request-utils'
 import { DEFAULT_THEME } from '../constants'
 import type { AppContext } from '../types'
+import { ErrorResponseSchema } from '../schemas-common'
 import {
   GetPreferencesResponseSchema,
   UpdatePreferencesInputSchema,
-  UpdatePreferencesResponseSchema,
-  ErrorResponseSchema
-} from '../schemas'
+  UpdatePreferencesResponseSchema
+} from '../schemas-preferences'
 
 export function createPreferencesRoutes() {
   const app = new OpenAPIHono<AppContext>()

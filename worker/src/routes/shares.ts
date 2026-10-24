@@ -21,18 +21,20 @@ import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { listShares, upsertShare, removeShare, resolveOwnBoard } from './board-sharing'
 import {
+  ForbiddenErrorSchema,
+  BoardNotFoundErrorSchema,
+  ShareGranteeNotFoundErrorSchema,
+  NoUserIdErrorSchema
+} from '../schemas-errors'
+import {
   GrantShareInputSchema,
   GrantShareResponseSchema,
   ListSharesResponseSchema,
   LeaveShareResponseSchema,
   RevokeShareResponseSchema,
-  UserSearchResponseSchema,
-  ForbiddenErrorSchema,
-  BoardNotFoundErrorSchema,
-  ShareGranteeNotFoundErrorSchema,
-  NoUserIdErrorSchema
-} from '../schemas-agent'
-import { ErrorResponseSchema } from '../schemas'
+  UserSearchResponseSchema
+} from '../schemas-shares'
+import { ErrorResponseSchema } from '../schemas-common'
 import {
   isIdentityError,
   nowIso,

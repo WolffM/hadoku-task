@@ -13,11 +13,11 @@
  * OpenAPI spec available at /task/api/openapi.json
  */
 import { OpenAPIHono } from '@hono/zod-openapi'
+import type { Context } from 'hono'
 import {
   createEdgeAuth,
   createCorsMiddleware,
   DEFAULT_HADOKU_ORIGINS,
-  simpleValidationHook,
   createErrorHandlers,
   createOpenAPIDocConfig
 } from '@wolffm/worker-utils'
@@ -31,8 +31,14 @@ import {
   type ThrottledTier
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
-import { DomainErrorSchema } from './schemas-agent'
+import { healthBody } from './routes/health'
+import { ROUTE_GROUPS, type RouteGroup } from './route-groups'
+import { ROUTE_MANIFEST } from './route-manifest'
 import type { AppContext, TaskAuthExtension } from './types'
+
+// NOTHING imported above may build a zod schema at module scope. Root is
+// evaluated on every cold isolate, before any request is routed; each route
+// group (and its schemas) loads on first use instead — see route-groups.ts.
 
 /**
  * Tiers subject to rate limiting. See the throttle middleware below for why
@@ -49,34 +55,162 @@ function isThrottledTier(tier: string): tier is ThrottledTier {
   return THROTTLED_TIERS.has(tier)
 }
 
-// Import route modules
-import { createSessionRoutes } from './routes/session'
-import { createPreferencesRoutes } from './routes/preferences'
-import { createBoardRoutes } from './routes/boards'
-import { createShareRoutes } from './routes/shares'
-import { createCalendarRoutes } from './routes/calendar'
-import { createAutomationRoutes } from './routes/automation'
-import { createAgentRoutes } from './routes/agent'
-import { createTaskRoutes } from './routes/tasks'
-import { handleMcp } from './mcp/handler'
-import { createTagsBatchRoutes } from './routes/tags-batch'
-import { createAdminRoutes } from './routes/admin'
-import { createThemeEditorRoutes } from './routes/theme-editor'
-import { createMiscRoutes } from './routes/misc'
+type AuthContext = AppContext['Variables']['authContext']
+
+/**
+ * The authContext root resolved for a request, handed to the group that serves
+ * it. A group runs as its own app (`shell.fetch`), which starts a fresh Context,
+ * so root's `c.var` does not reach it. Passing the object itself rather than
+ * re-running auth in the group keeps ONE auth + identity-scoping pass per
+ * request: the throttle and the handler see the same scoping by construction.
+ * Keyed by the Request, which root forwards unchanged.
+ */
+const forwardedAuth = new WeakMap<Request, AuthContext>()
+
+/** Hono's `executionCtx` getter throws when the app was invoked without one —
+ * `app.request()` in the verify harnesses. Absent is a legitimate state there,
+ * and the group sees exactly what root saw. */
+function executionCtxOf(c: Context): ExecutionContext | undefined {
+  try {
+    return c.executionCtx
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Map domain errors (TaskNotFound→404, BoardNotFound→404, VersionConflict→409)
+ * to their declared HTTP status before falling back to the generic 500 handler.
+ * Detected structurally so it works regardless of cross-package instanceof identity.
+ *
+ * Installed on root AND on every group shell: a group catches its own handler's
+ * throw, so root's onError never sees it.
+ */
+function installErrorHandlers(app: OpenAPIHono<AppContext>) {
+  const { notFoundHandler, errorHandler } = createErrorHandlers('simple')
+  app.notFound(notFoundHandler)
+  app.onError((err, c) => {
+    const domain = err as {
+      httpStatus?: unknown
+      code?: unknown
+      message?: string
+      currentVersion?: unknown
+      // Extra actionable fields carried by specific DomainErrors (§4.3): the
+      // claim holder + expiry on CLAIM_HELD, the current lane on LANE_CHANGED,
+      // the current notes digest on NOTES_CHANGED.
+      holder?: unknown
+      expiresAt?: unknown
+      currentLane?: unknown
+      currentDigest?: unknown
+      currentNotesHash?: unknown
+    }
+    if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
+      const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
+      if (typeof domain.currentVersion === 'number') body.currentVersion = domain.currentVersion
+      if (typeof domain.holder === 'string') body.holder = domain.holder
+      if (typeof domain.expiresAt === 'string') body.expiresAt = domain.expiresAt
+      if (domain.currentLane !== undefined) body.currentLane = domain.currentLane
+      if (typeof domain.currentDigest === 'string') body.currentDigest = domain.currentDigest
+      if (typeof domain.currentNotesHash === 'string') {
+        body.currentNotesHash = domain.currentNotesHash
+      }
+      return c.json(body, domain.httpStatus as 400 | 404 | 409 | 422 | 500)
+    }
+    return errorHandler(err, c)
+  })
+}
+
+/**
+ * Wrap one group the way root used to mount it: under /task/api, with root's
+ * authContext restored and the same error mapping. Root's CORS needs no copy —
+ * it decorates the response this returns.
+ */
+async function buildGroupShell(group: RouteGroup): Promise<OpenAPIHono<AppContext>> {
+  const shell = new OpenAPIHono<AppContext>()
+  shell.use('*', async (c, next) => {
+    const auth = forwardedAuth.get(c.req.raw)
+    if (!auth) {
+      logger.error('[Group shell] request reached a group without root auth', { group })
+      return c.json({ error: 'Auth context not available' }, 500)
+    }
+    c.set('authContext', auth)
+    return next()
+  })
+  shell.route('/task/api', await ROUTE_GROUPS[group]())
+  installErrorHandlers(shell)
+  return shell
+}
+
+/**
+ * Every group merged onto one app, the way they were all mounted before they
+ * went lazy, for the spec alone. Building it loads every group, which is fine for
+ * a route nothing hits on the request path.
+ */
+async function buildSpecApp(): Promise<OpenAPIHono<AppContext>> {
+  const spec = new OpenAPIHono<AppContext>()
+  for (const group of Object.keys(ROUTE_GROUPS) as RouteGroup[]) {
+    spec.route('/task/api', await ROUTE_GROUPS[group]())
+  }
+
+  // Every documented error response is narrowed to the codes ITS route+status can
+  // emit, so nothing references the catch-all any more. Register it explicitly:
+  // a generated client still needs the full `DomainErrorCode` enum and a base type
+  // for statuses no route declares (429 RATE_LIMITED from the throttle, 500).
+  const { DomainErrorSchema } = await import('./schemas-errors')
+  spec.openAPIRegistry.register('DomainError', DomainErrorSchema)
+
+  spec.doc(
+    '/task/api/openapi.json',
+    createOpenAPIDocConfig({
+      title: 'Task API',
+      version: '1.0.0',
+      description: `
+API for managing tasks, boards, and user preferences.
+
+## Overview
+This API provides endpoints for:
+- **Tasks**: Create, read, update, delete, and complete tasks
+- **Boards**: Organize tasks into boards
+- **Tags**: Categorize tasks with tags
+- **Batch Operations**: Bulk updates for tags and task movement
+- **Preferences**: User settings and configuration
+- **Sessions**: Session management and handshake
+
+## Authentication
+- **Public endpoints**: Basic read access without authentication
+- **Authenticated endpoints**: Full access via X-User-Key header
+- User types: admin, friend, public
+
+## Rate Limiting
+- Public users are rate-limited to prevent abuse
+- Authenticated users (admin/friend) bypass rate limiting
+		`,
+      production: 'https://task-api.hadoku.workers.dev',
+      tags: [
+        { name: 'Health', description: 'Health check endpoints' },
+        { name: 'Tasks', description: 'Task CRUD operations' },
+        { name: 'Boards', description: 'Board management' },
+        { name: 'Tags', description: 'Tag management' },
+        { name: 'Batch', description: 'Batch operations' },
+        { name: 'Session', description: 'Session management' },
+        { name: 'Preferences', description: 'User preferences' },
+        { name: 'Admin', description: 'Admin operations (requires admin access)' },
+        {
+          name: 'Theme editor',
+          description: 'Read and commit theme tokens for hadoku.me/task/editor (service tier+)'
+        }
+      ]
+    })
+  )
+  return spec
+}
 
 /**
  * Create the Task API Hono app.
  * Returns a Hono instance suitable for use as a Cloudflare Worker default export.
  */
 export function createTaskHandler(): OpenAPIHono<AppContext> {
-  // Cast needed: simpleValidationHook's ValidationHookResult uses Zod 3 issue types
-  // but @hono/zod-openapi 1.2.2 passes Zod 4 $ZodIssue (PropertyKey[] vs (string|number)[])
-  // Runtime behavior is identical — only the path array type definition differs
-  const app = new OpenAPIHono<AppContext>({
-    defaultHook: simpleValidationHook as unknown as NonNullable<
-      ConstructorParameters<typeof OpenAPIHono<AppContext>>[0]
-    >['defaultHook']
-  })
+  const app = new OpenAPIHono<AppContext>()
 
   // ============================================================================
   // Middleware Stack
@@ -250,141 +384,54 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // ============================================================================
   // Route Registration
   // ============================================================================
-  // IMPORTANT: Order matters! More specific routes must come before generic ones
-  // to avoid route parameter matching issues (e.g., /batch-tag before /:id)
+  // Root holds no route group. Each manifest row is a stub that loads its group
+  // on first use and forwards the request to it; a group's schemas are built
+  // only when a request needs them. Stubs register in manifest order, which is
+  // the order the groups used to be mounted, so match precedence is unchanged.
 
-  // MCP endpoint (stateless Streamable-HTTP) — explicit route, mounted before the
-  // generic task routes. Auth/scoping come from the shared authContext (X-User-Key).
-  app.post('/task/api/mcp', c => handleMcp(c))
+  // Answered here, not by the misc group, so a cold /health loads no group.
+  app.get('/task/api/health', c => c.json(healthBody(), 200))
+
+  // MCP endpoint (stateless Streamable-HTTP). Auth/scoping come from the shared
+  // authContext (X-User-Key); it runs on root's Context, so it needs no shell.
+  app.post('/task/api/mcp', async c => (await import('./mcp/handler')).handleMcp(c))
   app.get('/task/api/mcp', c => c.text('Method Not Allowed', 405))
 
-  // Misc routes (health, validate-key, deprecated endpoints, legacy root)
-  app.route('/task/api', createMiscRoutes())
+  // One shell per group per handler, built once. A failed load is dropped so the
+  // next request retries it instead of replaying the rejection forever.
+  const shells = new Map<RouteGroup, Promise<OpenAPIHono<AppContext>>>()
+  const loadShell = (group: RouteGroup) => {
+    let shell = shells.get(group)
+    if (!shell) {
+      shell = buildGroupShell(group)
+      shells.set(group, shell)
+      shell.catch(() => shells.delete(group))
+    }
+    return shell
+  }
 
-  // Session management
-  app.route('/task/api', createSessionRoutes())
-
-  // Preferences
-  app.route('/task/api', createPreferencesRoutes())
-
-  // Boards
-  app.route('/task/api', createBoardRoutes())
-
-  // Board share management (§7): grant / list / revoke / leave.
-  app.route('/task/api', createShareRoutes())
-
-  // A board's calendar (§9) — its dated tasks, as a sub-resource of the board.
-  app.route('/task/api', createCalendarRoutes())
-
-  // Automation activation (§5.4): owner-only activate / deactivate.
-  app.route('/task/api', createAutomationRoutes())
-
-  // Agent claim protocol (§4): claim / heartbeat / set-lane / release / history
-  // / change feed. MUST come before the generic task routes (its /agent/* and
-  // /changes paths are specific, but registering early keeps intent clear).
-  app.route('/task/api', createAgentRoutes())
-
-  // Tags and batch operations - MUST come before tasks to avoid /batch-tag matching /:id
-  app.route('/task/api', createTagsBatchRoutes())
-
-  // Tasks (includes stats endpoint) - Generic /:id route
-  app.route('/task/api', createTaskRoutes())
-
-  // Admin endpoints
-  app.route('/task/api', createAdminRoutes())
-
-  // Hosted theme editor (hadoku.me/task/editor) — read style.css, commit edits to main
-  app.route('/task/api', createThemeEditorRoutes())
+  for (const [method, path, group] of ROUTE_MANIFEST) {
+    app.on(method, path, async c => {
+      forwardedAuth.set(c.req.raw, c.get('authContext'))
+      const shell = await loadShell(group)
+      return shell.fetch(c.req.raw, c.env, executionCtxOf(c))
+    })
+  }
 
   // ============================================================================
   // OpenAPI Spec Endpoint
   // ============================================================================
 
-  // Every documented error response is narrowed to the codes ITS route+status can
-  // emit, so nothing references the catch-all any more. Register it explicitly:
-  // a generated client still needs the full `DomainErrorCode` enum and a base type
-  // for statuses no route declares (429 RATE_LIMITED from the throttle, 500).
-  app.openAPIRegistry.register('DomainError', DomainErrorSchema)
-
-  app.doc(
-    '/task/api/openapi.json',
-    createOpenAPIDocConfig({
-      title: 'Task API',
-      version: '1.0.0',
-      description: `
-API for managing tasks, boards, and user preferences.
-
-## Overview
-This API provides endpoints for:
-- **Tasks**: Create, read, update, delete, and complete tasks
-- **Boards**: Organize tasks into boards
-- **Tags**: Categorize tasks with tags
-- **Batch Operations**: Bulk updates for tags and task movement
-- **Preferences**: User settings and configuration
-- **Sessions**: Session management and handshake
-
-## Authentication
-- **Public endpoints**: Basic read access without authentication
-- **Authenticated endpoints**: Full access via X-User-Key header
-- User types: admin, friend, public
-
-## Rate Limiting
-- Public users are rate-limited to prevent abuse
-- Authenticated users (admin/friend) bypass rate limiting
-		`,
-      production: 'https://task-api.hadoku.workers.dev',
-      tags: [
-        { name: 'Health', description: 'Health check endpoints' },
-        { name: 'Tasks', description: 'Task CRUD operations' },
-        { name: 'Boards', description: 'Board management' },
-        { name: 'Tags', description: 'Tag management' },
-        { name: 'Batch', description: 'Batch operations' },
-        { name: 'Session', description: 'Session management' },
-        { name: 'Preferences', description: 'User preferences' },
-        { name: 'Admin', description: 'Admin operations (requires admin access)' },
-        {
-          name: 'Theme editor',
-          description: 'Read and commit theme tokens for hadoku.me/task/editor (service tier+)'
-        }
-      ]
+  let specApp: Promise<OpenAPIHono<AppContext>> | undefined
+  app.get('/task/api/openapi.json', async c => {
+    specApp ??= buildSpecApp().catch(err => {
+      specApp = undefined
+      throw err
     })
-  )
-
-  // Error handlers
-  const { notFoundHandler, errorHandler } = createErrorHandlers('simple')
-  app.notFound(notFoundHandler)
-  // Map domain errors (TaskNotFound→404, BoardNotFound→404, VersionConflict→409)
-  // to their declared HTTP status before falling back to the generic 500 handler.
-  // Detected structurally so it works regardless of cross-package instanceof identity.
-  app.onError((err, c) => {
-    const domain = err as {
-      httpStatus?: unknown
-      code?: unknown
-      message?: string
-      currentVersion?: unknown
-      // Extra actionable fields carried by specific DomainErrors (§4.3): the
-      // claim holder + expiry on CLAIM_HELD, the current lane on LANE_CHANGED,
-      // the current notes digest on NOTES_CHANGED.
-      holder?: unknown
-      expiresAt?: unknown
-      currentLane?: unknown
-      currentDigest?: unknown
-      currentNotesHash?: unknown
-    }
-    if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
-      const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
-      if (typeof domain.currentVersion === 'number') body.currentVersion = domain.currentVersion
-      if (typeof domain.holder === 'string') body.holder = domain.holder
-      if (typeof domain.expiresAt === 'string') body.expiresAt = domain.expiresAt
-      if (domain.currentLane !== undefined) body.currentLane = domain.currentLane
-      if (typeof domain.currentDigest === 'string') body.currentDigest = domain.currentDigest
-      if (typeof domain.currentNotesHash === 'string') {
-        body.currentNotesHash = domain.currentNotesHash
-      }
-      return c.json(body, domain.httpStatus as 400 | 404 | 409 | 422 | 500)
-    }
-    return errorHandler(err, c)
+    return (await specApp).fetch(c.req.raw, c.env)
   })
+
+  installErrorHandlers(app)
 
   return app
 }

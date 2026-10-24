@@ -26,6 +26,17 @@ import {
 import { getBoardConfig } from './board-automation'
 import { detectPresetUpdate, warmPresets } from './preset-update'
 import {
+  ForbiddenErrorSchema,
+  BoardNotFoundErrorSchema,
+  TaskOrBoardNotFoundErrorSchema,
+  ClaimHeldErrorSchema,
+  LeaseLostErrorSchema,
+  ReleaseConflictErrorSchema,
+  LaneUnknownErrorSchema,
+  LaneOrStatusInvalidErrorSchema,
+  NotesTooLargeErrorSchema
+} from '../schemas-errors'
+import {
   ClaimInputSchema,
   ClaimResponseSchema,
   HeartbeatInputSchema,
@@ -38,16 +49,7 @@ import {
   CancelResponseSchema,
   ClaimHistoryResponseSchema,
   ChangesResponseSchema,
-  HydratedBoardResponseSchema,
-  ForbiddenErrorSchema,
-  BoardNotFoundErrorSchema,
-  TaskOrBoardNotFoundErrorSchema,
-  ClaimHeldErrorSchema,
-  LeaseLostErrorSchema,
-  ReleaseConflictErrorSchema,
-  LaneUnknownErrorSchema,
-  LaneOrStatusInvalidErrorSchema,
-  NotesTooLargeErrorSchema
+  HydratedBoardResponseSchema
 } from '../schemas-agent'
 import { DEFAULT_SESSION_ID } from '../constants'
 import type { Context } from 'hono'

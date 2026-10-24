@@ -32,8 +32,8 @@
  */
 import type { APIRequestContext, Page } from '@playwright/test'
 
-/** Where scripts/dev-api.mjs serves the real prefs worker. */
-export const PREFS_BASE = 'http://localhost:3003/prefs'
+/** Where scripts/dev-api.mjs serves the real prefs worker (DEV_PREFS_PORT moves it). */
+export const PREFS_BASE = `http://localhost:${process.env.DEV_PREFS_PORT ?? 3003}/prefs`
 
 /**
  * Is the real prefs stack up? Specs skip on false, the same way the ones

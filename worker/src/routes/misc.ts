@@ -7,7 +7,8 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import type { AppContext } from '../types'
-import { HealthResponseSchema, ValidateKeyResponseSchema } from '../schemas'
+import { healthBody } from './health'
+import { HealthResponseSchema, ValidateKeyResponseSchema } from '../schemas-common'
 
 export function createMiscRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -31,21 +32,7 @@ export function createMiscRoutes() {
     }
   })
 
-  // Inlined rather than delegated to worker-utils' healthCheck(), which returns
-  // a bare Response and so cannot be checked against this route. The body is
-  // byte-identical to what it built: it derives status from the checks, and the
-  // only check passed here is a hardcoded `true`, so it always answered 200/ok.
-  app.openapi(healthRoute, c =>
-    c.json(
-      {
-        status: 'ok' as const,
-        service: 'task-api-adapter',
-        timestamp: new Date().toISOString(),
-        checks: { kv: true }
-      },
-      200
-    )
-  )
+  app.openapi(healthRoute, c => c.json(healthBody(), 200))
 
   // Validate Key
   const validateKeyRoute = createRoute({

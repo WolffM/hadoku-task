@@ -9,7 +9,7 @@ import {
   BoardNotFoundErrorSchema,
   DigestMismatchErrorSchema,
   LaneSetInvalidErrorSchema
-} from '../schemas-agent'
+} from '../schemas-errors'
 
 // Narrowed to the codes each (route, status) can actually emit — see agent.ts.
 export const forbidden = { 'application/json': { schema: ForbiddenErrorSchema } }

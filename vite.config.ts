@@ -86,7 +86,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/task/api': {
-        target: 'http://127.0.0.1:3001',
+        // DEV_*_PORT move the whole dev stack (scripts/dev-api.mjs reads the same
+        // names), so a second worktree can run it while another holds the defaults.
+        target: `http://127.0.0.1:${process.env.DEV_API_PORT ?? 3001}`,
         changeOrigin: true,
         ws: false,
         timeout: 5000
@@ -97,7 +99,7 @@ export default defineConfig({
       // same-origin, so a dev page exercises the real fetch -> edge-auth -> D1 path.
       // Used by the icon gallery; the e2e helper still points straight at :3003.
       '/prefs': {
-        target: 'http://127.0.0.1:3003',
+        target: `http://127.0.0.1:${process.env.DEV_PREFS_PORT ?? 3003}`,
         changeOrigin: true,
         ws: false,
         timeout: 5000

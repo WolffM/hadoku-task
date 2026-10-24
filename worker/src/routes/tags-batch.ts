@@ -33,10 +33,10 @@ import {
   BatchMoveTasksInputSchema,
   BatchMoveTasksResponseSchema,
   BatchClearTagInputSchema,
-  BatchClearTagResponseSchema,
-  ErrorResponseSchema
+  BatchClearTagResponseSchema
 } from '../schemas'
-import { boardErrorResponses } from '../schemas-agent'
+import { ErrorResponseSchema } from '../schemas-common'
+import { boardErrorResponses } from '../schemas-errors'
 import type { Context } from 'hono'
 import type { AppContext } from '../types'
 

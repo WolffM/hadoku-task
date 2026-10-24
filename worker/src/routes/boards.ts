@@ -17,9 +17,9 @@ import {
   GetBoardsResponseSchema,
   CreateBoardInputSchema,
   CreateBoardResponseSchema,
-  DeleteBoardResponseSchema,
-  ErrorResponseSchema
+  DeleteBoardResponseSchema
 } from '../schemas'
+import { ErrorResponseSchema } from '../schemas-common'
 
 export function createBoardRoutes() {
   const app = new OpenAPIHono<AppContext>()

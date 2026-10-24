@@ -11,7 +11,9 @@
  *                   handful of pure functions would be more machinery than the
  *                   thing it tests; the bundling here already works for them.
  *
- * Both need bundling before node can execute them. Each runs in its own child
+ * Both need bundling before node can execute them. A `*-verify.mjs` harness is
+ * plain node and runs as-is — for one that drives esbuild itself, which a
+ * bundle of it could not (cold-start-verify.mjs). Each runs in its own child
  * process: they assert by exit code, and one harness's failure must not mask
  * another's. Usage:
  *
@@ -38,7 +40,7 @@ function discover() {
       return [] // directory may not exist yet
     }
     return entries
-      .filter(f => f.endsWith('-verify.ts'))
+      .filter(f => f.endsWith('-verify.ts') || f.endsWith('-verify.mjs'))
       .sort()
       .map(file => ({ dir, file }))
   })
@@ -47,10 +49,12 @@ function discover() {
 const requested = process.argv[2]
 const harnesses = requested
   ? (() => {
-      const want = requested.endsWith('.ts') ? requested : `${requested}.ts`
-      const hit = discover().find(h => h.file === want)
+      const want = /\.m?[jt]s$/.test(requested)
+        ? [requested]
+        : [`${requested}.ts`, `${requested}.mjs`]
+      const hit = discover().find(h => want.includes(h.file))
       if (!hit) {
-        console.error(`No harness named ${want} in ${testDirs.join(' or ')}`)
+        console.error(`No harness named ${want.join(' or ')} in ${testDirs.join(' or ')}`)
         process.exit(1)
       }
       return [hit]
@@ -68,16 +72,18 @@ const failures = []
 try {
   for (const harness of harnesses) {
     console.log(`\n=== ${harness.file} ===`)
-    const outfile = join(outDir, harness.file.replace(/\.ts$/, '.mjs'))
-    await build({
-      entryPoints: [join(harness.dir, harness.file)],
-      bundle: true,
-      platform: 'node',
-      format: 'esm',
-      outfile,
-      logLevel: 'error'
-    })
-
+    let outfile = join(harness.dir, harness.file)
+    if (harness.file.endsWith('.ts')) {
+      outfile = join(outDir, harness.file.replace(/\.ts$/, '.mjs'))
+      await build({
+        entryPoints: [join(harness.dir, harness.file)],
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        outfile,
+        logLevel: 'error'
+      })
+    }
     const result = spawnSync(process.execPath, [outfile], { stdio: 'inherit' })
     if (result.status !== 0) failures.push(harness.file)
   }
