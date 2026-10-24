@@ -37,8 +37,9 @@ pnpm exec playwright test            # ~110 e2e specs
 - **`pnpm run dev:api` is not optional.** Without it ~80 specs skip themselves
   (it serves the real task worker on :3001 and the real prefs-api on :3003).
   A skipped spec is not a passing one — check the counts.
-- **CI does NOT run Playwright.** Only `typecheck`, `lint` and `worker-tests`.
-  Green CI is not evidence the e2e suite passes; run it yourself.
+- **CI runs the e2e suite, but after you push.** The `e2e` job in `ci.yml`
+  runs it against the real stack; on a direct push to main that is detection,
+  not prevention. Run it yourself first.
 - **Don't mock a backend you can run.** The prefs specs used to intercept
   `/prefs/api/v1/*`, and the mock hid a real bug for months by answering 404
   where the real worker answers 200. See the Dev Server notes in `CLAUDE.md`.

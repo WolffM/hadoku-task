@@ -17,9 +17,9 @@ Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate, then bumps 
 
 ## CI — what it does and does NOT cover
 
-`ci.yml` runs **typecheck, lint and worker-tests** on `pull_request` AND on pushes to `main`. The push trigger exists because work here lands by direct push at least as often as by PR; before it, those commits were verified by nothing at all. On a push it is DETECTION, not prevention — the commit has already landed, so a failure is a red main to fix forward.
+`ci.yml` runs **typecheck, lint, worker-tests and e2e** on `pull_request` AND on pushes to `main`. The push trigger exists because work here lands by direct push at least as often as by PR; before it, those commits were verified by nothing at all. On a push it is DETECTION, not prevention — the commit has already landed, so a failure is a red main to fix forward.
 
-**Per-push CI does not run Playwright.** The full e2e suite (~220 tests, against the local stack) runs only locally and in the nightly `e2e.yml`, so a green push is never evidence the suite passes — at best the nightly catches a break up to a day later. Three `theme-inheritance` specs sat red on `main` for weeks because of exactly this. Run `pnpm exec playwright test` (with `pnpm run dev:api` up) before trusting a change that touches the frontend.
+**The `e2e` job runs the full Playwright suite** (~220 tests) against the real local stack (`scripts/start-e2e-stack.sh`: task worker :3001, preset stub :3002, real prefs-api :3003), and fails on a skip e2e.json's `e2eSkipAllow` does not name — so a stack that never came up is red, not a green run of skips. Before it, Playwright ran only locally, and three `theme-inheritance` specs sat red on `main` for weeks. It shares a concurrency group (`task-e2e-stack`) with the nightly `e2e.yml`: e2e runs queue rather than fight over one claw's ports, and a newer queued run cancels an older _pending_ one. On a push it is still detection — run `pnpm exec playwright test` (with `pnpm run dev:api` up) before pushing frontend changes.
 
 ## Worktrees — bootstrap them, or the hook silently does nothing
 

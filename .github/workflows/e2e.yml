@@ -25,6 +25,12 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER) }}
     # From e2e.json's timeoutMinutes.
     timeout-minutes: 20
+    # Shared with ci.yml's e2e job. Two e2e runs on one claw would fight over
+    # :3001/:3003 and vite's :5199 — free-e2e-port.mjs kills a vite running out
+    # of any other checkout — so they queue instead.
+    concurrency:
+      group: task-e2e-stack
+      cancel-in-progress: false
     steps:
       - name: Mark the start, so the reported duration is real
         run: echo "JOB_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
@@ -53,30 +59,10 @@ jobs:
       - name: Install browser
         run: pnpm exec playwright install chromium
 
-      # Specs that need the stack skip themselves when it is down, so a stack
-      # that never came up reads as skips, not failures — report-e2e then fails
-      # the run on them. Health alone is not enough: jobs on one claw share its
-      # ports, and a server some other job left on :3001 would answer for a
-      # stack whose own bind failed. dev-api.mjs exits when any child dies, so
-      # it still being alive is what proves the answer came from it.
+      # Started and proven ours by the script — see its header. Shared with
+      # ci.yml's e2e job.
       - name: Start the local stack (:3001 task worker, :3002 preset stub, :3003 prefs-api)
-        run: |
-          nohup node scripts/dev-api.mjs > dev-api.log 2>&1 &
-          echo "DEV_API_PID=$!" >> "$GITHUB_ENV"
-          pid=$!
-          for _ in $(seq 1 90); do
-            if ! kill -0 "$pid" 2>/dev/null; then
-              echo "::error::dev-api exited before it came up"; cat dev-api.log; exit 1
-            fi
-            if curl -sf -o /dev/null http://127.0.0.1:3001/task/api/automation/presets &&
-               curl -sf -o /dev/null http://127.0.0.1:3003/prefs/api/v1/_health; then
-              sleep 2
-              kill -0 "$pid" 2>/dev/null && { cat dev-api.log; exit 0; }
-              echo "::error::dev-api exited after its ports answered — another process holds them"; cat dev-api.log; exit 1
-            fi
-            sleep 1
-          done
-          echo "::error::the stack did not answer within 90s"; cat dev-api.log; exit 1
+        run: bash scripts/start-e2e-stack.sh
 
       - name: e2e
         run: pnpm run test:e2e:ci
