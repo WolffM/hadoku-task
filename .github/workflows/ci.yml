@@ -387,11 +387,10 @@ jobs:
       # name, a failed test — with post 'false': these runs are not the
       # nightly's to record, and a fork PR has no key to send one with. A
       # passing run that silently skipped the stack-backed specs would
-      # otherwise be green. Pinned to the commit that added `post` until v1 is
-      # moved onto it.
+      # otherwise be green.
       - name: Fail on 0 tests, an unallowed skip or a failed test
         if: always() && steps.scope.outputs.run == 'true'
-        uses: WolffM/hadoku-actions/report-e2e@a286551a5635e0d548c5f187ffc67982b504c084
+        uses: WolffM/hadoku-actions/report-e2e@v1
         with:
           report: e2e-report.json
           runner: playwright
