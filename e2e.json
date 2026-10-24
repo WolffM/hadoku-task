@@ -88,6 +88,11 @@
     "every scroller in the app takes the active theme accent": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
     "no native title tooltips remain in the app chrome": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
     "task action buttons show card tooltips and keep their DOM shape": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
-    "the theme picker trigger has a tooltip and a press dismisses it": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner"
+    "the theme picker trigger has a tooltip and a press dismisses it": "needs the local dev stack (node scripts/dev-api.mjs) AND a sibling ../hadoku_site checkout for prefs-api; neither exists on the e2e runner",
+    "loads main, and a slider recolours the real components live": "needs the local dev stack (node scripts/dev-api.mjs), which the nightly e2e run does not start — the editor's GitHub is the dev stack's in-memory fake repo",
+    "Save commits the edit to main under new versions": "needs the local dev stack (node scripts/dev-api.mjs), which the nightly e2e run does not start — the editor's GitHub is the dev stack's in-memory fake repo",
+    "a contract failure blocks Save and says why": "needs the local dev stack (node scripts/dev-api.mjs), which the nightly e2e run does not start — the editor's GitHub is the dev stack's in-memory fake repo",
+    "a group slider moves every token in the group, and drafts survive a reload": "needs the local dev stack (node scripts/dev-api.mjs), which the nightly e2e run does not start — the editor's GitHub is the dev stack's in-memory fake repo",
+    "below service tier the API refuses, and the editor says so": "needs the local dev stack (node scripts/dev-api.mjs), which the nightly e2e run does not start — the editor's GitHub is the dev stack's in-memory fake repo"
   }
 }
