@@ -6,11 +6,12 @@
  * caught has to be caught here instead: the theme contract, the version bump,
  * and the bytes of the file (style.css is CRLF). Each is pinned below.
  *
- * GitHub is a stateful fake of the Git Data API — refs, commits, trees and the
- * raw contents endpoint — seeded with the REAL style.css and package.json files
- * from this checkout, so the assertions run against the actual bytes the
- * editor will be editing. `app.request()` does not route through global fetch,
- * so only api.github.com is intercepted.
+ * GitHub is a stateful fake — the ref and raw contents the worker reads, and
+ * mgmt-api's commit verb the worker saves through — seeded with the REAL
+ * style.css and package.json files from this checkout, so the assertions run
+ * against the actual bytes the editor will be editing. `app.request()` does not
+ * route through global fetch, so only api.github.com and mgmt-api are
+ * intercepted.
  */
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -81,7 +82,7 @@ const resetRepo = () => gh.reset(real)
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input)
-  if (url.startsWith('https://api.github.com/')) {
+  if (url.startsWith('https://api.github.com/') || url.startsWith('https://hadoku.me/mgmt/')) {
     return gh.handle(url, init) ?? new Response('{}', { status: 404 })
   }
   return realFetch(input as string, init)
@@ -109,7 +110,7 @@ interface Json {
 async function call(
   method: 'GET' | 'POST',
   path: string,
-  opts: { tier?: string; token?: string | null; body?: unknown } = {}
+  opts: { tier?: string; token?: string | null; serviceKey?: null; body?: unknown } = {}
 ): Promise<{ status: number; json: Json }> {
   const env: Record<string, unknown> = {
     TASKS_KV: makeKV(),
@@ -118,6 +119,7 @@ async function call(
     TASK_STORAGE: 'd1'
   }
   if (opts.token !== null) env.GITHUB_READ_TOKEN = opts.token ?? 'tok'
+  if (opts.serviceKey !== null) env.HADOKU_SERVICE_KEY = 'task-service-key'
   const res = await app.request(
     `http://localhost/task/api${path}`,
     {
@@ -137,8 +139,10 @@ async function call(
   return { status: res.status, json: (await res.json()) as Json }
 }
 
-const save = (body: unknown, opts: { tier?: string; token?: string | null } = {}) =>
-  call('POST', '/themes/save', { ...opts, body })
+const save = (
+  body: unknown,
+  opts: { tier?: string; token?: string | null; serviceKey?: null } = {}
+) => call('POST', '/themes/save', { ...opts, body })
 
 const version = (text: string) => (JSON.parse(text) as { version: string }).version
 const filesAt = (c: string) => gh.commit(c).files
@@ -173,7 +177,7 @@ async function main_() {
   check('main untouched by refused saves', gh.main === base)
 
   // -------------------------------------------------------------------
-  section('2. No GitHub credential bound → 503, not a crash')
+  section('2. No read token or service key bound → 503, not a crash')
   // -------------------------------------------------------------------
   let r = await call('GET', '/themes/source', { token: null })
   check('source → 503', r.status === 503, `status=${r.status}`)
@@ -182,6 +186,17 @@ async function main_() {
     { token: null }
   )
   check('save → 503', r.status === 503, `status=${r.status}`)
+  gh.calls = []
+  r = await save(
+    { baseCommit: base, edits: { light: { '--color-bg': '#eeeeee' } } },
+    { serviceKey: null }
+  )
+  check('no service key: save → 503', r.status === 503, `status=${r.status}`)
+  check('and GitHub never called', gh.calls.length === 0, gh.calls.join(', '))
+  check(
+    'source needs only the read token',
+    (await call('GET', '/themes/source', { serviceKey: null })).status === 200
+  )
 
   // -------------------------------------------------------------------
   section('3. Source is the exact file on main')

@@ -19,6 +19,7 @@ import {
   DomainError,
   notesWriteClosesQuestions
 } from '@wolffm/task/api'
+import { MGMT_BASE } from '@wolffm/worker-utils/edge-routes'
 import { logger } from '../logger'
 import type { Access } from './board-sharing'
 
@@ -153,20 +154,25 @@ const DISPATCH_TIMEOUT_MS = 5000
 const REPO_SHAPE = /^[\w.-]+\/[\w.-]+$/
 
 /**
- * The worker's GitHub credential — for the repo-validation READ and the
- * lane-change dispatch WRITE alike. Both go through here rather than reaching for
- * the binding, so "which credential does GitHub see" has one answer, and giving
- * the write its own narrower token later is a change to this function instead of a
- * hunt through call sites.
- *
- * The binding is named `GITHUB_READ_TOKEN` for a reason worth not re-litigating:
- * that is the name already deployed, and renaming a live secret to improve a
- * comment would break both uses until an operator pushed the new one. The name is
- * a little wrong; the indirection is where the honesty lives.
+ * The worker's GitHub credential: READ-ONLY, for repo validation and the theme
+ * editor's reads. Every GitHub WRITE goes through mgmt-api as this worker's own
+ * service key ({@link mgmtKey}); until 2026-10-24 this binding held the
+ * account-wide HADOKU_SITE_TOKEN because the wake dispatch and the theme save
+ * needed write.
  */
-
 export function githubToken(env: { GITHUB_READ_TOKEN?: string }): string | undefined {
   return env.GITHUB_READ_TOKEN
+}
+
+/**
+ * The key the wake dispatch presents to mgmt-api: this worker's own registry
+ * identity. mgmt-api derives hadoku-task from it and sends only the dispatch its
+ * DISPATCH_RULES pair with that repo. Absent ⇒ no wake; board writes are
+ * unaffected.
+ */
+export function mgmtKey(env: { HADOKU_SERVICE_KEY?: string }): string | undefined {
+  const k = (env.HADOKU_SERVICE_KEY ?? '').trim()
+  return k === '' ? undefined : k
 }
 
 /**
@@ -223,42 +229,43 @@ export interface LaneWriteNotice {
   lanes: Lane[]
   /** 'standard' | 'automation', as resolved for the write. */
   mode: string
-  /** The dispatch PAT. Absent ⇒ skip silently; an unconfigured install must not fail writes. */
-  token: string | undefined
+  /** From {@link mgmtKey}. Absent ⇒ skip silently; an unconfigured install must not fail writes. */
+  serviceKey: string | undefined
   /**
    * The runner's repo, from {@link runnerRepo}. Absent ⇒ dispatch to the board's
-   * own `cfg.repo`. Supplied by the caller alongside `token` so both GitHub
+   * own `cfg.repo`. Supplied by the caller alongside `serviceKey` so both dispatch
    * facts arrive from the same place — the env — rather than one being read
    * here and the other passed in.
    */
   runnerRepo?: string | undefined
 }
 
+/** mgmt-api's verb for a `repository_dispatch` to a repo other than hadoku_site. */
+const DISPATCH_URL = `${MGMT_BASE}/api/repo/dispatch`
+
 /**
- * POST the `repository_dispatch`. Never throws and never retries: the runner's
- * cron is the delivery guarantee, this is only the fast path (§ "No delivery
- * guarantee"). A `204` is success; anything else is logged and dropped.
+ * Ask mgmt-api to send the `repository_dispatch`. Never throws and never
+ * retries: the runner's cron is the delivery guarantee, this is only the fast
+ * path (§ "No delivery guarantee"). A `200` is success; anything else is logged
+ * and dropped. mgmt-api's refusal says why — an unregistered key, or a target
+ * its DISPATCH_RULES do not pair with hadoku-task.
  */
-async function postDispatch(repo: string, token: string, payload: Record<string, unknown>) {
+async function postDispatch(repo: string, serviceKey: string, payload: Record<string, unknown>) {
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+    const res = await fetch(DISPATCH_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
+        'X-User-Key': serviceKey,
         'User-Agent': 'hadoku-task-worker',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ event_type: DISPATCH_EVENT_TYPE, client_payload: payload }),
+      body: JSON.stringify({ repo, event_type: DISPATCH_EVENT_TYPE, client_payload: payload }),
       signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS)
     })
-    if (res.status === 204) {
+    if (res.status === 200) {
       logger.info('lane-change dispatch sent', { repo, ...payload })
       return
     }
-    // GitHub answers 404 — not 403 — when the token can't see a private repo, so
-    // an under-scoped PAT looks like a missing repo. Log the status either way.
     logger.warn('lane-change dispatch rejected', {
       repo,
       status: res.status,
@@ -277,7 +284,7 @@ async function postDispatch(repo: string, token: string, payload: Record<string,
  * happens here rather than in the caller so a board with no repo — the common
  * case — costs nothing until the cheap structural predicate has already passed.
  */
-async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<void> {
+async function dispatchLaneWrite(n: LaneWriteNotice, serviceKey: string): Promise<void> {
   let cfg: BoardConfig | null = null
   try {
     cfg = await getBoardConfig(n.db, n.ownerId, n.boardId)
@@ -310,7 +317,7 @@ async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<voi
     return
   }
 
-  await postDispatch(target, token, {
+  await postDispatch(target, serviceKey, {
     boardId: n.boardId,
     handle: cfg.handle,
     taskId: n.taskId,
@@ -346,10 +353,10 @@ async function dispatchLaneWrite(n: LaneWriteNotice, token: string): Promise<voi
  */
 export async function notifyLaneWrite(n: LaneWriteNotice, host: unknown): Promise<void> {
   if (n.mode !== 'automation') return
-  if (!n.token) return
+  if (!n.serviceKey) return
   if (!isUserLaneWrite(n.lanes, n.laneTag)) return
 
-  const pending = dispatchLaneWrite(n, n.token)
+  const pending = dispatchLaneWrite(n, n.serviceKey)
 
   let waitUntil: ((p: Promise<unknown>) => void) | null = null
   try {
@@ -392,10 +399,10 @@ export interface NotesWriteNotice extends LaneWriteNotice {
  */
 export async function notifyNotesWrite(n: NotesWriteNotice, host: unknown): Promise<void> {
   if (n.mode !== 'automation') return
-  if (!n.token) return
+  if (!n.serviceKey) return
   if (!notesWriteClosesQuestions(n.previousNotes, n.nextNotes)) return
 
-  const pending = dispatchLaneWrite({ ...n, reason: 'questions-answered' }, n.token)
+  const pending = dispatchLaneWrite({ ...n, reason: 'questions-answered' }, n.serviceKey)
 
   let waitUntil: ((p: Promise<unknown>) => void) | null = null
   try {

@@ -1,17 +1,17 @@
 /**
  * An in-memory GitHub repo, speaking the slice of the REST API the theme
- * editor uses: the branch ref, raw contents, commits, trees, and a
- * fast-forward-only ref update.
+ * editor reads (the branch ref and raw contents) and mgmt-api's commit verb,
+ * which it saves through.
  *
  * Two users:
  *   - theme-editor-verify.ts, which drives every save outcome through it
  *   - the dev server, so a save from a LOCAL editor lands here and not on the
- *     real main. That matters: the dev stack binds the real HADOKU_SITE_TOKEN
- *     (it validates board repos with it), so without this a local save would
- *     commit to production.
+ *     real main. That matters: the dev stack's service key could be a real
+ *     one, and mgmt-api would commit to production with it.
  *
- * `handle` answers only this repo's git/contents paths and returns null for
- * everything else, so the caller passes other GitHub traffic through.
+ * `handle` answers only this repo's git/contents paths, plus mgmt-api's
+ * `POST /api/repo/commit` (which the worker saves through), and returns null
+ * for everything else, so the caller passes other traffic through.
  */
 
 export type Files = Map<string, string>
@@ -24,10 +24,9 @@ export interface FakeCommit {
 
 export class FakeGitHub {
   commits = new Map<string, FakeCommit>()
-  trees = new Map<string, Files>()
   main = ''
   calls: string[] = []
-  /** Answer the next N ref updates with 422, as GitHub does when main moved. */
+  /** Refuse the next N saves with 409, as mgmt-api does when main moved. */
   refuseNextMoves = 0
   /** Runs between our read of main and our ref update — a concurrent push. */
   beforeMove: (() => void) | null = null
@@ -47,7 +46,6 @@ export class FakeGitHub {
 
   reset(seed: Files) {
     this.commits = new Map()
-    this.trees = new Map()
     this.main = this.sha()
     this.commits.set(this.main, { files: new Map(seed), parent: null, message: 'seed' })
     this.calls = []
@@ -78,6 +76,9 @@ export class FakeGitHub {
 
   handle(input: string, init?: RequestInit): Response | null {
     const url = new URL(input)
+    if (url.host === 'hadoku.me' && url.pathname === '/mgmt/api/repo/commit') {
+      return this.mgmtCommit(init)
+    }
     const prefix = `/repos/${this.repo}`
     if (url.host !== 'api.github.com' || !url.pathname.startsWith(`${prefix}/`)) return null
     const path = url.pathname.slice(prefix.length)
@@ -85,7 +86,6 @@ export class FakeGitHub {
 
     const method = init?.method ?? 'GET'
     this.calls.push(`${method} ${path}`)
-    const body = init?.body ? JSON.parse(String(init.body)) : undefined
     const reply = (status: number, payload: unknown) =>
       new Response(typeof payload === 'string' ? payload : JSON.stringify(payload), {
         status,
@@ -102,46 +102,59 @@ export class FakeGitHub {
       const content = this.commits.get(ref)?.files.get(file)
       return content === undefined ? reply(404, { message: 'Not Found' }) : reply(200, content)
     }
-    if (method === 'GET' && path.startsWith('/git/commits/')) {
-      const c = this.commits.get(path.slice('/git/commits/'.length))
-      if (!c) return reply(404, { message: 'Not Found' })
-      const tree = this.sha()
-      this.trees.set(tree, new Map(c.files))
-      return reply(200, { tree: { sha: tree } })
-    }
-    if (method === 'POST' && path === '/git/trees') {
-      const base = this.trees.get(body.base_tree)
-      if (!base) return reply(422, { message: 'bad base_tree' })
-      const files = new Map(base)
-      for (const entry of body.tree) files.set(entry.path, entry.content)
-      const tree = this.sha()
-      this.trees.set(tree, files)
-      return reply(201, { sha: tree })
-    }
-    if (method === 'POST' && path === '/git/commits') {
-      const files = this.trees.get(body.tree)
-      if (!files) return reply(422, { message: 'bad tree' })
-      const c = this.sha()
-      this.commits.set(c, { files, parent: body.parents[0], message: body.message })
-      return reply(201, { sha: c })
-    }
-    if (method === 'PATCH' && path === '/git/refs/heads/main') {
-      if (this.beforeMove) {
-        const run = this.beforeMove
-        this.beforeMove = null
-        run()
-      }
-      if (this.refuseNextMoves > 0) {
-        this.refuseNextMoves--
-        return reply(422, { message: 'Update is not a fast forward' })
-      }
-      // Fast-forward only, exactly like force:false.
-      if (this.commits.get(body.sha)?.parent !== this.main) {
-        return reply(422, { message: 'Update is not a fast forward' })
-      }
-      this.main = body.sha
-      return reply(200, { object: { sha: this.main } })
-    }
     return reply(404, { message: `fake GitHub has no ${method} ${path}` })
+  }
+
+  /**
+   * Fast-forward main to `sha`, exactly like mgmt-api's `force: false`: false
+   * when main has moved past its parent, or when a test asked for a refusal.
+   */
+  private moveMain(sha: string): boolean {
+    if (this.beforeMove) {
+      const run = this.beforeMove
+      this.beforeMove = null
+      run()
+    }
+    if (this.refuseNextMoves > 0) {
+      this.refuseNextMoves--
+      return false
+    }
+    if (this.commits.get(sha)?.parent !== this.main) return false
+    this.main = sha
+    return true
+  }
+
+  /**
+   * mgmt-api's commit verb against this repo: the tree, commit and
+   * fast-forward it makes with its own token, recorded in `calls` as GitHub
+   * would see them, and its answers — 401 with no key, 409 when main moved
+   * past `base`, 200 `{ commit }` otherwise.
+   */
+  private mgmtCommit(init?: RequestInit): Response {
+    const reply = (status: number, payload: unknown) =>
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    if (!new Headers(init?.headers).get('X-User-Key')) {
+      return reply(401, { success: false, error: 'X-User-Key required' })
+    }
+    const { base, message, files } = JSON.parse(String(init?.body)) as {
+      base: string
+      message: string
+      files: Record<string, string>
+    }
+    this.calls.push(`GET /git/commits/${base}`)
+    const parent = this.commits.get(base)
+    if (!parent) return reply(400, { success: false, error: `no commit ${base}` })
+    this.calls.push('POST /git/trees', 'POST /git/commits', 'PATCH /git/refs/heads/main')
+    const next = new Map(parent.files)
+    for (const [path, content] of Object.entries(files)) next.set(path, content)
+    const sha = this.sha()
+    this.commits.set(sha, { files: next, parent: base, message })
+    if (!this.moveMain(sha)) {
+      return reply(409, { success: false, error: `main has moved past ${base}` })
+    }
+    return reply(200, { success: true, commit: sha })
   }
 }

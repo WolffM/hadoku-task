@@ -14,20 +14,15 @@ export interface Env {
   // prefs-api. Optional so local/dev without the binding still boots (grant-by-key
   // then returns a clear error; grant-by-userId still works).
   SESSIONS_KV?: KVNamespace
-  // THE GitHub PAT — the worker's single GitHub credential, resolved from the
-  // HADOKU_SITE_TOKEN vault key. Read `githubToken(env)` rather than this field:
-  // one accessor, so there is one answer to "which credential does GitHub see".
-  //
-  // Two uses, and the name undersells the second: validating a board's `repo`
-  // (private WolffM repos 404 unauthenticated, so a real check needs a token) and
-  // the outbound `repository_dispatch` that wakes an automation board's runner
-  // (§5.2) — a WRITE, which needs `repo` scope. It is deliberately NOT split into
-  // a second binding: the value would be identical, and a duplicate secret to
-  // keep in sync buys nothing until there is a genuinely narrower token to put in
-  // one of them. Split it then, at this one accessor.
+  // The worker's GitHub credential, READ-ONLY: the HADOKU_GH_READ_TOKEN vault
+  // key. Read `githubToken(env)` rather than this field. It validates a board's
+  // `repo` (private WolffM repos 404 unauthenticated) and serves the theme
+  // editor's reads. It writes nothing: the wake dispatch (§5.2) and the theme
+  // save go through mgmt-api as HADOKU_SERVICE_KEY below. Until 2026-10-24 it
+  // held the account-wide HADOKU_SITE_TOKEN for those two writes.
   //
   // Optional. Absent ⇒ repo validation degrades to an unauthenticated probe
-  // (public repos only) and no dispatch is sent; board writes are unaffected.
+  // (public repos only) and the theme editor answers 503.
   GITHUB_READ_TOKEN?: string
   // Registry display name of the automation runner that gets `contributor` on a
   // board automatically when it's activated as an automation board (§5.4, §7).

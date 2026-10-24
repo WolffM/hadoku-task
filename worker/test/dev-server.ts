@@ -16,9 +16,8 @@
  *          credentialled — the stub 401s without the service key.
  *
  * The theme editor's GitHub (/task/api/themes/*) is ALWAYS an in-memory repo
- * seeded from this checkout (lib/fake-github.ts) — even when the real PAT is
- * bound via dev-vault, because a local save must never commit to the real
- * main. Inspect what a save "committed" at GET :3001/__dev/github, and start
+ * seeded from this checkout (lib/fake-github.ts), mgmt-api's commit verb
+ * included, because a local save must never commit to the real main. Inspect what a save "committed" at GET :3001/__dev/github, and start
  * over with POST :3001/__dev/github/reset.
  *
  * Not a *-verify.ts harness (it's a server, not an assertion run), so
@@ -194,14 +193,11 @@ const env = {
         url: `http://localhost:${PROVIDER_PORT}/automation/presets`
       }
     ]),
-  // The lane-change wake dispatch (§5.2) skips silently with no token binding, so
-  // a default dev/e2e run never POSTs to GitHub — deliberate: the specs must be
-  // hermetic. To smoke-test the real outbound call end to end, export a token
-  // with Actions write on the target repo as GITHUB_READ_TOKEN for that one run.
-  // This repo's dev-vault no longer serves the account-wide hadoku_site PAT.
+  // Read-only: board repo validation. Unset ⇒ an unauthenticated probe.
   GITHUB_READ_TOKEN: process.env.GITHUB_READ_TOKEN,
   // Our identity at the provider for the open-items scan. The stub above checks
-  // it, so the dev stack proves the credential is actually sent.
+  // it, so the dev stack proves the credential is actually sent. It also arms
+  // the lane-change wake (§5.2), which the fetch hook below answers locally.
   HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
 } as Record<string, unknown>
 
@@ -216,8 +212,18 @@ const themeSeed = (): Files =>
   new Map(THEME_FILES.map(p => [p, readFileSync(join(process.cwd(), p), 'utf8')]))
 const themeRepo = new FakeGitHub('WolffM/hadoku-task', themeSeed())
 const realFetch = globalThis.fetch
+/**
+ * The wake dispatch goes to mgmt-api, which would send it on to the real
+ * runner. Answered here instead, so a dev or e2e run stays hermetic and never
+ * wakes production; the log line shows it fired.
+ */
+const WAKE_URL = 'https://hadoku.me/mgmt/api/repo/dispatch'
 globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
   const url = input instanceof Request ? input.url : String(input)
+  if (url === WAKE_URL) {
+    console.log(`[dev] wake dispatch (not sent): ${String(init?.body)}`)
+    return Promise.resolve(Response.json({ success: true }))
+  }
   return Promise.resolve(themeRepo.handle(url, init) ?? realFetch(input, init))
 }) as typeof fetch
 

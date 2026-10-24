@@ -2,7 +2,8 @@
  * Lane-change `repository_dispatch` runtime verification (§5.2).
  *
  * When a HUMAN writes a task on an automation board that records a `repo`, the
- * worker POSTs a `repository_dispatch` to that repo so the runner starts in
+ * worker asks mgmt-api (`POST /api/repo/dispatch`, as its own service key) to
+ * send a `repository_dispatch` to the runner's repo so the runner starts in
  * seconds instead of waiting for its cron. The predicate is deliberately
  * STRUCTURAL — "a person wrote something, on a board wired to a repo" — never
  * "the lane is called approved", because which lanes are claimable is the
@@ -31,8 +32,9 @@
  *     (autoland v3 §5.1) — including when the closing act is ticking
  *     `- [x] Approve this plan` — while a save that leaves them open, a further
  *     save that keeps them closed, and an AGENT's release all fire nothing;
- *   - with no token binding, and with GitHub answering 404 (the shape of an
- *     under-scoped PAT) or hanging, the board write STILL SUCCEEDS;
+ *   - it never calls GitHub itself: the worker holds no GitHub write credential;
+ *   - with no service-key binding, and with mgmt-api refusing (403), reporting
+ *     GitHub's refusal (502) or hanging, the board write STILL SUCCEEDS;
  *   - the batch endpoint enforces lanes — a drag can't land a task in an `agent`
  *     lane that the single-task PATCH refuses.
  *
@@ -53,9 +55,9 @@ const MIGRATION = join(process.cwd(), 'worker/migrations')
 // this test must too, or it cannot see the bug by construction.
 const BOARD_REPO = 'WolffM/hadoku-pygmalion' // where the board's WORK happens
 const RUNNER_REPO = 'WolffM/tenhands' // where taskauto.yml actually lives
-const DISPATCH_URL = `https://api.github.com/repos/${RUNNER_REPO}/dispatches`
-/** Where a dispatch must NEVER go while AUTOMATION_RUNNER_REPO is set. */
-const BOARD_REPO_URL = `https://api.github.com/repos/${BOARD_REPO}/dispatches`
+/** mgmt-api's dispatch verb — the only place a wake goes. `repo` in the body aims it. */
+const DISPATCH_URL = 'https://hadoku.me/mgmt/api/repo/dispatch'
+const SERVICE_KEY = 'test-service-key'
 
 const USER = { key: 'owner-key', id: 'owner-uid' }
 
@@ -82,16 +84,18 @@ interface Sent {
   url: string
   method: string
   headers: Record<string, string>
-  body: { event_type?: string; client_payload?: Record<string, unknown> }
+  body: { repo?: string; event_type?: string; client_payload?: Record<string, unknown> }
 }
 const sent: Sent[] = []
-/** Next dispatch responses, consumed in order; default 204. */
+/** Next dispatch responses, consumed in order; default 200 `{success:true}`. */
 let responses: Array<{ status: number; body?: string; hang?: boolean }> = []
 
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-  if (!url.startsWith('https://api.github.com/')) return realFetch(input as RequestInfo, init)
+  if (!url.startsWith('https://api.github.com/') && url !== DISPATCH_URL) {
+    return realFetch(input as RequestInfo, init)
+  }
 
   const headers: Record<string, string> = {}
   for (const [k, v] of Object.entries((init?.headers ?? {}) as Record<string, string>)) {
@@ -105,7 +109,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   sent.push({ url, method: init?.method ?? 'GET', headers, body })
 
-  const next = responses.shift() ?? { status: 204 }
+  const next = responses.shift() ?? { status: 200, body: '{"success":true}' }
   if (next.hang) {
     // Never answers on its own — only the dispatch's own AbortSignal ends it,
     // which is the property under test. Rejects on abort so the caller's catch is
@@ -153,7 +157,7 @@ const env = {
   DB: d1,
   EDGE_AUTH_SECRET: EDGE_SECRET,
   TASK_STORAGE: 'd1',
-  GITHUB_READ_TOKEN: 'test-github-pat',
+  HADOKU_SERVICE_KEY: SERVICE_KEY,
   AUTOMATION_RUNNER_REPO: RUNNER_REPO
 } as Record<string, unknown>
 
@@ -313,11 +317,12 @@ async function main() {
   let out = drained()
   check('exactly one dispatch', out.length === 1, `count=${out.length}`)
   const one = out[0]
-  check('to the RUNNER’s repo, not the board’s', one?.url === DISPATCH_URL, one?.url)
+  check('through mgmt-api, never straight to GitHub', one?.url === DISPATCH_URL, one?.url)
+  check('aimed at the RUNNER’s repo', one?.body.repo === RUNNER_REPO, one?.body.repo)
   check(
-    'and specifically NOT to the board’s own repo',
-    one?.url !== BOARD_REPO_URL,
-    `went to ${one?.url}`
+    'and specifically NOT at the board’s own repo',
+    one?.body.repo !== BOARD_REPO,
+    `aimed at ${one?.body.repo}`
   )
   check('as a POST', one?.method === 'POST', one?.method)
   check(
@@ -326,14 +331,14 @@ async function main() {
     JSON.stringify(one?.body.event_type)
   )
   check(
-    'bearer-authed with the GitHub binding',
-    one?.headers.authorization === 'Bearer test-github-pat',
-    JSON.stringify(one?.headers.authorization)
+    'authed with the worker’s own service key',
+    one?.headers['x-user-key'] === SERVICE_KEY,
+    JSON.stringify(one?.headers['x-user-key'])
   )
   check(
-    'sends the GitHub API version',
-    one?.headers['x-github-api-version'] === '2022-11-28',
-    JSON.stringify(one?.headers['x-github-api-version'])
+    'and carries no GitHub credential at all',
+    one?.headers.authorization === undefined,
+    JSON.stringify(one?.headers.authorization)
   )
   const p = (one?.body.client_payload ?? {}) as Record<string, unknown>
   check('payload.boardId is the owner-scoped slug', p.boardId === 'flow', JSON.stringify(p))
@@ -482,26 +487,26 @@ async function main() {
   // ---------------------------------------------------------------------
   section('8. A failed dispatch NEVER fails the human’s write')
   // ---------------------------------------------------------------------
-  // 404 is the shape of an under-scoped PAT: GitHub answers 404, not 403, when a
-  // token can't see a private repo, so this is the realistic failure.
-  responses = [{ status: 404, body: '{"message":"Not Found"}' }]
+  // 403 is mgmt-api refusing the pairing (a key it does not know, or a target
+  // its DISPATCH_RULES do not name); 502 is mgmt-api reporting GitHub's refusal.
+  responses = [{ status: 403, body: '{"success":false,"error":"may not send taskauto"}' }]
   r = await drag('flow', ['d4'], 'replan')
-  check('GitHub 404 → the board write still succeeds', r.status === 200, `status=${r.status}`)
+  check('mgmt-api 403 → the board write still succeeds', r.status === 200, `status=${r.status}`)
   check('and the tag persisted', storedTag('d4') === 'replan', `tag="${storedTag('d4')}"`)
   check('the dispatch was attempted', drained().length === 1)
 
-  responses = [{ status: 401, body: '{"message":"Bad credentials"}' }]
+  responses = [{ status: 502, body: '{"success":false,"error":"GitHub answered 404"}' }]
   r = await drag('flow', ['d4'], 'approved')
-  check('GitHub 401 → the board write still succeeds', r.status === 200, `status=${r.status}`)
+  check('mgmt-api 502 → the board write still succeeds', r.status === 200, `status=${r.status}`)
   check('and the tag persisted', storedTag('d4') === 'approved', `tag="${storedTag('d4')}"`)
   drained()
 
-  // A hung GitHub must not hold the write open — the dispatch is timeout-bounded.
+  // A hung mgmt-api must not hold the write open — the dispatch is timeout-bounded.
   responses = [{ status: 0, hang: true }]
   const startedAt = Date.now()
   r = await drag('flow', ['d4'], 'replan')
   const elapsed = Date.now() - startedAt
-  check('a hung GitHub → the board write still succeeds', r.status === 200, `status=${r.status}`)
+  check('a hung mgmt-api → the board write still succeeds', r.status === 200, `status=${r.status}`)
   check(
     'and it was the dispatch timeout that ended it, not the stub',
     elapsed >= 4_000 && elapsed < 10_000,
@@ -512,9 +517,9 @@ async function main() {
   drained()
 
   // ---------------------------------------------------------------------
-  section('9. With no token binding at all, nothing is attempted')
+  section('9. With no service-key binding at all, nothing is attempted')
   // ---------------------------------------------------------------------
-  delete env.GITHUB_READ_TOKEN
+  delete env.HADOKU_SERVICE_KEY
   r = await drag('flow', ['d4'], 'approved')
   check(
     'unconfigured install → the board write still succeeds',
@@ -524,16 +529,16 @@ async function main() {
   check('and no dispatch is attempted', drained().length === 0)
   check('and the tag persisted', storedTag('d4') === 'approved', `tag="${storedTag('d4')}"`)
 
-  // Restored, and it is that ONE binding the dispatch authenticates with — there is
-  // no second GitHub credential to fall back to or be shadowed by.
-  env.GITHUB_READ_TOKEN = 'test-github-pat'
+  // Restored, and it is that ONE binding the dispatch authenticates with — the
+  // worker's GitHub read token plays no part in a write.
+  env.HADOKU_SERVICE_KEY = SERVICE_KEY
   await drag('flow', ['d4'], 'replan')
   out = drained()
-  check('the single GitHub binding arms the dispatch', out.length === 1, `count=${out.length}`)
+  check('the service key arms the dispatch', out.length === 1, `count=${out.length}`)
   check(
-    'and it is the token that goes out',
-    out[0]?.headers.authorization === 'Bearer test-github-pat',
-    JSON.stringify(out[0]?.headers.authorization)
+    'and it is the key that goes out',
+    out[0]?.headers['x-user-key'] === SERVICE_KEY,
+    JSON.stringify(out[0]?.headers['x-user-key'])
   )
 
   // ---------------------------------------------------------------------
@@ -551,7 +556,11 @@ async function main() {
   await drag('flow', ['d4'], 'approved')
   out = drained()
   check('binding unset → one dispatch still', out.length === 1, `count=${out.length}`)
-  check('and it falls back to the board’s own repo', out[0]?.url === BOARD_REPO_URL, out[0]?.url)
+  check(
+    'and it falls back to the board’s own repo',
+    out[0]?.body.repo === BOARD_REPO,
+    out[0]?.body.repo
+  )
 
   // A typo'd binding must NOT quietly fall back — that is the same silent-death
   // failure mode wearing a different hat.
@@ -567,7 +576,11 @@ async function main() {
   env.AUTOMATION_RUNNER_REPO = RUNNER_REPO
   await drag('flow', ['d4'], 'approved')
   out = drained()
-  check('restored → aimed at the runner again', out[0]?.url === DISPATCH_URL, out[0]?.url)
+  check(
+    'restored → aimed at the runner again',
+    out[0]?.body.repo === RUNNER_REPO,
+    out[0]?.body.repo
+  )
 
   // ---------------------------------------------------------------------
   section('11. A notes write that CLOSES the open questions (autoland v3 §5.1)')
@@ -597,7 +610,7 @@ async function main() {
   await req('PATCH', '/task/api/w1', { board: 'flow', notes: `${ASKED}\nUse main.\n` })
   out = drained()
   check('answering fires exactly one dispatch', out.length === 1, `count=${out.length}`)
-  check('…aimed at the runner', out[0]?.url === DISPATCH_URL, out[0]?.url)
+  check('…aimed at the runner', out[0]?.body.repo === RUNNER_REPO, out[0]?.body.repo)
   check(
     '…saying WHY it woke',
     out[0]?.body?.client_payload?.reason === 'questions-answered',

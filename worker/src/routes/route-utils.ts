@@ -14,7 +14,7 @@ import {
   notifyLaneWrite,
   notifyNotesWrite,
   readTaskNotes,
-  githubToken,
+  mgmtKey,
   runnerRepo
 } from './board-automation'
 import { DEFAULT_SESSION_ID, DEFAULT_BOARD_ID } from '../constants'
@@ -310,7 +310,7 @@ export async function handleBoardOperation<T>(
   // while it still IS before. Gated on the board being automated so an ordinary
   // board's notes edit pays nothing for a dispatch it could never send.
   const armNotesWake =
-    'notesWrite' in opts && !!opts.taskId && ctx.mode === 'automation' && !!githubToken(c.env)
+    'notesWrite' in opts && !!opts.taskId && ctx.mode === 'automation' && !!mgmtKey(c.env)
   const before = armNotesWake
     ? await readTaskNotes(c.env.DB, ctx.ownerId, ctx.boardId, opts.taskId as string)
     : null
@@ -334,7 +334,7 @@ export async function handleBoardOperation<T>(
     laneTag: opts.laneTag,
     lanes: ctx.lanes,
     mode: ctx.mode,
-    token: githubToken(c.env),
+    serviceKey: mgmtKey(c.env),
     runnerRepo: runnerRepo(c.env)
   }
   // Did the lane wake already fire for this write? One gesture, one dispatch —

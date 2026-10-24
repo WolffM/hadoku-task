@@ -23,6 +23,11 @@
  *   - values are re-serialized by normalizeColor, never copied from the request,
  *     so a request cannot smuggle CSS into the file
  *
+ * The commit itself is made by mgmt-api (POST /api/repo/commit) as this
+ * worker's own service key; the worker holds only a read token. mgmt-api allows
+ * hadoku-task exactly these four paths, and a package.json may change only its
+ * version.
+ *
  * Edits are token-level, so they re-apply cleanly onto a main that moved since
  * the editor loaded. The one case that refuses (409) is someone else having
  * changed one of the SAME tokens in between — overwriting that silently would
@@ -42,7 +47,8 @@ import {
 import { logger } from '../logger'
 import { ErrorResponseSchema } from '../schemas-common'
 import type { AppContext } from '../types'
-import { githubToken } from './board-automation'
+import { MGMT_BASE } from '@wolffm/worker-utils/edge-routes'
+import { githubToken, mgmtKey } from './board-automation'
 
 const REPO = 'WolffM/hadoku-task'
 const BRANCH = 'main'
@@ -71,25 +77,21 @@ class GitHubError extends Error {
   }
 }
 
+/** Reads of this repo, with the worker's read-only token. */
 function github(token: string) {
-  async function call<T>(path: string, init: RequestInit = {}, accept?: string): Promise<T> {
+  async function call<T>(path: string, accept?: string): Promise<T> {
     const res = await fetch(`https://api.github.com/repos/${REPO}${path}`, {
-      ...init,
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: accept ?? 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'hadoku-task-theme-editor',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {})
+        'User-Agent': 'hadoku-task-theme-editor'
       },
       signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS)
     })
     if (!res.ok) {
       const body = (await res.text().catch(() => '')).slice(0, 300)
-      throw new GitHubError(
-        `GitHub ${init.method ?? 'GET'} ${path} → ${res.status} ${body}`,
-        res.status
-      )
+      throw new GitHubError(`GitHub GET ${path} → ${res.status} ${body}`, res.status)
     }
     return (accept === RAW ? await res.text() : await res.json()) as T
   }
@@ -99,38 +101,41 @@ function github(token: string) {
       (await call<{ object: { sha: string } }>(`/git/ref/heads/${BRANCH}`)).object.sha,
     /** Exact bytes — style.css is CRLF and must stay that way. */
     file: (path: string, ref: string) =>
-      call<string>(`/contents/${path}?ref=${encodeURIComponent(ref)}`, {}, RAW),
-    treeOf: async (commit: string) =>
-      (await call<{ tree: { sha: string } }>(`/git/commits/${commit}`)).tree.sha,
-    createTree: async (baseTree: string, files: Record<string, string>) =>
-      (
-        await call<{ sha: string }>('/git/trees', {
-          method: 'POST',
-          body: JSON.stringify({
-            base_tree: baseTree,
-            tree: Object.entries(files).map(([path, content]) => ({
-              path,
-              mode: '100644',
-              type: 'blob',
-              content
-            }))
-          })
-        })
-      ).sha,
-    createCommit: async (message: string, tree: string, parent: string) =>
-      (
-        await call<{ sha: string }>('/git/commits', {
-          method: 'POST',
-          body: JSON.stringify({ message, tree, parents: [parent] })
-        })
-      ).sha,
-    /** Fast-forward only — a 422 means main moved under us. */
-    moveBranch: (commit: string) =>
-      call(`/git/refs/heads/${BRANCH}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ sha: commit, force: false })
-      })
+      call<string>(`/contents/${path}?ref=${encodeURIComponent(ref)}`, RAW)
   }
+}
+
+/**
+ * The save's one write, through mgmt-api as this worker's own service key:
+ * mgmt-api makes the tree, the commit on `base` and the fast-forward of main,
+ * and allows only the stylesheet and the three package.json version bumps.
+ * Returns the new commit, or null when main moved past `base` (409).
+ */
+async function commitThroughMgmt(
+  serviceKey: string,
+  base: string,
+  message: string,
+  files: Record<string, string>
+): Promise<string | null> {
+  const res = await fetch(`${MGMT_BASE}/api/repo/commit`, {
+    method: 'POST',
+    headers: {
+      'X-User-Key': serviceKey,
+      'User-Agent': 'hadoku-task-theme-editor',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ base, message, files }),
+    signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS)
+  })
+  if (res.status === 409) return null
+  const body = (await res.json().catch(() => null)) as { commit?: unknown; error?: unknown } | null
+  if (res.status !== 200 || typeof body?.commit !== 'string') {
+    throw new GitHubError(
+      `mgmt-api commit → ${res.status} ${String(body?.error ?? '').slice(0, 300)}`,
+      res.status
+    )
+  }
+  return body.commit
 }
 
 /** Rewrite only the `"version"` value, so the rest of package.json keeps its exact bytes. */
@@ -219,6 +224,7 @@ type SaveOutcome =
 
 async function attemptSave(
   gh: ReturnType<typeof github>,
+  serviceKey: string,
   baseCommit: string,
   edits: TokenEdits,
   savedBy: string | undefined,
@@ -262,15 +268,14 @@ async function attemptSave(
     versions[pkg.name] = bumped.to
   }
 
-  const tree = await gh.createTree(await gh.treeOf(head), files)
-  const commit = await gh.createCommit(commitMessage(changes, savedBy, note), tree, head)
-  try {
-    await gh.moveBranch(commit)
-  } catch (e) {
-    // The commit object we made is now unreferenced; GitHub collects it.
-    if (e instanceof GitHubError && e.status === 422) return { kind: 'moved' }
-    throw e
-  }
+  const commit = await commitThroughMgmt(
+    serviceKey,
+    head,
+    commitMessage(changes, savedBy, note),
+    files
+  )
+  // The commit object mgmt-api made is now unreferenced; GitHub collects it.
+  if (commit === null) return { kind: 'moved' }
   return { kind: 'committed', commit, versions, changes }
 }
 
@@ -332,7 +337,7 @@ export function createThemeEditorRoutes() {
       409: json(ConflictResponseSchema, 'Someone changed the same tokens since `baseCommit`'),
       422: json(ContractResponseSchema, 'The result fails the theme contract'),
       502: json(ErrorResponseSchema, 'GitHub refused or could not be reached'),
-      503: json(ErrorResponseSchema, 'No GitHub credential bound')
+      503: json(ErrorResponseSchema, 'No GitHub read token or service key bound')
     }
   })
 
@@ -342,7 +347,13 @@ export function createThemeEditorRoutes() {
       return c.json({ error: 'Service tier required' }, 403)
     }
     const token = githubToken(c.env)
-    if (!token) return c.json({ error: 'The theme editor needs the GitHub token binding' }, 503)
+    const serviceKey = mgmtKey(c.env)
+    if (!token || !serviceKey) {
+      return c.json(
+        { error: 'The theme editor needs the GitHub read token and service key bindings' },
+        503
+      )
+    }
 
     const { baseCommit, edits, note } = c.req.valid('json')
 
@@ -365,7 +376,7 @@ export function createThemeEditorRoutes() {
     const savedBy = c.req.header('X-User-Name') || undefined
     try {
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const outcome = await attemptSave(gh, baseCommit, edits, savedBy, note)
+        const outcome = await attemptSave(gh, serviceKey, baseCommit, edits, savedBy, note)
         switch (outcome.kind) {
           case 'committed':
             logger.info('theme editor: committed', {

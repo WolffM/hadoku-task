@@ -23,7 +23,7 @@ import {
   notifyLaneWrite,
   notifyNotesWrite,
   readTaskNotes,
-  githubToken,
+  mgmtKey,
   runnerRepo
 } from '../routes/board-automation'
 import type { Env } from '../types'
@@ -65,7 +65,7 @@ export interface ToolCtx {
   callerId: string
   /** D1, for the D1-direct claim protocol (§4). */
   db: ToolDb
-  /** Bindings — read for the lane-change dispatch token (§5.2). */
+  /** Bindings — read for the lane-change dispatch key (§5.2). */
   env: Env
   /**
    * The transport's own context object, passed through untouched and read ONLY
@@ -150,7 +150,7 @@ function wakeRunner(
       laneTag: tag,
       lanes: r.lanes,
       mode: r.mode,
-      token: githubToken(ctx.env),
+      serviceKey: mgmtKey(ctx.env),
       runnerRepo: runnerRepo(ctx.env)
     },
     ctx.host
@@ -184,7 +184,7 @@ function wakeRunnerOnAnswer(
       laneTag: before.tag,
       lanes: r.lanes,
       mode: r.mode,
-      token: githubToken(ctx.env),
+      serviceKey: mgmtKey(ctx.env),
       runnerRepo: runnerRepo(ctx.env),
       previousNotes: before.notes,
       nextNotes

@@ -916,15 +916,15 @@ writes through), `POST /`, `PATCH /:id`, and the MCP `create_task` / `update_tas
 - on a write that doesn't touch the tag (complete, delete, schedule, rename)
 
 It is fire-and-forget off the response path (`waitUntil`), 5s-bounded, no retries and no queue.
-**A failed dispatch never fails the human's write** — a non-`204` is logged with the repo and
+**A failed dispatch never fails the human's write** — a non-`200` is logged with the repo and
 status and dropped. A multi-card drag is one gesture, so it sends one dispatch, not one per card.
 
-Authenticates with the worker's single GitHub binding, `GITHUB_READ_TOKEN` (needs `repo` scope for
-this write) — the same credential `GET /repos/validate` reads with. Both go through
-`githubToken(env)` rather than the binding, so giving the write a narrower token later is a change
-in one function. Unbound ⇒ nothing is sent and board writes are unaffected. Note GitHub answers
-**404, not 403**, when a token can't see a private repo, so an under-scoped PAT looks like a
-missing repo in the logs.
+Sent through mgmt-api, not to GitHub directly: `POST hadoku.me/mgmt/api/repo/dispatch` with the
+worker's own `HADOKU_SERVICE_KEY` (`wakeKey(env)`). mgmt-api derives hadoku-task from the key and
+sends only the `(repo, event)` its `DISPATCH_RULES` pair with it — `taskauto` to
+`WolffM/hadoku-tenhands` — so the worker holds no GitHub write credential. Unbound ⇒ nothing is
+sent and board writes are unaffected. mgmt-api's refusal (`403` for a target it does not allow,
+`502` with GitHub's status when GitHub declined) is logged with the body.
 
 ### GET `/automation/presets`
 

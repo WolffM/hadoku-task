@@ -20,7 +20,7 @@ import {
   isUserLaneWrite,
   runnerRepo,
   notifyLaneWrite,
-  githubToken
+  mgmtKey
 } from './board-automation'
 import { DEFAULT_SESSION_ID } from '../constants'
 import {
@@ -117,7 +117,7 @@ async function batchUpdateTags(
         laneTag: landed[0].tag,
         lanes: ctx.lanes,
         mode: ctx.mode,
-        token: githubToken(c.env),
+        serviceKey: mgmtKey(c.env),
         runnerRepo: runnerRepo(c.env)
       },
       c
