@@ -48,10 +48,7 @@ async function taskActions(page: Page) {
 
 test.describe('themed controls in the running app', () => {
   test.beforeEach(async ({ request }) => {
-    test.skip(
-      !(await prefsUp(request)),
-      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
-    )
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
   })
 
   test('every scroller in the app takes the active theme accent', async ({ page }) => {

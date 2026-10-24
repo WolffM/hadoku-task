@@ -19,7 +19,7 @@ Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate, then bumps 
 
 `ci.yml` runs **typecheck, lint and worker-tests** on `pull_request` AND on pushes to `main`. The push trigger exists because work here lands by direct push at least as often as by PR; before it, those commits were verified by nothing at all. On a push it is DETECTION, not prevention — the commit has already landed, so a failure is a red main to fix forward.
 
-**CI does not run Playwright.** The ~110 e2e specs execute only when someone runs them locally, so green CI is never evidence the suite passes. Three `theme-inheritance` specs sat red on `main` for weeks because of exactly this. Run `pnpm exec playwright test` (with `pnpm run dev:api` up) before trusting a change that touches the frontend.
+**Per-push CI does not run Playwright.** The full e2e suite (~220 tests, against the local stack) runs only locally and in the nightly `e2e.yml`, so a green push is never evidence the suite passes — at best the nightly catches a break up to a day later. Three `theme-inheritance` specs sat red on `main` for weeks because of exactly this. Run `pnpm exec playwright test` (with `pnpm run dev:api` up) before trusting a change that touches the frontend.
 
 ## Worktrees — bootstrap them, or the hook silently does nothing
 
@@ -183,9 +183,11 @@ GitHub issues or a terminal — those systems cannot render an SVG. Waive those 
   answered 404 for an unset row where the real worker answers 200 with `merged:{}`, and only the
   `task` row was ever mocked, so the `portfolio` row escaped to production. Don't reintroduce it.
 
-- :3003 comes from `../hadoku_site/workers/prefs-api` (imported across the repo boundary on
-  purpose — a vendored copy would drift). Without that sibling checkout the prefs server is
-  skipped with a warning and prefs-backed specs skip themselves.
+- :3003 is hadoku_site's real `workers/prefs-api`, consumed as `@wolffm/e2e-harness/prefs-api`
+  (bundled and published from the same commit, migrations included) — not a vendored copy,
+  and not a sibling checkout, which CI can't have: hadoku_site is private and this repo holds
+  no token for it. The nightly e2e (`e2e.yml`) starts this whole stack, so a spec that skips
+  without it fails the run unless e2e.json's `e2eSkipAllow` names it.
 
 - Test isolation is per-DEVICE: the SDK mints `hadoku_device_id` into localStorage, and each
   Playwright context is a fresh browser, so device-scoped prefs (theme, themeMode) can't collide

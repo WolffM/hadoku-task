@@ -97,10 +97,7 @@ test.describe('Theme Mode', () => {
   test.beforeEach(async ({ page, request }) => {
     // Prefs are served by the real worker now, so these specs need the local
     // stack up — same contract as every other server-backed spec here.
-    test.skip(
-      !(await prefsUp(request)),
-      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
-    )
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
     await setupRoutes(page)
   })
 

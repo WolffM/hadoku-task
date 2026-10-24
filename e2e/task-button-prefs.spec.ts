@@ -77,10 +77,7 @@ function chip(page: Page, name: string) {
 
 test.describe('Task button preferences', () => {
   test.beforeEach(async ({ page, request }) => {
-    test.skip(
-      !(await prefsUp(request)),
-      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
-    )
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
     await setupRoutes(page)
   })
 

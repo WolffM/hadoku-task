@@ -183,10 +183,7 @@ test.describe('One tag per task: the edit-tag modal', () => {
   // The pill grid is only reachable with the tag button pref turned on, and
   // that pref only survives load with the prefs backend stubbed.
   test.beforeEach(async ({ page, request }) => {
-    test.skip(
-      !(await prefsUp(request)),
-      'prefs stack not running (node scripts/dev-api.mjs, needs ../hadoku_site)'
-    )
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
     await usePrefsBackend(page)
     await seedPublicSession(page, { showTagButton: true })
     await page.goto('/?userType=public')

@@ -15,7 +15,7 @@
  * So the fix is not a better mock. It is the actual worker, with actual auth and
  * an actual database, reachable at an actual URL:
  *
- *   :3003  prefs-api from ../hadoku_site, fronted by the same edge-router shim
+ *   :3003  prefs-api, fronted by the same edge-router shim
  *          shape dev-server.ts uses for :3001 — X-Edge-Auth, X-Hadoku-Tier,
  *          X-User-Key, X-User-Id — because the worker trusts edge-stamped
  *          headers (createEdgeAuth) and a browser can't set them itself.
@@ -28,22 +28,19 @@
  * the same job. The system under test — prefs-api, the SDK's fetch path, its
  * cache keying, the migration — is entirely real.
  *
- * WHY A SEPARATE ENTRY POINT
- * --------------------------
- * It statically imports across the repo boundary into ../hadoku_site. That is
- * deliberate (a copy here would be a mock that drifts), but it means the file
- * cannot build when the sibling checkout is absent — CI, a fresh clone. Keeping
- * it out of dev-server.ts lets scripts/dev-api.mjs build and start it only when
- * the sibling exists, and lets worker/tsconfig.json exclude it from typecheck.
+ * WHERE THE WORKER COMES FROM
+ * ---------------------------
+ * `@wolffm/e2e-harness/prefs-api`: hadoku_site's workers/prefs-api, bundled
+ * whole and published from the same commit, with its migrations beside it.
+ * Not a copy kept here — that would be a mock that drifts. It used to be
+ * imported from a sibling ../hadoku_site checkout, which CI can never have
+ * (the repo is private, and this one holds no token for it), so the nightly
+ * e2e skipped every prefs-backed spec.
  */
 import { createServer } from 'node:http'
-// Resolved by an esbuild alias in scripts/dev-api.mjs, NOT by node or tsc. A
-// relative '../../../hadoku_site/…' would be wrong the moment this runs from a
-// git worktree, where the repo root sits three levels deeper than the sibling
-// checkout — and worktrees are the normal way to work here. The build script
-// locates hadoku_site from the MAIN checkout (git --git-common-dir) and points
-// this specifier at it.
-import prefsApi from 'hadoku-site-prefs-api'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import prefsApi from '@wolffm/e2e-harness/prefs-api'
 import { makeSqliteD1 } from './lib/d1-sqlite'
 import { NO_IDLE_CLOSE } from './lib/dev-http'
 
@@ -53,16 +50,15 @@ const EDGE_SECRET = 'dev-edge-secret'
 /** Must match dev-server.ts's user, or the two rows key to different people. */
 const USER = { key: 'dev-key', id: 'dev-uid', tier: 'friend' }
 
-// Real schema, applied from the sibling repo's migration files — the same ones
-// prod runs. Supplied by dev-api.mjs for the same worktree reason as the import
-// above; there is no correct relative path to hardcode here.
-const PREFS_MIGRATIONS = process.env.DEV_PREFS_MIGRATIONS
-if (!PREFS_MIGRATIONS) {
-  throw new Error(
-    'DEV_PREFS_MIGRATIONS is unset — start this through scripts/dev-api.mjs, which resolves ' +
-      'the hadoku_site checkout and passes the migrations directory.'
-  )
-}
+// Real schema: the migration files prod runs, shipped in the same package as
+// the worker. Resolved from the repo root (dev-api.mjs's cwd), not from this
+// file — it runs as a bundle out of a temp dir, where there is no node_modules.
+const PREFS_MIGRATIONS = join(
+  dirname(
+    createRequire(join(process.cwd(), 'package.json')).resolve('@wolffm/e2e-harness/package.json')
+  ),
+  'dist/prefs-api-migrations'
+)
 
 function makeKV() {
   const store = new Map<string, string>()

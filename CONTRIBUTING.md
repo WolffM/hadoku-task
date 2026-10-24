@@ -34,9 +34,9 @@ pnpm run dev:api                     # required by server-backed e2e specs
 pnpm exec playwright test            # ~110 e2e specs
 ```
 
-- **`pnpm run dev:api` is not optional.** Without it ~33 specs skip themselves,
-  and prefs-backed specs need the sibling `../hadoku_site` checkout for the real
-  prefs-api on :3003. A skipped spec is not a passing one — check the counts.
+- **`pnpm run dev:api` is not optional.** Without it ~80 specs skip themselves
+  (it serves the real task worker on :3001 and the real prefs-api on :3003).
+  A skipped spec is not a passing one — check the counts.
 - **CI does NOT run Playwright.** Only `typecheck`, `lint` and `worker-tests`.
   Green CI is not evidence the e2e suite passes; run it yourself.
 - **Don't mock a backend you can run.** The prefs specs used to intercept

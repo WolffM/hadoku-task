@@ -2,12 +2,11 @@ name: e2e
 
 # Fleet nightly e2e (hadoku_site programme 3). Dispatched by hadoku_site's
 # nightly-e2e.yml with nightly_run_id set, or run by hand for a first proof.
-# The suite is route-mocked (e2e/helpers/mock-api.ts) — no backend, no key —
-# per the wave-3 design's settled call to keep that pattern. A smaller set of
-# specs needs the local dev stack (`pnpm run dev:api`) or a sibling
-# ../hadoku_site checkout for prefs-api; neither is started here, so those
-# skip themselves (see e2e.json's e2eSkipAllow — each has its own reason, read
-# off the suite's own `test.skip()` messages, not guessed).
+# Most specs are route-mocked (e2e/helpers/mock-api.ts). The rest run against
+# the local stack, started below: the real task worker on :3001, the preset
+# stub on :3002 and the real prefs-api on :3003 (from @wolffm/e2e-harness —
+# no sibling hadoku_site checkout, no key). Only the specs that would hit
+# production skip, each listed in e2e.json's e2eSkipAllow with its reason.
 on:
   workflow_dispatch:
     inputs:
@@ -54,8 +53,39 @@ jobs:
       - name: Install browser
         run: pnpm exec playwright install chromium
 
-      - name: e2e (route-mocked, no backend, no key)
+      # Specs that need the stack skip themselves when it is down, so a stack
+      # that never came up reads as skips, not failures — report-e2e then fails
+      # the run on them. Health alone is not enough: jobs on one claw share its
+      # ports, and a server some other job left on :3001 would answer for a
+      # stack whose own bind failed. dev-api.mjs exits when any child dies, so
+      # it still being alive is what proves the answer came from it.
+      - name: Start the local stack (:3001 task worker, :3002 preset stub, :3003 prefs-api)
+        run: |
+          nohup node scripts/dev-api.mjs > dev-api.log 2>&1 &
+          echo "DEV_API_PID=$!" >> "$GITHUB_ENV"
+          pid=$!
+          for _ in $(seq 1 90); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::error::dev-api exited before it came up"; cat dev-api.log; exit 1
+            fi
+            if curl -sf -o /dev/null http://127.0.0.1:3001/task/api/automation/presets &&
+               curl -sf -o /dev/null http://127.0.0.1:3003/prefs/api/v1/_health; then
+              sleep 2
+              kill -0 "$pid" 2>/dev/null && { cat dev-api.log; exit 0; }
+              echo "::error::dev-api exited after its ports answered — another process holds them"; cat dev-api.log; exit 1
+            fi
+            sleep 1
+          done
+          echo "::error::the stack did not answer within 90s"; cat dev-api.log; exit 1
+
+      - name: e2e
         run: pnpm run test:e2e:ci
+
+      - name: Stop the local stack
+        if: always()
+        run: |
+          [ -n "${DEV_API_PID:-}" ] && kill "$DEV_API_PID" 2>/dev/null || true
+          [ -f dev-api.log ] && tail -50 dev-api.log || true
 
       - name: Report results to the fleet e2e store
         if: always()

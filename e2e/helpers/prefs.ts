@@ -37,8 +37,7 @@ export const PREFS_BASE = 'http://localhost:3003/prefs'
 
 /**
  * Is the real prefs stack up? Specs skip on false, the same way the ones
- * needing :3001 do — the prefs server is not started when the sibling
- * hadoku_site checkout is absent.
+ * needing :3001 do — both come up together with `pnpm run dev:api`.
  */
 export async function prefsUp(request: APIRequestContext): Promise<boolean> {
   try {
