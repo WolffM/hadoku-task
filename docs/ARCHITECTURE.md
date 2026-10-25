@@ -172,7 +172,7 @@ The task app does NOT:
 
 The task app DOES:
 
-- ✅ Call parent's `/validate-key` and `/session/create` endpoints
+- ✅ Send the user to the site's `/auth` page to sign in or switch keys (`switchKeyHref()`) — only that page creates a session
 - ✅ Store `sessionId` and `userType` in localStorage after auth
 - ✅ Use these for storage namespacing (localStorage keys, API requests)
 - ✅ Validate operations based on `userType` (e.g., public can't sync to server)

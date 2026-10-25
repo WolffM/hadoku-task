@@ -1,12 +1,14 @@
 /**
  * Client for the unified user-settings modal (ConnectedSettings).
  *
- * Three concerns, all cookie-authed against the hadoku.me edge-router, which
+ * Two concerns, both cookie-authed against the hadoku.me edge-router, which
  * resolves the `hadoku_session` cookie / `X-Session-Id` header → X-User-Key +
  * X-User-Id for the backend:
  *   - display name  → POST /session/name                   (edge-router, self rename)
  *   - content level → GET/PUT /prefs/api/v1/content-level  (prefs-api)
- *   - auth key swap → POST /session/create                 (edge-router, new session)
+ *
+ * Switching keys is NOT a call here: it is a link to the site's /auth page —
+ * see `switchKeyHref()`.
  *
  * These are same-origin relative paths, so ConnectedSettings is portable to any
  * app served under hadoku.me with zero wiring. Off-origin (e.g. a Storybook or
@@ -15,8 +17,7 @@
  *
  * The raw key is never held in the browser (the auth page deliberately drops
  * it), so name + content-level changes go through session identity, not a key
- * header. Only an explicit key SWAP re-presents a key — the new one the user
- * types.
+ * header, and no app ever asks for a key at all.
  *
  * WHEN THESE RUN
  * --------------
@@ -28,7 +29,6 @@
 /** Edge-router / prefs-api endpoints (same-origin relative). */
 const CONTENT_LEVEL_PATH = '/prefs/api/v1/content-level'
 const SESSION_NAME = '/session/name'
-const SESSION_CREATE = '/session/create'
 const SESSION_WHOAMI = '/session/whoami'
 
 /**
@@ -190,40 +190,26 @@ export async function whoami(): Promise<Identity> {
   }
 }
 
-export interface KeySwapResult {
-  userType: Tier
-  name: string | null
-}
-
 /**
- * Swap the active auth key. POSTs the new key to /session/create, which mints
- * a FRESH session (new sessionId + cookie) — so on success we rewrite the
- * localStorage session mirror the rest of the app reads. Caller is expected to
- * reload afterwards so every mounted surface re-reads identity. Returns the new
- * tier on success, null on an invalid key / failure.
+ * Where a "Switch key" control sends the user: the site's sign-in page, which
+ * brings them back here afterwards.
+ *
+ * A browser session is created ONLY by /auth (hadoku_site, 2026-10-25): every
+ * render of that page carries an edge-signed funnel token and the device
+ * fingerprint, and /session/create alerts on — and will refuse — a sign-in
+ * without them. So an app never posts a key itself.
+ *
+ * `switch=1` stops /auth from sending an already signed-in visitor straight
+ * back, which would make switching impossible. `return` is this page's path,
+ * query and hash; /auth redirects there with the new session cookie, and the
+ * shell's mf-loader resyncs the localStorage mirror (hadoku_session_id /
+ * hadoku_user_type) from /session/whoami on that load, so nothing here writes it.
  */
-export async function swapAuthKey(newKey: string): Promise<KeySwapResult | null> {
-  try {
-    const res = await fetch(SESSION_CREATE, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-User-Key': newKey },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-    })
-    if (!res.ok) return null
-    const body = (await res.json()) as {
-      valid: boolean
-      sessionId?: string
-      userType: Tier
-      name: string | null
-    }
-    if (!body.valid || !body.sessionId) return null
-    localStorage.setItem('hadoku_session_id', body.sessionId)
-    localStorage.setItem('hadoku_user_type', body.userType)
-    return { userType: body.userType, name: body.name }
-  } catch {
-    return null
-  }
+export function switchKeyHref(): string {
+  return (
+    '/auth?switch=1&return=' +
+    encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)
+  )
 }
 
 /* ------------------------------------------------------------------ *

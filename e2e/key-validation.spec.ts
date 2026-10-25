@@ -1,21 +1,15 @@
 import { test, expect, type Page } from '@playwright/test'
-import { KEY_SUBMIT_LABEL } from './helpers/settings'
 
 /**
- * E2E tests for the key-swap and session management flow.
+ * E2E tests for switching keys and for session persistence.
  *
- * Key entry now lives in the shared ConnectedSettings popout (the gear button in
- * the AppHeader), not the old task-local SettingsModal. The flow is:
- *   1. User opens the gear ("User settings") → ConnectedSettings popout.
- *   2. Clicks "Change key…" → a password field appears.
- *   3. Types the new key, clicks the submit button (see KEY_SUBMIT_LABEL).
- *   4. ConnectedSettings POSTs the key (X-User-Key) to /session/create and, on
- *      { valid:true, sessionId, userType, name }, writes hadoku_session_id +
- *      hadoku_user_type to localStorage and calls window.location.reload().
- *   5. On failure it renders .settings-popout__error and does NOT reload.
- * The app still persists the session across reloads and still handshakes the
- * server for expiry detection — those paths are unchanged by the header
- * convergence.
+ * The settings popout (shared ConnectedSettings, the gear in the AppHeader)
+ * does not take a key. Only the site's /auth page may create a session — it
+ * carries the edge-signed funnel token and the device fingerprint that
+ * /session/create requires — so "Switch key" is a link to
+ * /auth?switch=1&return=<this page>, and /auth brings the user back with the
+ * new session cookie. The app still persists the session across reloads and
+ * still handshakes the server for expiry detection.
  */
 
 const APP_HEADER = 'h1.app-header__title'
@@ -26,17 +20,6 @@ async function openSettings(page: Page) {
   await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
 }
 
-/** Reveal the key field, type a key, and submit the swap. */
-async function swapKey(page: Page, key: string) {
-  await page.getByRole('button', { name: /change key/i }).click()
-
-  const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
-  await keyInput.waitFor({ state: 'visible', timeout: 5000 })
-  await keyInput.fill(key)
-
-  await page.getByRole('button', { name: KEY_SUBMIT_LABEL }).click()
-}
-
 /** Mock the whoami identity ConnectedSettings GETs when the popout opens. */
 async function mockWhoami(page: Page, identity: { userType: string; name: string | null }) {
   await page.route('**/session/whoami', async route => {
@@ -44,34 +27,6 @@ async function mockWhoami(page: Page, identity: { userType: string; name: string
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ valid: true, ...identity })
-    })
-  })
-}
-
-/**
- * Answer the session handshake as a server that AGREES with the session being
- * presented, by echoing back the client's `X-User-Type`.
- *
- * The handshake is authoritative over the local mirror: on a mismatch the app
- * calls `storeUserType(server's answer)` (`src/api/session.ts`) — correctly, it
- * is how an expired session gets downgraded. So a test that swaps into an admin
- * session and then lets the REAL dev worker answer (always `friend`) watches the
- * app faithfully overwrite the very value it is asserting on. Unmocked, this
- * test also passes or fails depending on whether the dev API stack happens to be
- * running, which is worse than either outcome.
- */
-async function mockHandshake(page: Page) {
-  await page.route('**/task/api/session/handshake', async route => {
-    const req = route.request()
-    const body = JSON.parse(req.postData() ?? '{}') as { newSessionId?: string }
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        sessionId: body.newSessionId ?? null,
-        userType: req.headers()['x-user-type'] ?? 'public',
-        preferences: null
-      })
     })
   })
 }
@@ -100,52 +55,30 @@ test.describe('Key Validation Flow', () => {
     expect(userType).toBeNull()
   })
 
-  test('should swap key and create session', async ({ page }) => {
+  test('Switch key links to /auth and round-trips the path, query and hash', async ({ page }) => {
+    // Public, so the popout fetches no content level and the spec stays hermetic.
     await mockWhoami(page, { userType: 'public', name: null })
-
-    // The swap POSTs the new key to /session/create with an X-User-Key header.
-    await page.route('**/session/create', async route => {
-      const key = route.request().headers()['x-user-key']
-      if (key === 'test-valid-key') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            valid: true,
-            sessionId: 'test-session-123',
-            userType: 'friend',
-            name: null
-          })
-        })
-      } else {
-        await route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ valid: false })
-        })
-      }
-    })
-
-    // Navigate and clear localStorage manually (not with addInitScript to avoid clearing on reload)
     await page.goto('/')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
     await page.waitForSelector(APP_HEADER, { timeout: 10000 })
 
-    // Open the gear and swap the key - this triggers window.location.reload()
+    // A page address with every part /auth has to hand back, including
+    // characters that must survive encoding.
+    const here = '/board/two%20words?view=calendar&sort=a+b#lane-3'
+    await page.evaluate(url => window.history.replaceState(null, '', url), here)
+
     await openSettings(page)
-    await swapKey(page, 'test-valid-key')
+    const link = page.getByRole('link', { name: 'Switch key' })
+    await expect(link).toBeVisible()
 
-    // Wait for the reload the swap triggers on success
-    await page.waitForEvent('load', { timeout: 15000 })
-    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
+    const href = await link.getAttribute('href')
+    expect(href).toBe('/auth?switch=1&return=' + encodeURIComponent(here))
+    const url = new URL(href ?? '', 'https://hadoku.me')
+    expect(url.pathname).toBe('/auth')
+    expect(url.searchParams.get('switch')).toBe('1')
+    expect(url.searchParams.get('return')).toBe(here)
 
-    // Verify the session mirror was written before the reload
-    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
-    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
-
-    expect(sessionId).toBe('test-session-123')
-    expect(userType).toBe('friend')
+    // The key is never typed into an app: the panel has no key field at all.
+    await expect(page.locator('.settings-popout__panel input[type="password"]')).toHaveCount(0)
   })
 
   test('should persist session across page reloads', async ({ page }) => {
@@ -220,121 +153,6 @@ test.describe('Key Validation Flow', () => {
 
     expect(sessionIdAfterReload).toBe('persisted-session-456')
     expect(userTypeAfterReload).toBe('admin')
-  })
-
-  test('should store the new session when switching accounts', async ({ page }) => {
-    // The old task-local flow cleared other-account localStorage on switch; the
-    // shared ConnectedSettings swap only rewrites the session mirror
-    // (hadoku_session_id + hadoku_user_type) and reloads. This asserts the swap
-    // overwrites an existing session with the new account's identity.
-    await mockWhoami(page, { userType: 'friend', name: null })
-    await mockHandshake(page)
-
-    await page.route('**/session/create', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          sessionId: 'new-session-222',
-          userType: 'admin',
-          name: null
-        })
-      })
-    })
-
-    // Content level is fetched for friend/admin on popout open — keep it hermetic.
-    await page.route('**/prefs/api/v1/content-level', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ level: 1, maxLevel: 3 })
-      })
-    })
-
-    // Navigate first, then set up localStorage manually
-    await page.goto('/')
-
-    // Pre-populate localStorage with an existing (friend) session
-    await page.evaluate(() => {
-      localStorage.setItem('hadoku_session_id', 'old-session-111')
-      localStorage.setItem('hadoku_user_type', 'friend')
-    })
-
-    // Reload to pick up the pre-populated session
-    await page.reload()
-    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
-
-    // Open the gear and swap to the new account key - triggers a reload
-    await openSettings(page)
-    await swapKey(page, 'new-account-key')
-
-    await page.waitForEvent('load', { timeout: 15000 })
-    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
-
-    // Verify the new session replaced the old one
-    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
-    const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
-
-    expect(sessionId).toBe('new-session-222')
-    expect(userType).toBe('admin')
-  })
-
-  test('should handle an invalid key gracefully', async ({ page }) => {
-    await mockWhoami(page, { userType: 'public', name: null })
-
-    // Server rejects the key: 200 with valid:false → swap fails, no reload.
-    await page.route('**/session/create', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: false })
-      })
-    })
-
-    await page.goto('/')
-    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
-
-    await openSettings(page)
-    await swapKey(page, 'invalid-key')
-
-    // Error renders in the popout; the popout stays open (no reload).
-    const errorMessage = page.locator('.settings-popout__error')
-    await expect(errorMessage).toBeVisible({ timeout: 5000 })
-
-    // Session should NOT be created
-    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
-    if (sessionId) {
-      expect(sessionId).not.toBe('new-session-222')
-      expect(sessionId).toMatch(/^public-/)
-    }
-  })
-
-  test('should handle a session creation failure gracefully', async ({ page }) => {
-    await mockWhoami(page, { userType: 'public', name: null })
-
-    // Server error (non-ok) → swap fails, error shown, no reload.
-    await page.route('**/session/create', async route => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Server error' })
-      })
-    })
-
-    await page.goto('/')
-    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
-
-    await openSettings(page)
-    await swapKey(page, 'valid-key-but-server-fails')
-
-    await expect(page.locator('.settings-popout__error')).toBeVisible({ timeout: 5000 })
-
-    // Session should NOT be updated
-    const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
-    if (sessionId) {
-      expect(sessionId).toMatch(/^public-/)
-    }
   })
 
   test('should handle session expiration gracefully', async ({ page }) => {

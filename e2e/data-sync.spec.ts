@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test'
-import { KEY_SUBMIT_LABEL_PROD } from './helpers/settings'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * E2E tests for data synchronization between localStorage and API
@@ -14,6 +13,18 @@ import { KEY_SUBMIT_LABEL_PROD } from './helpers/settings'
 
 // Test keys - these should be registered on the production server
 const FRIEND_TEST_KEY = 'friend-12345678-1234-1234-1234-1234567890ab'
+
+/**
+ * Sign in the way a person does: through the site's /auth page, which is the
+ * only thing allowed to create a session (it signs a funnel token and takes the
+ * device fingerprint). It returns to the task app with the session cookie.
+ */
+async function signInViaAuthPage(page: Page, key: string) {
+  await page.goto('https://hadoku.me/auth?switch=1&return=' + encodeURIComponent('/task/'))
+  await page.locator('#auth-key').fill(key)
+  await page.locator('#submit-btn').click()
+  await page.waitForURL(/hadoku\.me\/task\//, { timeout: 15000 })
+}
 
 test.describe('Data Sync Flow', () => {
   test.describe('Production API Integration', () => {
@@ -31,18 +42,7 @@ test.describe('Data Sync Flow', () => {
       // Wait for app to load
       await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
-      // Open the settings gear and swap in the key (shared ConnectedSettings)
-      await page.getByRole('button', { name: 'User settings' }).click()
-      await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
-      await page.getByRole('button', { name: /change key/i }).click()
-
-      const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
-      await keyInput.waitFor({ state: 'visible', timeout: 5000 })
-      await keyInput.fill(FRIEND_TEST_KEY)
-      await page.getByRole('button', { name: KEY_SUBMIT_LABEL_PROD }).click()
-
-      // Wait for page reload after auth
-      await page.waitForEvent('load', { timeout: 15000 })
+      await signInViaAuthPage(page, FRIEND_TEST_KEY)
       await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
       // Give time for sync to complete
@@ -81,17 +81,7 @@ test.describe('Data Sync Flow', () => {
       const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
 
       if (userType !== 'friend') {
-        // Need to authenticate first (shared ConnectedSettings gear)
-        await page.getByRole('button', { name: 'User settings' }).click()
-        await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
-        await page.getByRole('button', { name: /change key/i }).click()
-
-        const keyInput = page.locator('.settings-popout__input[placeholder="New access key"]')
-        await keyInput.waitFor({ state: 'visible', timeout: 5000 })
-        await keyInput.fill(FRIEND_TEST_KEY)
-        await page.getByRole('button', { name: KEY_SUBMIT_LABEL_PROD }).click()
-
-        await page.waitForEvent('load', { timeout: 15000 })
+        await signInViaAuthPage(page, FRIEND_TEST_KEY)
       }
 
       await page.waitForSelector('h1.app-header__title', { timeout: 15000 })

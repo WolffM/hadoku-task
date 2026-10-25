@@ -5,7 +5,7 @@
  *   - current access tier (read-only, friendly label)
  *   - display name (inline edit → POST /session/name)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
- *   - auth key swap (→ POST /session/create, reloads on success)
+ *   - switch key (a link to the site's /auth page, which brings the user back)
  *
  * "Connected" (parallel to ConnectedThemePicker): it self-wires to the
  * hadoku.me edge-router via same-origin fetches (see lib/settingsClient), so
@@ -30,7 +30,7 @@ import {
   prefetchSettings,
   setContentLevel,
   setDisplayName,
-  swapAuthKey,
+  switchKeyHref,
   type ContentLevelState,
   type Tier
 } from '../lib/settingsClient'
@@ -95,10 +95,6 @@ export function ConnectedSettings({
   const [displayName, setLocalName] = useState<string | null>(resolvedName)
 
   // Key swap
-  const [showKeyInput, setShowKeyInput] = useState(false)
-  const [keyDraft, setKeyDraft] = useState('')
-  const [keySwapping, setKeySwapping] = useState(false)
-  const [keyError, setKeyError] = useState<string | null>(null)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -211,21 +207,6 @@ export function ConnectedSettings({
     },
     [content, levelSaving]
   )
-
-  const doKeySwap = useCallback(async () => {
-    const key = keyDraft.trim()
-    if (!key) return
-    setKeySwapping(true)
-    setKeyError(null)
-    const result = await swapAuthKey(key)
-    if (!result) {
-      setKeySwapping(false)
-      setKeyError('That key was not accepted.')
-      return
-    }
-    // New session established — reload so every surface re-reads identity.
-    window.location.reload()
-  }, [keyDraft])
 
   // No caller-supplied class on the root. The four rows below are the
   // platform's, not the app's, and a className here is enough to restyle or
@@ -362,51 +343,13 @@ export function ConnectedSettings({
             </section>
           )}
 
-          {/* Auth key swap */}
-          <section className="settings-popout__row settings-popout__row--stack">
+          {/* Switch key. A link, not a field: only the site's /auth page may
+              create a session, so the key is never typed into an app. */}
+          <section className="settings-popout__row">
             <span className="settings-popout__label">Access key</span>
-            {showKeyInput ? (
-              <span className="settings-popout__inline">
-                <input
-                  className="settings-popout__input"
-                  type="password"
-                  placeholder="New access key"
-                  value={keyDraft}
-                  autoFocus
-                  disabled={keySwapping}
-                  onChange={e => setKeyDraft(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      doKeySwap().catch(reportErr)
-                    }
-                    if (e.key === 'Escape') {
-                      setShowKeyInput(false)
-                      setKeyDraft('')
-                      setKeyError(null)
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="settings-popout__btn settings-popout__btn--primary"
-                  disabled={keySwapping}
-                  onClick={() => {
-                    doKeySwap().catch(reportErr)
-                  }}
-                >
-                  {keySwapping ? '…' : 'Apply'}
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="settings-popout__btn"
-                onClick={() => setShowKeyInput(true)}
-              >
-                Change key…
-              </button>
-            )}
-            {keyError && <span className="settings-popout__error">{keyError}</span>}
+            <a className="settings-popout__btn" href={switchKeyHref()}>
+              Switch key
+            </a>
           </section>
 
           {/* App-specific settings (optional) — same popout, one gear. */}

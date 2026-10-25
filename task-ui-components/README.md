@@ -44,7 +44,8 @@ Enforces the shared header contract so child apps stop drifting. See
 ### ConnectedSettings (Overview)
 
 The unified per-user settings gear + popout (access tier, display name, global
-content-visibility level, auth-key swap). "Connected": it self-wires to the
+content-visibility level, and a "Switch key" link to the site's `/auth` page —
+only that page creates sessions). "Connected": it self-wires to the
 hadoku.me edge-router via same-origin fetches, so it needs zero props. Injected
 automatically by `AppHeader`; can also be used standalone.
 
