@@ -88,7 +88,7 @@
     "@typescript-eslint/parser": "^8.60.1",
     "@vitejs/plugin-react": "^5.1.1",
     "@wolffm/catalogue": "^1.0.7",
-    "@wolffm/e2e-harness": "^0.1.7",
+    "@wolffm/e2e-harness": "^0.1.8",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
