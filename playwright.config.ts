@@ -26,7 +26,9 @@ export default defineConfig({
   outputDir: 'test-results',
   use: {
     baseURL: `http://localhost:${PORT}`,
-    trace: 'on-first-retry'
+    // Locally there are no retries, so 'on-first-retry' would never record: a
+    // one-off failure under load left nothing to read once the run was rerun.
+    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure'
   },
   projects: [
     {
