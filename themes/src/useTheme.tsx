@@ -213,6 +213,8 @@ export function useTheme(options: UseThemeOptions = {}) {
   // `coffee-light` moves to `coffee-dark` at sunset rather than to plain dark.
   // Base light/dark are left alone — those are explicit choices, not families.
   useEffect(() => {
+    // jsdom and SSR have no matchMedia, so there is no OS preference to follow.
+    if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
     const onChange = (e: MediaQueryListEvent | MediaQueryList) => {

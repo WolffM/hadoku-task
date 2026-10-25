@@ -8,12 +8,13 @@ import { useState, useEffect } from 'react'
 
 export function useReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
-    // SSR-safe: default to false if window is not available
-    if (typeof window === 'undefined') return false
+    // SSR and jsdom have no matchMedia: default to false.
+    if (typeof window === 'undefined' || !window.matchMedia) return false
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   })
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
 
     const handleChange = (event: MediaQueryListEvent) => {
