@@ -33,6 +33,7 @@ import { setTheme as applyTheme, saveTheme, setThemeMode } from './index'
 import type { Theme } from './index'
 import { THEME_FAMILIES } from './metadata'
 import { themePrefs } from './themePrefs'
+import { useRefElement } from './useRefElement'
 
 export interface UseThemeOptions {
   /** Theme forced by a parent shell. When set, it wins over everything and the
@@ -105,6 +106,8 @@ function seedTheme(propsTheme?: string): string {
 
 export function useTheme(options: UseThemeOptions = {}) {
   const { propsTheme, containerRef } = options
+  // State, not the ref: the container can attach after the first apply (#102).
+  const container = useRefElement(containerRef)
 
   const [theme, setThemeState] = useState<string>(() => seedTheme(propsTheme))
   const [isThemeReady, setIsThemeReady] = useState(false)
@@ -171,9 +174,7 @@ export function useTheme(options: UseThemeOptions = {}) {
 
     document.documentElement.setAttribute('data-theme', valid)
     // Micro-frontend mounts style within their own subtree.
-    if (containerRef?.current) {
-      containerRef.current.setAttribute('data-theme', valid)
-    }
+    container?.setAttribute('data-theme', valid)
     applyTheme(valid as Theme)
     // Advanced visuals are switched off platform-wide: the Simple/Advanced
     // toggle is gone from the picker, so nothing can turn them on. The kit
@@ -193,7 +194,7 @@ export function useTheme(options: UseThemeOptions = {}) {
       return () => clearTimeout(timer)
     }
     setIsThemeReady(true)
-  }, [theme, containerRef, isInitialThemeLoad, isThemeAvailable])
+  }, [theme, container, isInitialThemeLoad, isThemeAvailable])
 
   // Adopt the cross-device theme once the SDK resolves — unless the parent
   // shell forced one, or the user already chose this session.

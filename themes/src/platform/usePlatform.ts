@@ -14,6 +14,7 @@ import {
   NARROW_QUERY,
   type PlatformSeed
 } from './index'
+import { useRefElement } from '../useRefElement'
 
 export interface UsePlatformOptions {
   /**
@@ -79,11 +80,13 @@ export function usePlatform(options: UsePlatformOptions = {}): PlatformSeed {
 
   // Stamp on every change. No cleanup here on purpose — clearing and
   // re-setting on every flip would churn the attribute for no reason.
+  // State, not the ref: the container can attach after the first stamp (#102).
+  const container = useRefElement(containerRef)
   const stampedRef = useRef<Element | null>(null)
   useEffect(() => {
-    stampedRef.current = containerRef?.current ?? null
-    stampPlatform(stampedRef.current, platform)
-  }, [containerRef, platform])
+    stampedRef.current = container
+    stampPlatform(container, platform)
+  }, [container, platform])
 
   // Clear on unmount only. The host's mount root outlives the app it holds —
   // mf-loader re-mounts watchparty into the same element — so leaving the
