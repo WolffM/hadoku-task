@@ -67,8 +67,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
       '@wolffm/catalogue':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: ^1.0.6
+        version: 1.0.6
       '@wolffm/e2e-harness':
         specifier: ^0.1.3
         version: 0.1.3(@playwright/test@1.60.0)
@@ -945,8 +945,8 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
-  '@wolffm/catalogue@1.0.5':
-    resolution: {integrity: sha512-Q6sh6VywX+aXbAunlXvkEHOxkVsneU5QGq/5cvQb2coYsEeLI9FC6l1bM4KaWaTpZOVTtx3DnnvTCVsvEVthFQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.5/9fca09ef5d70d0fafc70918ffd66117da91a1c77}
+  '@wolffm/catalogue@1.0.6':
+    resolution: {integrity: sha512-/La2l3VvmkAa1oivAzNAY9oTbNAZQuEjFdM5auoW4xqG/TpxqzyBHeD4DIZ04A+9YH4FTawt1vw5azpwbZVFvw==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.6/c473a5afc611efea666c31697f5c050b92498259}
     engines: {node: '>=18'}
 
   '@wolffm/e2e-harness@0.1.3':
@@ -3149,7 +3149,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@wolffm/catalogue@1.0.5': {}
+  '@wolffm/catalogue@1.0.6': {}
 
   '@wolffm/e2e-harness@0.1.3(@playwright/test@1.60.0)':
     dependencies:
