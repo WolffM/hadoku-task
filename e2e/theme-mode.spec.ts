@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 
 /**
@@ -16,27 +16,19 @@ import { mockShellApi } from './helpers/mock-api'
  *   3. The picker exposes NO mode toggle
  *   4. A previously persisted themeMode='advanced' does not resurrect the
  *      advanced visuals
- *   5. Legacy `simpleMode` saved preferences are still migrated to `themeMode`
- *      on first load and the legacy localStorage key is dropped — the value is
- *      recorded but no longer drives rendering
  */
 
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-test-session'
-const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 // @wolffm/prefs-client optimistic cache: `prefs-cache:{userId}:{appId}`.
 // The local stack's edge-router shim resolves /session/whoami to the dev user
 // it stamps on every request, so this is the real resolved identity rather
 // than a mock's idea of one.
 const DEV_USER_ID = 'dev-uid'
-const TASK_CACHE_KEY = `prefs-cache:${DEV_USER_ID}:task`
 const SHARED_CACHE_KEY = `prefs-cache:${DEV_USER_ID}:portfolio`
 
 /** Read a prefs-client cache envelope's blob from localStorage. */
-function readSdkCacheBlob(
-  page: Page,
-  key = TASK_CACHE_KEY
-): Promise<Record<string, unknown> | null> {
+function readSdkCacheBlob(page: Page, key: string): Promise<Record<string, unknown> | null> {
   return page.evaluate(k => {
     const raw = window.localStorage.getItem(k)
     return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
@@ -54,32 +46,21 @@ async function setupRoutes(page: Page) {
 }
 
 /**
- * Seed a public session whose legacy prefs blob the app will actually find.
+ * Seed a public session whose device already has `prefs` saved.
  *
  * A public user's sessionId comes from `task_anon_session_id`, NOT
  * `hadoku_session_id` — the host page's mf-loader owns the latter and wipes it
- * on every boot for a public user (see `src/api/session.ts`). Seeding the wrong
- * key doesn't fail loudly: the app just mints a fresh anon id, so the legacy
- * prefs key never matches, no preference is read, and every assertion here
- * silently tests the DEFAULT theme instead of the one under test.
+ * on every boot for a public user (see `src/api/session.ts`).
  */
-async function seedPublicSession(page: Page, prefs: Record<string, unknown> | null): Promise<void> {
-  const prefsJson = prefs ? JSON.stringify(prefs) : null
+async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Promise<void> {
   await page.addInitScript(
-    ({ userType, sessionId, prefsKey, prefsJson }) => {
+    ({ userType, sessionId }) => {
       window.localStorage.setItem('hadoku_user_type', userType)
       window.localStorage.setItem('task_anon_session_id', sessionId)
-      if (prefsJson !== null) {
-        window.localStorage.setItem(prefsKey, prefsJson)
-      }
     },
-    {
-      userType: PUBLIC_USER_TYPE,
-      sessionId: PUBLIC_SESSION_ID,
-      prefsKey: PREFS_KEY,
-      prefsJson
-    }
+    { userType: PUBLIC_USER_TYPE, sessionId: PUBLIC_SESSION_ID }
   )
+  await seedDevicePrefs(page, prefs)
 }
 
 async function waitForApp(page: Page) {
@@ -103,8 +84,6 @@ test.describe('Theme Mode', () => {
 
   test('default themeMode is simple on first load (light theme)', async ({ page }) => {
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'light'
     })
 
@@ -126,8 +105,6 @@ test.describe('Theme Mode', () => {
     // no shared row, so their theme stayed stranded in the task row and the
     // app opened on the default forever.
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'coffee-dark'
     })
 
@@ -151,8 +128,6 @@ test.describe('Theme Mode', () => {
 
   test('hdk-advanced-page class is applied to the task container', async ({ page }) => {
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'light'
     })
 
@@ -168,8 +143,6 @@ test.describe('Theme Mode', () => {
     // `light` is one of the two themes that ship an advanced contract (see
     // THEME_EFFECTS), so it is where a toggle would show up if one survived.
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'light'
     })
 
@@ -191,8 +164,6 @@ test.describe('Theme Mode', () => {
     // seeded below is inert now, but the token scoping this guards is
     // what would break first if the advanced kit is ever switched back on.
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'coffee-light',
       themeMode: 'advanced'
     })
@@ -222,8 +193,6 @@ test.describe('Theme Mode', () => {
     // Someone who used the toggle before it was removed still has
     // themeMode='advanced' in their prefs row. It must not render.
     await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
       theme: 'light',
       themeMode: 'advanced'
     })
@@ -242,62 +211,5 @@ test.describe('Theme Mode', () => {
       return el ? getComputedStyle(el).backgroundImage : null
     })
     expect(surfaceBg).not.toMatch(/linear-gradient/)
-  })
-
-  test('legacy simpleMode=true is migrated to themeMode=simple on load', async ({ page }) => {
-    await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      theme: 'light',
-      // Old key shape — should be migrated and removed
-      simpleMode: true
-    })
-
-    await page.goto('/')
-    await waitForApp(page)
-
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
-      .toBe('simple')
-
-    // Migration outcome: the legacy localStorage blob is removed and the
-    // unified store's cache carries themeMode with the simpleMode key dropped.
-    await expect
-      .poll(() => page.evaluate(key => window.localStorage.getItem(key), PREFS_KEY))
-      .toBeNull()
-
-    // Poll past the SDK's 1s save debounce + post-flush refresh.
-    await expect
-      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null, { timeout: 10000 })
-      .toBe('simple')
-    expect('simpleMode' in ((await readSdkCacheBlob(page)) ?? {})).toBe(false)
-  })
-
-  test('legacy simpleMode=false migrates to themeMode=advanced but still renders simple', async ({
-    page
-  }) => {
-    await seedPublicSession(page, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      theme: 'light',
-      simpleMode: false
-    })
-
-    await page.goto('/')
-    await waitForApp(page)
-
-    // The migration still records the old value; rendering ignores it.
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme-mode')))
-      .toBe('simple')
-
-    await expect
-      .poll(() => page.evaluate(key => window.localStorage.getItem(key), PREFS_KEY))
-      .toBeNull()
-
-    await expect
-      .poll(async () => (await readSdkCacheBlob(page))?.themeMode ?? null, { timeout: 10000 })
-      .toBe('advanced')
-    expect('simpleMode' in ((await readSdkCacheBlob(page)) ?? {})).toBe(false)
   })
 })

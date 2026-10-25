@@ -181,20 +181,6 @@ test.describe('Data Sync Flow', () => {
         })
       })
 
-      // Mock handshake
-      await page.route('**/task/api/session/handshake', async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            sessionId: 'test-sync-session',
-            migrated: false,
-            preferences: null
-          })
-        })
-      })
-
       await page.goto('/')
       await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 
@@ -263,19 +249,6 @@ test.describe('Data Sync Flow', () => {
                 ]
               }
             ]
-          })
-        })
-      })
-
-      await page.route('**/task/api/session/handshake', async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            sessionId: 'test-overwrite-session',
-            migrated: false,
-            preferences: null
           })
         })
       })

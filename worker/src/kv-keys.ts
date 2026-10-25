@@ -28,38 +28,6 @@ export function tasksKey(sessionId: string | undefined, boardId: string): string
 }
 
 // ============================================================================
-// Preferences Keys
-// ============================================================================
-
-/**
- * Generate KV key for preferences by sessionId
- * Format: prefs:{sessionId}
- */
-export function preferencesKey(sessionId: string): string {
-  return `${KV_PREFIXES.PREFS}:${sessionId}`
-}
-
-// ============================================================================
-// Session Management Keys
-// ============================================================================
-
-/**
- * Generate KV key for session info by sessionId
- * Format: session-info:{sessionId}
- */
-export function sessionInfoKey(sessionId: string): string {
-  return `${KV_PREFIXES.SESSION_INFO}:${sessionId}`
-}
-
-/**
- * Generate KV key for session mapping by authKey
- * Format: session-map:{authKey}
- */
-export function sessionMappingKey(authKey: string): string {
-  return `${KV_PREFIXES.SESSION_MAP}:${authKey}`
-}
-
-// ============================================================================
 // Throttle & Rate Limiting Keys
 // ============================================================================
 

@@ -4,24 +4,18 @@
  * Handles administrative endpoints for monitoring and management
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { maskKey, maskSessionId, tierAtLeast } from '@wolffm/worker-utils'
+import { maskSessionId, tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest } from '../logger'
 import {
   getThrottleState,
   getIncidents,
   isSessionBlacklisted,
   unblacklistSession,
-  resetThrottleState,
-  checkSuspiciousPatterns
+  resetThrottleState
 } from '../throttle'
-import { getSessionMapping } from '../session'
 import type { AppContext } from '../types'
 import { ErrorResponseSchema } from '../schemas-common'
-import {
-  GetThrottleStatusResponseSchema,
-  GetSessionsResponseSchema,
-  UnblacklistResponseSchema
-} from '../schemas-admin'
+import { GetThrottleStatusResponseSchema, UnblacklistResponseSchema } from '../schemas-admin'
 
 export function createAdminRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -86,80 +80,6 @@ export function createAdminRoutes() {
         blacklisted,
         incidents,
         incidentCount: incidents.length
-      },
-      200
-    )
-  })
-
-  // Get Sessions for Auth Key
-  const getSessionsRoute = createRoute({
-    method: 'get',
-    path: '/admin/sessions/{authKey}',
-    tags: ['Admin'],
-    summary: 'Get sessions for auth key',
-    description:
-      'Returns all sessions associated with an authKey. Includes suspicious pattern detection. Requires admin access.',
-    request: {
-      params: z.object({
-        authKey: z.string().openapi({ example: 'key_xyz789' })
-      })
-    },
-    responses: {
-      200: {
-        description: 'Sessions for auth key',
-        content: {
-          'application/json': {
-            schema: GetSessionsResponseSchema
-          }
-        }
-      },
-      400: {
-        description: 'Invalid request',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema
-          }
-        }
-      },
-      403: {
-        description: 'Admin access required',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema
-          }
-        }
-      }
-    }
-  })
-
-  app.openapi(getSessionsRoute, async c => {
-    const auth = c.get('authContext')
-    if (!tierAtLeast(auth, 'admin')) {
-      return c.json({ error: 'Admin access required' }, 403)
-    }
-
-    const { authKey } = c.req.valid('param')
-
-    const mapping = await getSessionMapping(c.env.TASKS_KV, authKey)
-
-    if (!mapping) {
-      return c.json({ authKey: maskKey(authKey), sessions: [], lastSessionId: null }, 200)
-    }
-
-    const suspiciousCheck = await checkSuspiciousPatterns(
-      c.env.TASKS_KV,
-      authKey,
-      mapping.sessionIds
-    )
-
-    return c.json(
-      {
-        authKey: maskKey(authKey),
-        sessionCount: mapping.sessionIds.length,
-        sessions: mapping.sessionIds.map(maskSessionId),
-        lastSessionId: maskSessionId(mapping.lastSessionId),
-        suspicious: suspiciousCheck.suspicious,
-        suspiciousReasons: suspiciousCheck.reasons
       },
       200
     )

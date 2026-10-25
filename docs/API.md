@@ -10,21 +10,21 @@ Complete endpoint documentation for implementing the Task Manager backend.
 
 **This micro-frontend delegates authentication to your parent application.**
 
-### Your Responsibilities
-
-1. **Validate authentication keys/tokens** in your backend
-2. **Provide `userType` and `sessionId`** to the task app via props
-3. **Secure all API endpoints** - validate auth headers before processing
-4. **Handle user login/logout** in your application
-
-### Request Headers
-
-All authenticated endpoints should include:
+Identity belongs to the edge. On hadoku.me every sign-in goes through the
+`/auth` page; edge-router resolves the `hadoku_session` cookie and stamps each
+`/task/api/*` request with the caller's identity before it reaches the worker:
 
 ```http
-X-User-Type: public | friend | admin
-X-Session-Id: <unique-session-identifier>
+X-User-Id: <stable registry user id>
+X-Hadoku-Tier: public | friend | service | wife | admin
+X-Edge-Auth: <edge signature>
 ```
+
+The worker trusts only those edge-stamped headers. The app sends nothing that
+claims a tier; it forwards `X-Session-Id` (the host's session id), which
+edge-router uses as the cookie-less fallback for clients whose cookies are
+blocked. Service callers (agents) authenticate server-to-server with
+`X-User-Key`.
 
 ---
 
@@ -75,7 +75,6 @@ Get all active tasks for a board.
 
 **Query Parameters:**
 
-- `userType` (optional): `public` | `friend` | `admin`
 - `boardId` (optional): Board ID (default: `main`)
 
 **Response:**
@@ -108,7 +107,6 @@ Create a new task.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -153,7 +151,6 @@ Update a task's title, tags, or scheduling.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
@@ -201,7 +198,6 @@ Mark a task as completed (moves to stats graveyard).
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
@@ -235,7 +231,6 @@ Permanently delete a task.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
@@ -271,7 +266,6 @@ Get all boards for the current user.
 
 **Query Parameters:**
 
-- `userType` (optional): `public` | `friend` | `admin`
 - `sessionId` (optional): Session identifier
 
 **Response:**
@@ -310,7 +304,6 @@ Create a new board.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -341,7 +334,6 @@ Delete a board and all its tasks.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
@@ -374,7 +366,6 @@ Create a persisted tag on a board.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **URL Parameters:**
@@ -406,7 +397,6 @@ Delete a persisted tag from a board.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -437,7 +427,6 @@ Update tags for multiple tasks.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -481,7 +470,6 @@ Move multiple tasks between boards.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -511,7 +499,6 @@ Remove a specific tag from multiple tasks.
 
 **Headers:**
 
-- `X-User-Type`: `public` | `friend` | `admin`
 - `X-Session-Id`: Session identifier
 
 **Body:**
@@ -535,67 +522,13 @@ Remove a specific tag from multiple tasks.
 
 ---
 
-## Preferences Endpoints
-
-### GET `/preferences`
-
-Get user preferences (synced for non-public users).
-
-**Headers:**
-
-- `X-User-Type`: `public` | `friend` | `admin`
-- `X-Session-Id`: Session identifier
-
-**Response:**
-
-```json
-{
-  "version": 1,
-  "updatedAt": "2025-10-27T12:00:00Z",
-  "displayName": "Ada",
-  "alwaysVerticalLayout": false
-}
-```
-
-> **Note**: Theme is NOT included - it's stored per-device in sessionStorage.
-
----
-
-### PUT `/preferences`
-
-Save user preferences (syncs for non-public users).
-
-**Headers:**
-
-- `X-User-Type`: `public` | `friend` | `admin`
-- `X-Session-Id`: Session identifier
-
-**Body:**
-
-```json
-{
-  "displayName": "Ada",
-  "alwaysVerticalLayout": false
-}
-```
-
-**Response:**
-
-```json
-{
-  "ok": true
-}
-```
-
----
-
-## Session & Authentication Endpoints
+## Key Endpoint
 
 ### POST `/validate-key`
 
 Validate an authentication key.
 
-> **Note**: Implement your own key validation logic. This endpoint is called when users enter a key in the settings modal.
+> **Note**: Answers whether the edge resolved the caller to an authenticated tier. The app no longer calls it (keys are entered only on hadoku.me/auth); it stays for callers that probe a key, such as hadoku-site's e2e.
 
 **Headers:**
 
@@ -621,73 +554,6 @@ X-User-Key: user-provided-key
 
 ---
 
-### POST `/session/create`
-
-Create a new authenticated session after key validation.
-
-> **Note**: Called after successful key validation. Should create a server-side session and return session details.
-
-**Headers:**
-
-```http
-X-User-Key: validated-key
-```
-
-**Response:**
-
-```json
-{
-  "sessionId": "unique-session-identifier",
-  "userType": "friend",
-  "valid": true
-}
-```
-
-The frontend stores `sessionId` and `userType` in localStorage for subsequent requests.
-
----
-
-### POST `/session/handshake`
-
-Establish or migrate a session on page load (for authenticated users).
-
-> **Note**: Called on page load for non-public users. Used to migrate preferences from old sessions and establish the current session.
-
-**Headers:**
-
-```http
-X-User-Type: friend | admin
-X-Session-Id: current-session-id
-```
-
-**Body:**
-
-```json
-{
-  "newSessionId": "current-session-id",
-  "oldSessionId": "previous-session-id-or-null"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "sessionId": "current-session-id",
-  "userType": "friend",
-  "migrated": false,
-  "preferences": {
-    "displayName": "Ada",
-    "alwaysVerticalLayout": false
-  }
-}
-```
-
-> **Important - Session Expiration**: The `userType` field in the response reflects the server's determined user type based on the current session state. If the server session has expired (e.g., KV TTL exceeded), the server will return `userType: "public"` even if the client sent `X-User-Type: friend`. The client must check for this mismatch and handle session expiration appropriately (show re-authentication prompt, reload page).
-
----
-
 ## Statistics Endpoint
 
 ### GET `/stats`
@@ -696,7 +562,6 @@ Get task statistics for a board.
 
 **Query Parameters:**
 
-- `userType` (optional): `public` | `friend` | `admin`
 - `boardId` (optional): Board ID (default: `main`)
 
 **Response:**

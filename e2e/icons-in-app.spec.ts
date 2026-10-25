@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { pointPrefsAtLocalStack, prefsUp } from './helpers/prefs'
+import { pointPrefsAtLocalStack, prefsUp, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 
 /**
@@ -14,27 +14,21 @@ import { mockShellApi } from './helpers/mock-api'
 
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-icons-session'
-const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 
 async function setupRoutes(page: Page) {
   await mockShellApi(page)
   await pointPrefsAtLocalStack(page)
 }
 
-async function seedPublicSession(page: Page, prefs: Record<string, unknown>) {
+async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Promise<void> {
   await page.addInitScript(
-    ({ userType, sessionId, prefsKey, prefsJson }) => {
+    ({ userType, sessionId }) => {
       window.localStorage.setItem('hadoku_user_type', userType)
       window.localStorage.setItem('task_anon_session_id', sessionId)
-      window.localStorage.setItem(prefsKey, prefsJson)
     },
-    {
-      userType: PUBLIC_USER_TYPE,
-      sessionId: PUBLIC_SESSION_ID,
-      prefsKey: PREFS_KEY,
-      prefsJson: JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), ...prefs })
-    }
+    { userType: PUBLIC_USER_TYPE, sessionId: PUBLIC_SESSION_ID }
   )
+  await seedDevicePrefs(page, prefs)
 }
 
 /** The settings panel renders a live preview TaskItem — where the migrated icons sit. */

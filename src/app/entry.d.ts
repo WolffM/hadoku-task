@@ -26,10 +26,13 @@ export interface TaskAppProps {
    * type-lying about values it already received at runtime.
    */
   userType?: 'public' | 'friend' | 'service' | 'wife' | 'admin'
+  /**
+   * The registry userId from whoami (what the edge stamps as X-User-Id).
+   * Accepted and deliberately unused: the worker reads identity off the edge.
+   */
+  userId?: string | null
   sessionId?: string
-  displayName?: string
   theme?: ThemeName | string
-  onKeyValidation?: (isValid: boolean, userType?: string, displayName?: string) => void
   /**
    * Device context resolved once by the host at mount. A SEED for first paint,
    * not the live value — read it through `usePlatform({ propsPlatform })`,

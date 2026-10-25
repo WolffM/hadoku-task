@@ -4,7 +4,7 @@
  * `createApi` picks the branch — a public user gets the localStorage-only client
  * and never syncs — then composes the method groups. The groups live beside this
  * file (client-tasks, client-boards, client-sharing, client-automation,
- * client-batch, client-misc) and share the closure through ApiCtx; the shape of
+ * client-batch) and share the closure through ApiCtx; the shape of
  * the object returned here is what src/test/api-client-verify.ts pins.
  */
 import { createLocalStorageApi } from './localStorageApi'
@@ -17,7 +17,6 @@ import { boardMethods } from './client-boards'
 import { shareMethods } from './client-sharing'
 import { automationMethods } from './client-automation'
 import { batchMethods } from './client-batch'
-import { miscMethods } from './client-misc'
 
 // Re-exported because App.tsx and useTasks import them from here; ApiCtx is
 // deliberately NOT among them — every method group takes it straight from
@@ -68,17 +67,14 @@ export function createApi(
 
   const ctx: ApiCtx = { userType, sessionId, localStorage, onSyncError, snapshot }
 
-  // Spread, not nested: the returned object is one flat surface of 27 methods,
+  // Spread, not nested: the returned object is one flat surface of 26 methods,
   // which is what every caller and the characterization harness expect.
   return {
     ...taskMethods(ctx),
     ...boardMethods(ctx),
     ...shareMethods(ctx),
     ...automationMethods(ctx),
-    // User preferences moved to @wolffm/prefs-client (src/prefs/taskPrefs.ts).
-    // The legacy GET/PUT /task/api/preferences path is gone from the client;
-    // the worker route is retained for the 30d migration window (Tranche B).
-    ...batchMethods(ctx),
-    ...miscMethods(ctx)
+    // User preferences live in @wolffm/prefs-client (src/prefs/taskPrefs.ts).
+    ...batchMethods(ctx)
   }
 }

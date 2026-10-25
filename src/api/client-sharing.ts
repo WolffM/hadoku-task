@@ -5,7 +5,7 @@
 import { adminHeaders, type ApiCtx } from './client-context'
 
 export function shareMethods(ctx: ApiCtx) {
-  const { userType, sessionId } = ctx
+  const { sessionId } = ctx
   return {
     // --- Board sharing (§7). These are server-only (no localStorage mirror). ---
 
@@ -14,7 +14,7 @@ export function shareMethods(ctx: ApiCtx) {
       if (!q.trim()) return []
       try {
         const res = await fetch(`/task/api/users/search?q=${encodeURIComponent(q)}`, {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         if (!res.ok) return []
         const data = (await res.json()) as { users?: Array<{ name: string; tier?: string }> }
@@ -36,7 +36,7 @@ export function shareMethods(ctx: ApiCtx) {
     > {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/shares`, {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         if (!res.ok) return []
         const data = (await res.json()) as {
@@ -66,7 +66,7 @@ export function shareMethods(ctx: ApiCtx) {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/shares`, {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify(input)
         })
         const data = (await res.json().catch(() => ({}))) as {
@@ -85,7 +85,7 @@ export function shareMethods(ctx: ApiCtx) {
       try {
         const res = await fetch(
           `/task/api/boards/${encodeURIComponent(boardRef)}/shares/${encodeURIComponent(granteeUserId)}`,
-          { method: 'DELETE', headers: adminHeaders(userType, sessionId) }
+          { method: 'DELETE', headers: adminHeaders(sessionId) }
         )
         return res.ok
       } catch {

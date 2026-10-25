@@ -60,10 +60,10 @@ For questions the standard run doesn't answer, drive Playwright + CDP directly
   `window.__renders` counter at the top of the component, drive the flow, read it
   back with `page.evaluate`. Remove the instrumentation before committing. Cold
   load was 7 App renders, board switch +4, idle +0 — all healthy.
-- **Server-side latency** (e.g. the KV round-trips inside the handshake): boot the
-  real worker handler against an in-memory KV that simulates CF latency (~40ms
-  read / ~150ms write) and record an op timeline. This is how the handshake was
-  shown to drop 1180ms → 582ms by parallelising independent KV ops.
+- **Server-side latency** (e.g. a route's KV round-trips): boot the real worker
+  handler against an in-memory KV that simulates CF latency (~40ms read / ~150ms
+  write) and record an op timeline. This is how the (since removed) session
+  handshake was shown to drop 1180ms → 582ms by parallelising independent KV ops.
 
 ## Regression guards (in CI, no prod needed)
 
@@ -71,10 +71,10 @@ Two committed e2e specs pin the wins so they can't silently regress. Both use
 stubbed prod-median latencies and run in the normal suite:
 
 - [`e2e/cold-load-serialization.spec.ts`](../e2e/cold-load-serialization.spec.ts)
-  — asserts handshake / prefs / boards are issued **concurrently**. It checks
-  request _ordering_ (boards and prefs must fire before the handshake response
-  arrives), not a latency budget, so it's immune to CI load. Fails on the old
-  serial code.
+  — asserts prefs and the board sync are issued **concurrently**, and that no
+  session handshake is sent. It checks request _ordering_ (boards must fire
+  before the prefs identity lookup returns), not a latency budget, so it's
+  immune to CI load.
 - [`e2e/prod-cold-load.spec.ts`](../e2e/prod-cold-load.spec.ts) — opt-in
   (`RUN_PROD_PERF=1`), asserts median skeleton < 400ms and app < 1500ms against
   live prod, and that the inline skeleton still ships in the HTML.
@@ -103,7 +103,8 @@ needs user-scoped data, it goes in `prefetchSettings()`
 | total API on the wire | 2003 ms    | 998 ms     |
 
 The load chain used to be serial (`handshake → prefs → boards`); #63 made the
-three concurrent, and parallelised the handshake's KV ops server-side.
+three concurrent, and parallelised the handshake's KV ops server-side. The
+handshake has since been removed outright — identity is the edge's.
 
 **Known open item:** `GET /session/whoami` is fetched twice on boot — the shell
 (`mf-loader`) and `@wolffm/prefs-client` each resolve it. Fixed by

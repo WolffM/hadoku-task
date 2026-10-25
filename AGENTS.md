@@ -235,6 +235,7 @@ their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest
 
 - **Browser fetches** must hit `hadoku.me/{prefix}/*` via edge-router — NEVER `*.hadoku.me` direct subdomains. The `hadoku_session` cookie (`Domain=.hadoku.me`, 30d sliding) is set on `/auth` and resolved server-side by edge-router into `X-User-Key` for the backend. See `../hadoku_site/CLAUDE.md` for the rule.
 - **Secrets**: vault-broker model. Local dev fetches via `.devvault.json` + `node ../hadoku_site/scripts/secrets/dev-vault.mjs -- <cmd>`. Production runtime is wired automatically (PM2 wrappers for tunnel apps; CF Worker secret bindings pushed by `python ../hadoku_site/scripts/administration.py cloudflare-secrets`). NEVER add `.env` files. See `../hadoku_site/docs/operations/SECRETS.md`.
+- **The app has no session layer.** No handshake, no key entry, no tier from a URL, and it never writes `hadoku_session_id` / `hadoku_user_type` (the host's mf-loader owns them). Sign-in is hadoku.me/auth only; the worker trusts the edge-stamped `X-User-Id` + tier. Loading prefs must never write them (a per-session "migration" that did silently reset users' themes — `e2e/prefs-survive-new-session.spec.ts`).
 - **Auth model**: 1:1 named user-keys. `/auth` accepts key + name; whoami returns the name. Admin endpoints `GET/POST/DELETE /session/admin/keys` manage the registry. See `../hadoku_site/docs/planning/next-work.md`.
 
 ## Vault — what your service-tier key can and can't do

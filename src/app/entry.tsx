@@ -53,11 +53,16 @@ export interface TaskAppProps {
    */
   appName?: string
   basename?: string
+  /** Caller tier, as the host resolved it from /session/whoami. */
   userType?: UserType
+  /**
+   * The registry userId from whoami — the identity the edge stamps as
+   * X-User-Id. Accepted and deliberately unused: the worker reads identity off
+   * the edge header, so the app never needs to send or key anything by it.
+   */
+  userId?: string | null
   sessionId?: string
-  displayName?: string // Display name for welcome message
   theme?: string // Theme to apply (overrides user preferences)
-  onKeyValidation?: (isValid: boolean, userType?: UserType, displayName?: string) => void // Callback when key is validated
   /**
    * Device context resolved once by the host at mount. A SEED for first paint,
    * not the live value — read it through `usePlatform({ propsPlatform })`,
@@ -81,21 +86,16 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   installDevLogSink()
   ensureSafeAreaViewport()
 
-  // Priority for userType and sessionId:
-  // 1. localStorage (for session-based auth after key validation - survives page reload)
-  // 2. Props passed to mount() (for embedding scenarios with explicit non-public auth)
-  // 3. URL query parameters (fallback)
-  // 4. Default values
-  //
-  // IMPORTANT: localStorage takes precedence because after key validation, the authenticated
-  // userType ('friend'/'admin') is stored in localStorage and must override the default
-  // 'public' that registry.json passes to mount().
-  const urlParams = new URLSearchParams(window.location.search)
+  // userType and sessionId come from the host. hadoku_site's mf-loader resolves
+  // them from /session/whoami (the edge owns identity) and both passes them as
+  // props and stores them under hadoku_user_type / hadoku_session_id; the stored
+  // copy wins so a mount that passes only registry defaults still sees the
+  // signed-in tier. Never read a tier from the URL — the dev harness
+  // (index.html) does that itself, and it is not part of the shipped bundle.
   const storedSessionId = getStoredSessionId()
   const storedUserType = getStoredUserType()
 
-  const userType =
-    storedUserType || props.userType || (urlParams.get('userType') as UserType) || 'public'
+  const userType = storedUserType || props.userType || 'public'
 
   // Authed users' sessionId comes from the host (via hadoku_session_id / props).
   // Public users get the stable, host-independent anon id so their local tasks

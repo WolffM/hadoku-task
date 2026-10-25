@@ -77,83 +77,34 @@ const sessionId = storedSessionId || props.sessionId || 'public-session'
 
 **Why localStorage first:** After key validation, the authenticated `userType` is stored in localStorage. On reload, this must override the default `'public'` from the parent's registry.json.
 
-### 3. Session-Based Authentication Flow
+### 3. Sign-In and Identity
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    KEY VALIDATION FLOW                               │
+│                        SIGN-IN FLOW                                  │
 └─────────────────────────────────────────────────────────────────────┘
-User enters key in Settings
+"Switch key" in Settings → link to hadoku.me/auth?switch=1&return=<page>
         │
         ▼
-POST /task/api/validate-key
-Headers: { X-User-Key: "user-key" }
-        │
-        ▼ (if valid)
-POST /task/api/session/create
-Headers: { X-User-Key: "user-key" }
-Response: { sessionId: "abc123", userType: "friend" }
+/auth (the site's one sign-in funnel) mints the session
+→ sets the hadoku_session cookie, sends the user back to <page>
         │
         ▼
-Store in localStorage:
-- currentSessionId: "abc123"
-- currentUserType: "friend"
+Host page (mf-loader) → GET /session/whoami → { userType, userId, sessionId }
+→ stores hadoku_user_type / hadoku_session_id, mounts the app with them as props
         │
         ▼
-Page reload (URL cleaned of ?key= param)
+entry.tsx reads them → createApi('friend', sessionId) → syncFromApi()
         │
         ▼
-entry.tsx reads localStorage → userType='friend', sessionId='abc123'
-        │
-        ▼
-createApi('friend', 'abc123') → API with syncFromApi()
-        │
-        ▼
-syncFromApi() → fetches boards from server → updates localStorage
+Every /task/api request: edge-router resolves the cookie and stamps
+X-User-Id + X-Hadoku-Tier; the worker trusts only those
 ```
 
-### 4. Session Expiration Handling
-
-Server sessions may expire (e.g., KV TTL exceeded after 24+ hours). When this happens, the server treats the user as `public` even if the client thinks they're authenticated.
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                   SESSION EXPIRATION FLOW                            │
-└─────────────────────────────────────────────────────────────────────┘
-User reloads after 24+ hours
-        │
-        ▼
-localStorage: userType='friend', sessionId='abc123'
-        │
-        ▼
-POST /task/api/session/handshake
-Headers: { X-User-Type: 'friend', X-Session-Id: 'abc123' }
-        │
-        ▼
-Edge-router: KV lookup for session → expired/not found
-        │
-        ▼
-Response: { userType: 'public', ... }  ← Server disagrees with client
-        │
-        ▼
-Client detects mismatch: expected 'friend', got 'public'
-        │
-        ▼
-Show toast: "Your session has expired. Please enter your key again."
-        │
-        ▼
-Update localStorage: userType='public'
-        │
-        ▼
-Page reload → App reinitializes as public user
-```
-
-**Key implementation details:**
-
-- `performSessionHandshake()` returns `{ preferences, serverUserType }`
-- `useSessionInitialization` compares `serverUserType` with client's `userType`
-- On mismatch where authenticated user becomes public: show toast, update localStorage, reload
-- This prevents "lost context" where user sees empty/public data instead of their authenticated data
+The app has no session layer of its own: no handshake, no key handling, and it
+never writes the host's session keys. An expired session is the host's to
+notice — whoami runs on every boot, and the app mounts with whatever tier it
+returned.
 
 ---
 
@@ -173,7 +124,7 @@ The task app does NOT:
 The task app DOES:
 
 - ✅ Send the user to the site's `/auth` page to sign in or switch keys (`switchKeyHref()`) — only that page creates a session
-- ✅ Store `sessionId` and `userType` in localStorage after auth
+- ✅ Read the `sessionId` and `userType` the host resolved (props / host-owned localStorage)
 - ✅ Use these for storage namespacing (localStorage keys, API requests)
 - ✅ Validate operations based on `userType` (e.g., public can't sync to server)
 
@@ -186,18 +137,13 @@ Your parent application must handle:
    - Session management
    - Token generation and validation
 
-2. **Key Validation**
-   - Implement `/validate-key` endpoint
-   - Verify keys against your auth system
-   - Return `{ valid: true/false }`
-
-3. **API Security**
-   - Validate `X-User-Type` header
-   - Verify `X-Session-Id` against your session store
+2. **API Security**
+   - Resolve the session at the edge and stamp `X-User-Id` + tier on each request
+   - Never trust a tier the client claims
    - Return 403 for unauthorized requests
 
-4. **Props to Task App**
-   - Provide correct `userType` (public, friend, admin, etc.)
+3. **Props to Task App**
+   - Provide correct `userType` (public < friend < service < wife < admin)
    - Provide stable `sessionId` (changes on logout/login)
 
 ### Security Features

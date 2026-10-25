@@ -3,11 +3,11 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * `createApi` is a 780-line factory returning 27 methods, and the only thing
+ * `createApi` is a 780-line factory returning 26 methods, and the only thing
  * exercising it was Playwright driving the whole app — which covers the paths a
  * user walks and nothing else. That is thin cover for a refactor, because the
  * risk of moving a method between modules is not that the app breaks loudly; it
- * is that one of the 27 quietly changes the request it sends, or stops being
+ * is that one of the 26 quietly changes the request it sends, or stops being
  * returned at all, on a path no spec happens to click.
  *
  * So this pins the observable contract rather than the implementation: the exact
@@ -144,7 +144,6 @@ async function main() {
     'setPinnedBoards',
     'setRepo',
     'syncFromApi',
-    'validateKey',
     'validateRepo'
   ]
   check(
@@ -385,21 +384,14 @@ async function main() {
     JSON.stringify(repo.map(c => `${c.method} ${c.url}`))
   )
 
-  const key = await wire('validateKey', () => w.validateKey('k'))
-  check(
-    'validateKey POSTs /task/api/validate-key',
-    key.some(c => c.url.includes('/validate-key')),
-    JSON.stringify(key.map(c => `${c.method} ${c.url}`))
-  )
-
   // -------------------------------------------------------------------
   section('4. Every request carries the identity headers')
   // -------------------------------------------------------------------
   const idCalls = await wire('createTask', () => w.createTask({ title: 'T' }, 'main'))
   const withHeaders = idCalls.filter(c => Object.keys(c.headers).length)
   check(
-    'the write carries X-Session-Id and X-User-Type',
-    withHeaders.every(c => c.headers['X-Session-Id'] && c.headers['X-User-Type']),
+    'the write carries X-Session-Id and not the retired X-User-Type',
+    withHeaders.every(c => c.headers['X-Session-Id'] && !('X-User-Type' in c.headers)),
     JSON.stringify(withHeaders.map(c => c.headers))
   )
 

@@ -44,18 +44,13 @@
     // Get params from URL
     const params = new URLSearchParams(window.location.search)
     const userType = params.get('userType') || 'public'
-    const displayName = params.get('displayName') || null
     
-    console.log('[mount] Mounting with:', { userType, displayName })
+    console.log('[mount] Mounting with:', { userType })
     
     // Mount the app
     mount(document.getElementById('app'), {
       basename: '/',
-      userType: userType,
-      displayName: displayName,
-      onKeyValidation: (isValid, validatedUserType, validatedDisplayName) => {
-        console.log('[mount] Key validation result:', { isValid, validatedUserType, validatedDisplayName })
-      }
+      userType: userType
     })
   </script>
 </body>

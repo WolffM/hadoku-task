@@ -68,12 +68,7 @@ export default function App(props: TaskAppProps = {}) {
 }
 
 function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivElement | null> }) {
-  const {
-    userType = 'public',
-    sessionId: propsSessionId = 'public',
-    onKeyValidation: _onKeyValidation,
-    containerRef
-  } = props
+  const { userType = 'public', sessionId: propsSessionId = 'public', containerRef } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
@@ -124,17 +119,9 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     return propsSessionId
   })
 
-  // Hooks for preferences and theme - skip initial load, we'll handle it in session handshake
-  const {
-    preferences,
-    // `savePreferences` from this hook is intentionally not taken: its only
-    // caller was the theme-mode write, which now goes through the shared theme
-    // prefs. Everything else saves via handleSavePreferences below.
-    preferencesLoaded,
-    isDarkTheme,
-    setPreferences,
-    setPreferencesLoaded
-  } = usePreferences(userType, effectiveSessionId, true)
+  // Preferences state; useSessionInitialization below does the initial load.
+  const { preferences, preferencesLoaded, isDarkTheme, setPreferences, setPreferencesLoaded } =
+    usePreferences()
   // Theme comes from the provider above — same hook, same persistence, same
   // picker as every other app in the ecosystem.
   const { isThemeReady, isInitialThemeLoad } = useHadokuTheme()
@@ -284,12 +271,11 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     setSelectedFilters(new Set())
   }, [currentBoardId])
 
-  // Session initialization (handshake + preferences). Board loading is owned by
+  // Session initialization (sessionId + preferences). Board loading is owned by
   // useTasks (cache-first paint then revalidate); this hook no longer drives it.
   useSessionInitialization({
     userType,
     propsSessionId,
-    preferences,
     effectiveSessionId,
     setEffectiveSessionId,
     setPreferences,

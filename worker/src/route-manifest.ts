@@ -13,9 +13,6 @@ export const ROUTE_MANIFEST: ReadonlyArray<
   readonly [method: string, path: string, group: RouteGroup]
 > = [
   ['POST', '/task/api/validate-key', 'misc'],
-  ['POST', '/task/api/session/handshake', 'session'],
-  ['GET', '/task/api/preferences', 'preferences'],
-  ['PUT', '/task/api/preferences', 'preferences'],
   ['GET', '/task/api/boards', 'boards'],
   ['POST', '/task/api/boards', 'boards'],
   ['DELETE', '/task/api/boards/:boardId', 'boards'],
@@ -56,7 +53,6 @@ export const ROUTE_MANIFEST: ReadonlyArray<
   ['DELETE', '/task/api/:id', 'tasks'],
   ['GET', '/task/api/stats', 'tasks'],
   ['GET', '/task/api/admin/throttle/:sessionId', 'admin'],
-  ['GET', '/task/api/admin/sessions/:authKey', 'admin'],
   ['POST', '/task/api/admin/unblacklist/:sessionId', 'admin'],
   ['GET', '/task/api/themes/source', 'theme-editor'],
   ['POST', '/task/api/themes/save', 'theme-editor']

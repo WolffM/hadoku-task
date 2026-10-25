@@ -6,7 +6,7 @@
  * that anything was scheduled, and had to re-open the calendar every single time.
  *
  * This is a DEVICE preference, not a user one — it rides in localStorage rather
- * than the synced preferences file, so it neither waits on the prefs handshake
+ * than the synced preferences file, so it neither waits on the prefs load
  * (the view is picked during the first render, before prefs land) nor follows a
  * person onto a screen where they'd want the other view.
  */

@@ -75,14 +75,6 @@ async function seedCachedSession(page: Page) {
 }
 
 async function stubApi(page: Page) {
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ userType: USER_TYPE, preferences: null })
-    })
-  )
-
   // Preferences must resolve for the shell to unblock; contents don't matter here.
   await page.route('**/prefs/api/**', route =>
     route.fulfill({

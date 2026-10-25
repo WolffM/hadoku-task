@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 
 /**
@@ -19,7 +19,6 @@ import { mockShellApi } from './helpers/mock-api'
 
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-buttons-session'
-const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 // The local stack's edge-router shim resolves whoami to the dev user it stamps
 // on every request, so this is the real resolved identity.
 const SDK_CACHE_KEY = 'prefs-cache:dev-uid:task'
@@ -37,31 +36,24 @@ function readSdkCacheBlob(page: Page): Promise<Record<string, unknown> | null> {
 async function setupRoutes(page: Page) {
   await mockShellApi(page)
 
-  // Hermetic prefs backend for @wolffm/prefs-client (see theme-mode.spec.ts for
-  // why GET 404s: it keeps the optimistic localStorage cache authoritative).
   // Prefs go to the REAL prefs-api on :3003 (scripts/dev-api.mjs) against a
   // real sqlite D1 — no interception. See helpers/prefs.ts.
   await pointPrefsAtLocalStack(page)
 }
 
 /**
- * Seed a public session with a legacy prefs blob the app will actually find —
- * a public sessionId comes from `task_anon_session_id`, not `hadoku_session_id`.
+ * Seed a public session whose device already has `prefs` saved. A public
+ * sessionId comes from `task_anon_session_id`, not `hadoku_session_id`.
  */
 async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Promise<void> {
   await page.addInitScript(
-    ({ userType, sessionId, prefsKey, prefsJson }) => {
+    ({ userType, sessionId }) => {
       window.localStorage.setItem('hadoku_user_type', userType)
       window.localStorage.setItem('task_anon_session_id', sessionId)
-      window.localStorage.setItem(prefsKey, prefsJson)
     },
-    {
-      userType: PUBLIC_USER_TYPE,
-      sessionId: PUBLIC_SESSION_ID,
-      prefsKey: PREFS_KEY,
-      prefsJson: JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), ...prefs })
-    }
+    { userType: PUBLIC_USER_TYPE, sessionId: PUBLIC_SESSION_ID }
   )
+  await seedDevicePrefs(page, prefs)
 }
 
 async function openSettings(page: Page) {

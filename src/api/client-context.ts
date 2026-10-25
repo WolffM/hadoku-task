@@ -82,10 +82,9 @@ export async function syncBoardsToLocalStorage(
   })
 }
 
-export function adminHeaders(userType: string, sessionId?: string) {
+export function adminHeaders(sessionId?: string) {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-User-Type': userType
+    'Content-Type': 'application/json'
   }
   if (sessionId) headers['X-Session-Id'] = sessionId
   return headers

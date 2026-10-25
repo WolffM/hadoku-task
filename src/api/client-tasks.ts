@@ -39,9 +39,9 @@ export function taskMethods(ctx: ApiCtx) {
       try {
         logger.info('[api] syncFromApi: Starting API sync...', { userType, sessionId })
         const response = await fetch(
-          `/task/api/boards?userType=${userType}&sessionId=${encodeURIComponent(sessionId)}`,
+          `/task/api/boards?sessionId=${encodeURIComponent(sessionId)}`,
           {
-            headers: adminHeaders(userType, sessionId),
+            headers: adminHeaders(sessionId),
             cache: 'no-store'
           }
         )
@@ -102,7 +102,7 @@ export function taskMethods(ctx: ApiCtx) {
       // Send task to server WITH the client-generated ID so server uses same ID
       fetch('/task/api', {
         method: 'POST',
-        headers: adminHeaders(userType, sessionId),
+        headers: adminHeaders(sessionId),
         body: JSON.stringify({
           id: data.id || localTask.id, // Use provided ID (for moves) or client-generated ID
           ...data,
@@ -157,7 +157,7 @@ export function taskMethods(ctx: ApiCtx) {
         `/task/api/tags`,
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ boardId, tag })
         },
         'createTag',
@@ -175,7 +175,7 @@ export function taskMethods(ctx: ApiCtx) {
         `/task/api/tags/delete`,
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ boardId, tag })
         },
         'deleteTag',
@@ -218,7 +218,7 @@ export function taskMethods(ctx: ApiCtx) {
         `/task/api/${id}`,
         {
           method: 'PATCH',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ ...patch, boardId })
         },
         'patchTask',
@@ -245,7 +245,7 @@ export function taskMethods(ctx: ApiCtx) {
         completeUrl,
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         },
         'completeTask',
         { taskId: id, boardId },
@@ -273,7 +273,7 @@ export function taskMethods(ctx: ApiCtx) {
         deleteUrl,
         {
           method: 'DELETE',
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         },
         'deleteTask',
         { taskId: id, boardId },

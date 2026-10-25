@@ -18,7 +18,8 @@ import {
   createEdgeAuth,
   createCorsMiddleware,
   DEFAULT_HADOKU_ORIGINS,
-  createErrorHandlers
+  createErrorHandlers,
+  maskKey
 } from '@wolffm/worker-utils'
 import { logError, logger } from './logger'
 import {
@@ -158,7 +159,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     createCorsMiddleware({
       origins: [...DEFAULT_HADOKU_ORIGINS, 'https://task-api.hadoku.me'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'X-User-Key', 'X-Session-Id'],
+      allowedHeaders: ['Content-Type', 'X-Session-Id'],
       exposedHeaders: ['X-Backend-Source'],
       credentials: true,
       maxAge: 86400
@@ -177,7 +178,8 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
         // sessionId is used as KV key prefix (e.g., tasks:{sessionId}:{boardId})
         // Uses credential or falls back to default for public users
         sessionId: base.credential || DEFAULT_SESSION_ID,
-        // key alias for backward compat (used by throttle middleware)
+        // The raw credential. Only the throttle middleware reads it, and it
+        // records it masked — a raw key must never land in KV.
         key: base.credential ?? undefined
       })
     })
@@ -232,7 +234,6 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     // - Health check endpoint (monitoring)
     // - Trusted HUMAN tiers (admin/friend) — no rate limiting
     // - Validate-key endpoint - needed for initial connection, users don't have session yet
-    // - Session handshake - needed for session establishment
     // This significantly reduces KV operations and prevents unnecessary usage
     //
     // `service` (automated agents like TenHands) IS throttled, but at its own
@@ -243,11 +244,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     // ("throttle anonymous and machine callers, exempt humans"), not an access
     // gate. It is not monotonic in tier — `service` outranks `friend` yet is the
     // throttled one — so tierAtLeast would be the wrong tool here.
-    const skipThrottlePaths = [
-      '/task/api/health',
-      '/task/api/validate-key',
-      '/task/api/session/handshake'
-    ]
+    const skipThrottlePaths = ['/task/api/health', '/task/api/validate-key']
     if (skipThrottlePaths.includes(c.req.path) || !isThrottledTier(userType)) {
       return next()
     }
@@ -264,7 +261,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
             timestamp: new Date().toISOString(),
             type: 'throttle_violation',
             sessionId,
-            authKey: auth.key,
+            authKey: auth.key ? maskKey(auth.key) : undefined,
             userType,
             details: {
               reason: throttleResult.reason,
@@ -282,7 +279,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
               c.env.TASKS_KV,
               sessionId,
               `Auto-blacklisted after ${throttleResult.state.violations} throttle violations`,
-              auth.key
+              auth.key ? maskKey(auth.key) : undefined
             )
           }
         } catch (kvError) {

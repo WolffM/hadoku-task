@@ -48,13 +48,6 @@ function boardsFile(boardIds: string[]) {
 async function setup(page: Page, opts: { userType: string }) {
   const boardGets: string[] = []
 
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  )
   await page.route('**/task/api/boards*', async route => {
     if (route.request().method() !== 'GET') return route.fallback()
     boardGets.push(route.request().url())

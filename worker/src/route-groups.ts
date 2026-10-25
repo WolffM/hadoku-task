@@ -22,8 +22,6 @@ import type { AppContext } from './types'
 export const ROUTE_GROUPS = {
   // health, validate-key
   misc: () => import('./routes/misc').then(m => m.createMiscRoutes()),
-  session: () => import('./routes/session').then(m => m.createSessionRoutes()),
-  preferences: () => import('./routes/preferences').then(m => m.createPreferencesRoutes()),
   boards: () => import('./routes/boards').then(m => m.createBoardRoutes()),
   // Board share management (§7): grant / list / revoke / leave.
   shares: () => import('./routes/shares').then(m => m.createShareRoutes()),

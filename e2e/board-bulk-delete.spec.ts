@@ -25,14 +25,6 @@ const NAMES = ['Alpha', 'Beta', 'Gamma', 'Delta']
 async function statefulBoards(page: Page, names: string[] = NAMES) {
   const deleted: string[] = []
 
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ preferences: null })
-    })
-  )
-
   await page.route('**/task/api/boards**', route => {
     const req = route.request()
     if (req.method() === 'DELETE') {

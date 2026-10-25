@@ -34,7 +34,7 @@ export async function buildOpenAPISpec(): Promise<string> {
       title: 'Task API',
       version: '1.0.0',
       description: `
-API for managing tasks, boards, and user preferences.
+API for managing tasks and boards.
 
 ## Overview
 This API provides endpoints for:
@@ -42,13 +42,12 @@ This API provides endpoints for:
 - **Boards**: Organize tasks into boards
 - **Tags**: Categorize tasks with tags
 - **Batch Operations**: Bulk updates for tags and task movement
-- **Preferences**: User settings and configuration
-- **Sessions**: Session management and handshake
 
 ## Authentication
 - **Public endpoints**: Basic read access without authentication
-- **Authenticated endpoints**: Full access via X-User-Key header
-- User types: admin, friend, public
+- **Authenticated endpoints**: identity is stamped by the edge (X-User-Id + tier) from the
+  hadoku.me session; service callers authenticate with the X-User-Key header
+- User types: public < friend < service < wife < admin
 
 ## Rate Limiting
 - Public users are rate-limited to prevent abuse
@@ -61,8 +60,6 @@ This API provides endpoints for:
         { name: 'Boards', description: 'Board management' },
         { name: 'Tags', description: 'Tag management' },
         { name: 'Batch', description: 'Batch operations' },
-        { name: 'Session', description: 'Session management' },
-        { name: 'Preferences', description: 'User preferences' },
         { name: 'Admin', description: 'Admin operations (requires admin access)' },
         {
           name: 'Theme editor',

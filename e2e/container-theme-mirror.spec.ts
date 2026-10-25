@@ -11,8 +11,9 @@ import { mockShellApi } from './helpers/mock-api'
  * hook's first two passes (the initial apply and the ready flip 50ms later)
  * left the container bare for the rest of the session.
  *
- * A slow session handshake holds the skeleton up long enough to make that
- * deterministic rather than a 1-in-4 race.
+ * A slow prefs identity lookup holds the skeleton up long enough to make that
+ * deterministic rather than a 1-in-4 race: the prefs SDK awaits /session/whoami
+ * before it resolves, and the shell reveals only once prefs have loaded.
  */
 
 for (const theme of ['light', 'coffee-dark']) {
@@ -21,7 +22,7 @@ for (const theme of ['light', 'coffee-dark']) {
       sessionStorage.setItem('hadoku-theme', t)
     }, theme)
     await mockShellApi(page)
-    await page.route('**/task/api/session/handshake', async route => {
+    await page.route('**/session/whoami', async route => {
       await new Promise(resolve => setTimeout(resolve, 500))
       await route.fallback()
     })

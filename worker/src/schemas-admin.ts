@@ -1,5 +1,5 @@
 /**
- * Zod schemas for the admin endpoints (throttle state, sessions, unblacklist).
+ * Zod schemas for the admin endpoints (throttle state, unblacklist).
  */
 import { z } from '@hono/zod-openapi'
 
@@ -45,18 +45,6 @@ export const GetThrottleStatusResponseSchema = z
     incidentCount: z.number().openapi({ example: 0 })
   })
   .openapi('GetThrottleStatusResponse')
-
-// GET /admin/sessions/:authKey
-export const GetSessionsResponseSchema = z
-  .object({
-    authKey: z.string().openapi({ example: 'key_***xyz' }),
-    sessionCount: z.number().optional().openapi({ example: 3 }),
-    sessions: z.array(z.string()).openapi({ example: ['sess_***abc', 'sess_***def'] }),
-    lastSessionId: z.string().nullable().openapi({ example: 'sess_***abc' }),
-    suspicious: z.boolean().optional().openapi({ example: false }),
-    suspiciousReasons: z.array(z.string()).optional().openapi({ example: [] })
-  })
-  .openapi('GetSessionsResponse')
 
 // POST /admin/unblacklist/:sessionId
 export const UnblacklistResponseSchema = z

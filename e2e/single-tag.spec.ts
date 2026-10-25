@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 
 /**
  * A task carries AT MOST ONE tag.
@@ -17,7 +17,6 @@ import { prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-single-tag-session'
-const PREFS_KEY = `${PUBLIC_USER_TYPE}-${PUBLIC_SESSION_ID}-preferences`
 
 interface StoredTask {
   id: string
@@ -58,26 +57,19 @@ async function usePrefsBackend(page: Page) {
   await pointPrefsAtLocalStack(page)
 }
 
-/** Seed a public session; a public sessionId comes from `task_anon_session_id`. */
-async function seedPublicSession(page: Page, prefs: Record<string, unknown> = {}) {
+/**
+ * Seed a public session; a public sessionId comes from `task_anon_session_id`.
+ * `prefs`, when given, are saved for the device first (needs the prefs stack).
+ */
+async function seedPublicSession(page: Page, prefs?: Record<string, unknown>) {
   await page.addInitScript(
-    ({ userType, sessionId, prefsKey, prefsJson }) => {
+    ({ userType, sessionId }) => {
       window.localStorage.setItem('hadoku_user_type', userType)
       window.localStorage.setItem('task_anon_session_id', sessionId)
-      window.localStorage.setItem(prefsKey, prefsJson)
     },
-    {
-      userType: PUBLIC_USER_TYPE,
-      sessionId: PUBLIC_SESSION_ID,
-      prefsKey: PREFS_KEY,
-      prefsJson: JSON.stringify({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        theme: 'light',
-        ...prefs
-      })
-    }
+    { userType: PUBLIC_USER_TYPE, sessionId: PUBLIC_SESSION_ID }
   )
+  if (prefs) await seedDevicePrefs(page, prefs)
 }
 
 async function addTask(page: Page, input: string) {
@@ -180,8 +172,7 @@ test.describe('One tag per task', () => {
 })
 
 test.describe('One tag per task: the edit-tag modal', () => {
-  // The pill grid is only reachable with the tag button pref turned on, and
-  // that pref only survives load with the prefs backend stubbed.
+  // The pill grid is only reachable with the tag button pref turned on.
   test.beforeEach(async ({ page, request }) => {
     test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
     await usePrefsBackend(page)

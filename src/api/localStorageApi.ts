@@ -450,23 +450,6 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType, boardId })
 
       logger.info('[localStorageApi] batchClearTag END')
-    },
-
-    // User Management (localStorage only - no-op for validation)
-    async validateKey(key: string): Promise<boolean> {
-      // For localStorage/public mode, keys are not validated
-      // In development, reject obviously invalid keys for better UX
-      if (!key || key.length < 10) {
-        logger.warn('[localStorageApi] validateKey: Key too short (must be at least 10 characters)')
-        return false
-      }
-      // Accept any key that's long enough (no real validation in public mode)
-      return true
-    },
-
-    async setUserId(_newUserId: string): Promise<{ ok: boolean; message?: string }> {
-      // For localStorage/public mode changes are handled by URL params
-      return { ok: true }
     }
   }
 }

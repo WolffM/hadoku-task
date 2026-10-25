@@ -3,7 +3,7 @@ import { logger } from '@wolffm/logger/client'
 import { adminHeaders, backgroundSync, type ApiCtx } from './client-context'
 
 export function boardMethods(ctx: ApiCtx) {
-  const { localStorage, onSyncError, userType, sessionId } = ctx
+  const { localStorage, onSyncError, sessionId } = ctx
   return {
     // Board operations
     async createBoard(boardId: string) {
@@ -15,7 +15,7 @@ export function boardMethods(ctx: ApiCtx) {
         '/task/api/boards',
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ id: boardId, name: boardId })
         },
         'createBoard',
@@ -34,7 +34,7 @@ export function boardMethods(ctx: ApiCtx) {
         `/task/api/boards/${encodeURIComponent(boardId)}`,
         {
           method: 'DELETE',
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         },
         'deleteBoard',
         { boardId },
@@ -49,7 +49,7 @@ export function boardMethods(ctx: ApiCtx) {
         `/task/api/boards/${encodeURIComponent(boardId)}`,
         {
           method: 'PATCH',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ name })
         },
         'renameBoard',
@@ -65,7 +65,7 @@ export function boardMethods(ctx: ApiCtx) {
         '/task/api/boards/pinned',
         {
           method: 'PUT',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ order })
         },
         'setPinnedBoards',

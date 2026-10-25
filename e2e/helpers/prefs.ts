@@ -30,6 +30,7 @@
  * isolated for free. USER-scoped values (displayName) are shared across
  * the run; a spec that writes one must not assume it starts unset.
  */
+import { randomUUID } from 'node:crypto'
 import type { APIRequestContext, Page } from '@playwright/test'
 
 /** Where scripts/dev-api.mjs serves the real prefs worker (DEV_PREFS_PORT moves it). */
@@ -58,4 +59,73 @@ export async function pointPrefsAtLocalStack(page: Page): Promise<void> {
   await page.addInitScript(base => {
     ;(window as unknown as Record<string, unknown>).__HADOKU_PREFS_API_BASE__ = base
   }, PREFS_BASE)
+}
+
+/** The task row's endpoint on the local prefs-api. */
+const TASK_PREFS = `${PREFS_BASE}/api/v1/task`
+
+/**
+ * The SDK's localStorage cache of the task row: `prefs-cache:{userId}:{appId}`.
+ * The local whoami shim answers `dev-uid` for every caller.
+ */
+export const TASK_PREFS_CACHE_KEY = 'prefs-cache:dev-uid:task'
+
+/**
+ * Give this page a device whose saved prefs already hold `prefs` — the state a
+ * returning user's browser is in.
+ *
+ * Seeds both halves the SDK reads: the device row on the real prefs-api
+ * (written exactly as the SDK's own save() writes a device-scoped patch), and
+ * the SDK's localStorage cache of it, under the planted `hadoku_device_id`.
+ *
+ * Both, because the browser cannot currently reach the local prefs-api at all:
+ * its CORS list carries `http://localhost:*` as a literal string, hono's array
+ * matcher compares origins exactly, so every preflight from vite's origin fails
+ * and the SDK runs on its cache. Seeding only the server would test defaults;
+ * seeding only the cache would break the day that CORS is fixed, because the
+ * SDK refreshes the cache from the server.
+ *
+ * Register it AFTER any init script that clears localStorage (signIn does):
+ * init scripts run in registration order. It seeds once per empty storage, so a
+ * reload keeps what the previous load left.
+ */
+export async function seedDevicePrefs(page: Page, prefs: Record<string, unknown>): Promise<string> {
+  const deviceId = randomUUID()
+  const resp = await page.request.put(TASK_PREFS, {
+    headers: { 'X-Device-Id': deviceId },
+    data: { scope: 'device', patch: prefs, expectedVersion: 0 }
+  })
+  if (!resp.ok()) {
+    throw new Error(`seeding device prefs failed: ${resp.status()} ${await resp.text()}`)
+  }
+  const { version } = (await resp.json()) as { version: number }
+  await page.addInitScript(
+    ({ id, key, envelope }) => {
+      // Only into an empty slot: init scripts re-run on every navigation, and
+      // re-seeding on a reload would paper over whatever the last load wrote.
+      if (window.localStorage.getItem('hadoku_device_id') === null) {
+        window.localStorage.setItem('hadoku_device_id', id)
+        window.localStorage.setItem(key, envelope)
+      }
+    },
+    {
+      id: deviceId,
+      key: TASK_PREFS_CACHE_KEY,
+      envelope: JSON.stringify({
+        blob: prefs,
+        userVersion: 0,
+        deviceVersion: version,
+        cachedAt: Date.now()
+      })
+    }
+  )
+  return deviceId
+}
+
+/** The task-row blob the SDK holds for this page (its localStorage cache). */
+export function readTaskPrefsCache(page: Page): Promise<Record<string, unknown> | null> {
+  return page.evaluate(key => {
+    const raw = window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw).blob as Record<string, unknown>) : null
+  }, TASK_PREFS_CACHE_KEY)
 }

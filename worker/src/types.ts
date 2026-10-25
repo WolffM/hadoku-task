@@ -75,7 +75,7 @@ export interface Env {
  *   to prefer `userId` (the stable per-key UUID) so data survives key rotation.
  * - userId: Edge-injected X-User-Id (registry-derived stable UUID). Present when the
  *   request arrived through edge-router; absent on direct *.workers.dev hits.
- * - key: Alias for credential (backward compat for throttle middleware)
+ * - key: The raw credential. Read only by the throttle middleware, which masks it.
  */
 export interface TaskAuthExtension {
   /**
@@ -92,7 +92,7 @@ export interface TaskAuthExtension {
    * hit (read-repair), so pre-migration data is never orphaned.
    */
   legacyId?: string
-  /** Alias for credential (backward compat for throttle middleware). */
+  /** The raw credential. Read only by the throttle middleware, which masks it before storing. */
   key: string | undefined
   [key: string]: unknown
 }

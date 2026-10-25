@@ -1,31 +1,5 @@
 import { logger } from '@wolffm/logger/client'
-import { formatError } from '../domain/utils/tags'
 import type { UserType } from '../domain/types'
-
-/**
- * The success body of `POST /task/api/session/handshake`, as the worker builds
- * it — `HandshakeResponse` in worker/src/session.ts.
- *
- * Declared here rather than imported: the frontend does not compile against the
- * worker's tsconfig. That makes this a hand-kept mirror, so it is deliberately
- * read through `Partial<>` at the call site and every field is treated as
- * possibly absent.
- */
-interface HandshakeResponsePayload {
-  sessionId: string
-  preferences: unknown
-  isNewSession: boolean
-  migratedFrom?: string
-  userType: UserType
-}
-
-/**
- * Result from session handshake
- */
-export interface HandshakeResult {
-  preferences: null
-  serverUserType: UserType
-}
 
 /**
  * Generate a unique session ID for this browser tab/session
@@ -34,41 +8,11 @@ export interface HandshakeResult {
 export const SESSION_ID = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 /**
- * One-shot migration (2026-05-07): rename legacy 'currentSessionId' /
- * 'currentUserType' to platform-canonical 'hadoku_session_id' /
- * 'hadoku_user_type'. The mf-loader (hadoku_site/src/components/mf-loader.js)
- * and auth-client (hadoku_site/src/lib/api/auth-client.ts) both read the
- * canonical names. Without this rename, cross-origin clients (Capacitor APK)
- * loop on "session expired" because their cookies are blocked by SameSite=Strict
- * and the X-Session-Id header fallback couldn't find the sessionId at the
- * key the loader was looking at. Safe to remove after one release cycle.
- */
-if (typeof window !== 'undefined') {
-  const legacySessionId = localStorage.getItem('currentSessionId')
-  if (legacySessionId && !localStorage.getItem('hadoku_session_id')) {
-    localStorage.setItem('hadoku_session_id', legacySessionId)
-    localStorage.removeItem('currentSessionId')
-  }
-  const legacyUserType = localStorage.getItem('currentUserType')
-  if (legacyUserType && !localStorage.getItem('hadoku_user_type')) {
-    localStorage.setItem('hadoku_user_type', legacyUserType)
-    localStorage.removeItem('currentUserType')
-  }
-}
-
-/**
- * Get the last sessionId we used (stored in localStorage)
+ * The authed sessionId the host page stored. hadoku_site's mf-loader owns this
+ * key: it syncs it from /session/whoami on every boot.
  */
 export function getStoredSessionId(): string | null {
   return localStorage.getItem('hadoku_session_id')
-}
-
-/**
- * Store the current sessionId in localStorage
- */
-export function storeSessionId(sessionId: string): void {
-  localStorage.setItem('hadoku_session_id', sessionId)
-  logger.info('[Session] Stored sessionId', { sessionId })
 }
 
 /**
@@ -98,163 +42,9 @@ export function getAnonSessionId(): string {
 }
 
 /**
- * Get the stored userType from localStorage
+ * The tier the host page stored alongside the sessionId (mf-loader, from
+ * whoami). Read-only here: the edge owns identity, so the app never writes it.
  */
 export function getStoredUserType(): UserType | null {
   return localStorage.getItem('hadoku_user_type') as UserType | null
-}
-
-/**
- * Store the current userType in localStorage
- */
-export function storeUserType(userType: UserType): void {
-  localStorage.setItem('hadoku_user_type', userType)
-  logger.info('[Session] Stored userType', { userType })
-}
-
-/**
- * Perform session handshake with server
- * Sends old and new sessionIds, receives preferences for the new session
- *
- * For public users: skips handshake, maintains stable sessionId in localStorage
- *
- * Returns both the server preferences and the server's determined userType.
- * The serverUserType may differ from the client's userType if the session expired.
- */
-export async function performSessionHandshake(
-  newSessionId: string,
-  userType: string
-): Promise<HandshakeResult> {
-  const oldSessionId = getStoredSessionId()
-
-  // Public users: no server handshake. Resolve (and, first time, mint) the stable
-  // anon sessionId from a host-independent key so it survives reloads — the host
-  // wipes `hadoku_session_id` for public users on every boot (see ANON_SESSION_KEY).
-  if (userType === 'public') {
-    const anonId = getAnonSessionId()
-    logger.info('[Session] Public user - using anon sessionId', { anonId })
-    return { preferences: null, serverUserType: 'public' }
-  }
-
-  // Authenticated users: perform handshake with server
-  logger.info('[Session] Performing handshake...', { oldSessionId, newSessionId, userType })
-
-  try {
-    const response = await fetch(`/task/api/session/handshake`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-Type': userType,
-        'X-Session-Id': newSessionId
-      },
-      body: JSON.stringify({
-        oldSessionId,
-        newSessionId
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`Handshake failed: ${response.status}`)
-    }
-
-    // `response.json()` is `any`, and every `data.*` read below inherits it —
-    // this is an untrusted network boundary, so name the shape the worker
-    // actually returns (`HandshakeResponse` in worker/src/session.ts) and let
-    // the compiler check the reads. Fields are optional because a stale worker,
-    // an error body, or an edge shim can serve something narrower.
-    const data = (await response.json()) as Partial<HandshakeResponsePayload>
-    logger.info('[Session] Handshake successful', { data })
-
-    // Store the new sessionId
-    storeSessionId(newSessionId)
-
-    // Check for userType mismatch - session may have expired
-    const serverUserType: UserType = data.userType || userType
-    if (data.userType && data.userType !== userType) {
-      logger.warn('[Session] Server userType differs from client', {
-        clientUserType: userType,
-        serverUserType: data.userType
-      })
-      // Update stored userType to match server
-      storeUserType(data.userType)
-    }
-
-    // `data.preferences` is deliberately dropped, not forwarded. Preferences
-    // come from the prefs SDK (`loadTaskPreferences`), and the only thing
-    // useSessionInitialization takes from the handshake is serverUserType —
-    // which is why HandshakeResult types this field as `null`. Returning the
-    // server's blob here typechecked only because `response.json()` was `any`.
-    return {
-      preferences: null,
-      serverUserType
-    }
-  } catch (error) {
-    logger.error('[Session] Handshake failed', {
-      error: formatError(error)
-    })
-    // Store the new sessionId anyway
-    storeSessionId(newSessionId)
-    // Return null preferences but keep client's userType assumption
-    return { preferences: null, serverUserType: userType as UserType }
-  }
-}
-
-/**
- * Clear all localStorage keys associated with old sessionId for a specific userType
- */
-export function clearOldSessionStorage(oldSessionId: string, userType: string): void {
-  if (!oldSessionId) return
-
-  const keysToRemove: string[] = []
-
-  // Find all keys matching the old session pattern
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key && key.includes(`${userType}-${oldSessionId}-`)) {
-      keysToRemove.push(key)
-    }
-  }
-
-  logger.info('[Session] Clearing old storage keys', { count: keysToRemove.length })
-
-  // Remove them
-  keysToRemove.forEach(key => {
-    logger.info('[Session] Removing key', { key })
-    localStorage.removeItem(key)
-  })
-}
-
-/**
- * Clear all localStorage keys associated with a sessionId across ALL userTypes
- * Used when switching accounts to ensure old data doesn't persist
- */
-export function clearAllSessionStorage(oldSessionId: string): void {
-  if (!oldSessionId) return
-
-  const keysToRemove: string[] = []
-
-  // Match on the session id, NOT on an enumerated list of userTypes. This used to
-  // loop over ['public', 'friend', 'admin'] — three of the five tiers — so a
-  // `service` or `wife` user's keys survived an account switch, which is precisely
-  // what this function's contract says it prevents. Any list of tiers drifts the
-  // moment one is added (`wife` arrived 2026-08-04); the session id does not.
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    // `<userType>-<sessionId>-<rest>`: anchor both dashes so a bare substring
-    // collision cannot match, without caring what the userType is.
-    if (key && key.includes(`-${oldSessionId}-`) && !key.startsWith(`-${oldSessionId}-`)) {
-      keysToRemove.push(key)
-    }
-  }
-
-  logger.info('[Session] Clearing all session storage keys', {
-    sessionId: oldSessionId,
-    count: keysToRemove.length
-  })
-
-  // Remove them
-  keysToRemove.forEach(key => {
-    logger.info('[Session] Removing key', { key })
-    localStorage.removeItem(key)
-  })
 }

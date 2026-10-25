@@ -10,7 +10,7 @@ import { formatError } from '../domain/utils/tags'
 import { adminHeaders, backgroundSync, type ApiCtx } from './client-context'
 
 export function batchMethods(ctx: ApiCtx) {
-  const { localStorage, onSyncError, userType, sessionId } = ctx
+  const { localStorage, onSyncError, sessionId } = ctx
   return {
     // Batch operations
     async batchUpdateTags(boardId: string, updates: Array<{ taskId: string; tag: string | null }>) {
@@ -51,7 +51,7 @@ export function batchMethods(ctx: ApiCtx) {
         '/task/api/batch-tag',
         {
           method: 'PATCH',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ boardId, updates })
         },
         'batchUpdateTags',
@@ -92,7 +92,7 @@ export function batchMethods(ctx: ApiCtx) {
         '/task/api/batch-move',
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ sourceBoardId, targetBoardId, taskIds })
         },
         'batchMoveTasks',
@@ -119,7 +119,7 @@ export function batchMethods(ctx: ApiCtx) {
         '/task/api/batch-clear-tag',
         {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ boardId, tag, taskIds })
         },
         'batchClearTag',

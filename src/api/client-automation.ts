@@ -11,7 +11,7 @@ import type {
 import { adminHeaders, type ApiCtx } from './client-context'
 
 export function automationMethods(ctx: ApiCtx) {
-  const { userType, sessionId } = ctx
+  const { sessionId } = ctx
   return {
     /**
      * The lane contracts our providers publish (§5.4). The worker fetches them
@@ -24,7 +24,7 @@ export function automationMethods(ctx: ApiCtx) {
     }> {
       try {
         const res = await fetch('/task/api/automation/presets', {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         if (!res.ok) return { presets: [], sources: [] }
         return (await res.json()) as { presets: AutomationPreset[]; sources: PresetSourceStatus[] }
@@ -45,7 +45,7 @@ export function automationMethods(ctx: ApiCtx) {
     async listActionable(boardRef: string): Promise<ActionableScan> {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/actionable`, {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         // 403 (read-only) and 404 (no such board) are answers, not faults — the
         // reason carries the status so a support question has something to go on.
@@ -66,7 +66,7 @@ export function automationMethods(ctx: ApiCtx) {
     async getPresetUpdate(boardRef: string): Promise<PresetUpdate | null> {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}`, {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         if (!res.ok) return null
         const data = (await res.json()) as { board?: { presetUpdate?: PresetUpdate } }
@@ -97,7 +97,7 @@ export function automationMethods(ctx: ApiCtx) {
           `/task/api/boards/${encodeURIComponent(boardRef)}/activate-automation`,
           {
             method: 'POST',
-            headers: adminHeaders(userType, sessionId),
+            headers: adminHeaders(sessionId),
             body: JSON.stringify(payload)
           }
         )
@@ -117,7 +117,7 @@ export function automationMethods(ctx: ApiCtx) {
           `/task/api/boards/${encodeURIComponent(boardRef)}/deactivate-automation`,
           {
             method: 'POST',
-            headers: adminHeaders(userType, sessionId)
+            headers: adminHeaders(sessionId)
           }
         )
         if (!res.ok) return { ok: false, error: `Error ${res.status}` }
@@ -132,7 +132,7 @@ export function automationMethods(ctx: ApiCtx) {
       try {
         const res = await fetch(`/task/api/boards/${encodeURIComponent(boardRef)}/repo`, {
           method: 'POST',
-          headers: adminHeaders(userType, sessionId),
+          headers: adminHeaders(sessionId),
           body: JSON.stringify({ repo })
         })
         if (!res.ok) return { ok: false }
@@ -153,7 +153,7 @@ export function automationMethods(ctx: ApiCtx) {
     }> {
       try {
         const res = await fetch(`/task/api/repos/validate?repo=${encodeURIComponent(repo)}`, {
-          headers: adminHeaders(userType, sessionId)
+          headers: adminHeaders(sessionId)
         })
         if (!res.ok) return { repo, valid: false, reason: 'error', message: `Error ${res.status}` }
         return (await res.json()) as {

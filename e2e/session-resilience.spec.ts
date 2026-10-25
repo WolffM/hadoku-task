@@ -1,14 +1,15 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * Guards the two behaviours that moved when the cold-load chain was
- * de-serialised (handshake no longer blocks first paint):
+ * A failing prefs backend must not strand the user on the skeleton.
  *
- *  1. Session expiry — the handshake result is now handled after the app has
- *     painted rather than before. The expiry prompt + reload must still happen.
- *  2. Handshake failure — the app must still become usable. It renders from the
- *     localStorage cache and the board sync authenticates off the session cookie,
- *     so a dead handshake must not strand the user on the skeleton.
+ * The shell reveals once prefs settle, and the prefs SDK's first call is the
+ * /session/whoami identity lookup. If that lookup fails, the SDK must fall back
+ * to defaults and the app must still mount and show the board — the board sync
+ * authenticates off the session cookie at the edge, not off prefs.
+ *
+ * (Session expiry is no longer the app's to detect: the host page re-resolves
+ * whoami on every boot and mounts the app with the tier it got.)
  */
 
 const SESSION_ID = 'resilience-session'
@@ -56,41 +57,13 @@ async function stubPrefsAndBoards(page: Page) {
 }
 
 test.describe('Session resilience', () => {
-  test('expired session still prompts and reloads, even though paint no longer waits on the handshake', async ({
+  test('a failing prefs identity lookup does not strand the user on the skeleton', async ({
     page
   }) => {
     await seedFriendSession(page)
     await stubPrefsAndBoards(page)
 
-    // Server says this key is no longer a friend — i.e. the session expired.
-    await page.route('**/task/api/session/handshake', route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ userType: 'public', preferences: null })
-      })
-    )
-
-    await page.goto('/')
-
-    // The expiry handling now runs after the handshake resolves. It must still:
-    //  (a) downgrade the stored userType to match the server
-    await expect
-      .poll(() => page.evaluate(() => localStorage.getItem('hadoku_user_type')), {
-        timeout: 15000,
-        message: 'stored userType should be downgraded to public on expiry'
-      })
-      .toBe('public')
-
-    //  (b) tell the user
-    await expect(page.getByText(/session has expired/i)).toBeVisible({ timeout: 10000 })
-  })
-
-  test('a failing handshake does not strand the user on the skeleton', async ({ page }) => {
-    await seedFriendSession(page)
-    await stubPrefsAndBoards(page)
-
-    await page.route('**/task/api/session/handshake', route =>
+    await page.route('**/session/whoami', route =>
       route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' })
     )
 
@@ -99,13 +72,12 @@ test.describe('Session resilience', () => {
     // App still mounts...
     await expect(page.locator('.task-app-container')).toBeAttached({ timeout: 15000 })
 
-    // ...and the board sync still lands, because it authenticates off the session
-    // cookie rather than the handshake.
+    // ...and the board sync still lands.
     await expect(page.locator('.task-app__item-title', { hasText: TASK_TITLE })).toBeAttached({
       timeout: 15000
     })
 
-    // And we did NOT wrongly treat a 500 as an expiry.
+    // And the signed-in tier is left alone: the app never rewrites it.
     expect(await page.evaluate(() => localStorage.getItem('hadoku_user_type'))).toBe('friend')
   })
 })

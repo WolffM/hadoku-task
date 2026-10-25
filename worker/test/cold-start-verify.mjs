@@ -72,7 +72,6 @@ const friend = {
 // [label, group it should load, method, path, body?]
 const CORE = [
   ['validate-key', 'routes/misc.ts', 'POST', '/task/api/validate-key'],
-  ['preferences', 'routes/preferences.ts', 'GET', '/task/api/preferences'],
   ['boards', 'routes/boards.ts', 'GET', '/task/api/boards'],
   ['tasks', 'routes/tasks.ts', 'GET', '/task/api/tasks'],
   ['shares', 'routes/shares.ts', 'GET', '/task/api/boards/main/shares'],

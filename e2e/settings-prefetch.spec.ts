@@ -60,13 +60,6 @@ async function stubBoot(page: Page) {
   await page.route(`**${CONTENT_PATH}`, route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CONTENT) })
   )
-  await page.route('**/task/api/session/handshake', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ sessionId: 'prefetch-session', userType: 'friend', preferences: null })
-    })
-  )
   await page.route('**/task/api/boards**', route =>
     route.fulfill({
       status: 200,
