@@ -155,9 +155,13 @@ Cold isolates are task-api's typical request, and zod schemas built at module sc
 their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest row is a stub that
 `import()`s its group on first use and forwards the request. `/health` loads no group at all.
 
-- **Added, removed or reordered a route? Run `pnpm run gen:routes`.** It regenerates
-  `worker/src/route-manifest.ts`; `route-manifest-verify.ts` fails if you forget, and an
-  unlisted route is a 404. Row order is match precedence — group order is set in `route-groups.ts`.
+- **Changed a route or a schema? Run `pnpm run gen:worker`.** It regenerates
+  `worker/src/route-manifest.ts` (root's routing table) and `worker/src/openapi-spec.ts` (the
+  bytes `/task/api/openapi.json` serves). `route-manifest-verify.ts` and `openapi-spec-verify.ts`
+  fail until you do: an unlisted route is a 404, a stale spec describes an API that no longer
+  exists. Row order is match precedence — group order is set in `route-groups.ts`.
+- **The spec is built at build time, never per request** (`openapi-builder.ts`, #103). TenHands
+  fetches it hourly; generated per request it loaded every group and cost 90–250 ms CPU.
 - **Root must not statically import anything that builds a schema.** `cold-start-verify.mjs`
   pins it: a cold `/health` evaluates no group and no `schemas*.ts`, a core UI route never
   evaluates `schemas-agent.ts`.

@@ -15,7 +15,7 @@
  *      once, domain errors must still map to their status, and root's CORS must
  *      still decorate the response.
  *
- * Fix drift with `pnpm run gen:routes`. Run: pnpm run test:worker
+ * Fix drift with `pnpm run gen:worker`. Run: pnpm run test:worker
  */
 import { createTaskHandler } from '../src/index'
 import { ROUTE_MANIFEST } from '../src/route-manifest'
@@ -92,7 +92,7 @@ async function main() {
     const live = await collectRouteManifest()
     const want = JSON.stringify(live)
     const have = JSON.stringify(ROUTE_MANIFEST)
-    check('route-manifest.ts is current (else: pnpm run gen:routes)', want === have)
+    check('route-manifest.ts is current (else: pnpm run gen:worker)', want === have)
     if (want !== have) {
       const key = (r: readonly string[]) => r.join(' ')
       const liveKeys = new Set(live.map(key))

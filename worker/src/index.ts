@@ -18,8 +18,7 @@ import {
   createEdgeAuth,
   createCorsMiddleware,
   DEFAULT_HADOKU_ORIGINS,
-  createErrorHandlers,
-  createOpenAPIDocConfig
+  createErrorHandlers
 } from '@wolffm/worker-utils'
 import { logError, logger } from './logger'
 import {
@@ -34,6 +33,7 @@ import { DEFAULT_SESSION_ID } from './constants'
 import { healthBody } from './routes/health'
 import { ROUTE_GROUPS, type RouteGroup } from './route-groups'
 import { ROUTE_MANIFEST } from './route-manifest'
+import { OPENAPI_SPEC } from './openapi-spec'
 import type { AppContext, TaskAuthExtension } from './types'
 
 // NOTHING imported above may build a zod schema at module scope. Root is
@@ -139,70 +139,6 @@ async function buildGroupShell(group: RouteGroup): Promise<OpenAPIHono<AppContex
   shell.route('/task/api', await ROUTE_GROUPS[group]())
   installErrorHandlers(shell)
   return shell
-}
-
-/**
- * Every group merged onto one app, the way they were all mounted before they
- * went lazy, for the spec alone. Building it loads every group, which is fine for
- * a route nothing hits on the request path.
- */
-async function buildSpecApp(): Promise<OpenAPIHono<AppContext>> {
-  const spec = new OpenAPIHono<AppContext>()
-  for (const group of Object.keys(ROUTE_GROUPS) as RouteGroup[]) {
-    spec.route('/task/api', await ROUTE_GROUPS[group]())
-  }
-
-  // Every documented error response is narrowed to the codes ITS route+status can
-  // emit, so nothing references the catch-all any more. Register it explicitly:
-  // a generated client still needs the full `DomainErrorCode` enum and a base type
-  // for statuses no route declares (429 RATE_LIMITED from the throttle, 500).
-  const { DomainErrorSchema } = await import('./schemas-errors')
-  spec.openAPIRegistry.register('DomainError', DomainErrorSchema)
-
-  spec.doc(
-    '/task/api/openapi.json',
-    createOpenAPIDocConfig({
-      title: 'Task API',
-      version: '1.0.0',
-      description: `
-API for managing tasks, boards, and user preferences.
-
-## Overview
-This API provides endpoints for:
-- **Tasks**: Create, read, update, delete, and complete tasks
-- **Boards**: Organize tasks into boards
-- **Tags**: Categorize tasks with tags
-- **Batch Operations**: Bulk updates for tags and task movement
-- **Preferences**: User settings and configuration
-- **Sessions**: Session management and handshake
-
-## Authentication
-- **Public endpoints**: Basic read access without authentication
-- **Authenticated endpoints**: Full access via X-User-Key header
-- User types: admin, friend, public
-
-## Rate Limiting
-- Public users are rate-limited to prevent abuse
-- Authenticated users (admin/friend) bypass rate limiting
-		`,
-      production: 'https://task-api.hadoku.workers.dev',
-      tags: [
-        { name: 'Health', description: 'Health check endpoints' },
-        { name: 'Tasks', description: 'Task CRUD operations' },
-        { name: 'Boards', description: 'Board management' },
-        { name: 'Tags', description: 'Tag management' },
-        { name: 'Batch', description: 'Batch operations' },
-        { name: 'Session', description: 'Session management' },
-        { name: 'Preferences', description: 'User preferences' },
-        { name: 'Admin', description: 'Admin operations (requires admin access)' },
-        {
-          name: 'Theme editor',
-          description: 'Read and commit theme tokens for hadoku.me/task/editor (service tier+)'
-        }
-      ]
-    })
-  )
-  return spec
 }
 
 /**
@@ -422,14 +358,11 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   // OpenAPI Spec Endpoint
   // ============================================================================
 
-  let specApp: Promise<OpenAPIHono<AppContext>> | undefined
-  app.get('/task/api/openapi.json', async c => {
-    specApp ??= buildSpecApp().catch(err => {
-      specApp = undefined
-      throw err
-    })
-    return (await specApp).fetch(c.req.raw, c.env)
-  })
+  // Generated at build time (openapi-builder.ts, `pnpm run gen:spec`): building
+  // it here loaded every group and cost 90–250 ms CPU per fetch (#103).
+  app.get('/task/api/openapi.json', c =>
+    c.body(OPENAPI_SPEC, 200, { 'Content-Type': 'application/json' })
+  )
 
   installErrorHandlers(app)
 

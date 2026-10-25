@@ -11,6 +11,7 @@
  *   - /health evaluates no route group and no schema file
  *   - a core UI route never evaluates schemas-agent.ts
  *   - an agent route does (the positive control: the tagging below works)
+ *   - /openapi.json is served from the build-time spec, loading no group (#103)
  *
  * The worker is bundled the way hadoku_site's wrangler bundles it (one ESM
  * file, workerd conditions, unsplit), with an esbuild plugin that tags each
@@ -211,6 +212,26 @@ process.stdout.write(JSON.stringify({ status: res.status, evaluated: globalThis.
     console.log(`    changes: ${r.status}, ${fmt(r)}`)
     check('agent route loads routes/agent.ts', r.evaluated.includes('routes/agent.ts'))
     check('agent route loads schemas-agent.ts', r.evaluated.includes('schemas-agent.ts'))
+  }
+
+  console.log('\n4. A cold /openapi.json serves the build-time spec (#103)')
+  {
+    // TenHands fetches it hourly. Built per request it loaded every group and
+    // cost 90–250 ms of CPU; now it must cost what /health costs.
+    const r = cold('GET', '/task/api/openapi.json')
+    console.log(`    ${fmt(r)}`)
+    check('/openapi.json is 200', r.status === 200, `status=${r.status}`)
+    check(
+      'no route group evaluated',
+      groupsIn(r.evaluated).length === 0,
+      groupsIn(r.evaluated).join(', ')
+    )
+    check(
+      'no schema file evaluated',
+      schemasIn(r.evaluated).length === 0,
+      schemasIn(r.evaluated).join(', ')
+    )
+    check('the spec builder is not evaluated', !r.evaluated.includes('openapi-builder.ts'))
   }
 } finally {
   rmSync(outDir, { recursive: true, force: true })
