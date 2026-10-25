@@ -7,8 +7,8 @@
  *   - display name  → POST /session/name                   (edge-router, self rename)
  *   - content level → GET/PUT /prefs/api/v1/content-level  (prefs-api)
  *
- * Switching keys is NOT a call here: it is a link to the site's /auth page —
- * see `switchKeyHref()`.
+ * Switching keys goes through the SITE's sign-in client, never a call of ours:
+ * see `loadSignIn()`, with `switchKeyHref()` as the fallback.
  *
  * These are same-origin relative paths, so ConnectedSettings is portable to any
  * app served under hadoku.me with zero wiring. Off-origin (e.g. a Storybook or
@@ -191,8 +191,9 @@ export async function whoami(): Promise<Identity> {
 }
 
 /**
- * Where a "Switch key" control sends the user: the site's sign-in page, which
- * brings them back here afterwards.
+ * Where a "Switch key" control sends the user when the inline sign-in client
+ * (`loadSignIn()`) can't be loaded: the site's sign-in page, which brings them
+ * back here afterwards.
  *
  * A browser session is created ONLY by /auth (hadoku_site, 2026-10-25): every
  * render of that page carries an edge-signed funnel token and the device
@@ -210,6 +211,52 @@ export function switchKeyHref(): string {
     '/auth?switch=1&return=' +
     encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)
   )
+}
+
+/** What the site's sign-in client resolves to on success. */
+export interface SignInResult {
+  valid: boolean
+  userType?: string
+  sessionId?: string
+}
+
+/** `signIn` from hadoku.me's `/auth/sign-in.js`. Resolves on success; throws an
+ *  `Error` carrying the server's message on a refused or empty key. */
+export type SignIn = (key: string) => Promise<SignInResult>
+
+/**
+ * The site serves its sign-in page's own client as a module, so an app can sign
+ * in INLINE on the same code path as /auth: a fresh funnel token per call, the
+ * device fingerprint, and the `/session/create` post that sets the cookie (and
+ * writes the hadoku_session_id / hadoku_user_type mirror). This package never
+ * posts /session/create itself — a direct post would skip the fingerprint and
+ * read as off-funnel — and it does not vendor a copy.
+ *
+ * The specifier is a VARIABLE on purpose. A literal `import('/auth/sign-in.js')`
+ * would have every bundler that re-bundles this package (hadoku_site's build
+ * among them) try to resolve the path at build time; this one is only ever
+ * resolved by the browser, against whatever origin the page is on. For the
+ * same reason it is typed here (`SignIn`) rather than by an ambient module
+ * declaration, which only a literal specifier would pick up.
+ *
+ * The module starts collecting the fingerprint as soon as it evaluates, so call
+ * this when a sign-in form OPENS, not when it submits. Memoised; resolves to
+ * null when the module can't be loaded (a dev server that isn't hadoku.me),
+ * which is the caller's cue to fall back to `switchKeyHref()`.
+ */
+const SIGN_IN_MODULE = '/auth/sign-in.js'
+let signInModule: Promise<SignIn | null> | null = null
+
+export function loadSignIn(): Promise<SignIn | null> {
+  signInModule ??= import(/* @vite-ignore */ SIGN_IN_MODULE).then(
+    (m: { signIn?: unknown }) => (typeof m.signIn === 'function' ? (m.signIn as SignIn) : null),
+    () => {
+      // Let a later open retry: a failed fetch is not cached by the browser.
+      signInModule = null
+      return null
+    }
+  )
+  return signInModule
 }
 
 /* ------------------------------------------------------------------ *

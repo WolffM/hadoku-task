@@ -5,7 +5,7 @@
  *   - current access tier (read-only, friendly label)
  *   - display name (inline edit → POST /session/name)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
- *   - switch key (a link to the site's /auth page, which brings the user back)
+ *   - switch key (an inline sign-in form, on the site's own sign-in client)
  *
  * "Connected" (parallel to ConnectedThemePicker): it self-wires to the
  * hadoku.me edge-router via same-origin fetches (see lib/settingsClient), so
@@ -30,6 +30,7 @@ import {
   prefetchSettings,
   setContentLevel,
   setDisplayName,
+  loadSignIn,
   switchKeyHref,
   type ContentLevelState,
   type Tier
@@ -94,7 +95,12 @@ export function ConnectedSettings({
   const [nameSaving, setNameSaving] = useState(false)
   const [displayName, setLocalName] = useState<string | null>(resolvedName)
 
-  // Key swap
+  // Key swap. The draft lives only in this state and the input: it is never
+  // logged, stored or sent anywhere but the site's sign-in client.
+  const [keyFormOpen, setKeyFormOpen] = useState(false)
+  const [keyDraft, setKeyDraft] = useState('')
+  const [keyBusy, setKeyBusy] = useState(false)
+  const [keyError, setKeyError] = useState<string | null>(null)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -194,6 +200,41 @@ export function ConnectedSettings({
     }
     setEditingName(false)
   }, [nameDraft, displayName, onNameChange])
+
+  // Open the form AND start loading the site's sign-in client, which begins its
+  // fingerprint collection as it evaluates — so it is ready by submit. Where the
+  // client cannot load at all (not on hadoku.me), the page-level /auth flow is
+  // the only way to sign in, so go there.
+  const openKeyForm = useCallback(() => {
+    setKeyFormOpen(true)
+    setKeyError(null)
+    loadSignIn()
+      .then(signIn => {
+        if (!signIn) window.location.assign(switchKeyHref())
+      })
+      .catch(reportErr)
+  }, [])
+
+  const submitKey = useCallback(async () => {
+    setKeyBusy(true)
+    setKeyError(null)
+    const signIn = await loadSignIn()
+    if (!signIn) {
+      window.location.assign(switchKeyHref())
+      return
+    }
+    try {
+      await signIn(keyDraft)
+    } catch (err) {
+      // A refused key is an inline error, never a redirect.
+      setKeyError((err as Error)?.message || 'Invalid key')
+      setKeyBusy(false)
+      return
+    }
+    // The page now acts for a different identity: everything must re-mount.
+    // Busy stays on through the reload so the form can't be resubmitted.
+    window.location.reload()
+  }, [keyDraft])
 
   const pickLevel = useCallback(
     async (level: number) => {
@@ -343,14 +384,73 @@ export function ConnectedSettings({
             </section>
           )}
 
-          {/* Switch key. A link, not a field: only the site's /auth page may
-              create a session, so the key is never typed into an app. */}
-          <section className="settings-popout__row">
-            <span className="settings-popout__label">Access key</span>
-            <a className="settings-popout__btn" href={switchKeyHref()}>
-              Switch key
-            </a>
-          </section>
+          {/* Switch key. Signs in inline through the SITE's sign-in client
+              (the /auth page's own code path), never a post of ours. A real
+              <form> with a username + current-password pair, so password
+              managers offer and save the key. */}
+          {keyFormOpen ? (
+            <section className="settings-popout__row settings-popout__row--stack">
+              <form
+                className="settings-popout__key-form"
+                onSubmit={e => {
+                  e.preventDefault()
+                  submitKey().catch(reportErr)
+                }}
+              >
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  value="hadoku"
+                  readOnly
+                  hidden
+                />
+                <label className="settings-popout__label" htmlFor="settings-popout-key">
+                  Access key
+                </label>
+                <span className="settings-popout__inline">
+                  <input
+                    id="settings-popout-key"
+                    className="settings-popout__input"
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    autoFocus
+                    value={keyDraft}
+                    disabled={keyBusy}
+                    aria-invalid={keyError !== null}
+                    aria-describedby={keyError ? 'settings-popout-key-error' : undefined}
+                    onChange={e => setKeyDraft(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="settings-popout__btn settings-popout__btn--primary"
+                    disabled={keyBusy}
+                  >
+                    {keyBusy ? 'Signing in…' : 'Sign in'}
+                  </button>
+                </span>
+                {keyError && (
+                  <span
+                    id="settings-popout-key-error"
+                    className="settings-popout__error"
+                    role="alert"
+                  >
+                    {keyError}
+                  </span>
+                )}
+              </form>
+            </section>
+          ) : (
+            <section className="settings-popout__row">
+              <span className="settings-popout__label">Access key</span>
+              <button type="button" className="settings-popout__btn" onClick={openKeyForm}>
+                Switch key
+              </button>
+            </section>
+          )}
 
           {/* App-specific settings (optional) — same popout, one gear. */}
           {children && (

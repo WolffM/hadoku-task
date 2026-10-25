@@ -4,11 +4,12 @@ import { test, expect, type Page } from '@playwright/test'
  * E2E tests for switching keys and for session persistence.
  *
  * The settings popout (shared ConnectedSettings, the gear in the AppHeader)
- * does not take a key. Only the site's /auth page may create a session — it
- * carries the edge-signed funnel token and the device fingerprint that
- * /session/create requires — so "Switch key" is a link to
- * /auth?switch=1&return=<this page>, and /auth brings the user back with the
- * new session cookie. The host owns the session: the app reads what it stored,
+ * never creates a session itself. Only the site's sign-in code may — it carries
+ * the edge-signed funnel token and the device fingerprint that /session/create
+ * requires. "Switch key" therefore signs in inline through the
+ * site's own sign-in client (/auth/sign-in.js, the /auth page's code path),
+ * and falls back to /auth?switch=1&return=<this page> only when that client
+ * can't be loaded. The host owns the session: the app reads what it stored,
  * never rewrites it, and sends no session handshake of its own.
  */
 
@@ -56,9 +57,15 @@ test.describe('Key Validation Flow', () => {
     expect(stored.userType).toBeNull()
   })
 
-  test('Switch key links to /auth and round-trips the path, query and hash', async ({ page }) => {
-    // Public, so the popout fetches no content level and the spec stays hermetic.
+  test('Switch key falls back to /auth when the sign-in client is not served', async ({ page }) => {
+    // The vite dev server is not hadoku.me: /auth/sign-in.js 404s, so the only
+    // way to sign in is the page-level flow. Answer /auth with a stub page so the
+    // navigation lands somewhere observable.
     await mockWhoami(page, { userType: 'public', name: null })
+    await page.route('**/auth/sign-in.js*', route => route.fulfill({ status: 404, body: '' }))
+    await page.route(/\/auth\?/, route =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>auth</h1>' })
+    )
     await page.goto('/')
     await page.waitForSelector(APP_HEADER, { timeout: 10000 })
 
@@ -68,18 +75,81 @@ test.describe('Key Validation Flow', () => {
     await page.evaluate(url => window.history.replaceState(null, '', url), here)
 
     await openSettings(page)
-    const link = page.getByRole('link', { name: 'Switch key' })
-    await expect(link).toBeVisible()
+    await page.getByRole('button', { name: 'Switch key' }).click()
 
-    const href = await link.getAttribute('href')
-    expect(href).toBe('/auth?switch=1&return=' + encodeURIComponent(here))
-    const url = new URL(href ?? '', 'https://hadoku.me')
+    await page.waitForURL(/\/auth\?/)
+    const url = new URL(page.url())
     expect(url.pathname).toBe('/auth')
     expect(url.searchParams.get('switch')).toBe('1')
     expect(url.searchParams.get('return')).toBe(here)
+  })
 
-    // The key is never typed into an app: the panel has no key field at all.
-    await expect(page.locator('.settings-popout__panel input[type="password"]')).toHaveCount(0)
+  test('Switch key signs in inline: busy state, inline refusal, reload on success', async ({
+    page
+  }) => {
+    await mockWhoami(page, { userType: 'public', name: null })
+    // A stand-in for hadoku.me's /auth/sign-in.js, honouring its contract:
+    // `signIn(key)` resolves on success and throws Error(message) on a refusal.
+    // It holds each call until the spec releases it, so the busy state is
+    // observable rather than a race. (prod-inline-sign-in.spec.ts drives the
+    // real module.) The trailing `*` matters: vite dev appends `?import` to a
+    // dynamic import's URL; a production build does not.
+    await page.route('**/auth/sign-in.js*', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'text/javascript',
+        body: `
+          window.__signInCalls = 0
+          export async function signIn(key) {
+            window.__signInCalls++
+            await new Promise(r => { window.__releaseSignIn = r })
+            if (key !== 'good-key') throw new Error('Invalid key')
+            localStorage.setItem('hadoku_user_type', 'friend')
+            return { valid: true, userType: 'friend', sessionId: 'inline-session' }
+          }`
+      })
+    )
+    const sessionCreates: string[] = []
+    page.on('request', r => {
+      if (r.url().includes('/session/create')) sessionCreates.push(r.url())
+    })
+
+    await page.goto('/')
+    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
+    await openSettings(page)
+    await page.getByRole('button', { name: 'Switch key' }).click()
+
+    // A real form a password manager recognises.
+    const form = page.locator('.settings-popout__panel form')
+    const key = form.getByLabel('Access key')
+    await expect(key).toHaveAttribute('type', 'password')
+    await expect(key).toHaveAttribute('autocomplete', 'current-password')
+    await expect(form.locator('input[autocomplete="username"]')).toHaveValue('hadoku')
+
+    // A refused key: busy while the call is out, then an inline error, no navigation.
+    await key.fill('wrong-key')
+    await form.getByRole('button', { name: 'Sign in' }).click()
+    await expect(form.getByRole('button', { name: 'Signing in…' })).toBeDisabled()
+    await page.evaluate(() =>
+      (window as unknown as { __releaseSignIn: () => void }).__releaseSignIn()
+    )
+    await expect(form.getByRole('alert')).toHaveText('Invalid key')
+    expect(new URL(page.url()).pathname).not.toBe('/auth')
+
+    // An accepted key reloads the page, which re-mounts as the new identity.
+    await key.fill('good-key')
+    await form.getByRole('button', { name: 'Sign in' }).click()
+    const reloaded = page.waitForEvent('load')
+    await page.evaluate(() =>
+      (window as unknown as { __releaseSignIn: () => void }).__releaseSignIn()
+    )
+    await reloaded
+    await page.waitForSelector(APP_HEADER, { timeout: 10000 })
+    expect(await page.evaluate(() => localStorage.getItem('hadoku_user_type'))).toBe('friend')
+    expect(new URL(page.url()).pathname).not.toBe('/auth')
+
+    // The site's client is the only thing that may create a session.
+    expect(sessionCreates).toEqual([])
   })
 
   test('should persist session across page reloads', async ({ page }) => {

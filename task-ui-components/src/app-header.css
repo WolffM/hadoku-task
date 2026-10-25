@@ -265,6 +265,22 @@
   cursor: default;
 }
 
+/* Inline sign-in: label above, input + submit on one line, error below. */
+.settings-popout__key-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.settings-popout__error {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--color-danger-bg);
+  color: var(--color-on-danger-bg);
+}
+
 .settings-popout__hint {
   font-size: 0.72rem;
   line-height: 1.35;

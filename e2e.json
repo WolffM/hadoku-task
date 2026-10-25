@@ -7,6 +7,7 @@
   "e2eSkipAllow": {
     "should fetch boards from API after authentication": "hits production directly and is explicitly gated off in CI by the spec itself",
     "should show API data after page reload": "hits production directly and is explicitly gated off in CI by the spec itself",
-    "cold load: skeleton < 400ms, app < 1500ms (median of 3)": "opt-in production perf probe (RUN_PROD_PERF=1); not meant for the nightly run, which must not hit prod"
+    "cold load: skeleton < 400ms, app < 1500ms (median of 3)": "opt-in production perf probe (RUN_PROD_PERF=1); not meant for the nightly run, which must not hit prod",
+    "switches key inline, with no trip to /auth, and refuses a bad key inline": "opt-in production sign-in probe (RUN_PROD_SIGNIN=1 + FRIEND_TEST_KEY); signs in on prod, so never part of the nightly run"
   }
 }
