@@ -30,6 +30,13 @@ function fits(side: TooltipPlacement, a: DOMRect, w: number, h: number) {
   return a.right + GAP + w <= window.innerWidth - EDGE
 }
 
+/** Onto the device-pixel grid. A bubble at a fractional offset draws its 1px
+ *  border antialiased across two rows of the screen — a blurred edge. */
+function snap(v: number) {
+  const dpr = window.devicePixelRatio || 1
+  return Math.round(v * dpr) / dpr
+}
+
 export function placeTooltip(
   preferred: TooltipPlacement,
   a: DOMRect,
@@ -42,11 +49,11 @@ export function placeTooltip(
       : OPPOSITE[preferred]
   const clamp = (v: number, max: number) => Math.min(Math.max(v, EDGE), max - EDGE)
   if (side === 'top' || side === 'bottom') {
-    const left = clamp(a.left + a.width / 2 - w / 2, window.innerWidth - w)
-    const top = side === 'top' ? a.top - GAP - h : a.bottom + GAP
+    const left = snap(clamp(a.left + a.width / 2 - w / 2, window.innerWidth - w))
+    const top = snap(side === 'top' ? a.top - GAP - h : a.bottom + GAP)
     return { side, left, top, arrow: a.left + a.width / 2 - left }
   }
-  const top = clamp(a.top + a.height / 2 - h / 2, window.innerHeight - h)
-  const left = side === 'left' ? a.left - GAP - w : a.right + GAP
+  const top = snap(clamp(a.top + a.height / 2 - h / 2, window.innerHeight - h))
+  const left = snap(side === 'left' ? a.left - GAP - w : a.right + GAP)
   return { side, left, top, arrow: a.top + a.height / 2 - top }
 }

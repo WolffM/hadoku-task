@@ -198,3 +198,42 @@ test('nested titles: the nearest wins, including over the anchor’s own childre
   await expect(tip(page)).toHaveText('outer card')
   await expect(inner).toHaveAttribute('title', 'inner button')
 })
+
+test.describe('at a fractional zoom', () => {
+  test.use({ deviceScaleFactor: 1.25 })
+
+  test('the bubble fades in place on the device-pixel grid, never sliding', async ({ page }) => {
+    await open(page)
+    // A transform that differs between hidden and shown is a slide, which
+    // smears the 1px border mid-transition and snaps it back at the end.
+    // Checked on a bare bubble on <body>: the task app's container gives
+    // every element its own colour-only `transition`, which would hide one.
+    const transforms = await page.evaluate(() =>
+      ['top', 'bottom', 'left', 'right'].map(side => {
+        const b = document.createElement('div')
+        b.className = `hdk-tooltip hdk-tooltip--${side}`
+        document.body.appendChild(b)
+        const hidden = getComputedStyle(b).transform
+        b.classList.add('hdk-tooltip--visible')
+        const shown = getComputedStyle(b).transform
+        b.remove()
+        return `${side}: ${hidden} -> ${shown}`
+      })
+    )
+    expect(transforms).toEqual([
+      'top: none -> none',
+      'bottom: none -> none',
+      'left: none -> none',
+      'right: none -> none'
+    ])
+
+    // A fractional offset draws the 1px border antialiased across two rows.
+    await row(page).getByRole('button', { name: 'Hover me (title=)' }).hover()
+    await expect(tip(page)).toBeVisible()
+    const offsets = await tip(page).evaluate(b => [
+      parseFloat(b.style.left) * window.devicePixelRatio,
+      parseFloat(b.style.top) * window.devicePixelRatio
+    ])
+    for (const px of offsets) expect(Math.abs(px - Math.round(px))).toBeLessThan(1e-6)
+  })
+})

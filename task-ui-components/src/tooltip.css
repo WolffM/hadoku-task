@@ -29,31 +29,15 @@
   border: 1px solid var(--_tip-border);
   border-radius: var(--hdk-radius);
   box-shadow: var(--hdk-shadow-md);
+  /* A fade, never a slide: a transform puts the bubble on its own layer, so
+   * its 1px border smears across rows mid-slide and visibly snaps back into
+   * place when the transition ends. */
   opacity: 0;
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
+  transition: opacity var(--transition-fast);
 }
 
 .hdk-tooltip--visible {
   opacity: 1;
-  transform: none;
-}
-
-.hdk-tooltip--top:not(.hdk-tooltip--visible) {
-  transform: translateY(3px);
-}
-
-.hdk-tooltip--bottom:not(.hdk-tooltip--visible) {
-  transform: translateY(-3px);
-}
-
-.hdk-tooltip--left:not(.hdk-tooltip--visible) {
-  transform: translateX(3px);
-}
-
-.hdk-tooltip--right:not(.hdk-tooltip--visible) {
-  transform: translateX(-3px);
 }
 
 .hdk-tooltip--card {
@@ -116,12 +100,4 @@
   top: var(--hdk-tooltip-arrow);
   translate: 50% -50%;
   rotate: 135deg;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hdk-tooltip,
-  .hdk-tooltip:not(.hdk-tooltip--visible) {
-    transform: none;
-    transition: opacity var(--transition-fast);
-  }
 }

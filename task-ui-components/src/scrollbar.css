@@ -20,7 +20,7 @@
  * Modifiers sit on the same element:
  *
  *   --subtle    neutral thumb instead of the accent
- *   --thin      narrower bar
+ *   --thin      narrower bar (WebKit/Chromium only; see Firefox below)
  *   --rail      visible track, so the scroll extent reads at a glance
  *   --autohide  thumb appears only while that scroller is hovered or focused
  *
@@ -33,7 +33,12 @@
  * simply inherit.
  *
  * Two engines, two mechanisms. Firefox only knows the standard
- * `scrollbar-color`/`scrollbar-width`. Chromium and Safari support the
+ * `scrollbar-color`/`scrollbar-width`, and only ever gets `auto` width —
+ * `--thin` included. Under overlay scrollbars (GTK's default on Linux)
+ * `thin` draws the idle thumb as a ~1px hairline that antialiases
+ * unevenly along its length and only widens on hover; `auto` idles at a solid
+ * 2px and hovers at 6px, and with classic scrollbars it is a 6px thumb, the
+ * same as the WebKit default below. Chromium and Safari support the
  * `::-webkit-scrollbar` pseudo-elements, which are the only way to get a
  * rounded, inset thumb — but Chromium 121+ IGNORES them whenever
  * `scrollbar-color` or `scrollbar-width` is non-auto, and `scrollbar-color`
@@ -103,13 +108,8 @@
   @supports not selector(::-webkit-scrollbar) {
     :where(.hdk-scroll),
     :where(.hdk-scroll *) {
-      scrollbar-width: thin;
+      scrollbar-width: auto;
       scrollbar-color: var(--hdk-scrollbar-thumb) var(--hdk-scrollbar-track);
-    }
-
-    :where(.hdk-scroll--thin),
-    :where(.hdk-scroll--thin *) {
-      scrollbar-width: thin;
     }
   }
 
