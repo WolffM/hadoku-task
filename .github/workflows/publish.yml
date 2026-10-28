@@ -586,16 +586,28 @@ jobs:
 
       # npmjs copies, for builds outside the fleet (hadoku-actions/publish-npmjs).
       # AFTER the notify, so a failure here never holds back a fleet release.
-      - name: Publish UI Components package to npmjs
+      - name: Stage UI Components package for npmjs
         if: steps.changes.outputs.ui == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@9fe4b3ab1d78b43696e957b2b649d434c522f612
+        uses: WolffM/hadoku-actions/publish-npmjs@2b262d3036ef44e29631c5b0c8e15610110d0002
         with:
           package-dir: task-ui-components
-          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
 
-      - name: Publish Themes package to npmjs
+      - name: Stage Themes package for npmjs
         if: steps.changes.outputs.themes == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@9fe4b3ab1d78b43696e957b2b649d434c522f612
+        uses: WolffM/hadoku-actions/publish-npmjs@2b262d3036ef44e29631c5b0c8e15610110d0002
         with:
           package-dir: themes
-          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
+
+  # npmjs publishes through trusted publishing, which refuses self-hosted
+  # runners: the publish job above staged the gated tarballs, and this hosted
+  # job (no checkout, no secret) hands them to npm. Each
+  # @hadoku/* package trusts exactly this repo and workflow file.
+  npmjs:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      actions: read
+    steps:
+      - uses: WolffM/hadoku-actions/publish-npmjs/publish@2b262d3036ef44e29631c5b0c8e15610110d0002
