@@ -84,6 +84,20 @@ function reportErr(err: unknown) {
   console.error('[ConnectedSettings] action failed', (err as Error)?.message ?? err)
 }
 
+/** Inline, not in app-header.css: every app runs this component from the
+ *  site's shared vendor module, but compiles app-header.css into its own
+ *  stylesheet at ITS build, so a new rule reaches an app only when it rebuilds. */
+const PASSKEY_DOT: React.CSSProperties = {
+  position: 'absolute',
+  top: 2,
+  right: 2,
+  width: 8,
+  height: 8,
+  borderRadius: '50%',
+  background: 'var(--color-primary)',
+  pointerEvents: 'none'
+}
+
 const TIER_LABEL: Record<Tier, string> = {
   admin: 'Administrator',
   wife: 'Wife',
@@ -368,11 +382,14 @@ export function ConnectedSettings({
         type="button"
         className="app-header__icon-btn settings-toggle-btn"
         aria-label={needsPasskey ? 'User settings, no passkey saved' : 'User settings'}
+        style={needsPasskey ? { position: 'relative' } : undefined}
         aria-expanded={open}
         onClick={() => setOpen(v => !v)}
       >
         <SettingsIcon />
-        {needsPasskey && <span className="settings-toggle-btn__dot" aria-hidden="true" />}
+        {needsPasskey && (
+          <span className="settings-toggle-btn__dot" style={PASSKEY_DOT} aria-hidden="true" />
+        )}
       </button>
 
       {open && <div className="settings-popout__overlay" onClick={() => setOpen(false)} />}
