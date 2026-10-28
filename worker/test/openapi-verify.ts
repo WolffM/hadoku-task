@@ -44,7 +44,9 @@ const REQUIRED_PATHS = [
   '/task/api/boards/{ref}/activate-automation',
   '/task/api/boards/{ref}/deactivate-automation',
   // A board's calendar (§9) — the sub-resource an integration reads to reconcile.
-  '/task/api/boards/{ref}/calendar'
+  '/task/api/boards/{ref}/calendar',
+  // Many tasks in one board write (whattocook's shopping lists).
+  '/task/api/boards/{boardId}/tasks/batch'
 ]
 
 const REQUIRED_SCHEMAS = [
@@ -70,6 +72,8 @@ const REQUIRED_SCHEMAS = [
   'ListSharesResponse',
   'BoardCalendar',
   'GetBoardCalendarResponse',
+  'BatchCreateTasksInput',
+  'BatchCreateTasksResponse',
   'Lane',
   'DomainError',
   'DomainErrorCode'
@@ -98,7 +102,8 @@ const NARROWED_ERROR_SCHEMAS: Record<string, string[]> = {
   DigestMismatchError: ['DIGEST_MISMATCH'],
   LaneSetInvalidError: ['LANE_SET_INVALID'],
   ShareGranteeNotFoundError: ['BOARD_NOT_FOUND', 'NAME_NOT_FOUND'],
-  NoUserIdError: ['NO_USER_ID']
+  NoUserIdError: ['NO_USER_ID'],
+  CreateConflictError: ['VERSION_CONFLICT', 'DUPLICATE_SOURCE']
 }
 
 /** The (route, status) → schema wiring a Python client branches on. */
@@ -113,7 +118,11 @@ const RESPONSE_SCHEMA_REFS: Array<[string, string, string, string]> = [
   ['/task/api/agent/release', 'post', '422', 'LaneOrStatusInvalidError'],
   ['/task/api/boards/{ref}/activate-automation', 'post', '409', 'DigestMismatchError'],
   ['/task/api/boards/{ref}/shares', 'post', '409', 'NoUserIdError'],
-  ['/task/api/boards/{ref}/calendar', 'get', '404', 'BoardNotFoundError']
+  ['/task/api/boards/{ref}/calendar', 'get', '404', 'BoardNotFoundError'],
+  ['/task/api', 'post', '409', 'CreateConflictError'],
+  ['/task/api/boards/{boardId}/tasks/batch', 'post', '409', 'CreateConflictError'],
+  ['/task/api/boards/{boardId}/tasks/batch', 'post', '413', 'NotesTooLargeError'],
+  ['/task/api/boards/{boardId}/tasks/batch', 'post', '403', 'ForbiddenError']
 ]
 
 /** Every .ts under a directory, recursively. */

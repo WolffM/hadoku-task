@@ -49,20 +49,25 @@ function tallyEvents(rows: Array<{ event_type: string; count: number }>): EventS
 }
 
 /**
- * Log a task event to D1
+ * Log several task events in ONE D1 batch — one round trip however many tasks
+ * a write touched.
  */
-export async function logTaskEvent(db: D1Database, event: TaskEvent): Promise<void> {
-  const metadata = event.metadata ? JSON.stringify(event.metadata) : null
-
-  await db
-    .prepare(
-      `
-    INSERT INTO task_events (user_key, board_id, task_id, event_type, metadata)
-    VALUES (?, ?, ?, ?, ?)
-  `
+export async function logTaskEvents(db: D1Database, events: TaskEvent[]): Promise<void> {
+  if (events.length === 0) return
+  const insert = db.prepare(
+    'INSERT INTO task_events (user_key, board_id, task_id, event_type, metadata) VALUES (?, ?, ?, ?, ?)'
+  )
+  await db.batch(
+    events.map(e =>
+      insert.bind(
+        e.userKey,
+        e.boardId,
+        e.taskId,
+        e.eventType,
+        e.metadata ? JSON.stringify(e.metadata) : null
+      )
     )
-    .bind(event.userKey, event.boardId, event.taskId, event.eventType, metadata)
-    .run()
+  )
 }
 
 /**

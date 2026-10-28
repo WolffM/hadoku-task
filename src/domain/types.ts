@@ -416,6 +416,32 @@ export class VersionConflictError extends DomainError {
 }
 
 /**
+ * Error thrown when a create would put a second LIVE task on the same
+ * `source` + `sourceId` pair. The pair is the ingest key (unique per user over
+ * Active tasks — the `tasks_source` index), so the write is refused whole rather
+ * than surfacing as a bare constraint failure. `taskId` names the live task
+ * already holding the pair, when it is a stored one; a clash inside a single
+ * batch has none.
+ * HTTP status: 409 Conflict
+ */
+export class DuplicateSourceError extends DomainError {
+  constructor(
+    public readonly source: string,
+    public readonly sourceId: string,
+    public readonly taskId?: string
+  ) {
+    super(
+      taskId
+        ? `A live task (${taskId}) already has source ${source} / sourceId ${sourceId}`
+        : `sourceId ${sourceId} (source ${source}) appears more than once`,
+      'DUPLICATE_SOURCE',
+      409
+    )
+    this.name = 'DuplicateSourceError'
+  }
+}
+
+/**
  * Largest allowed size for a task's `notes` body, in bytes (UTF-8). ~64 KB — a
  * plan, not a log file (§6). Measured on the encoded string so multibyte content
  * can't slip past a length check.

@@ -455,6 +455,36 @@ async function main() {
   check('a drag onto a non-lane tag → 422', r.status === 422, `status=${r.status}`)
   check('and fires nothing', drained().length === 0)
 
+  // Batch create is a human write too: every item's tag is checked before any
+  // of them lands, and a batch that does land is ONE gesture, one dispatch.
+  r = await req('POST', '/task/api/boards/flow/tasks/batch', {
+    tasks: [
+      { id: 'bc-1', title: 'Fine', tag: 'approved' },
+      { id: 'bc-2', title: 'Agent lane', tag: 'working' }
+    ]
+  })
+  check('a batch create with an agent-lane item → 403', r.status === 403, `status=${r.status}`)
+  const landedRows = d1.__raw
+    .prepare("SELECT id FROM tasks WHERE user_id = ? AND id IN ('bc-1', 'bc-2')")
+    .all(USER.id)
+  check('and NO item of it landed', landedRows.length === 0, JSON.stringify(landedRows))
+  check('the refused batch fires nothing', drained().length === 0)
+
+  r = await req('POST', '/task/api/boards/flow/tasks/batch', {
+    tasks: [
+      { id: 'bc-3', title: 'Inbox' },
+      { id: 'bc-4', title: 'Approved', tag: 'approved' }
+    ]
+  })
+  check('a batch create into user lanes → 200', r.status === 200, `status=${r.status}`)
+  out = drained()
+  check('fires exactly one dispatch', out.length === 1, `count=${out.length}`)
+  check(
+    'naming the first task it landed',
+    out[0]?.body.client_payload?.taskId === 'bc-3',
+    JSON.stringify(out[0]?.body.client_payload)
+  )
+
   // ---------------------------------------------------------------------
   section('7. A standard board, and an automation board with no repo')
   // ---------------------------------------------------------------------

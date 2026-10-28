@@ -49,6 +49,7 @@ export const DOMAIN_ERROR_CODES = [
   'DIGEST_MISMATCH', // 409 — stale activation digest (carries `currentDigest`)
   // Writes (§6)
   'VERSION_CONFLICT', // 409 — If-Match lost (carries `currentVersion`)
+  'DUPLICATE_SOURCE', // 409 — a live task already has that source/sourceId (carries both)
   'NOTES_TOO_LARGE', // 413 — notes exceed MAX_NOTES_BYTES
   'STATUS_INVALID' // 422 — `status` isn't { kind: <closed set>, label, href? }
 ] as const
@@ -76,7 +77,19 @@ const domainErrorFields = {
   currentNotesHash: z.string().optional().openapi({
     description: 'The notes digest as it now stands, on NOTES_CHANGED. Re-plan against this.'
   }),
-  retryAfter: z.number().optional().openapi({ example: 60 })
+  retryAfter: z.number().optional().openapi({ example: 60 }),
+  source: z
+    .string()
+    .optional()
+    .openapi({ description: 'The clashing `source`, on DUPLICATE_SOURCE.' }),
+  sourceId: z
+    .string()
+    .optional()
+    .openapi({ description: 'The clashing `sourceId`, on DUPLICATE_SOURCE.' }),
+  taskId: z.string().optional().openapi({
+    description:
+      'On DUPLICATE_SOURCE: the live task already holding the pair. Absent when the clash is between two items of one batch.'
+  })
 }
 
 /** A domain error: `error` message + a machine-readable `code`, plus optional
@@ -228,3 +241,15 @@ export const NoUserIdErrorSchema = narrowError(
 export const boardRefParam = z.object({
   ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
 })
+
+/**
+ * 409 on the task creates: a stale If-Match (VERSION_CONFLICT, carries
+ * `currentVersion`), or a `source`/`sourceId` pair a live task already holds
+ * (DUPLICATE_SOURCE, carries `source` + `sourceId`, and `taskId` when the holder
+ * is a stored task). Both wrote nothing.
+ */
+export const CreateConflictErrorSchema = narrowError(
+  'CreateConflictError',
+  ['VERSION_CONFLICT', 'DUPLICATE_SOURCE'],
+  'VERSION_CONFLICT: the board moved past your If-Match (`currentVersion` carries where it is). DUPLICATE_SOURCE: a live task already has that `source`/`sourceId` — or two items of one batch share it; `sourceId` names it. Nothing was written.'
+)

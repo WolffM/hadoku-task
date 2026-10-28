@@ -322,11 +322,13 @@ export async function withTaskOperation<T>(
     updatedStats = recordStatsEvent(updatedStats, task, eventType, timestamp)
   }
 
-  // Save both files
-  await Promise.all([
-    storage.saveTasks(auth.userType, auth.sessionId, boardId, versionedTasks),
-    storage.saveStats(auth.userType, auth.sessionId, boardId, updatedStats)
-  ])
+  // Tasks first, THEN stats: a task write the store refuses (a source clash
+  // the unique index catches) must not leave 'created' events behind for tasks
+  // that never landed. An operation with no events has nothing to record.
+  await storage.saveTasks(auth.userType, auth.sessionId, boardId, versionedTasks)
+  if (statsEvents.length > 0) {
+    await storage.saveStats(auth.userType, auth.sessionId, boardId, updatedStats)
+  }
 
   // Surface the new version to callers/HTTP layer (additive; legacy clients ignore it)
   if (result !== null && typeof result === 'object') {

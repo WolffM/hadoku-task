@@ -289,6 +289,13 @@ export async function handleBoardOperation<T>(
      * nothing to compare and no wake to consider.
      */
     notesWrite?: string | null
+    /**
+     * The tags a MULTI-task human write lands (batch create), one per task.
+     * Each is checked against an automation board's lanes like `laneTag`, all
+     * before anything is written; the wake fires once, for the first task that
+     * landed in a user lane — the batch is one gesture.
+     */
+    laneWrites?: Array<{ taskId: string; tag: string | null }>
   } = {}
 ) {
   const ctx = await getBoardContext(c, boardId)
@@ -303,6 +310,9 @@ export async function handleBoardOperation<T>(
   // mapped to their status by the app-level onError handler.
   if ('laneTag' in opts && ctx.mode === 'automation') {
     assertHumanLaneWrite(ctx.lanes, opts.laneTag)
+  }
+  if (opts.laneWrites && ctx.mode === 'automation') {
+    for (const w of opts.laneWrites) assertHumanLaneWrite(ctx.lanes, w.tag)
   }
   const { storage, auth } = ctx
 
@@ -348,6 +358,10 @@ export async function handleBoardOperation<T>(
 
   if ('laneTag' in opts && opts.taskId) {
     await notifyLaneWrite(wake, c)
+  }
+  const landed = opts.laneWrites?.find(w => isUserLaneWrite(ctx.lanes, w.tag))
+  if (landed) {
+    await notifyLaneWrite({ ...wake, taskId: landed.taskId, laneTag: landed.tag }, c)
   }
   if (armNotesWake && before && !laneWoke) {
     await notifyNotesWrite(

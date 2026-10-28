@@ -11,7 +11,10 @@ import {
   getBoardContext,
   handleOperation,
   handleBatchOperation,
+  handleBoardOperation,
+  parseIfMatch,
   withBoardLock,
+  withoutBoardRef,
   boardLockKey
 } from './route-utils'
 import {
@@ -33,10 +36,17 @@ import {
   BatchMoveTasksInputSchema,
   BatchMoveTasksResponseSchema,
   BatchClearTagInputSchema,
-  BatchClearTagResponseSchema
+  BatchClearTagResponseSchema,
+  BatchCreateTasksInputSchema,
+  BatchCreateTasksResponseSchema,
+  MAX_BATCH_CREATE
 } from '../schemas'
 import { ErrorResponseSchema } from '../schemas-common'
-import { boardErrorResponses } from '../schemas-errors'
+import {
+  boardErrorResponses,
+  CreateConflictErrorSchema,
+  NotesTooLargeErrorSchema
+} from '../schemas-errors'
 import type { Context } from 'hono'
 import type { AppContext } from '../types'
 
@@ -247,6 +257,85 @@ export function createTagsBatchRoutes() {
   // ============================================================================
   // Batch Operations
   // ============================================================================
+
+  // Batch Create Tasks
+  const batchCreateTasksRoute = createRoute({
+    method: 'post',
+    path: '/boards/{boardId}/tasks/batch',
+    tags: ['Batch'],
+    summary: 'Create many tasks',
+    description:
+      `Creates up to ${MAX_BATCH_CREATE} tasks on one board in a single write: one board read, ` +
+      'one save, instead of a full board rewrite per task. Each item is exactly what `POST /` ' +
+      'accepts, and becomes exactly the task `POST /` would have made. All-or-nothing: a bad ' +
+      'item (validation, notes size, a lane the human path may not write, a duplicate ' +
+      '`source`/`sourceId`) writes nothing. `ids` comes back in request order; items without ' +
+      'their own `createdAt` are stamped 1 ms apart so age sorting keeps that order. Honours ' +
+      '`If-Match` and returns the new version as the ETag.',
+    request: {
+      params: z.object({
+        boardId: z.string().openapi({
+          example: 'main',
+          description:
+            'Board reference: your own board id, or the `handle` of a board shared with you.'
+        })
+      }),
+      body: {
+        content: {
+          'application/json': {
+            schema: BatchCreateTasksInputSchema
+          }
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Tasks created',
+        content: {
+          'application/json': {
+            schema: BatchCreateTasksResponseSchema
+          }
+        }
+      },
+      400: {
+        description: 'Invalid request — nothing was written',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema
+          }
+        }
+      },
+      409: {
+        description: 'Stale If-Match, or a duplicate source/sourceId — nothing was written',
+        content: { 'application/json': { schema: CreateConflictErrorSchema } }
+      },
+      413: {
+        description: "An item's notes exceed the 64 KB limit — nothing was written",
+        content: { 'application/json': { schema: NotesTooLargeErrorSchema } }
+      },
+      ...boardErrorResponses
+    }
+  })
+
+  app.openapi(batchCreateTasksRoute, async c => {
+    const { boardId } = c.req.valid('param')
+    // The path names the board; a board ref on an item would only contradict it.
+    const inputs = c.req.valid('json').tasks.map(t => withoutBoardRef(t))
+
+    logRequest('POST', '/task/api/boards/:boardId/tasks/batch', {
+      userType: c.get('authContext').userType,
+      boardId,
+      count: inputs.length
+    })
+
+    const expectedVersion = parseIfMatch(c)
+    return handleBoardOperation(
+      c,
+      boardId,
+      (storage, auth, bid) => TaskHandlers.createTasks(storage, auth, inputs, bid, expectedVersion),
+      { write: true, laneWrites: inputs.map(t => ({ taskId: t.id, tag: t.tag ?? null })) }
+    )
+  })
 
   // Batch Update Tags (with boardId in URL)
   const batchUpdateTagsWithParamRoute = createRoute({

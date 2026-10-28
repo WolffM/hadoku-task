@@ -102,6 +102,7 @@ export {
   TaskNotFoundError,
   BoardNotFoundError,
   VersionConflictError,
+  DuplicateSourceError,
   NotesTooLargeError,
   MAX_NOTES_BYTES,
   assertNotesWithinLimit,

@@ -14,7 +14,12 @@ import {
   boardRefFrom,
   withoutBoardRef
 } from './route-utils'
-import { boardErrorResponses, boardNotFoundResponse } from '../schemas-errors'
+import {
+  boardErrorResponses,
+  boardNotFoundResponse,
+  CreateConflictErrorSchema,
+  NotesTooLargeErrorSchema
+} from '../schemas-errors'
 import type { AppContext } from '../types'
 import {
   GetTasksResponseSchema,
@@ -130,6 +135,14 @@ export function createTaskRoutes() {
             schema: ErrorResponseSchema
           }
         }
+      },
+      409: {
+        description: 'Stale If-Match, or a duplicate source/sourceId — nothing was written',
+        content: { 'application/json': { schema: CreateConflictErrorSchema } }
+      },
+      413: {
+        description: 'Notes exceed the 64 KB limit — nothing was written',
+        content: { 'application/json': { schema: NotesTooLargeErrorSchema } }
       },
       ...boardErrorResponses
     }

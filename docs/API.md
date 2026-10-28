@@ -421,6 +421,69 @@ Delete a persisted tag from a board.
 
 ## Batch Operations
 
+### POST `/boards/:boardId/tasks/batch`
+
+Create many tasks on one board in a single write — one board read and one save, instead of a full
+board rewrite per `POST /`. Built for putting a list on a board (a shopping list, one task per
+ingredient).
+
+`:boardId` is a board reference, exactly as on the task routes: your own board id, or the `handle` of
+a board shared with you. A readonly grantee gets `403 FORBIDDEN`; an unshared handle is `404`.
+
+**Body:** 1–100 tasks, each exactly what [`POST /`](#post-) accepts (`id` and `title` required;
+`notes`, `tag`, `createdAt`, `date`, `startTime`, `endTime`, `source`, `sourceId`, `metadata`
+optional). A `board`/`boardId` on an item is ignored — the path names the board. Ids must be unique
+within the batch.
+
+```json
+{
+  "tasks": [
+    {
+      "id": "01HQ...",
+      "title": "Flour",
+      "tag": "groceries",
+      "source": "whattocook",
+      "sourceId": "r1:flour"
+    },
+    { "id": "01HR...", "title": "Eggs", "source": "whattocook", "sourceId": "r1:eggs" }
+  ]
+}
+```
+
+**Response** (`ETag` header carries the new version, like every write; `If-Match` is honoured):
+
+```json
+{ "ok": true, "ids": ["01HQ...", "01HR..."], "version": 9 }
+```
+
+Each item becomes exactly the task `POST /` would have made (one tag, `date` derived from
+`startTime`, one `created` stats event per task). `ids` is in request order, and an item without its
+own `createdAt` is stamped 1 ms after the one before it, so sorting by age keeps that order.
+
+**All-or-nothing.** A bad item writes nothing at all: `400` for a schema failure (missing title,
+duplicate id, empty or over 100), `413 NOTES_TOO_LARGE`, a lane the human path may not write on an
+automation board (`403 LANE_NOT_EDITABLE` / `422 LANE_INVALID`), `409 VERSION_CONFLICT`, or:
+
+**`409 DUPLICATE_SOURCE`** — a `source` + `sourceId` pair is unique among a user's LIVE (Active)
+tasks, across all their boards. Two items of the batch sharing a pair, or an item whose pair a live
+task already holds, refuses the whole batch:
+
+```json
+{
+  "error": "A live task (01HP...) already has source whattocook / sourceId r1:flour",
+  "code": "DUPLICATE_SOURCE",
+  "source": "whattocook",
+  "sourceId": "r1:flour",
+  "taskId": "01HP..."
+}
+```
+
+`taskId` is the live task holding the pair; it is absent when the clash is between two items of the
+batch. `POST /` answers a duplicate pair the same way. A completed or deleted task does not hold its
+pair, and re-sending a task under its own `id` is an update of that task, not a duplicate.
+
+---
+
 ### PATCH `/batch-tag`
 
 Update tags for multiple tasks.
@@ -1167,7 +1230,7 @@ the response schema is narrowed further (`/agent/heartbeat` 409 → `LeaseLostEr
 do about each: [MCP.md](MCP.md#error-codes): `CLAIM_HELD`, `LEASE_LOST`, `LANE_NOT_EDITABLE`,
 `LANE_UNKNOWN`, `LANE_INVALID`, `LANE_CHANGED`, `NOTES_CHANGED`, `LANE_SET_INVALID`,
 `BOARD_SCHEMA_LOCKED`, `STATUS_INVALID`,
-`DIGEST_MISMATCH`, `VERSION_CONFLICT`, `NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`,
+`DIGEST_MISMATCH`, `VERSION_CONFLICT`, `DUPLICATE_SOURCE`, `NOTES_TOO_LARGE`, `RATE_LIMITED`, `TASK_NOT_FOUND`,
 `BOARD_NOT_FOUND`, `NAME_NOT_FOUND`, `NO_USER_ID`, `FORBIDDEN`.
 
 **Rate limits.** `friend`/`admin` are not throttled; the **`service`** tier is capped at

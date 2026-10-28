@@ -104,6 +104,9 @@ function installErrorHandlers(app: OpenAPIHono<AppContext>) {
       currentLane?: unknown
       currentDigest?: unknown
       currentNotesHash?: unknown
+      source?: unknown
+      sourceId?: unknown
+      taskId?: unknown
     }
     if (typeof domain.httpStatus === 'number' && typeof domain.code === 'string') {
       const body: Record<string, unknown> = { error: domain.message ?? 'Error', code: domain.code }
@@ -114,6 +117,12 @@ function installErrorHandlers(app: OpenAPIHono<AppContext>) {
       if (typeof domain.currentDigest === 'string') body.currentDigest = domain.currentDigest
       if (typeof domain.currentNotesHash === 'string') {
         body.currentNotesHash = domain.currentNotesHash
+      }
+      // DUPLICATE_SOURCE names the clashing pair, and the live task holding it.
+      if (domain.code === 'DUPLICATE_SOURCE') {
+        if (typeof domain.source === 'string') body.source = domain.source
+        if (typeof domain.sourceId === 'string') body.sourceId = domain.sourceId
+        if (typeof domain.taskId === 'string') body.taskId = domain.taskId
       }
       return c.json(body, domain.httpStatus as 400 | 404 | 409 | 422 | 500)
     }

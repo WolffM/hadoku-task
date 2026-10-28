@@ -14,7 +14,7 @@
  * nothing. They get real behavioural coverage here.
  *
  * The rest of the file pins what a code move can silently break and the HTTP
- * harnesses would not necessarily catch: that all 18 handlers are still
+ * harnesses would not necessarily catch: that all 19 handlers are still
  * exported under the same names, and that the three batch handlers — the
  * largest symbols, and the ones being moved — still do what they did.
  *
@@ -112,6 +112,7 @@ async function main() {
     'createBoard',
     'createTag',
     'createTask',
+    'createTasks',
     'deleteBoard',
     'deleteTag',
     'deleteTask',

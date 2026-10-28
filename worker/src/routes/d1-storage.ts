@@ -26,13 +26,18 @@ import type {
   Task
 } from '@wolffm/task/api'
 import { TaskUtils } from '@wolffm/task/api'
-import { VersionConflictError, completedCutoff, parseStoredStatus } from '@wolffm/task/api'
+import {
+  VersionConflictError,
+  DuplicateSourceError,
+  completedCutoff,
+  parseStoredStatus
+} from '@wolffm/task/api'
 import { DEFAULT_BOARD_ID, DEFAULT_BOARD_NAME } from '../constants'
 import {
   getBoardStats as getD1BoardStats,
   getBoardTimeline,
   deleteBoardEvents,
-  logTaskEvent
+  logTaskEvents
 } from '../events'
 import { maskKey } from '@wolffm/worker-utils'
 import type { Env } from '../types'
@@ -413,7 +418,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
           )
           .bind(tasks.version ?? 1, ts, uid, boardId)
       )
-      await db.batch(stmts)
+      await batchTaskWrite(db, uid, stmts, tasks.tasks)
     },
 
     // --- Batch task write across boards (atomic) ------------------------
@@ -465,7 +470,12 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         )
       }
 
-      await db.batch([...deletes, ...upserts])
+      await batchTaskWrite(
+        db,
+        uid,
+        [...deletes, ...upserts],
+        writes.flatMap(w => w.tasks.tasks)
+      )
     },
 
     // --- Stats (D1 events; identical to the KV adapter's stats path) ------
@@ -503,16 +513,25 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
     ): Promise<void> {
       if (!boardId) boardId = DEFAULT_BOARD_ID
       const userKey = sessionId ? maskKey(sessionId) : 'public'
-      if (stats.timeline && stats.timeline.length > 0) {
-        const latestEvent = stats.timeline[stats.timeline.length - 1]
-        await logTaskEvent(env.DB, {
+      // The operation's events are the timeline's tail, and they all carry the
+      // operation's one ISO timestamp. Stored events read back in SQLite's
+      // `datetime('now')` form ("YYYY-MM-DD HH:MM:SS", no "T"), so a tail of
+      // those means the operation added nothing. Log every new one — a batch
+      // create is N 'created' events, not one.
+      const timeline = stats.timeline ?? []
+      const latest = timeline[timeline.length - 1]
+      if (!latest || !latest.t.includes('T')) return
+      let first = timeline.length - 1
+      while (first > 0 && timeline[first - 1].t === latest.t) first--
+      await logTaskEvents(
+        env.DB,
+        timeline.slice(first).map(e => ({
           userKey,
-          boardId,
-          taskId: latestEvent.id || '',
-          eventType: latestEvent.event,
-          metadata: undefined
-        })
-      }
+          boardId: boardId as string,
+          taskId: e.id || '',
+          eventType: e.event
+        }))
+      )
     },
 
     // --- Delete board data ----------------------------------------------
@@ -534,6 +553,48 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         await deleteBoardEvents(env.DB, maskKey(legacyId), boardId)
       }
     }
+  }
+}
+
+/** SQLite's message when the `tasks_source` unique index refuses a write. */
+const SOURCE_CLASH = /UNIQUE constraint failed: tasks\.user_id, tasks\.source, tasks\.source_id/
+
+/**
+ * Run a task write as ONE atomic batch, turning a `tasks_source` clash into a
+ * DuplicateSourceError (409) that names the pair, instead of a bare 500.
+ *
+ * The handlers already refuse a clash they can see — within the write, or on
+ * the same board. What reaches here is a live task on ANOTHER board of the same
+ * user holding the pair, so the batch rolled back whole and nothing landed.
+ * Only on that failure do we look up which pair it was.
+ */
+async function batchTaskWrite(
+  db: D1Like,
+  uid: string,
+  stmts: Array<{ run(): Promise<unknown> }>,
+  written: Task[]
+): Promise<void> {
+  try {
+    await db.batch(stmts)
+  } catch (err) {
+    const e = err as { message?: unknown; cause?: { message?: unknown } }
+    const text = `${String(e?.message ?? '')} ${String(e?.cause?.message ?? '')}`
+    if (!SOURCE_CLASH.test(text)) throw err
+    const live = await db
+      .prepare(
+        `SELECT id, source, source_id FROM tasks
+          WHERE user_id = ? AND state = 'Active' AND source IS NOT NULL AND source_id IS NOT NULL`
+      )
+      .bind(uid)
+      .all<{ id: string; source: string; source_id: string }>()
+    for (const t of written) {
+      if (t.state !== 'Active' || t.source == null || t.sourceId == null) continue
+      const holder = live.results.find(
+        r => r.source === t.source && r.source_id === t.sourceId && r.id !== t.id
+      )
+      if (holder) throw new DuplicateSourceError(t.source, t.sourceId, holder.id)
+    }
+    throw err
   }
 }
 

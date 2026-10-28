@@ -191,6 +191,47 @@ export const CreateTaskResponseSchema = z
   })
   .openapi('CreateTaskResponse')
 
+/** Most tasks one batch create may carry. A shopping list, not a migration. */
+export const MAX_BATCH_CREATE = 100
+
+// POST /boards/{boardId}/tasks/batch (create many)
+export const BatchCreateTasksInputSchema = z
+  .object({
+    tasks: z
+      .array(CreateTaskInputSchema)
+      .min(1)
+      .max(MAX_BATCH_CREATE)
+      .superRefine((tasks, ctx) => {
+        const seen = new Set<string>()
+        tasks.forEach((t, i) => {
+          if (seen.has(t.id)) {
+            ctx.addIssue({
+              code: 'custom',
+              path: [i, 'id'],
+              message: `Duplicate task id ${t.id} in batch`
+            })
+          }
+          seen.add(t.id)
+        })
+      })
+      .openapi({
+        description:
+          `1–${MAX_BATCH_CREATE} tasks, each exactly what \`POST /\` accepts. A \`board\`/\`boardId\` ` +
+          'on an item is ignored: the path names the board. Ids must be unique within the batch.'
+      })
+  })
+  .openapi('BatchCreateTasksInput')
+
+export const BatchCreateTasksResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    // The created tasks' ids, in request order.
+    ids: z.array(z.string()).openapi({ example: ['01HXYZ123ABC', '01HXYZ456DEF'] }),
+    // New board version after the write (also sent as the ETag header).
+    version: z.number().optional().openapi({ example: 9 })
+  })
+  .openapi('BatchCreateTasksResponse')
+
 // PATCH /:id (update task)
 export const UpdateTaskInputSchema = z
   .object({
