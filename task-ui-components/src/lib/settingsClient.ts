@@ -52,6 +52,9 @@ const WHOAMI_GLOBAL = '__hadokuWhoami'
  * arrive from edge-router ≥ the 2026-08-07 change, which reports the level
  * `authGate` had already resolved to stamp X-Hadoku-Content-Level. When they
  * are absent we fall back to the standalone GET — see resolveSettings.
+ *
+ * `passkeys` (edge-router ≥ 2026-10-28) counts the passkeys that sign this
+ * session in. Absent means unknown, never none.
  */
 interface WhoamiBody {
   valid?: boolean
@@ -59,6 +62,7 @@ interface WhoamiBody {
   name?: string | null
   contentLevel?: number
   maxContentLevel?: number
+  passkeys?: number
 }
 
 // Hard timeout on every settings request. Without it, a request throttled by
@@ -317,6 +321,8 @@ export interface SettingsSnapshot {
   identity: Identity
   /** null = public caller (no pill) or the request failed. */
   content: ContentLevelState | null
+  /** Passkeys that sign this person in; null = unknown (older edge, host-supplied identity). */
+  passkeys: number | null
 }
 
 /** Identity the host already knows, so we don't ask the server for it again. */
@@ -391,8 +397,16 @@ async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSn
     return identityPromise.then(id => (id.userType === 'public' ? null : getContentLevel()))
   })
 
-  const [identity, content] = await Promise.all([identityPromise, contentPromise])
-  return { identity, content }
+  const [identity, content, body] = await Promise.all([
+    identityPromise,
+    contentPromise,
+    bodyPromise
+  ])
+  return { identity, content, passkeys: passkeysFromWhoami(body) }
+}
+
+function passkeysFromWhoami(body: WhoamiBody | null): number | null {
+  return body?.valid && typeof body.passkeys === 'number' ? body.passkeys : null
 }
 
 /**

@@ -125,6 +125,8 @@ export function ConnectedSettings({
   // time limit each end the wait.
   const [passkeyMode, setPasskeyMode] = useState<'save' | 'signin' | null>(null)
   const [passkeySaved, setPasskeySaved] = useState(false)
+  // How many passkeys sign this person in, from whoami; null = unknown.
+  const [passkeyCount, setPasskeyCount] = useState<number | null>(null)
   const [passkeyError, setPasskeyError] = useState<string | null>(null)
   const passkeyCtl = useRef<AbortController | null>(null)
   const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
@@ -146,6 +148,15 @@ export function ConnectedSettings({
   // tier existed, which is the failure the rank model is meant to prevent.
   // There is no rank helper in this bundle, but "above public" needs none.
   const showContentPill = userType !== 'public'
+
+  // Signed in on a key with no passkey: the gear carries a dot and Save passkey
+  // is the primary action until one is saved. Unknown counts never prompt.
+  const needsPasskey =
+    !resolving &&
+    userType !== 'public' &&
+    passkeyCount === 0 &&
+    !passkeySaved &&
+    passkeysSupported()
 
   // Keep local identity in sync when the host controls it via props.
   useEffect(() => {
@@ -176,8 +187,9 @@ export function ConnectedSettings({
   useEffect(() => {
     let live = true
     prefetchSettings({ userType: userTypeProp, name: nameProp })
-      .then(({ identity, content: state }) => {
+      .then(({ identity, content: state, passkeys }) => {
         if (!live) return
+        setPasskeyCount(passkeys)
         // Props stay authoritative: the host passed them because it can see an
         // identity this component can't resolve for itself.
         if (userTypeProp === undefined) {
@@ -355,11 +367,12 @@ export function ConnectedSettings({
       <button
         type="button"
         className="app-header__icon-btn settings-toggle-btn"
-        aria-label="User settings"
+        aria-label={needsPasskey ? 'User settings, no passkey saved' : 'User settings'}
         aria-expanded={open}
         onClick={() => setOpen(v => !v)}
       >
         <SettingsIcon />
+        {needsPasskey && <span className="settings-toggle-btn__dot" aria-hidden="true" />}
       </button>
 
       {open && <div className="settings-popout__overlay" onClick={() => setOpen(false)} />}
@@ -577,7 +590,7 @@ export function ConnectedSettings({
                 {!resolving && userType !== 'public' && passkeysSupported() && (
                   <button
                     type="button"
-                    className="settings-popout__btn"
+                    className={`settings-popout__btn${needsPasskey ? ' settings-popout__btn--primary' : ''}`}
                     disabled={passkeyMode !== null || passkeySaved}
                     onClick={() => {
                       savePasskey().catch(reportErr)

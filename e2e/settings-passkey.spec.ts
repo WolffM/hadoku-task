@@ -15,7 +15,10 @@ import { test, expect, type Page } from '@playwright/test'
 
 const APP_HEADER = 'h1.app-header__title'
 
-async function mockWhoami(page: Page, identity: { userType: string; name: string | null }) {
+async function mockWhoami(
+  page: Page,
+  identity: { userType: string; name: string | null; passkeys?: number }
+) {
   await page.route('**/session/whoami', route =>
     route.fulfill({
       status: 200,
@@ -71,6 +74,49 @@ async function load(page: Page) {
   await page.goto('/')
   await page.waitForSelector(APP_HEADER, { timeout: 10000 })
 }
+
+test.describe('settings popout: asks someone with no passkey to save one', () => {
+  const dot = (page: Page) => page.locator('.settings-toggle-btn__dot')
+
+  test('no passkey: a dot on the gear and Save passkey leads, both gone once saved', async ({
+    page
+  }) => {
+    await mockWhoami(page, { userType: 'friend', name: 'alice', passkeys: 0 })
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    await expect(dot(page)).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: 'User settings, no passkey saved' })
+    ).toBeVisible()
+    const panel = await openSettings(page)
+    const save = panel.getByRole('button', { name: 'Save passkey' })
+    await expect(save).toHaveClass(/settings-popout__btn--primary/)
+    await save.click()
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
+    await expect(dot(page)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'User settings', exact: true })).toBeVisible()
+  })
+
+  for (const [why, identity] of [
+    ['already has one', { userType: 'friend', name: 'alice', passkeys: 1 }],
+    ['an edge that does not say', { userType: 'friend', name: 'alice' }],
+    ['a guest', { userType: 'public', name: null, passkeys: 0 }]
+  ] as const) {
+    test(`no prompt for ${why}`, async ({ page }) => {
+      await mockWhoami(page, identity)
+      await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+      await load(page)
+      await expect(page.getByRole('button', { name: 'User settings', exact: true })).toBeVisible()
+      await expect(dot(page)).toHaveCount(0)
+      if (identity.userType === 'public') return
+      const panel = await openSettings(page)
+      await expect(panel.getByRole('button', { name: 'Save passkey' })).not.toHaveClass(
+        /settings-popout__btn--primary/
+      )
+    })
+  }
+})
 
 test.describe('settings popout: save a passkey', () => {
   test.beforeEach(async ({ page }) => {

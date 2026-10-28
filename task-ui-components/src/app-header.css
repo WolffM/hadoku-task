@@ -77,6 +77,21 @@
   display: inline-flex;
 }
 
+/* No passkey saved yet: a dot on the gear until one is. */
+.settings-toggle-btn {
+  position: relative;
+}
+.settings-toggle-btn__dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
 /* Full-viewport click-catcher, same trick ThemePicker uses. */
 .settings-popout__overlay {
   position: fixed;
