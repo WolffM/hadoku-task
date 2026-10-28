@@ -562,6 +562,15 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
 
+      # Themes again on npmjs as @hadoku/themes, once the registry has it, so a
+      # build outside the fleet needs no GitHub token (hadoku-actions/publish-npmjs).
+      - name: Publish Themes package to npmjs
+        if: steps.changes.outputs.themes == 'true'
+        uses: WolffM/hadoku-actions/publish-npmjs@a0234220dee4223a67d330752e2e13f444734e53
+        with:
+          package-dir: themes
+          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
+
       # hadoku_site is told through mgmt-api with this repo's own service key
       # (hadoku-actions/repo-action). A refused or unanswered notify FAILS the
       # job: the old curl only warned, and a dropped dispatch is a release the
