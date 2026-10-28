@@ -588,14 +588,14 @@ jobs:
       # AFTER the notify, so a failure here never holds back a fleet release.
       - name: Publish UI Components package to npmjs
         if: steps.changes.outputs.ui == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@a0234220dee4223a67d330752e2e13f444734e53
+        uses: WolffM/hadoku-actions/publish-npmjs@9fe4b3ab1d78b43696e957b2b649d434c522f612
         with:
           package-dir: task-ui-components
           vault-key: ${{ secrets.KEY_SERVICE_TASK }}
 
       - name: Publish Themes package to npmjs
         if: steps.changes.outputs.themes == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@a0234220dee4223a67d330752e2e13f444734e53
+        uses: WolffM/hadoku-actions/publish-npmjs@9fe4b3ab1d78b43696e957b2b649d434c522f612
         with:
           package-dir: themes
           vault-key: ${{ secrets.KEY_SERVICE_TASK }}
