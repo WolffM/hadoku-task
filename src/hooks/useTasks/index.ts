@@ -84,6 +84,13 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   )
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
+  // `?board=<id>` opens that board: another app (whattocook's "Open in Tasks")
+  // links straight to the board it wrote to. An unpinned board still shows, as
+  // the current one (BoardsSection). It holds through the context resets below
+  // (the session resolves after mount) until the user picks a board.
+  const linkedBoardRef = useRef<string | null>(
+    new URLSearchParams(window.location.search).get('board')
+  )
 
   // `reload` runs async and is often kicked off unawaited (mount, BroadcastChannel,
   // mutations). Reading the selected board from state would capture whatever was
@@ -236,7 +243,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
     setPendingOperations(new Set())
     setBoards(null)
     setSyncState('syncFromApi' in api ? 'pending' : 'synced')
-    selectBoard('main')
+    selectBoard(linkedBoardRef.current || 'main')
     void (async () => {
       // Fast cache paint (localStorage for authed users). Reveal the shell even
       // if this throws — a corrupt cache must never trap the user on the
@@ -584,6 +591,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   }
 
   function switchBoard(boardId: string) {
+    linkedBoardRef.current = null
     selectBoard(boardId)
     const { tasks: boardTasks, foundBoard } = extractBoardTasks(boards, boardId)
     if (foundBoard) {
