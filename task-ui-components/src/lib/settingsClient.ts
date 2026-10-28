@@ -254,10 +254,11 @@ let signInModule: Promise<SignInClient | null> | null = null
  */
 export interface SignInClient {
   signIn: SignIn
-  /** Like `signIn`, with a passkey in place of the key. Throws Error(message). */
-  signInWithPasskey?: () => Promise<SignInResult>
+  /** Like `signIn`, with a passkey in place of the key. Throws Error(message).
+   *  `signal` cancels the open prompt. */
+  signInWithPasskey?: (opts?: { signal?: AbortSignal }) => Promise<SignInResult>
   /** Saves a passkey for the signed-in person on this device. Throws Error(message). */
-  addPasskey?: () => Promise<{ saved: boolean; passkeys: number }>
+  addPasskey?: (opts?: { signal?: AbortSignal }) => Promise<{ saved: boolean; passkeys: number }>
 }
 
 export function loadSignInClient(): Promise<SignInClient | null> {

@@ -1,0 +1,320 @@
+import { test, expect, type Page } from '@playwright/test'
+
+/**
+ * The settings popout's passkey controls and display name, interrupted at
+ * every point a person can interrupt them.
+ *
+ * The popout never runs a WebAuthn ceremony itself: it calls the site's
+ * /auth/sign-in.js (`addPasskey`, `signInWithPasskey`). Each test serves a
+ * stand-in module with exactly the behaviour under test — answering, refusing,
+ * or never answering at all, which is what a password manager does when its
+ * prompt is dismissed. The stand-ins IGNORE the abort signal unless a test
+ * says otherwise, so a passing test proves the popout lets go on its own.
+ * The real ceremony is hadoku_site's workers/edge-router/e2e/passkey-ceremony.e2e.ts.
+ */
+
+const APP_HEADER = 'h1.app-header__title'
+
+async function mockWhoami(page: Page, identity: { userType: string; name: string | null }) {
+  await page.route('**/session/whoami', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ valid: true, ...identity })
+    })
+  )
+}
+
+/** Serve a stand-in /auth/sign-in.js. `body` is the module's source. */
+async function signInModule(page: Page, body: string) {
+  // The trailing `*`: vite dev appends `?import` to a dynamic import's URL.
+  await page.route('**/auth/sign-in.js*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/javascript',
+      body: `export async function signIn() { throw new Error('unused') }\n${body}`
+    })
+  )
+}
+
+/**
+ * A passkey call that settles only when the test says so. `window.__settle`
+ * resolves the current call ('ok') or rejects it with a message; calls and
+ * the signals they were given are counted.
+ */
+const HELD = (name: string, result: string) => `
+  window.__calls = 0
+  window.__aborted = 0
+  export function ${name}(opts) {
+    window.__calls++
+    if (opts && opts.signal) opts.signal.addEventListener('abort', () => window.__aborted++)
+    return new Promise((resolve, reject) => {
+      window.__settle = msg => (msg === 'ok' ? resolve(${result}) : reject(new Error(msg)))
+    })
+  }`
+
+const calls = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __calls: number }).__calls)
+const aborted = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __aborted: number }).__aborted)
+const settle = (page: Page, msg: string) =>
+  page.evaluate(m => (window as unknown as { __settle: (m: string) => void }).__settle(m), msg)
+
+async function openSettings(page: Page) {
+  await page.getByRole('button', { name: 'User settings' }).click()
+  const panel = page.locator('.settings-popout__panel')
+  await expect(panel).toBeVisible()
+  return panel
+}
+
+async function load(page: Page) {
+  await page.goto('/')
+  await page.waitForSelector(APP_HEADER, { timeout: 10000 })
+}
+
+test.describe('settings popout: save a passkey', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockWhoami(page, { userType: 'friend', name: 'alice' })
+  })
+
+  test('sits on the Access key row, next to Switch key', async ({ page }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    const row = panel.locator('section', { hasText: 'Access key' })
+    await expect(row.getByRole('button', { name: 'Save passkey' })).toBeVisible()
+    await expect(row.getByRole('button', { name: 'Switch key' })).toBeVisible()
+    await expect(panel.getByText('Passkey', { exact: true })).toHaveCount(0)
+  })
+
+  test('saves, and says so', async ({ page }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await expect(panel.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeDisabled()
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+  })
+
+  test("the site's refusal is shown, and a retry works", async ({ page }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await settle(page, 'This device already has your passkey')
+    await expect(panel.getByRole('alert')).toHaveText('This device already has your passkey')
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
+  })
+
+  test('a prompt that never answers: Cancel lets go, even when the client ignores it', async ({
+    page
+  }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    // No switching mid-prompt; Cancel is on its own line.
+    await expect(panel.getByRole('button', { name: 'Switch key' })).toBeDisabled()
+    await panel.getByRole('button', { name: 'Cancel' }).click()
+    await expect(panel.getByRole('alert')).toHaveText('Passkey not saved')
+    await expect(panel.getByRole('button', { name: 'Save passkey' })).toBeEnabled()
+    await expect(panel.getByRole('button', { name: 'Switch key' })).toBeEnabled()
+    await expect(panel.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
+    expect(await aborted(page)).toBe(1)
+
+    // The abandoned call answering late changes nothing.
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Save passkey' })).toBeEnabled()
+
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
+  })
+
+  test('closing the popout mid-prompt abandons it quietly', async ({ page }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    let panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    expect(await aborted(page)).toBe(1)
+
+    panel = await openSettings(page)
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Save passkey' })).toBeEnabled()
+  })
+
+  test('a double click saves once', async ({ page }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).dblclick()
+    await expect(panel.getByRole('button', { name: 'Saving…' })).toBeVisible()
+    expect(await calls(page)).toBe(1)
+    expect(await aborted(page)).toBe(0)
+  })
+
+  test('clicking outside the popout during a prompt closes it and abandons the prompt', async ({
+    page
+  }) => {
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await page.locator('.settings-popout__overlay').click({ position: { x: 5, y: 5 } })
+    await expect(panel).toBeHidden()
+    expect(await aborted(page)).toBe(1)
+  })
+
+  test('a site client without passkeys sends you to /auth to save one', async ({ page }) => {
+    await signInModule(page, '')
+    await page.route(/\/auth\?/, route =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>auth</h1>' })
+    )
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await page.waitForURL(/\/auth\?/)
+    const url = new URL(page.url())
+    expect(url.searchParams.get('passkey')).toBe('add')
+    expect(url.searchParams.get('return')).toBe('/')
+  })
+
+  test('a public visitor is not offered one', async ({ page }) => {
+    await page.unrouteAll({ behavior: 'ignoreErrors' })
+    await mockWhoami(page, { userType: 'public', name: null })
+    await load(page)
+    const panel = await openSettings(page)
+    await expect(panel.getByRole('button', { name: 'Save passkey' })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Switch key' })).toBeVisible()
+  })
+})
+
+test.describe('settings popout: sign in with a passkey', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockWhoami(page, { userType: 'public', name: null })
+  })
+
+  async function openKeyForm(page: Page) {
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Switch key' }).click()
+    return panel.locator('form')
+  }
+
+  const SIGNED_IN = `(localStorage.setItem('hadoku_user_type', 'friend'), { valid: true, userType: 'friend' })`
+
+  test('signs in, then reloads as the new identity', async ({ page }) => {
+    await signInModule(page, HELD('signInWithPasskey', SIGNED_IN))
+    await load(page)
+    const form = await openKeyForm(page)
+    await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await expect(form.getByLabel('Access key')).toBeDisabled()
+    const reloaded = page.waitForEvent('load')
+    await settle(page, 'ok')
+    await reloaded
+    expect(await page.evaluate(() => localStorage.getItem('hadoku_user_type'))).toBe('friend')
+  })
+
+  test('a prompt that never answers: Cancel gives the form back', async ({ page }) => {
+    await signInModule(page, HELD('signInWithPasskey', SIGNED_IN))
+    await load(page)
+    const form = await openKeyForm(page)
+    await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await expect(form.getByRole('button', { name: 'Waiting for passkey…' })).toBeDisabled()
+    await form.getByRole('button', { name: 'Cancel' }).click()
+    await expect(form.getByRole('alert')).toHaveText('Passkey sign-in cancelled')
+    await expect(form.getByLabel('Access key')).toBeEnabled()
+    await expect(form.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+    await expect(form.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
+    expect(await aborted(page)).toBe(1)
+  })
+
+  test("the site's refusal is shown inline, with no navigation", async ({ page }) => {
+    await signInModule(page, HELD('signInWithPasskey', SIGNED_IN))
+    await load(page)
+    const form = await openKeyForm(page)
+    await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await settle(page, 'That passkey was retired with its key. Ask for a new login code.')
+    await expect(form.getByRole('alert')).toHaveText(
+      'That passkey was retired with its key. Ask for a new login code.'
+    )
+    await expect(form.getByRole('button', { name: 'Use a passkey' })).toBeEnabled()
+    expect(new URL(page.url()).pathname).toBe('/')
+  })
+
+  test('a double click starts one prompt and cannot cancel it', async ({ page }) => {
+    await signInModule(page, HELD('signInWithPasskey', SIGNED_IN))
+    await load(page)
+    const form = await openKeyForm(page)
+    await form.getByRole('button', { name: 'Use a passkey' }).dblclick()
+    await expect(form.getByRole('button', { name: 'Waiting for passkey…' })).toBeVisible()
+    expect(await calls(page)).toBe(1)
+    expect(await aborted(page)).toBe(0)
+  })
+
+  test('closing the popout mid-prompt leaves the form usable', async ({ page }) => {
+    await signInModule(page, HELD('signInWithPasskey', SIGNED_IN))
+    await load(page)
+    const form = await openKeyForm(page)
+    await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await page.keyboard.press('Escape')
+    expect(await aborted(page)).toBe(1)
+    const panel = await openSettings(page)
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await expect(panel.getByLabel('Access key')).toBeEnabled()
+  })
+})
+
+test.describe('settings popout: display name', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockWhoami(page, { userType: 'friend', name: 'alice' })
+  })
+
+  test('click the name to edit it; Enter saves', async ({ page }) => {
+    const posted: string[] = []
+    await page.route('**/session/name', async route => {
+      const { name } = route.request().postDataJSON() as { name: string }
+      posted.push(name)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, name })
+      })
+    })
+    await load(page)
+    const panel = await openSettings(page)
+    await expect(panel.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0)
+    await panel.getByRole('button', { name: 'Edit display name' }).click()
+    const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
+    await expect(input).toBeFocused()
+    await expect(input).toHaveValue('alice')
+    await input.fill('Alice W')
+    await input.press('Enter')
+    await expect(panel.getByRole('button', { name: 'Edit display name' })).toHaveText('Alice W')
+    expect(posted).toEqual(['Alice W'])
+  })
+
+  test('Escape abandons the edit and posts nothing', async ({ page }) => {
+    const posted: string[] = []
+    await page.route('**/session/name', route => {
+      posted.push('x')
+      return route.fulfill({ status: 200, body: '{}' })
+    })
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Edit display name' }).click()
+    const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
+    await input.fill('nope')
+    await input.press('Escape')
+    // Escape ends the edit; the popout stays open.
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Edit display name' })).toHaveText('alice')
+    expect(posted).toEqual([])
+  })
+})

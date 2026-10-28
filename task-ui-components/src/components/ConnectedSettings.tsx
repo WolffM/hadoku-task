@@ -63,6 +63,19 @@ export interface ConnectedSettingsProps {
   children?: React.ReactNode
 }
 
+/** Rejects once `signal` aborts, so a call that ignores the signal (an older
+ *  site client, a prompt that never settles) still lets the UI go. */
+function untilAborted(signal: AbortSignal): Promise<never> {
+  return new Promise((_, reject) => {
+    const fail = () => reject(new Error('cancelled'))
+    if (signal.aborted) fail()
+    else signal.addEventListener('abort', fail, { once: true })
+  })
+}
+
+/** Abort reason when the popout closes: a dismissal, not an error to show. */
+const CLOSED = 'closed'
+
 /** Rejection sink for fire-and-forget settings actions. The client helpers
  *  already resolve to null on failure (state reflects it), so this only trips
  *  on truly unexpected throws — log rather than swallow silently. */
@@ -106,10 +119,15 @@ export function ConnectedSettings({
   const [keyError, setKeyError] = useState<string | null>(null)
 
   // Passkeys, through the same site client: save one while signed in, or
-  // sign in with one from the key form.
-  const [passkeyBusy, setPasskeyBusy] = useState(false)
+  // sign in with one from the key form. One prompt at a time, and always
+  // cancellable: a password manager can dismiss the browser's prompt without
+  // ever answering it, so Cancel, closing the popout and the site client's own
+  // time limit each end the wait.
+  const [passkeyMode, setPasskeyMode] = useState<'save' | 'signin' | null>(null)
   const [passkeySaved, setPasskeySaved] = useState(false)
   const [passkeyError, setPasskeyError] = useState<string | null>(null)
+  const passkeyCtl = useRef<AbortController | null>(null)
+  const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -246,39 +264,74 @@ export function ConnectedSettings({
   }, [keyDraft])
 
   const savePasskey = useCallback(async () => {
-    setPasskeyBusy(true)
+    const ctl = new AbortController()
+    passkeyCtl.current = ctl
+    setPasskeyMode('save')
     setPasskeyError(null)
-    const client = await loadSignInClient()
-    if (!client?.addPasskey) {
-      window.location.assign(passkeyHref('add'))
-      return
-    }
     try {
-      await client.addPasskey()
+      const client = await Promise.race([loadSignInClient(), untilAborted(ctl.signal)])
+      if (!client?.addPasskey) {
+        window.location.assign(passkeyHref('add'))
+        return
+      }
+      await Promise.race([client.addPasskey({ signal: ctl.signal }), untilAborted(ctl.signal)])
       setPasskeySaved(true)
     } catch (err) {
-      setPasskeyError((err as Error)?.message || 'Passkey not saved')
+      if (ctl.signal.reason !== CLOSED) {
+        setPasskeyError(
+          ctl.signal.aborted ? 'Passkey not saved' : (err as Error)?.message || 'Passkey not saved'
+        )
+      }
+    } finally {
+      if (passkeyCtl.current === ctl) passkeyCtl.current = null
+      setPasskeyMode(null)
     }
-    setPasskeyBusy(false)
   }, [])
 
   const signInWithPasskey = useCallback(async () => {
+    const ctl = new AbortController()
+    passkeyCtl.current = ctl
+    setPasskeyMode('signin')
     setKeyBusy(true)
     setKeyError(null)
-    const client = await loadSignInClient()
-    if (!client?.signInWithPasskey) {
-      window.location.assign(passkeyHref('signin'))
-      return
-    }
+    let leaving = false
     try {
-      await client.signInWithPasskey()
+      const client = await Promise.race([loadSignInClient(), untilAborted(ctl.signal)])
+      if (!client?.signInWithPasskey) {
+        leaving = true
+        window.location.assign(passkeyHref('signin'))
+        return
+      }
+      await Promise.race([
+        client.signInWithPasskey({ signal: ctl.signal }),
+        untilAborted(ctl.signal)
+      ])
+      // The page now acts for a different identity: everything must re-mount.
+      // Busy stays on through the reload so nothing can be resubmitted.
+      leaving = true
+      window.location.reload()
     } catch (err) {
-      setKeyError((err as Error)?.message || 'Passkey sign-in cancelled')
-      setKeyBusy(false)
-      return
+      if (ctl.signal.reason !== CLOSED) {
+        setKeyError(
+          ctl.signal.aborted
+            ? 'Passkey sign-in cancelled'
+            : (err as Error)?.message || 'Passkey sign-in cancelled'
+        )
+      }
+    } finally {
+      if (passkeyCtl.current === ctl) passkeyCtl.current = null
+      if (!leaving) {
+        setPasskeyMode(null)
+        setKeyBusy(false)
+      }
     }
-    window.location.reload()
   }, [])
+
+  // Closing the popout (or leaving the page) abandons an open prompt.
+  useEffect(() => {
+    if (!open) cancelPasskey(CLOSED)
+  }, [open, cancelPasskey])
+  useEffect(() => () => cancelPasskey(CLOSED), [cancelPasskey])
 
   const pickLevel = useCallback(
     async (level: number) => {
@@ -349,6 +402,8 @@ export function ConnectedSettings({
                       saveName().catch(reportErr)
                     }
                     if (e.key === 'Escape') {
+                      // The edit's Escape, not the popout's (window listener).
+                      e.stopPropagation()
                       setEditingName(false)
                       setNameDraft(displayName ?? '')
                     }
@@ -366,19 +421,17 @@ export function ConnectedSettings({
                 </button>
               </span>
             ) : (
-              <span className="settings-popout__inline">
-                <span className="settings-popout__value">{displayName || 'Unnamed'}</span>
-                <button
-                  type="button"
-                  className="settings-popout__btn"
-                  onClick={() => {
-                    setNameDraft(displayName ?? '')
-                    setEditingName(true)
-                  }}
-                >
-                  Edit
-                </button>
-              </span>
+              <button
+                type="button"
+                className="settings-popout__value settings-popout__value--editable"
+                aria-label="Edit display name"
+                onClick={() => {
+                  setNameDraft(displayName ?? '')
+                  setEditingName(true)
+                }}
+              >
+                {displayName || 'Unnamed'}
+              </button>
             )}
           </section>
 
@@ -426,30 +479,6 @@ export function ConnectedSettings({
                 <span className="settings-popout__hint">Currently unavailable.</span>
               )}
             </section>
-          )}
-
-          {/* Save a passkey: signed-in people only (the site refuses others). */}
-          {!resolving && userType !== 'public' && passkeysSupported() && (
-            <>
-              <section className="settings-popout__row">
-                <span className="settings-popout__label">Passkey</span>
-                <button
-                  type="button"
-                  className="settings-popout__btn"
-                  disabled={passkeyBusy || passkeySaved}
-                  onClick={() => {
-                    savePasskey().catch(reportErr)
-                  }}
-                >
-                  {passkeySaved ? 'Saved' : passkeyBusy ? 'Saving…' : 'Save'}
-                </button>
-              </section>
-              {passkeyError && (
-                <span className="settings-popout__error" role="alert">
-                  {passkeyError}
-                </span>
-              )}
-            </>
           )}
 
           {/* Switch key. Signs in inline through the SITE's sign-in client
@@ -501,16 +530,31 @@ export function ConnectedSettings({
                   </button>
                 </span>
                 {passkeysSupported() && (
-                  <button
-                    type="button"
-                    className="settings-popout__btn"
-                    disabled={keyBusy}
-                    onClick={() => {
-                      signInWithPasskey().catch(reportErr)
-                    }}
-                  >
-                    Use a passkey
-                  </button>
+                  <span className="settings-popout__inline">
+                    <button
+                      type="button"
+                      className="settings-popout__btn"
+                      disabled={keyBusy}
+                      onClick={() => {
+                        signInWithPasskey().catch(reportErr)
+                      }}
+                    >
+                      {passkeyMode === 'signin' ? 'Waiting for passkey…' : 'Use a passkey'}
+                    </button>
+                  </span>
+                )}
+                {/* Cancel on a line of its own: in the row it would slide under
+                    the pointer, and a double click would cancel what it started. */}
+                {passkeyMode === 'signin' && (
+                  <span className="settings-popout__inline">
+                    <button
+                      type="button"
+                      className="settings-popout__btn"
+                      onClick={() => cancelPasskey()}
+                    >
+                      Cancel
+                    </button>
+                  </span>
                 )}
                 {keyError && (
                   <span
@@ -524,11 +568,54 @@ export function ConnectedSettings({
               </form>
             </section>
           ) : (
-            <section className="settings-popout__row">
-              <span className="settings-popout__label">Access key</span>
-              <button type="button" className="settings-popout__btn" onClick={openKeyForm}>
-                Switch key
-              </button>
+            <section className="settings-popout__row settings-popout__row--stack">
+              <span className="settings-popout__inline">
+                <span className="settings-popout__label settings-popout__label--grow">
+                  Access key
+                </span>
+                {/* Signed-in people only: the site refuses to save one for anyone else. */}
+                {!resolving && userType !== 'public' && passkeysSupported() && (
+                  <button
+                    type="button"
+                    className="settings-popout__btn"
+                    disabled={passkeyMode !== null || passkeySaved}
+                    onClick={() => {
+                      savePasskey().catch(reportErr)
+                    }}
+                  >
+                    {passkeySaved
+                      ? 'Passkey saved'
+                      : passkeyMode === 'save'
+                        ? 'Saving…'
+                        : 'Save passkey'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="settings-popout__btn"
+                  disabled={passkeyMode === 'save'}
+                  onClick={openKeyForm}
+                >
+                  Switch key
+                </button>
+              </span>
+              {/* Its own line, so nothing moves under a double click. */}
+              {passkeyMode === 'save' && (
+                <span className="settings-popout__inline">
+                  <button
+                    type="button"
+                    className="settings-popout__btn"
+                    onClick={() => cancelPasskey()}
+                  >
+                    Cancel
+                  </button>
+                </span>
+              )}
+              {passkeyError && (
+                <span className="settings-popout__error" role="alert">
+                  {passkeyError}
+                </span>
+              )}
             </section>
           )}
 

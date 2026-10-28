@@ -146,6 +146,26 @@
   font-weight: 500;
   color: var(--color-text);
 }
+/* The display name is its own edit control: click it to rename. No preflight
+ * here, so the button's UA chrome is reset explicitly. */
+.settings-popout__value--editable {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 4px 8px;
+  margin-right: -8px;
+  font-family: inherit;
+  cursor: text;
+  transition: border-color 0.15s ease;
+}
+.settings-popout__value--editable:hover,
+.settings-popout__value--editable:focus-visible {
+  border-color: var(--color-border);
+  outline: none;
+}
+.settings-popout__label--grow {
+  margin-right: auto;
+}
 
 /* Label + control pair on the right of a row. `min-width: 0` is load-bearing:
  * as a flex item of __row it otherwise floors at its own min-content width, and
