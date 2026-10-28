@@ -95,8 +95,21 @@ export {
 export type { ThemeName, ThemeFamily, DropdownPlacement, ThemeMode } from './types'
 export type { AppHeaderProps } from './components/AppHeader'
 export type { ConnectedSettingsProps } from './components/ConnectedSettings'
-export type { ContentLevelState, Identity, SignIn, SignInResult, Tier } from './lib/settingsClient'
-export { loadSignIn, switchKeyHref } from './lib/settingsClient'
+export type {
+  ContentLevelState,
+  Identity,
+  SignIn,
+  SignInClient,
+  SignInResult,
+  Tier
+} from './lib/settingsClient'
+export {
+  loadSignIn,
+  loadSignInClient,
+  passkeyHref,
+  passkeysSupported,
+  switchKeyHref
+} from './lib/settingsClient'
 export type { ToastProps } from './components/Toast'
 export type { ToasterProps, ToastState } from './components/Toaster'
 export type { UseToastReturn } from './hooks/useToast'

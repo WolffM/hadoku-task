@@ -31,6 +31,9 @@ import {
   setContentLevel,
   setDisplayName,
   loadSignIn,
+  loadSignInClient,
+  passkeyHref,
+  passkeysSupported,
   switchKeyHref,
   type ContentLevelState,
   type Tier
@@ -101,6 +104,12 @@ export function ConnectedSettings({
   const [keyDraft, setKeyDraft] = useState('')
   const [keyBusy, setKeyBusy] = useState(false)
   const [keyError, setKeyError] = useState<string | null>(null)
+
+  // Passkeys, through the same site client: save one while signed in, or
+  // sign in with one from the key form.
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
+  const [passkeySaved, setPasskeySaved] = useState(false)
+  const [passkeyError, setPasskeyError] = useState<string | null>(null)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -235,6 +244,41 @@ export function ConnectedSettings({
     // Busy stays on through the reload so the form can't be resubmitted.
     window.location.reload()
   }, [keyDraft])
+
+  const savePasskey = useCallback(async () => {
+    setPasskeyBusy(true)
+    setPasskeyError(null)
+    const client = await loadSignInClient()
+    if (!client?.addPasskey) {
+      window.location.assign(passkeyHref('add'))
+      return
+    }
+    try {
+      await client.addPasskey()
+      setPasskeySaved(true)
+    } catch (err) {
+      setPasskeyError((err as Error)?.message || 'Passkey not saved')
+    }
+    setPasskeyBusy(false)
+  }, [])
+
+  const signInWithPasskey = useCallback(async () => {
+    setKeyBusy(true)
+    setKeyError(null)
+    const client = await loadSignInClient()
+    if (!client?.signInWithPasskey) {
+      window.location.assign(passkeyHref('signin'))
+      return
+    }
+    try {
+      await client.signInWithPasskey()
+    } catch (err) {
+      setKeyError((err as Error)?.message || 'Passkey sign-in cancelled')
+      setKeyBusy(false)
+      return
+    }
+    window.location.reload()
+  }, [])
 
   const pickLevel = useCallback(
     async (level: number) => {
@@ -384,6 +428,30 @@ export function ConnectedSettings({
             </section>
           )}
 
+          {/* Save a passkey: signed-in people only (the site refuses others). */}
+          {!resolving && userType !== 'public' && passkeysSupported() && (
+            <>
+              <section className="settings-popout__row">
+                <span className="settings-popout__label">Passkey</span>
+                <button
+                  type="button"
+                  className="settings-popout__btn"
+                  disabled={passkeyBusy || passkeySaved}
+                  onClick={() => {
+                    savePasskey().catch(reportErr)
+                  }}
+                >
+                  {passkeySaved ? 'Saved' : passkeyBusy ? 'Saving…' : 'Save'}
+                </button>
+              </section>
+              {passkeyError && (
+                <span className="settings-popout__error" role="alert">
+                  {passkeyError}
+                </span>
+              )}
+            </>
+          )}
+
           {/* Switch key. Signs in inline through the SITE's sign-in client
               (the /auth page's own code path), never a post of ours. A real
               <form> with a username + current-password pair, so password
@@ -432,6 +500,18 @@ export function ConnectedSettings({
                     {keyBusy ? 'Signing in…' : 'Sign in'}
                   </button>
                 </span>
+                {passkeysSupported() && (
+                  <button
+                    type="button"
+                    className="settings-popout__btn"
+                    disabled={keyBusy}
+                    onClick={() => {
+                      signInWithPasskey().catch(reportErr)
+                    }}
+                  >
+                    Use a passkey
+                  </button>
+                )}
                 {keyError && (
                   <span
                     id="settings-popout-key-error"

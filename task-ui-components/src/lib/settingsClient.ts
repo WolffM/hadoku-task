@@ -245,11 +245,37 @@ export type SignIn = (key: string) => Promise<SignInResult>
  * which is the caller's cue to fall back to `switchKeyHref()`.
  */
 const SIGN_IN_MODULE = '/auth/sign-in.js'
-let signInModule: Promise<SignIn | null> | null = null
+let signInModule: Promise<SignInClient | null> | null = null
 
-export function loadSignIn(): Promise<SignIn | null> {
+/**
+ * The whole sign-in client. The passkey half is optional: a site build from
+ * before it exports only `signIn`, and the passkey controls then fall back to
+ * the /auth page (`passkeyHref()`), as a missing module does.
+ */
+export interface SignInClient {
+  signIn: SignIn
+  /** Like `signIn`, with a passkey in place of the key. Throws Error(message). */
+  signInWithPasskey?: () => Promise<SignInResult>
+  /** Saves a passkey for the signed-in person on this device. Throws Error(message). */
+  addPasskey?: () => Promise<{ saved: boolean; passkeys: number }>
+}
+
+export function loadSignInClient(): Promise<SignInClient | null> {
   signInModule ??= import(/* @vite-ignore */ SIGN_IN_MODULE).then(
-    (m: { signIn?: unknown }) => (typeof m.signIn === 'function' ? (m.signIn as SignIn) : null),
+    (m: Partial<Record<keyof SignInClient, unknown>>) =>
+      typeof m.signIn === 'function'
+        ? {
+            signIn: m.signIn as SignIn,
+            signInWithPasskey:
+              typeof m.signInWithPasskey === 'function'
+                ? (m.signInWithPasskey as SignInClient['signInWithPasskey'])
+                : undefined,
+            addPasskey:
+              typeof m.addPasskey === 'function'
+                ? (m.addPasskey as SignInClient['addPasskey'])
+                : undefined
+          }
+        : null,
     () => {
       // Let a later open retry: a failed fetch is not cached by the browser.
       signInModule = null
@@ -257,6 +283,28 @@ export function loadSignIn(): Promise<SignIn | null> {
     }
   )
   return signInModule
+}
+
+export function loadSignIn(): Promise<SignIn | null> {
+  return loadSignInClient().then(c => c?.signIn ?? null)
+}
+
+/** Whether this browser can use a passkey at all (WebAuthn present). */
+export function passkeysSupported(): boolean {
+  return typeof window !== 'undefined' && 'PublicKeyCredential' in window
+}
+
+/**
+ * The /auth page's passkey flows, for when the sign-in client can't be
+ * loaded: `add` saves one for the signed-in visitor, `signin` is the page with
+ * its passkey button. Both come back here afterwards.
+ */
+export function passkeyHref(mode: 'add' | 'signin'): string {
+  if (mode === 'signin') return switchKeyHref()
+  return (
+    '/auth?passkey=add&return=' +
+    encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)
+  )
 }
 
 /* ------------------------------------------------------------------ *
