@@ -98,6 +98,34 @@ const PASSKEY_DOT: React.CSSProperties = {
   pointerEvents: 'none'
 }
 
+/** Save passkey pulses while the dot is asking for it. Keyframes cannot be
+ *  inline, so the rule is injected once into the document instead, for the
+ *  same reason PASSKEY_DOT is inline. */
+const PASSKEY_PULSE_CLASS = 'settings-popout__btn--pulse'
+const PASSKEY_PULSE_STYLE_ID = 'settings-passkey-pulse'
+const PASSKEY_PULSE_CSS = `
+@keyframes settings-passkey-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 70%, transparent); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .${PASSKEY_PULSE_CLASS}:not(:disabled) {
+    animation: settings-passkey-pulse 1.6s ease-out infinite;
+  }
+}
+`
+
+function usePasskeyPulseStyle(active: boolean) {
+  useEffect(() => {
+    if (!active || document.getElementById(PASSKEY_PULSE_STYLE_ID)) return
+    const el = document.createElement('style')
+    el.id = PASSKEY_PULSE_STYLE_ID
+    el.textContent = PASSKEY_PULSE_CSS
+    document.head.appendChild(el)
+  }, [active])
+}
+
 const TIER_LABEL: Record<Tier, string> = {
   admin: 'Administrator',
   wife: 'Wife',
@@ -171,6 +199,7 @@ export function ConnectedSettings({
     passkeyCount === 0 &&
     !passkeySaved &&
     passkeysSupported()
+  usePasskeyPulseStyle(needsPasskey)
 
   // Keep local identity in sync when the host controls it via props.
   useEffect(() => {
@@ -607,7 +636,7 @@ export function ConnectedSettings({
                 {!resolving && userType !== 'public' && passkeysSupported() && (
                   <button
                     type="button"
-                    className={`settings-popout__btn${needsPasskey ? ' settings-popout__btn--primary' : ''}`}
+                    className={`settings-popout__btn${needsPasskey ? ` settings-popout__btn--primary ${PASSKEY_PULSE_CLASS}` : ''}`}
                     disabled={passkeyMode !== null || passkeySaved}
                     onClick={() => {
                       savePasskey().catch(reportErr)

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 
 /**
  * The settings popout's passkey controls and display name, interrupted at
@@ -77,6 +77,7 @@ async function load(page: Page) {
 
 test.describe('settings popout: asks someone with no passkey to save one', () => {
   const dot = (page: Page) => page.locator('.settings-toggle-btn__dot')
+  const animation = (el: Locator) => el.evaluate(n => getComputedStyle(n).animationName)
 
   test('no passkey: a dot on the gear and Save passkey leads, both gone once saved', async ({
     page
@@ -91,11 +92,25 @@ test.describe('settings popout: asks someone with no passkey to save one', () =>
     const panel = await openSettings(page)
     const save = panel.getByRole('button', { name: 'Save passkey' })
     await expect(save).toHaveClass(/settings-popout__btn--primary/)
+    expect(await animation(save)).toBe('settings-passkey-pulse')
     await save.click()
     await settle(page, 'ok')
-    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
+    const saved = panel.getByRole('button', { name: 'Passkey saved' })
+    await expect(saved).toBeVisible()
+    expect(await animation(saved)).toBe('none')
     await expect(dot(page)).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'User settings', exact: true })).toBeVisible()
+  })
+
+  test('no pulse for someone who asked for reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await mockWhoami(page, { userType: 'friend', name: 'alice', passkeys: 0 })
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await load(page)
+    const panel = await openSettings(page)
+    const save = panel.getByRole('button', { name: 'Save passkey' })
+    await expect(save).toHaveClass(/settings-popout__btn--primary/)
+    expect(await animation(save)).toBe('none')
   })
 
   for (const [why, identity] of [
