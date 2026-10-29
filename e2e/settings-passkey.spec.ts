@@ -379,3 +379,42 @@ test.describe('settings popout: display name', () => {
     expect(posted).toEqual([])
   })
 })
+
+test.describe('settings popout: a member deletes their own account', () => {
+  test('two separate clicks, then gone; nobody else sees the control', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'Stranger', passkeys: 1 })
+    let deletes = 0
+    await page.route('**/session/account/delete', route => {
+      deletes++
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ deleted: true })
+      })
+    })
+    await load(page)
+    const panel = await openSettings(page)
+    await expect(panel.getByText('Member', { exact: true })).toBeVisible()
+
+    // A double click on Delete never confirms: the confirm is a separate button.
+    await panel.getByRole('button', { name: 'Delete account' }).dblclick()
+    await expect(panel.getByRole('button', { name: 'Delete for good' })).toBeVisible()
+    expect(deletes).toBe(0)
+
+    // Keep backs out; the next try confirms.
+    await panel.getByRole('button', { name: 'Keep' }).click()
+    await panel.getByRole('button', { name: 'Delete account' }).click()
+    await Promise.all([
+      page.waitForURL(url => url.pathname === '/'),
+      panel.getByRole('button', { name: 'Delete for good' }).click()
+    ])
+    expect(deletes).toBe(1)
+  })
+
+  test('a friend has no delete control', async ({ page }) => {
+    await mockWhoami(page, { userType: 'friend', name: 'alice', passkeys: 1 })
+    await load(page)
+    const panel = await openSettings(page)
+    await expect(panel.getByRole('button', { name: 'Delete account' })).toHaveCount(0)
+  })
+})

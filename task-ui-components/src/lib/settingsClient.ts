@@ -29,6 +29,7 @@
 /** Edge-router / prefs-api endpoints (same-origin relative). */
 const CONTENT_LEVEL_PATH = '/prefs/api/v1/content-level'
 const SESSION_NAME = '/session/name'
+const ACCOUNT_DELETE = '/session/account/delete'
 const SESSION_WHOAMI = '/session/whoami'
 
 /**
@@ -121,6 +122,24 @@ export async function setContentLevel(level: number): Promise<ContentLevelState 
   }
 }
 
+/** Delete the signed-in member's own account (edge-router refuses any key
+ *  someone was handed). True when it is gone; the session cookie is cleared. */
+export async function deleteOwnAccount(): Promise<boolean> {
+  try {
+    const res = await fetch(ACCOUNT_DELETE, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: sessionHeaders(),
+      body: '{}',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+    if (!res.ok) return false
+    return ((await res.json()) as { deleted?: boolean }).deleted === true
+  } catch {
+    return false
+  }
+}
+
 /** POST a new display name for the signed-in user. Returns the stored name
  *  (may differ from the request for wp-* protected keys) or null on failure. */
 export async function setDisplayName(name: string): Promise<string | null> {
@@ -142,13 +161,14 @@ export async function setDisplayName(name: string): Promise<string | null> {
 }
 
 /**
- * The hadoku tier ladder, LOW to HIGH: `public < friend < service < wife < admin`.
+ * The hadoku tier ladder, LOW to HIGH: `public < member < friend < service < wife < admin`.
+ * `member` is a self-signed-up account (a passkey, no key), cardtable only.
  * Mirrors TIER_RANK in @wolffm/worker-utils, which this browser bundle cannot
  * import (it would pull hono into the client). A tier missing here does not
  * error — it fails the union and, worse, drops out of every `Record<Tier, …>`
  * lookup, so the caller renders as if unrecognised. Keep it complete.
  */
-export type Tier = 'public' | 'friend' | 'service' | 'wife' | 'admin'
+export type Tier = 'public' | 'member' | 'friend' | 'service' | 'wife' | 'admin'
 
 export interface Identity {
   userType: Tier

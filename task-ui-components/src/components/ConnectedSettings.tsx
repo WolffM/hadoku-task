@@ -27,6 +27,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SettingsIcon } from './ThemeIcons'
 import {
+  deleteOwnAccount,
   prefetchSettings,
   setContentLevel,
   setDisplayName,
@@ -131,6 +132,7 @@ const TIER_LABEL: Record<Tier, string> = {
   wife: 'Wife',
   service: 'Service',
   friend: 'Friend',
+  member: 'Member',
   public: 'Guest'
 }
 
@@ -170,6 +172,9 @@ export function ConnectedSettings({
   // How many passkeys sign this person in, from whoami; null = unknown.
   const [passkeyCount, setPasskeyCount] = useState<number | null>(null)
   const [passkeyError, setPasskeyError] = useState<string | null>(null)
+  // Delete account: one click arms it, a second, separate button confirms.
+  const [deleteStage, setDeleteStage] = useState<'idle' | 'confirm' | 'busy'>('idle')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const passkeyCtl = useRef<AbortController | null>(null)
   const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
 
@@ -673,6 +678,69 @@ export function ConnectedSettings({
               {passkeyError && (
                 <span className="settings-popout__error" role="alert">
                   {passkeyError}
+                </span>
+              )}
+            </section>
+          )}
+
+          {/* A self-made account (member) can delete itself. The confirm is a
+              separate button on its own line, so a double click on Delete
+              never confirms. */}
+          {!resolving && userType === 'member' && (
+            <section className="settings-popout__row settings-popout__row--stack">
+              <span className="settings-popout__inline">
+                <span className="settings-popout__label settings-popout__label--grow">Account</span>
+                {deleteStage === 'idle' ? (
+                  <button
+                    type="button"
+                    className="settings-popout__btn"
+                    onClick={() => {
+                      setDeleteError(null)
+                      setDeleteStage('confirm')
+                    }}
+                  >
+                    Delete account
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="settings-popout__btn"
+                    disabled={deleteStage === 'busy'}
+                    onClick={() => setDeleteStage('idle')}
+                  >
+                    Keep
+                  </button>
+                )}
+              </span>
+              {deleteStage !== 'idle' && (
+                <span className="settings-popout__inline">
+                  <button
+                    type="button"
+                    className="settings-popout__btn settings-popout__btn--primary"
+                    disabled={deleteStage === 'busy'}
+                    onClick={() => {
+                      setDeleteStage('busy')
+                      deleteOwnAccount()
+                        .then(deleted => {
+                          if (!deleted) {
+                            setDeleteError('Account not deleted')
+                            setDeleteStage('confirm')
+                            return
+                          }
+                          localStorage.removeItem('hadoku_session_id')
+                          localStorage.removeItem('hadoku_user_type')
+                          window.location.assign('/')
+                        })
+                        .catch(reportErr)
+                    }}
+                  >
+                    {deleteStage === 'busy' ? 'Deleting…' : 'Delete for good'}
+                  </button>
+                </span>
+              )}
+              {deleteError && (
+                <span className="settings-popout__error" role="alert">
+                  {deleteError}
                 </span>
               )}
             </section>
