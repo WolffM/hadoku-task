@@ -15,8 +15,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0(hono@4.12.23)(zod@4.1.12)
       '@wolffm/logger':
-        specifier: ^1.4.2
-        version: 1.4.2
+        specifier: ^1.4.3
+        version: 1.4.3
       '@wolffm/prefs-client':
         specifier: ^1.1.1
         version: 1.1.1(react@19.2.7)(zod@4.1.12)
@@ -27,8 +27,8 @@ importers:
         specifier: workspace:*
         version: link:themes
       '@wolffm/worker-utils':
-        specifier: ^1.6.17
-        version: 1.6.17(hono@4.12.23)(zod@4.1.12)
+        specifier: ^1.6.18
+        version: 1.6.18(hono@4.12.23)(zod@4.1.12)
       hono:
         specifier: ^4.12.23
         version: 4.12.23
@@ -70,8 +70,8 @@ importers:
         specifier: ^1.0.11
         version: 1.0.11
       '@wolffm/e2e-harness':
-        specifier: ^0.1.17
-        version: 0.1.17(@playwright/test@1.60.0)
+        specifier: ^0.1.18
+        version: 0.1.18(@playwright/test@1.60.0)
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
@@ -949,18 +949,14 @@ packages:
     resolution: {integrity: sha512-KVTwSm9ritt5OUAUjukHbAH80LnzzoMqoeAsXLJ5EYbQoTvCDRxqhVnOEMc3uQLoZ3rtIeWP6YAui+M1a1cROQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.11/dfcf666e4d6c844d78b24cf92bf4f4d2dda46610}
     engines: {node: '>=18'}
 
-  '@wolffm/e2e-harness@0.1.17':
-    resolution: {integrity: sha512-XH+EulAhUAgs5j3eaB8eQVON0OuY9vn1iTBEV/6MkJ1xzW/f7YWpSsGi+kcGgCrAn+aRMwxsvf2pmTfH1cRljA==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.1.17/96d05afe34cddd5a7f3e59b53f4562441d4bb776}
+  '@wolffm/e2e-harness@0.1.18':
+    resolution: {integrity: sha512-602x0d/HCdqlqX5cYKwsifCfv/ZxdeHJDVsDpZzn0REyo+RCfy+w5ITxto1uZvPyDiAsu8sbyhlStSt0/dN5Kg==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.1.18/814e79ba7990fc4f8d28f6d7eaf67620edeeb561}
     engines: {node: '>=18'}
     peerDependencies:
       '@playwright/test': '>=1.50.0'
 
-  '@wolffm/logger@1.4.0':
-    resolution: {integrity: sha512-JH84fEmaA/z0mC2UQcXupFoki9+u9cR6BIuD5aY6sV/KuYTLGdzX7BigzKCQ30jyRzi9WNRlIa/NEPcOh9uZYw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.0/975f8189fd42dcbc1d5bcf7be3d2c80bb5344043}
-    engines: {node: '>=18'}
-
-  '@wolffm/logger@1.4.2':
-    resolution: {integrity: sha512-HYkZiWLCqZdgfX1qDi5ll6uluXYXFUvhyCTlalKP0XiCeI+sn/ek8z4QCdPGVwAIC0QwvytI+JiXI979zZ3mOA==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.2/54de8260f39109e882bcf8eef245c4b8e6b88479}
+  '@wolffm/logger@1.4.3':
+    resolution: {integrity: sha512-Slc+zFMo1PODZ0+YuhmbdISNl/UPnB7//M+VMTN8ZbR1YMMDKnkFMR2I8gvt7invaYMno5N0iOW3iJkeCC5lUw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.3/b567775fac1a91f83fe006c9be7fa778fe76e073}
     engines: {node: '>=18'}
 
   '@wolffm/prefs-client@1.1.1':
@@ -970,8 +966,8 @@ packages:
       react: ^18.0.0 || ^19.0.0
       zod: ^4.0.0
 
-  '@wolffm/worker-utils@1.6.17':
-    resolution: {integrity: sha512-OnzLlpPVUxdSifV4doO6Vpei4WVShV2Pzd6y3QPn1hl+B5n8ix4z+26+6nVTmU12kLaEubUhjD27kb9Eoj3TOw==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.6.17/4920ea5a9dfc112e58c36b7a2a9bcb9c85f9aee4}
+  '@wolffm/worker-utils@1.6.18':
+    resolution: {integrity: sha512-KdTdaK9Sicf25VsJPKPpZ3LsGzGVqFGNQoChYk3aeOpipxBAaubG3Vfjbqu14da27x1XO7Y0bMI5J+62OkOdzQ==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.6.18/c9968e9e1cbb2ac40b70783007a093ac98781135}
     peerDependencies:
       hono: ^4.11.4
 
@@ -3153,23 +3149,21 @@ snapshots:
 
   '@wolffm/catalogue@1.0.11': {}
 
-  '@wolffm/e2e-harness@0.1.17(@playwright/test@1.60.0)':
+  '@wolffm/e2e-harness@0.1.18(@playwright/test@1.60.0)':
     dependencies:
       '@playwright/test': 1.60.0
 
-  '@wolffm/logger@1.4.0': {}
-
-  '@wolffm/logger@1.4.2': {}
+  '@wolffm/logger@1.4.3': {}
 
   '@wolffm/prefs-client@1.1.1(react@19.2.7)(zod@4.1.12)':
     dependencies:
       react: 19.2.7
       zod: 4.1.12
 
-  '@wolffm/worker-utils@1.6.17(hono@4.12.23)(zod@4.1.12)':
+  '@wolffm/worker-utils@1.6.18(hono@4.12.23)(zod@4.1.12)':
     dependencies:
       '@hono/zod-openapi': 1.4.0(hono@4.12.23)(zod@4.1.12)
-      '@wolffm/logger': 1.4.0
+      '@wolffm/logger': 1.4.3
       hono: 4.12.23
     transitivePeerDependencies:
       - zod
