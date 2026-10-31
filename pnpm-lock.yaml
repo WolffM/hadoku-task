@@ -969,13 +969,6 @@ packages:
       react: ^18.0.0 || ^19.0.0
       zod: ^4.0.0
 
-  '@wolffm/prefs-client@1.1.6':
-    resolution: {integrity: sha512-oqz8PU1qSTZpiHTGwbiUMlj0f19PFG1aO+9WX57CbpK5zmtbHTfqLJa5gDilyja7LeypxRn48kLeUz8C0nQmxw==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.6/bd53aa03d7813120f1dbbc932cb7610981202726}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: ^18.0.0 || ^19.0.0
-      zod: ^4.0.0
-
   '@wolffm/worker-utils@1.6.19':
     resolution: {integrity: sha512-6t8eWtBJMloS3bLlKNrA+jsLQByD1JmdSMnjHa5PE8UDLS6NawprSh6ZGiHG2DGyV6vAN/MNYhh6Rkp4EvcFmg==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.6.19/733a3e043eba43b6771c074064a6041ca500f542}
     peerDependencies:
