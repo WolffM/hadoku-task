@@ -30,13 +30,17 @@
  * // once, at the app root:
  * <HadokuThemeRoot>
  *   <AppHeader title="Print Tool" status={<ApiStatus status={apiStatus} />}>
- *     <MyAppPreferences />   // optional: appended AFTER the canonical rows
+ *     <MyAppPreferences />   // optional: the "App" tab, after the site's tabs
  *   </AppHeader>
  * </HadokuThemeRoot>
  * ```
  */
 import React from 'react'
-import { ConnectedSettings, type ConnectedSettingsProps } from './ConnectedSettings'
+import {
+  ConnectedSettings,
+  type AppSettingsTab,
+  type ConnectedSettingsProps
+} from './ConnectedSettings'
 import { HadokuThemePicker } from './HadokuThemePicker'
 
 export interface AppHeaderProps {
@@ -50,11 +54,14 @@ export interface AppHeaderProps {
    *  `name` exist because an app behind a path-prefixed shim may not be able to
    *  reach `/session/whoami` (conjure), NOT as a styling or layout hook. */
   settingsProps?: ConnectedSettingsProps
-  /** THE app-specific extension point. Rendered inside the settings popout as a
-   *  final section, under the four canonical rows. Put your app's own
-   *  preferences here — checkboxes, selects, whatever it needs; this slot is
-   *  deliberately unconstrained. What it cannot do is alter the rows above it. */
+  /** THE app-specific extension point. Rendered inside the settings popout as
+   *  one "App" tab, after the site's own tabs. Put your app's own preferences
+   *  here — checkboxes, selects, whatever it needs; this slot is deliberately
+   *  unconstrained. What it cannot do is alter the site's tabs. */
   children?: React.ReactNode
+  /** The same, split into tabs of the app's own: one per entry, after the
+   *  "App" tab if `children` is also given. See AppSettingsTab. */
+  appTabs?: AppSettingsTab[]
   /** Extra class on the <header> root. Layout only — it cannot reach the
    *  controls, which own their own markup. */
   className?: string
@@ -65,6 +72,7 @@ export function AppHeader({
   status,
   settingsProps,
   children,
+  appTabs,
   className = ''
 }: AppHeaderProps) {
   // No useHadokuTheme() call here: <HadokuThemePicker> reads the context and
@@ -80,7 +88,9 @@ export function AppHeader({
       <div className="app-header__actions">
         {status}
         <HadokuThemePicker />
-        <ConnectedSettings {...settingsProps}>{children}</ConnectedSettings>
+        <ConnectedSettings {...settingsProps} appTabs={appTabs}>
+          {children}
+        </ConnectedSettings>
       </div>
     </header>
   )

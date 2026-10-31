@@ -112,12 +112,6 @@
   color: var(--color-text);
 }
 
-/* Divider above the optional app-specific settings section. */
-.settings-popout__app {
-  border-top: 1px solid var(--color-border);
-  padding-top: 12px;
-}
-
 .settings-popout__header {
   font-weight: 600;
   font-size: 0.95rem;

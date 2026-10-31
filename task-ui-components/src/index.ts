@@ -95,7 +95,7 @@ export {
 // a prop type you cannot render is only useful for reimplementing the control.
 export type { ThemeName, ThemeFamily, DropdownPlacement, ThemeMode } from './types'
 export type { AppHeaderProps } from './components/AppHeader'
-export type { ConnectedSettingsProps } from './components/ConnectedSettings'
+export type { AppSettingsTab, ConnectedSettingsProps } from './components/ConnectedSettings'
 export type {
   ContentLevelState,
   Identity,

@@ -182,6 +182,8 @@ export type { HadokuThemeRootProps } from './HadokuThemeRoot'
 // Canonical theme prefs client — was copy-pasted into every child app.
 export { themePrefs, ThemePrefsSchema } from './themePrefs'
 export type { ThemePrefs } from './themePrefs'
+// The settings popout's remembered tab, on the same shared row.
+export { useSettingsTab } from './settingsTab'
 // Shared by every prefs client in the ecosystem, so a dev/E2E stack can point
 // them all at a local prefs-api with one global instead of mocking the network.
 export { resolvePrefsApiBase, PREFS_API_BASE_GLOBAL } from './prefsApiBase'

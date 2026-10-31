@@ -19,6 +19,7 @@ const APP_HEADER = 'h1.app-header__title'
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'User settings' }).click()
   await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+  await page.getByRole('tab', { name: 'Account' }).click()
 }
 
 /** Mock the whoami identity ConnectedSettings GETs when the popout opens. */

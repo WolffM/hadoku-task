@@ -61,19 +61,22 @@ const calls = (page: Page) =>
 const aborted = (page: Page) =>
   page.evaluate(() => (window as unknown as { __aborted: number }).__aborted)
 /**
- * Waits for the held prompt to be OPEN. The click loads the site's sign-in
- * client first (a dynamic import), so an abort sent straight after it can land
- * during the load, where it is honoured before any prompt exists: `aborted`
- * then reads 0, and the test fails under load for a reason it is not about.
+ * Waits for the `n`th held prompt to be OPEN. The click loads the site's
+ * sign-in client first (a dynamic import), so an abort sent straight after it
+ * can land during the load, where it is honoured before any prompt exists:
+ * `aborted` then reads 0. A settle sent that early finds no `__settle`, or the
+ * previous call's. Either way the test fails under load for a reason it is not
+ * about.
  */
-const promptOpen = (page: Page) => expect.poll(() => calls(page)).toBe(1)
+const promptOpen = (page: Page, n = 1) => expect.poll(() => calls(page)).toBe(n)
 const settle = (page: Page, msg: string) =>
   page.evaluate(m => (window as unknown as { __settle: (m: string) => void }).__settle(m), msg)
 
-async function openSettings(page: Page) {
+async function openSettings(page: Page, tab: 'Account' | 'Profile' = 'Account') {
   await page.getByRole('button', { name: 'User settings' }).click()
   const panel = page.locator('.settings-popout__panel')
   await expect(panel).toBeVisible()
+  await panel.getByRole('tab', { name: tab }).click()
   return panel
 }
 
@@ -101,6 +104,7 @@ test.describe('settings popout: asks someone with no passkey to save one', () =>
     await expect(save).toHaveClass(/settings-popout__btn--primary/)
     expect(await animation(save)).toBe('settings-passkey-pulse')
     await save.click()
+    await promptOpen(page)
     await settle(page, 'ok')
     const saved = panel.getByRole('button', { name: 'Passkey saved' })
     await expect(saved).toBeVisible()
@@ -161,6 +165,7 @@ test.describe('settings popout: save a passkey', () => {
     const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).click()
     await expect(panel.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    await promptOpen(page)
     await settle(page, 'ok')
     await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeDisabled()
     await expect(panel.getByRole('alert')).toHaveCount(0)
@@ -171,10 +176,12 @@ test.describe('settings popout: save a passkey', () => {
     await load(page)
     const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
     await settle(page, 'This device already has your passkey')
     await expect(panel.getByRole('alert')).toHaveText('This device already has your passkey')
     await panel.getByRole('button', { name: 'Save passkey' }).click()
     await expect(panel.getByRole('alert')).toHaveCount(0)
+    await promptOpen(page, 2)
     await settle(page, 'ok')
     await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
   })
@@ -201,6 +208,7 @@ test.describe('settings popout: save a passkey', () => {
     await expect(panel.getByRole('button', { name: 'Save passkey' })).toBeEnabled()
 
     await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page, 2)
     await settle(page, 'ok')
     await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
   })
@@ -286,6 +294,7 @@ test.describe('settings popout: sign in with a passkey', () => {
     const form = await openKeyForm(page)
     await form.getByRole('button', { name: 'Use a passkey' }).click()
     await expect(form.getByLabel('Access key')).toBeDisabled()
+    await promptOpen(page)
     const reloaded = page.waitForEvent('load')
     await settle(page, 'ok')
     await reloaded
@@ -312,6 +321,7 @@ test.describe('settings popout: sign in with a passkey', () => {
     await load(page)
     const form = await openKeyForm(page)
     await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await promptOpen(page)
     await settle(page, 'That passkey was retired with its key. Ask for a new login code.')
     await expect(form.getByRole('alert')).toHaveText(
       'That passkey was retired with its key. Ask for a new login code.'
@@ -361,7 +371,7 @@ test.describe('settings popout: display name', () => {
       })
     })
     await load(page)
-    const panel = await openSettings(page)
+    const panel = await openSettings(page, 'Profile')
     await expect(panel.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0)
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
@@ -389,7 +399,7 @@ test.describe('settings popout: display name', () => {
           })
     )
     await load(page)
-    const panel = await openSettings(page)
+    const panel = await openSettings(page, 'Profile')
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
     await input.fill('Bob')
@@ -413,7 +423,7 @@ test.describe('settings popout: display name', () => {
       return route.fulfill({ status: 200, body: '{}' })
     })
     await load(page)
-    const panel = await openSettings(page)
+    const panel = await openSettings(page, 'Profile')
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
     await input.fill('nope')
@@ -438,8 +448,9 @@ test.describe('settings popout: a member deletes their own account', () => {
       })
     })
     await load(page)
-    const panel = await openSettings(page)
+    const panel = await openSettings(page, 'Profile')
     await expect(panel.getByText('Member', { exact: true })).toBeVisible()
+    await panel.getByRole('tab', { name: 'Account' }).click()
 
     // A double click on Delete never confirms: the confirm is a separate button.
     await panel.getByRole('button', { name: 'Delete account' }).dblclick()

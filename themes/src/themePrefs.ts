@@ -31,7 +31,11 @@ z.config({ jitless: true })
 
 export const ThemePrefsSchema = z.object({
   theme: z.string().optional(),
-  themeMode: z.enum(['simple', 'advanced']).optional()
+  themeMode: z.enum(['simple', 'advanced']).optional(),
+  // The settings popout's last-open tab, keyed by app (see ./settingsTab). The
+  // popout is platform UI, not an app's, so it shares this row — which the
+  // theme has already read at boot, so remembering the tab costs no request.
+  settingsTabs: z.record(z.string(), z.string()).optional()
 })
 
 export type ThemePrefs = z.infer<typeof ThemePrefsSchema>

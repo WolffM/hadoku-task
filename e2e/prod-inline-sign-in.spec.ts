@@ -51,6 +51,7 @@ test.describe('Inline sign-in (production)', () => {
 
     const openForm = async () => {
       await page.getByRole('button', { name: 'User settings' }).click()
+      await page.getByRole('tab', { name: 'Account' }).click()
       await page.getByRole('button', { name: 'Switch key' }).click()
       return page.locator('.settings-popout__panel form')
     }
@@ -83,6 +84,7 @@ test.describe('Inline sign-in (production)', () => {
 
     // The settings tier row reflects the switch too.
     await page.getByRole('button', { name: 'User settings' }).click()
+    await page.getByRole('tab', { name: 'Profile' }).click()
     await expect(page.locator('.settings-popout__tier')).not.toHaveText('Guest')
   })
 })

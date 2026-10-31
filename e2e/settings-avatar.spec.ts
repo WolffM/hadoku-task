@@ -86,6 +86,7 @@ async function openSettings(page: Page, userType: 'friend' | 'public') {
   await page.waitForSelector(APP_HEADER, { timeout: 15000 })
   await page.getByRole('button', { name: 'User settings' }).click()
   await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+  await page.getByRole('tab', { name: 'Profile' }).click()
   await expect(page.locator('.settings-popout__tier')).toBeVisible({ timeout: 5000 })
 }
 
