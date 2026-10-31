@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/task-ui-components",
-  "version": "4.22.1",
+  "version": "4.22.2",
   "description": "Reusable UI components with Bento grid and metallic gradient support",
   "type": "module",
   "main": "dist/index.js",
@@ -67,6 +67,7 @@
   "devDependencies": {
     "@types/react": "^19.2.16",
     "@vitejs/plugin-react": "^5.1.1",
+    "@wolffm/prefs-client": "^1.1.6",
     "@wolffm/themes": "workspace:*",
     "typescript": "^5.0.0",
     "vite": "^7.2.4"

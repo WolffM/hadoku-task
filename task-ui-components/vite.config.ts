@@ -32,7 +32,18 @@ export default defineConfig({
       output: {
         preserveModules: true,
         preserveModulesRoot: 'src',
-        entryFileNames: '[name].js',
+        // A bundled dependency (only @wolffm/prefs-client/avatar, for
+        // AvatarPicker) would otherwise land at dist/node_modules/.pnpm/…, and
+        // npm and pnpm both strip every node_modules directory from a published
+        // package: the import would resolve on this disk and 404 for every app.
+        entryFileNames: chunk => {
+          const at = chunk.name.lastIndexOf('node_modules/')
+          if (at === -1) return '[name].js'
+          return `vendor/${chunk.name
+            .slice(at + 'node_modules/'.length)
+            .replace(/^@/, '')
+            .replace(/\/dist\//, '/')}.js`
+        },
         // Extract CSS to separate files
         assetFileNames: '[name][extname]'
       }

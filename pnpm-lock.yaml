@@ -124,6 +124,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
+      '@wolffm/prefs-client':
+        specifier: ^1.1.6
+        version: 1.1.6(react@19.2.8)(zod@4.1.12)
       '@wolffm/themes':
         specifier: workspace:*
         version: link:../themes
@@ -958,6 +961,13 @@ packages:
   '@wolffm/logger@1.4.3':
     resolution: {integrity: sha512-Slc+zFMo1PODZ0+YuhmbdISNl/UPnB7//M+VMTN8ZbR1YMMDKnkFMR2I8gvt7invaYMno5N0iOW3iJkeCC5lUw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.3/b567775fac1a91f83fe006c9be7fa778fe76e073}
     engines: {node: '>=18'}
+
+  '@wolffm/prefs-client@1.1.6':
+    resolution: {integrity: sha512-oqz8PU1qSTZpiHTGwbiUMlj0f19PFG1aO+9WX57CbpK5zmtbHTfqLJa5gDilyja7LeypxRn48kLeUz8C0nQmxw==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.6/bd53aa03d7813120f1dbbc932cb7610981202726}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      zod: ^4.0.0
 
   '@wolffm/prefs-client@1.1.6':
     resolution: {integrity: sha512-oqz8PU1qSTZpiHTGwbiUMlj0f19PFG1aO+9WX57CbpK5zmtbHTfqLJa5gDilyja7LeypxRn48kLeUz8C0nQmxw==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.6/bd53aa03d7813120f1dbbc932cb7610981202726}
@@ -3158,6 +3168,11 @@ snapshots:
   '@wolffm/prefs-client@1.1.6(react@19.2.7)(zod@4.1.12)':
     dependencies:
       react: 19.2.7
+      zod: 4.1.12
+
+  '@wolffm/prefs-client@1.1.6(react@19.2.8)(zod@4.1.12)':
+    dependencies:
+      react: 19.2.8
       zod: 4.1.12
 
   '@wolffm/worker-utils@1.6.19(hono@4.12.23)(zod@4.1.12)':

@@ -4,7 +4,7 @@
  * property of the PERSON (not the app):
  *   - current access tier (read-only, friendly label)
  *   - display name (inline edit → POST /session/name)
- *   - avatar (a link to hadoku.me/account, where it is managed)
+ *   - avatar: picture and character, chosen in place (AvatarPicker)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
  *   - switch key (an inline sign-in form, on the site's own sign-in client)
  *
@@ -27,6 +27,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SettingsIcon } from './ThemeIcons'
+import { AvatarPicker } from './AvatarPicker'
 import {
   deleteOwnAccount,
   prefetchSettings,
@@ -179,6 +180,9 @@ export function ConnectedSettings({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const passkeyCtl = useRef<AbortController | null>(null)
   const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
+
+  // Avatar: the picker loads only when opened, never at mount (AvatarPicker).
+  const [avatarOpen, setAvatarOpen] = useState(false)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -520,17 +524,24 @@ export function ConnectedSettings({
             )}
           </section>
 
-          {/* Avatar. Managed on /account (character, Discord, Steam, upload),
-              so this is only the way there: no thumbnail, because drawing one
-              would cost every app a request at mount. A new tab, so following
-              it never takes anyone out of a game mid-match. Hidden for public
-              callers, like the content pill: /account needs a session. */}
+          {/* Avatar: picture and character, chosen in place (AvatarPicker).
+              Collapsed until Change, so opening the gear costs no request and no
+              page load reads the avatar. Hidden for public callers, like the
+              content pill: an avatar needs a session. */}
           {!resolving && userType !== 'public' && (
-            <section className="settings-popout__row">
-              <span className="settings-popout__label">Avatar</span>
-              <a className="settings-popout__btn" href="/account" target="_blank" rel="noopener">
-                Change
-              </a>
+            <section className="settings-popout__row settings-popout__row--stack">
+              <span className="settings-popout__inline">
+                <span className="settings-popout__label settings-popout__label--grow">Avatar</span>
+                <button
+                  type="button"
+                  className="settings-popout__btn"
+                  aria-expanded={avatarOpen}
+                  onClick={() => setAvatarOpen(v => !v)}
+                >
+                  {avatarOpen ? 'Done' : 'Change'}
+                </button>
+              </span>
+              {avatarOpen && <AvatarPicker />}
             </section>
           )}
 
