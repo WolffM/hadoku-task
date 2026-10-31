@@ -33,6 +33,7 @@ import {
   type LinkProvider,
   type ResolvedAvatar
 } from '@wolffm/prefs-client/avatar'
+import { AVATAR_EVENT } from '../lib/avatarEvent'
 
 const client = createAvatarClient({ baseUrl: '/prefs' })
 
@@ -187,7 +188,11 @@ export function AvatarPicker() {
     setBusy(true)
     setError(null)
     try {
-      setSettings(await work())
+      const next = await work()
+      setSettings(next)
+      // The page under the popout (a watchparty room, a game) re-reads the
+      // avatar from this instead of waiting for its next join.
+      window.dispatchEvent(new window.CustomEvent<AvatarSettings>(AVATAR_EVENT, { detail: next }))
     } catch (err) {
       setError(message(err))
     } finally {

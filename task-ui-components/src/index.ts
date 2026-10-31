@@ -20,6 +20,7 @@
 export { HadokuThemePicker } from './components/HadokuThemePicker'
 export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
+export { AVATAR_EVENT } from './lib/avatarEvent'
 // Re-exported from @wolffm/themes, which now owns the context AND the provider
 // that fills it. These are RE-EXPORTS, not re-declarations: every consumer gets
 // the one context object from themes, which is what makes a duplicated copy of

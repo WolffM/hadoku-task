@@ -122,6 +122,13 @@ test.describe('settings avatar row', () => {
     })
     await openSettings(page, 'friend')
     const url = page.url()
+    await page.evaluate(() => {
+      window.addEventListener('hadoku:avatar', e => {
+        ;(window as unknown as { __avatar: unknown }).__avatar = (
+          e as Event & { detail: unknown }
+        ).detail
+      })
+    })
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
     await avatarRow(page).getByRole('radio', { name: 'Fern' }).click()
     await expect(avatarRow(page).getByRole('radio', { name: 'Fern' })).toHaveAttribute(
@@ -129,6 +136,11 @@ test.describe('settings avatar row', () => {
       'true'
     )
     expect(puts).toEqual([{ sprite: 'mage' }])
+    // The host page hears the change (watchparty sends the new character on).
+    const heard = await page.evaluate(
+      () => (window as unknown as { __avatar?: { sprite?: string } }).__avatar?.sprite
+    )
+    expect(heard).toBe('mage')
     expect(page.url()).toBe(url)
   })
 
