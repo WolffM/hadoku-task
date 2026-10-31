@@ -342,9 +342,11 @@ export function ConnectedSettings({
   }
 
   // A remembered tab past the edge of a narrow strip is scrolled into sight.
+  // jsdom implements no scrollIntoView, and every consumer's unit test that
+  // renders the popout runs there, so the call is optional.
   useEffect(() => {
     if (open)
-      tabRefs.current.get(activeTab)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      tabRefs.current.get(activeTab)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }, [open, activeTab])
 
   // Keep local identity in sync when the host controls it via props.
