@@ -9,6 +9,7 @@ import { test, expect, type Page, type Route } from '@playwright/test'
  *     popout costs no request); only Change loads it;
  *   - picking a character writes it through prefs-api, and the page never
  *     navigates;
+ *   - the character grid shows only while the picture is the character;
  *   - linking signs in through a POPUP opened inside the click, and the picker
  *     re-reads its settings when the callback page reports back on the
  *     BroadcastChannel (hadoku_site src/pages/account/link/callback.astro).
@@ -143,6 +144,43 @@ test.describe('settings avatar row', () => {
     )
     expect(heard).toBe('mage')
     expect(page.url()).toBe(url)
+  })
+
+  test('the character grid shows only while the picture is the character', async ({ page }) => {
+    await stubBoot(page, 'friend')
+    const discord = {
+      avatarUrl: 'https://cdn.discordapp.com/avatars/1/abc.png',
+      linkedAt: 1,
+      refreshedAt: 1
+    }
+    let source = 'discord'
+    await page.route(`**${AVATAR_PATH}`, async route => {
+      if (route.request().method() === 'PUT') {
+        source = (route.request().postDataJSON() as { source: string }).source
+      }
+      await json(
+        route,
+        settings({
+          linked: { discord },
+          choice: source,
+          avatar:
+            source === 'discord'
+              ? { source, url: discord.avatarUrl, sprite: 'sage' }
+              : { source: 'sprite', sprite: 'sage' }
+        })
+      )
+    })
+    await openSettings(page, 'friend')
+    await avatarRow(page).getByRole('button', { name: 'Change' }).click()
+    const picture = avatarRow(page).getByRole('radiogroup', { name: 'Picture' })
+    await expect(picture.getByRole('radio', { name: 'Discord' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    await expect(avatarRow(page).getByRole('radiogroup', { name: 'Character' })).toHaveCount(0)
+
+    await picture.getByRole('radio', { name: 'Character' }).click()
+    await expect(avatarRow(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
   })
 
   test('linking opens a popup after the consent step, and reads back when it reports', async ({

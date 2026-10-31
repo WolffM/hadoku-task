@@ -131,8 +131,7 @@ const S = {
   },
   line: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   grow: { flex: 1, minWidth: 0 },
-  list: { margin: 0, paddingLeft: 18, fontSize: '0.75rem', lineHeight: 1.45 },
-  fine: { fontSize: '0.7rem', color: 'var(--color-text-secondary)', lineHeight: 1.4, margin: 0 }
+  list: { margin: 0, paddingLeft: 18, fontSize: '0.75rem', lineHeight: 1.45 }
 } satisfies Record<string, React.CSSProperties>
 
 function portraitUrl(c: Character): string {
@@ -277,49 +276,49 @@ export function AvatarPicker() {
         ))}
       </div>
 
-      <span className="settings-popout__label">Character</span>
-      {sets ? (
-        <>
-          {sets.length > 1 && (
-            <div style={S.sets}>
-              {sets.map((s, i) => (
+      {shown.source === 'sprite' &&
+        (sets ? (
+          <>
+            {sets.length > 1 && (
+              <div style={S.sets}>
+                {sets.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`settings-popout__btn${i === setIdx ? ' settings-popout__btn--primary' : ''}`}
+                    onClick={() => setSetIdx(i)}
+                  >
+                    {s.id}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={S.grid} role="radiogroup" aria-label="Character">
+              {current?.characters.map(c => (
                 <button
-                  key={s.id}
+                  key={c.id}
                   type="button"
-                  className={`settings-popout__btn${i === setIdx ? ' settings-popout__btn--primary' : ''}`}
-                  onClick={() => setSetIdx(i)}
+                  role="radio"
+                  aria-checked={settings.sprite === c.id}
+                  aria-label={c.name}
+                  title={c.name}
+                  disabled={busy}
+                  style={{
+                    ...S.cell,
+                    borderColor: settings.sprite === c.id ? c.color : 'transparent'
+                  }}
+                  onClick={() => {
+                    run(() => client.update({ sprite: c.id })).catch(reportErr)
+                  }}
                 >
-                  {s.id}
+                  <img src={portraitUrl(c)} alt="" style={S.img} />
                 </button>
               ))}
             </div>
-          )}
-          <div style={S.grid} role="radiogroup" aria-label="Character">
-            {current?.characters.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={settings.sprite === c.id}
-                aria-label={c.name}
-                title={c.name}
-                disabled={busy}
-                style={{
-                  ...S.cell,
-                  borderColor: settings.sprite === c.id ? c.color : 'transparent'
-                }}
-                onClick={() => {
-                  run(() => client.update({ sprite: c.id })).catch(reportErr)
-                }}
-              >
-                <img src={portraitUrl(c)} alt="" style={S.img} />
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <span className="settings-popout__hint">…</span>
-      )}
+          </>
+        ) : (
+          <span className="settings-popout__hint">…</span>
+        ))}
 
       {(['discord', 'steam'] as const).map(p => {
         const linked = settings.linked[p]
@@ -421,14 +420,6 @@ export function AvatarPicker() {
           {error}
         </span>
       )}
-
-      <p style={S.fine}>
-        Steam avatars via the Steam Web API. Steam is a trademark of Valve; hadoku.me is not
-        affiliated with Valve, Steam or Discord.{' '}
-        <a href="/privacy#avatars" target="_blank" rel="noopener">
-          What is kept
-        </a>
-      </p>
     </div>
   )
 }
