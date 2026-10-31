@@ -4,6 +4,7 @@
  * property of the PERSON (not the app):
  *   - current access tier (read-only, friendly label)
  *   - display name (inline edit → POST /session/name)
+ *   - avatar (a link to hadoku.me/account, where it is managed)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
  *   - switch key (an inline sign-in form, on the site's own sign-in client)
  *
@@ -498,6 +499,20 @@ export function ConnectedSettings({
               </button>
             )}
           </section>
+
+          {/* Avatar. Managed on /account (character, Discord, Steam, upload),
+              so this is only the way there: no thumbnail, because drawing one
+              would cost every app a request at mount. A new tab, so following
+              it never takes anyone out of a game mid-match. Hidden for public
+              callers, like the content pill: /account needs a session. */}
+          {!resolving && userType !== 'public' && (
+            <section className="settings-popout__row">
+              <span className="settings-popout__label">Avatar</span>
+              <a className="settings-popout__btn" href="/account" target="_blank" rel="noopener">
+                Change
+              </a>
+            </section>
+          )}
 
           {/* Content visibility level. Held back until the first-open fetch
               settles, so it lands in the same paint as the tier and name
