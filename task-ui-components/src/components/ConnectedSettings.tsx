@@ -33,6 +33,12 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
 import { AvatarPicker } from './AvatarPicker'
+
+// A grantee's own service credentials, with a QR encoder for TOTP enrolment:
+// its own chunk, fetched only when a grantee opens it.
+const ServiceAccess = React.lazy(() =>
+  import('./ServiceAccess').then(m => ({ default: m.ServiceAccess }))
+)
 import {
   deleteOwnAccount,
   prefetchSettings,
@@ -261,6 +267,9 @@ export function ConnectedSettings({
 
   // Avatar: the picker loads only when opened, never at mount (AvatarPicker).
   const [avatarOpen, setAvatarOpen] = useState(false)
+  // Service identities this person may mint for (whoami.serviceGrants).
+  const [serviceGrants, setServiceGrants] = useState(0)
+  const [serviceOpen, setServiceOpen] = useState(false)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -378,9 +387,10 @@ export function ConnectedSettings({
   useEffect(() => {
     let live = true
     prefetchSettings({ userType: userTypeProp, name: nameProp })
-      .then(({ identity, content: state, passkeys }) => {
+      .then(({ identity, content: state, passkeys, serviceGrants: grants }) => {
         if (!live) return
         setPasskeyCount(passkeys)
+        setServiceGrants(grants)
         // Props stay authoritative: the host passed them because it can see an
         // identity this component can't resolve for itself.
         if (userTypeProp === undefined) {
@@ -718,6 +728,31 @@ export function ConnectedSettings({
                       </button>
                     </span>
                     {avatarOpen && <AvatarPicker />}
+                  </section>
+                )}
+
+                {/* Service access: only for someone the operator granted a
+              service identity. Collapsed until Open, like Avatar. */}
+                {!resolving && serviceGrants > 0 && (
+                  <section className="settings-popout__row settings-popout__row--stack">
+                    <span className="settings-popout__inline">
+                      <span className="settings-popout__label settings-popout__label--grow">
+                        Service access
+                      </span>
+                      <button
+                        type="button"
+                        className="settings-popout__btn"
+                        aria-expanded={serviceOpen}
+                        onClick={() => setServiceOpen(v => !v)}
+                      >
+                        {serviceOpen ? 'Done' : 'Open'}
+                      </button>
+                    </span>
+                    {serviceOpen && (
+                      <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
+                        <ServiceAccess />
+                      </React.Suspense>
+                    )}
                   </section>
                 )}
               </>

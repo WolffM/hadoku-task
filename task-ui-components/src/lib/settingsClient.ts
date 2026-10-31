@@ -56,6 +56,10 @@ const WHOAMI_GLOBAL = '__hadokuWhoami'
  *
  * `passkeys` (edge-router ≥ 2026-10-28) counts the passkeys that sign this
  * session in. Absent means unknown, never none.
+ *
+ * `serviceGrants` (edge-router ≥ 2026-10-31) counts the service identities
+ * this person may mint their own credentials for; Service access shows only
+ * above zero.
  */
 interface WhoamiBody {
   valid?: boolean
@@ -64,6 +68,7 @@ interface WhoamiBody {
   contentLevel?: number
   maxContentLevel?: number
   passkeys?: number
+  serviceGrants?: number
 }
 
 // Hard timeout on every settings request. Without it, a request throttled by
@@ -293,6 +298,17 @@ export interface SignInClient {
   signInWithPasskey?: (opts?: { signal?: AbortSignal }) => Promise<SignInResult>
   /** Saves a passkey for the signed-in person on this device. Throws Error(message). */
   addPasskey?: (opts?: { signal?: AbortSignal }) => Promise<{ saved: boolean; passkeys: number }>
+  /** A fresh passkey tap from the signed-in person; the assertion to post. Throws Error(message). */
+  stepUpPasskey?: (opts?: { signal?: AbortSignal }) => Promise<PasskeyAssertion>
+}
+
+/** What `stepUpPasskey` resolves to: the WebAuthn assertion, base64url fields. */
+export interface PasskeyAssertion {
+  id: string
+  clientDataJSON: string
+  authenticatorData: string
+  signature: string
+  userHandle: string | null
 }
 
 export function loadSignInClient(): Promise<SignInClient | null> {
@@ -308,6 +324,10 @@ export function loadSignInClient(): Promise<SignInClient | null> {
             addPasskey:
               typeof m.addPasskey === 'function'
                 ? (m.addPasskey as SignInClient['addPasskey'])
+                : undefined,
+            stepUpPasskey:
+              typeof m.stepUpPasskey === 'function'
+                ? (m.stepUpPasskey as SignInClient['stepUpPasskey'])
                 : undefined
           }
         : null,
@@ -353,6 +373,8 @@ export interface SettingsSnapshot {
   content: ContentLevelState | null
   /** Passkeys that sign this person in; null = unknown (older edge, host-supplied identity). */
   passkeys: number | null
+  /** Service identities this person may mint for; 0 when unknown. */
+  serviceGrants: number
 }
 
 /** Identity the host already knows, so we don't ask the server for it again. */
@@ -432,7 +454,12 @@ async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSn
     contentPromise,
     bodyPromise
   ])
-  return { identity, content, passkeys: passkeysFromWhoami(body) }
+  return {
+    identity,
+    content,
+    passkeys: passkeysFromWhoami(body),
+    serviceGrants: body?.valid && typeof body.serviceGrants === 'number' ? body.serviceGrants : 0
+  }
 }
 
 function passkeysFromWhoami(body: WhoamiBody | null): number | null {
