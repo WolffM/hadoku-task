@@ -140,9 +140,15 @@ export async function deleteOwnAccount(): Promise<boolean> {
   }
 }
 
-/** POST a new display name for the signed-in user. Returns the stored name
- *  (may differ from the request for wp-* protected keys) or null on failure. */
-export async function setDisplayName(name: string): Promise<string | null> {
+/**
+ * POST a new display name for the signed-in user. Answers the stored name (may
+ * differ from the request for wp-* protected keys), or why it was refused: the
+ * server's own words where it gave any ("That display name is already taken"),
+ * so the editor can say them.
+ */
+export type RenameResult = { ok: true; name: string | null } | { ok: false; error: string }
+
+export async function setDisplayName(name: string): Promise<RenameResult> {
   try {
     const res = await fetch(SESSION_NAME, {
       method: 'POST',
@@ -151,12 +157,16 @@ export async function setDisplayName(name: string): Promise<string | null> {
       body: JSON.stringify({ name }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null
+      const said = typeof body?.error === 'string' ? body.error : null
+      return { ok: false, error: said ?? `Not saved (${res.status})` }
+    }
     const body = (await res.json()) as { ok: boolean; name: string | null }
     patchSnapshot(prev => ({ ...prev, identity: { ...prev.identity, name: body.name } }))
-    return body.name
+    return { ok: true, name: body.name }
   } catch {
-    return null
+    return { ok: false, error: 'Not saved: no connection' }
   }
 }
 

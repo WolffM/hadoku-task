@@ -183,6 +183,11 @@
    * has something to grow into now that its basis is 0. */
   flex: 1 1 auto;
   min-width: 0;
+  flex-wrap: wrap;
+}
+/* A refused rename's reason, on its own line under the input. */
+.settings-popout__inline > .settings-popout__error {
+  flex-basis: 100%;
 }
 
 .settings-popout__tier {

@@ -154,6 +154,7 @@ export function ConnectedSettings({
   const [nameDraft, setNameDraft] = useState(resolvedName ?? '')
   const [editingName, setEditingName] = useState(false)
   const [nameSaving, setNameSaving] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
   const [displayName, setLocalName] = useState<string | null>(resolvedName)
 
   // Key swap. The draft lives only in this state and the input: it is never
@@ -279,13 +280,17 @@ export function ConnectedSettings({
       return
     }
     setNameSaving(true)
-    const stored = await setDisplayName(trimmed)
+    const result = await setDisplayName(trimmed)
     setNameSaving(false)
-    if (stored !== null) {
-      setLocalName(stored)
-      setNameDraft(stored)
-      onNameChange?.(stored)
+    // A refusal keeps the editor open on the draft, saying why.
+    if (!result.ok) {
+      setNameError(result.error)
+      return
     }
+    setNameError(null)
+    setLocalName(result.name)
+    setNameDraft(result.name ?? '')
+    if (result.name !== null) onNameChange?.(result.name)
     setEditingName(false)
   }, [nameDraft, displayName, onNameChange])
 
@@ -461,7 +466,12 @@ export function ConnectedSettings({
                   maxLength={64}
                   autoFocus
                   disabled={nameSaving}
-                  onChange={e => setNameDraft(e.target.value)}
+                  aria-invalid={nameError !== null}
+                  aria-describedby={nameError ? 'settings-popout-name-error' : undefined}
+                  onChange={e => {
+                    setNameDraft(e.target.value)
+                    setNameError(null)
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       saveName().catch(reportErr)
@@ -470,6 +480,7 @@ export function ConnectedSettings({
                       // The edit's Escape, not the popout's (window listener).
                       e.stopPropagation()
                       setEditingName(false)
+                      setNameError(null)
                       setNameDraft(displayName ?? '')
                     }
                   }}
@@ -484,6 +495,15 @@ export function ConnectedSettings({
                 >
                   {nameSaving ? '…' : 'Save'}
                 </button>
+                {nameError && (
+                  <span
+                    id="settings-popout-name-error"
+                    className="settings-popout__error"
+                    role="alert"
+                  >
+                    {nameError}
+                  </span>
+                )}
               </span>
             ) : (
               <button

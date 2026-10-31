@@ -60,6 +60,13 @@ const calls = (page: Page) =>
   page.evaluate(() => (window as unknown as { __calls: number }).__calls)
 const aborted = (page: Page) =>
   page.evaluate(() => (window as unknown as { __aborted: number }).__aborted)
+/**
+ * Waits for the held prompt to be OPEN. The click loads the site's sign-in
+ * client first (a dynamic import), so an abort sent straight after it can land
+ * during the load, where it is honoured before any prompt exists: `aborted`
+ * then reads 0, and the test fails under load for a reason it is not about.
+ */
+const promptOpen = (page: Page) => expect.poll(() => calls(page)).toBe(1)
 const settle = (page: Page, msg: string) =>
   page.evaluate(m => (window as unknown as { __settle: (m: string) => void }).__settle(m), msg)
 
@@ -179,6 +186,7 @@ test.describe('settings popout: save a passkey', () => {
     await load(page)
     const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
     // No switching mid-prompt; Cancel is on its own line.
     await expect(panel.getByRole('button', { name: 'Switch key' })).toBeDisabled()
     await panel.getByRole('button', { name: 'Cancel' }).click()
@@ -202,6 +210,7 @@ test.describe('settings popout: save a passkey', () => {
     await load(page)
     let panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
     await page.keyboard.press('Escape')
     await expect(panel).toBeHidden()
     expect(await aborted(page)).toBe(1)
@@ -228,6 +237,7 @@ test.describe('settings popout: save a passkey', () => {
     await load(page)
     const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
     await page.locator('.settings-popout__overlay').click({ position: { x: 5, y: 5 } })
     await expect(panel).toBeHidden()
     expect(await aborted(page)).toBe(1)
@@ -288,6 +298,7 @@ test.describe('settings popout: sign in with a passkey', () => {
     const form = await openKeyForm(page)
     await form.getByRole('button', { name: 'Use a passkey' }).click()
     await expect(form.getByRole('button', { name: 'Waiting for passkey…' })).toBeDisabled()
+    await promptOpen(page)
     await form.getByRole('button', { name: 'Cancel' }).click()
     await expect(form.getByRole('alert')).toHaveText('Passkey sign-in cancelled')
     await expect(form.getByLabel('Access key')).toBeEnabled()
@@ -324,6 +335,7 @@ test.describe('settings popout: sign in with a passkey', () => {
     await load(page)
     const form = await openKeyForm(page)
     await form.getByRole('button', { name: 'Use a passkey' }).click()
+    await promptOpen(page)
     await page.keyboard.press('Escape')
     expect(await aborted(page)).toBe(1)
     const panel = await openSettings(page)
@@ -359,6 +371,39 @@ test.describe('settings popout: display name', () => {
     await input.press('Enter')
     await expect(panel.getByRole('button', { name: 'Edit display name' })).toHaveText('Alice W')
     expect(posted).toEqual(['Alice W'])
+  })
+
+  test('a refused name keeps the editor open and says why', async ({ page }) => {
+    let refuse = true
+    await page.route('**/session/name', route =>
+      refuse
+        ? route.fulfill({
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'That display name is already taken' })
+          })
+        : route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ ok: true, name: 'Alice W' })
+          })
+    )
+    await load(page)
+    const panel = await openSettings(page)
+    await panel.getByRole('button', { name: 'Edit display name' }).click()
+    const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
+    await input.fill('Bob')
+    await input.press('Enter')
+    await expect(panel.getByRole('alert')).toHaveText('That display name is already taken')
+    await expect(input).toHaveValue('Bob')
+    await expect(input).toHaveAttribute('aria-invalid', 'true')
+
+    // Typing clears the reason; a name that is free saves.
+    refuse = false
+    await input.fill('Alice W')
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await input.press('Enter')
+    await expect(panel.getByRole('button', { name: 'Edit display name' })).toHaveText('Alice W')
   })
 
   test('Escape abandons the edit and posts nothing', async ({ page }) => {
