@@ -585,6 +585,39 @@ Remove a specific tag from multiple tasks.
 
 ---
 
+## Account Erase (edge-internal)
+
+### POST `/task/api/_account/erase`
+
+Called only by hadoku_site's account deletion, beside prefs-api's
+`_account/erase` (IDENTITY_MODEL R12). The edge 404s every inbound path with an
+`_account` segment, so no page reaches it through the proxy. It needs the edge's
+seal (`X-Edge-Auth`), a signed-in tier and `X-User-Id`; anything else is a
+**401**.
+
+**Response 200:** the rows removed, per table. A second call answers zeros.
+
+```json
+{
+  "erased": {
+    "tasks": 4,
+    "task_claims": 1,
+    "task_claim_log": 1,
+    "task_events": 3,
+    "board_prefs": 5,
+    "board_shares": 1,
+    "boards": 2,
+    "board_meta": 0
+  }
+}
+```
+
+A board shared with anyone else stays whole, still owned by the erased id;
+everything else the person owns goes. The per-table rules are in
+`worker/src/account-erase.ts`.
+
+---
+
 ## Key Endpoint
 
 ### POST `/validate-key`

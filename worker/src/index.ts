@@ -339,6 +339,12 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   app.post('/task/api/mcp', async c => (await import('./mcp/handler')).handleMcp(c))
   app.get('/task/api/mcp', c => c.text('Method Not Allowed', 405))
 
+  // Account-erase hook (hadoku_site IDENTITY_MODEL R12): edge-internal, called
+  // only by account deletion under the edge's seal. See account-erase.ts.
+  app.post('/task/api/_account/erase', async c =>
+    (await import('./account-erase')).handleAccountErase(c)
+  )
+
   // One shell per group per handler, built once. A failed load is dropped so the
   // next request retries it instead of replaying the rejection forever.
   const shells = new Map<RouteGroup, Promise<OpenAPIHono<AppContext>>>()
