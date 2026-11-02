@@ -57,9 +57,17 @@ export interface AvatarDialogProps {
   returnFocus?: React.RefObject<HTMLElement | null>
   /** The person's display name, shown in the preview. */
   name?: string | null
+  /** Admins also see archived cosmetics. */
+  isAdmin?: boolean
 }
 
-export function AvatarDialog({ open, onClose, returnFocus, name = null }: AvatarDialogProps) {
+export function AvatarDialog({
+  open,
+  onClose,
+  returnFocus,
+  name = null,
+  isAdmin = false
+}: AvatarDialogProps) {
   const titleId = useId()
   const cardRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -110,7 +118,7 @@ export function AvatarDialog({ open, onClose, returnFocus, name = null }: Avatar
             Done
           </button>
         </div>
-        <AvatarBuilder name={name} />
+        <AvatarBuilder name={name} isAdmin={isAdmin} />
       </div>
     </div>,
     document.body

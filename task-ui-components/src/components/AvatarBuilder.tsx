@@ -8,8 +8,9 @@
  * screens stack the two.
  *
  * Cosmetics (`@wolffm/prefs-client/cosmetics`, bundled at build like the avatar
- * client): earned items equip on click; items not yet earned show how to earn
- * them and can be tried on in the preview, which saves nothing. An overlay
+ * client): what the person owns equips on click (every shown item is free but
+ * three earned in a Major); an earned item not yet earned shows how to earn
+ * it and can be tried on in the preview, which saves nothing. An overlay
  * image can be placed: drag it on the big preview, turn it with the top handle,
  * resize it with the corner handle, or use the sliders. Every move goes through
  * `fitPlacement`, the same function prefs-api runs before it stores one, so the
@@ -180,7 +181,6 @@ const S = {
     color: 'var(--color-text-muted)'
   },
   tabOn: { color: 'var(--color-text)', borderBottomColor: 'var(--color-primary)' },
-  count: { fontSize: '0.68rem', marginLeft: 4, opacity: 0.8, fontVariantNumeric: 'tabular-nums' },
   pane: { display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 8 },
   tile: {
@@ -347,9 +347,11 @@ function useDragScroll<T extends HTMLElement>() {
 export interface AvatarBuilderProps {
   /** The person's display name, for the preview. */
   name: string | null
+  /** Admins also see archived items (greyed; nobody can select one). */
+  isAdmin?: boolean
 }
 
-export function AvatarBuilder({ name }: AvatarBuilderProps) {
+export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
   const [settings, setSettings] = useState<AvatarSettings | null>(null)
   const [sets, setSets] = useState<CharacterSet[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -617,7 +619,6 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
       <div style={{ minWidth: 0 }}>
         <div ref={tabStrip} style={S.tabs} role="tablist" aria-label="Avatar">
           {tabs.map(t => {
-            const items = t === 'picture' ? [] : COSMETICS.filter(i => i.slot === t)
             return (
               <button
                 key={t}
@@ -628,15 +629,20 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
                 onClick={e => {
                   setTab(t)
                   setTryOn(null)
-                  e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+                  // Where the strip overflows (narrow screens), a tab in its
+                  // right half shifts the strip to the end and one in its left
+                  // half to the start, so the tabs past the chosen one show.
+                  const strip = e.currentTarget.parentElement
+                  if (strip && strip.scrollWidth > strip.clientWidth) {
+                    const right = tabs.indexOf(t) >= tabs.length / 2
+                    strip.scrollTo({
+                      left: right ? strip.scrollWidth - strip.clientWidth : 0,
+                      behavior: 'smooth'
+                    })
+                  }
                 }}
               >
                 {tabLabel(t)}
-                {t !== 'picture' && (
-                  <span style={S.count}>
-                    {items.filter(i => owned.has(i.id)).length}/{items.length}
-                  </span>
-                )}
               </button>
             )
           })}
@@ -652,6 +658,7 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
               tryOn={tryOn}
               showLocked={showLocked}
               onShowLocked={setShowLocked}
+              isAdmin={isAdmin}
               preview={id => {
                 const only: AvatarCosmetics = { [tab]: id ?? undefined }
                 if (tab === 'overlay') return avatarHtml({ src: picture, size: 40, worn: only })
@@ -812,13 +819,18 @@ interface SlotGridProps {
   tryOn: { slot: CosmeticSlot; id: string } | null
   showLocked: boolean
   onShowLocked: (on: boolean) => void
+  /** Admins see archived items, greyed and not selectable. */
+  isAdmin: boolean
   preview: (id: string | null) => string
   colour: React.CSSProperties
   onEquip: (id: string | null) => void
   onTry: (id: string) => void
 }
 
-/** One slot's items: None, then everything, earned or not. */
+/**
+ * One slot's items: None, then the shown items, free or earned. Archived items
+ * show only to admins, greyed and not selectable; nobody can wear one.
+ */
 function SlotGrid({
   slot,
   owned,
@@ -826,14 +838,15 @@ function SlotGrid({
   tryOn,
   showLocked,
   onShowLocked,
+  isAdmin,
   preview,
   colour,
   onEquip,
   onTry
 }: SlotGridProps) {
-  const items = COSMETICS.filter(i => i.slot === slot)
-  const locked = items.filter(i => !owned.has(i.id))
-  const shown = showLocked ? items : items.filter(i => owned.has(i.id))
+  const items = COSMETICS.filter(i => i.slot === slot && (!i.hidden || isAdmin))
+  const locked = items.filter(i => !i.hidden && !owned.has(i.id))
+  const shown = showLocked ? items : items.filter(i => i.hidden || owned.has(i.id))
 
   return (
     <>
@@ -848,6 +861,21 @@ function SlotGrid({
           <span style={S.tileName}>None</span>
         </button>
         {shown.map(item => {
+          if (item.hidden) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                disabled
+                aria-label={`${item.label}, archived`}
+                style={{ ...S.tile, cursor: 'not-allowed', opacity: 0.45 }}
+              >
+                <Html html={preview(item.id)} style={{ ...S.tilePv, ...colour }} />
+                <span style={S.tileName}>{item.label}</span>
+                <span style={S.tileEarn}>Archived</span>
+              </button>
+            )
+          }
           const own = owned.has(item.id)
           const on = equipped === item.id
           const trying = tryOn?.slot === slot && tryOn.id === item.id
@@ -856,7 +884,7 @@ function SlotGrid({
               key={item.id}
               type="button"
               aria-pressed={own ? on : trying}
-              aria-label={own ? item.label : `${item.label}, locked. ${item.earn}. Try it on.`}
+              aria-label={own ? item.label : `${item.label}, locked. ${item.earn ?? ''}. Try it on.`}
               style={{
                 ...S.tile,
                 ...(on ? S.tileOn : {}),
@@ -879,13 +907,12 @@ function SlotGrid({
           )
         })}
       </div>
-      <div style={S.foot}>
-        <span>
-          {locked.length
-            ? `${locked.length} still to earn. Pick one to try it on.`
-            : 'You have earned all of these.'}
-        </span>
-        {locked.length > 0 && (
+      {locked.length > 0 && (
+        <div style={S.foot}>
+          <span>
+            {locked.length === 1 ? 'One to earn.' : `${locked.length} to earn.`} Pick one to try it
+            on.
+          </span>
           <label>
             <input
               type="checkbox"
@@ -894,8 +921,8 @@ function SlotGrid({
             />{' '}
             Show locked
           </label>
-        )}
-      </div>
+        </div>
+      )}
     </>
   )
 }

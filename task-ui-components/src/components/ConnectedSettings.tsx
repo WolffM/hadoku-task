@@ -738,6 +738,7 @@ export function ConnectedSettings({
                       onClose={() => setAvatarOpen(false)}
                       returnFocus={avatarBtn}
                       name={displayName}
+                      isAdmin={userType === 'admin'}
                     />
                   </section>
                 )}

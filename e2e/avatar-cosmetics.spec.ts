@@ -4,9 +4,10 @@ import { mockShellApi } from './helpers/mock-api'
 
 /**
  * Avatar cosmetics in the avatar dialog (AvatarBuilder), against the REAL
- * prefs-api on the dev stack: what the operator gifts shows as earned, an
- * earned item equips and is stored, an unearned one can only be tried on, and
- * an overlay's placement is fitted to the allowed area before it is stored.
+ * prefs-api on the dev stack: free items and what the operator grants equip
+ * and are stored, an earned item not yet earned can only be tried on, archived
+ * items show to nobody, and an overlay's placement is fitted to the allowed
+ * area before it is stored.
  *
  * The operator's gift goes through the real admin route, by name, with
  * `X-Dev-Tier: admin` (worker/test/prefs-dev-server.ts). The dev user is
@@ -18,6 +19,8 @@ import { mockShellApi } from './helpers/mock-api'
  */
 
 const AVATAR = `${PREFS_BASE}/api/v1/_avatar`
+/** A phone: the dialog stacks, and the tab strip is narrower than its tabs. */
+const NARROW = { width: 360, height: 800 }
 const PORTFOLIO = `${PREFS_BASE}/api/v1/portfolio`
 const CHARACTERS = {
   sets: [
@@ -95,7 +98,7 @@ test.describe('avatar cosmetics', () => {
       user: { blob: { settingsTabs?: Record<string, string> } } | null
     }
     savedTabs = row.user?.blob.settingsTabs ?? {}
-    await gift(request, ['overlay.crown', 'effect.glint'])
+    await gift(request, ['overlay.crown'])
     const res = await request.put(`${AVATAR}/cosmetics`, {
       data: {
         equip: { effect: null, gradient: null, font: null, overlay: null, message: null },
@@ -112,13 +115,12 @@ test.describe('avatar cosmetics', () => {
     expect(res.ok(), await res.text()).toBe(true)
   })
 
-  test('a gift shows as earned, equips, and is stored', async ({ page, request }) => {
+  test('a granted item and a free one equip, and are stored', async ({ page, request }) => {
     const dialog = await openDialog(page)
     // The picture tab comes first, as before.
     await expect(dialog.getByRole('radio', { name: 'Fern' })).toBeVisible()
 
     await dialog.getByRole('tab', { name: /Overlay/ }).click()
-    await expect(dialog.getByRole('tab', { name: /Overlay/ })).toContainText('1/9')
     await page.evaluate(() => {
       window.addEventListener('hadoku:avatar', e => {
         ;(window as unknown as { __worn: unknown }).__worn = (
@@ -147,13 +149,20 @@ test.describe('avatar cosmetics', () => {
     await expect(preview.locator('.hc-name.hc-fx-glint')).toBeAttached()
   })
 
-  test('the tab strip drags sideways, so every tab can be reached', async ({ page }) => {
+  test('every tab fits at the dialog width, with no scrolling', async ({ page }) => {
+    const dialog = await openDialog(page)
+    const strip = dialog.getByRole('tablist', { name: 'Avatar' })
+    expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  })
+
+  test('on a narrow screen the tab strip drags sideways', async ({ page }) => {
+    await page.setViewportSize(NARROW)
     const dialog = await openDialog(page)
     const strip = dialog.getByRole('tablist', { name: 'Avatar' })
     const message = dialog.getByRole('tab', { name: /Message/ })
     const sb = await strip.boundingBox()
     if (!sb) throw new Error('the tab strip has no box')
-    // Six tabs with their counts are wider than the dialog's right column.
+    // Six tabs are wider than a phone-width dialog.
     expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
     const before = await message.boundingBox()
     expect(before && before.x + before.width > sb.x + sb.width).toBe(true)
@@ -169,23 +178,52 @@ test.describe('avatar cosmetics', () => {
     await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
     await message.click()
     await expect(message).toHaveAttribute('aria-selected', 'true')
-    await expect(dialog.getByRole('button', { name: /^Typewriter, locked\./ })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: /^Decode, locked\./ })).toBeVisible()
+  })
+
+  test('on a narrow screen, choosing a later tab shifts the strip to show the rest', async ({
+    page
+  }) => {
+    await page.setViewportSize(NARROW)
+    const dialog = await openDialog(page)
+    const strip = dialog.getByRole('tablist', { name: 'Avatar' })
+    const inView = async (name: RegExp) => {
+      const s = await strip.boundingBox()
+      const t = await dialog.getByRole('tab', { name }).boundingBox()
+      return !!s && !!t && t.x >= s.x - 1 && t.x + t.width <= s.x + s.width + 1
+    }
+    expect(await inView(/Message/)).toBe(false)
+    await dialog.getByRole('tab', { name: /Font/ }).click()
+    await expect.poll(() => inView(/Message/)).toBe(true)
+    // And back: an early tab shifts it to the start.
+    await dialog.getByRole('tab', { name: /Effect/ }).click()
+    await expect.poll(() => inView(/Picture/)).toBe(true)
   })
 
   test('an item not yet earned can be tried on, and saves nothing', async ({ page, request }) => {
     const dialog = await openDialog(page)
-    await dialog.getByRole('tab', { name: /Overlay/ }).click()
-    const halo = dialog.getByRole('button', { name: /^Halo, locked\./ })
-    await expect(halo).toContainText('Help a new player')
-    await halo.click()
+    await dialog.getByRole('tab', { name: /Effect/ }).click()
+    const twinkle = dialog.getByRole('button', { name: /^Twinkle, locked\./ })
+    await expect(twinkle).toContainText('Bronze or better in a Major')
+    await twinkle.click()
     const preview = dialog.getByRole('group', { name: 'Preview' })
-    await expect(preview.getByText(/Trying on Halo/)).toBeVisible()
-    await expect(preview.locator('img[src="/cosmetics/art/halo.webp"]')).toBeAttached()
-    expect((await stored(request)).cosmetics.loadout.equipped.overlay).toBeNull()
+    await expect(preview.getByText(/Trying on Twinkle/)).toBeVisible()
+    await expect(preview.locator('.hc-name.hc-fx-twinkle')).toBeAttached()
+    expect((await stored(request)).cosmetics.loadout.equipped.effect).toBeNull()
 
     await dialog.getByRole('button', { name: 'Take off' }).click()
-    await expect(preview.getByText(/Trying on Halo/)).toHaveCount(0)
-    await expect(preview.locator('img[src="/cosmetics/art/halo.webp"]')).toHaveCount(0)
+    await expect(preview.getByText(/Trying on Twinkle/)).toHaveCount(0)
+    await expect(preview.locator('.hc-name.hc-fx-twinkle')).toHaveCount(0)
+  })
+
+  test('archived items show to nobody: five fonts, no Metal', async ({ page }) => {
+    const dialog = await openDialog(page)
+    await dialog.getByRole('tab', { name: /Font/ }).click()
+    for (const label of ['Script', 'Surf', 'Gothic', 'Runic', 'Arcade']) {
+      await expect(dialog.getByRole('button', { name: label, exact: true })).toBeVisible()
+    }
+    await expect(dialog.getByRole('button', { name: /Metal/ })).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: /archived/ })).toHaveCount(0)
   })
 
   test('placing the crown: down is fine, above its own height is not', async ({
