@@ -52,7 +52,6 @@
     "lint:css": "stylelint \"src/**/*.css\" && pnpm --filter @wolffm/themes run validate",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --cache",
-    "version:patch": "pnpm version patch --no-git-tag-version",
     "trim-changelog": "node scripts/trim-changelog.js",
     "prepare": "git config core.hooksPath .husky 2>/dev/null || true",
     "test:worker": "node scripts/run-worker-verify.mjs",

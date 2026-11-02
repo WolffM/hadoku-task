@@ -1,25 +1,16 @@
 # Husky Git Hooks
 
-Pre-commit hooks for linting, formatting, and automatic version bumping.
+Pre-commit gates: typecheck, lint-staged (ESLint + Prettier on staged files),
+and the CSS/theme-token gate.
 
-## Pre-commit Hook
+## Versions
 
-Runs automatically before each commit:
-
-1. **Lint & Format** - ESLint + Prettier (auto-fixes what it can)
-2. **Version Bump** - Auto-increments package versions for source changes
-
-### Version Bump Rules
-
-| Package                      | Triggers on changes to                        |
-| ---------------------------- | --------------------------------------------- |
-| `@wolffm/task` (root)        | `src/`, `package.json`, `vite.config.*`       |
-| `@wolffm/themes`             | `themes/src/`, `themes/package.json`          |
-| `@wolffm/task-ui-components` | `task-ui-components/src/`, its `package.json` |
-
-- Patch increments: `1.2.3` → `1.2.4`
-- Rolls over at `.20`: `1.2.20` → `1.3.0`
-- Documentation changes (`.md` files) do NOT trigger bumps
+No commit carries a version number, and nobody edits one by hand. publish.yml
+sets each package's version at publish time with
+`WolffM/hadoku-actions/next-version` — one patch above the newest on the
+registry, written into the runner's workspace only. A committed version ABOVE
+the registry's newest is published as it stands, which is how a deliberate
+minor or major bump still works.
 
 ## Troubleshooting
 

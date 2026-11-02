@@ -9,7 +9,6 @@ import type { TokenEdits } from '@wolffm/themes/contract'
 export interface ThemeSource {
   commit: string
   css: string
-  versions: Record<string, string>
 }
 
 export interface TokenChange {
@@ -24,7 +23,6 @@ export type SaveResult =
       kind: 'committed'
       commit: string
       url: string
-      versions: Record<string, string>
       changes: TokenChange[]
     }
   | { kind: 'unchanged' }
@@ -76,7 +74,6 @@ export function createEditorApi(devTier?: string): EditorApi {
               kind: 'committed',
               commit: body.commit as string,
               url: body.url as string,
-              versions: body.versions as Record<string, string>,
               changes: body.changes as TokenChange[]
             }
           : { kind: 'unchanged' }

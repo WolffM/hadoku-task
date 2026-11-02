@@ -86,7 +86,10 @@ test.describe('Theme editor', () => {
     await expect(page.getByRole('button', { name: /^Save 1$/ })).toBeEnabled()
   })
 
-  test('Save commits the edit to main under new versions', async ({ page, request }) => {
+  test('Save commits the edit to main, and nothing but the stylesheet', async ({
+    page,
+    request
+  }) => {
     const before = (await (await request.get(DEV)).json()) as DevRepo
     await openEditor(page)
 
@@ -106,13 +109,12 @@ test.describe('Theme editor', () => {
     expect(after.message).toMatch(/^style\(themes\): theme editor — light \(1 token\)/)
     expect(after.message).toContain('Visible borders on Sun')
 
-    const v = (f: string, files: Record<string, string>) =>
-      (JSON.parse(files[f]) as { version: string }).version
+    // No version in the commit: publish.yml sets it at publish time.
     for (const f of ['themes/package.json', 'task-ui-components/package.json', 'package.json']) {
-      expect(v(f, after.files), f).not.toBe(v(f, before.files))
+      expect(after.files[f], f).toBe(before.files[f])
     }
     await expect(page.getByRole('status')).toContainText(
-      `@wolffm/themes ${v('themes/package.json', after.files)}`
+      'publishing @wolffm/themes and @wolffm/task'
     )
 
     // The editor reloads from the new head: nothing pending, new commit shown.

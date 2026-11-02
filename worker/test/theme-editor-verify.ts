@@ -3,8 +3,9 @@
  * editor's backend, which commits straight to main.
  *
  * A save skips the local pre-commit hook, so everything the hook would have
- * caught has to be caught here instead: the theme contract, the version bump,
- * and the bytes of the file (style.css is CRLF). Each is pinned below.
+ * caught has to be caught here instead: the theme contract and the bytes of the
+ * file (style.css is CRLF). And it commits no version — publish.yml sets that.
+ * Each is pinned below.
  *
  * GitHub is a stateful fake — the ref and raw contents the worker reads, and
  * mgmt-api's commit verb the worker saves through — seeded with the REAL
@@ -13,11 +14,9 @@
  * route through global fetch, so only api.github.com and mgmt-api are
  * intercepted.
  */
-import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createTaskHandler } from '../src/index'
-import { nextVersion } from '../src/routes/theme-editor'
 import { checkThemes, parseThemes } from '@wolffm/themes/contract'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 import { FakeGitHub, type Files } from './lib/fake-github'
@@ -101,7 +100,6 @@ interface Json {
   committed?: boolean
   commit?: string
   css?: string
-  versions?: Record<string, string>
   changes?: { theme: string; token: string; from: string; to: string }[]
   problems?: string[]
   conflicts?: { theme: string; token: string }[]
@@ -144,7 +142,6 @@ const save = (
   opts: { tier?: string; token?: string | null; serviceKey?: null } = {}
 ) => call('POST', '/themes/save', { ...opts, body })
 
-const version = (text: string) => (JSON.parse(text) as { version: string }).version
 const filesAt = (c: string) => gh.commit(c).files
 
 async function main_() {
@@ -204,14 +201,9 @@ async function main_() {
   r = await call('GET', '/themes/source')
   check('commit is the head of main', r.json.commit === gh.main, String(r.json.commit))
   check('css is byte-identical (CRLF kept)', r.json.css === real.get(STYLE))
-  check(
-    'versions are main’s',
-    r.json.versions?.['@wolffm/themes'] === version(must(real.get('themes/package.json'))),
-    JSON.stringify(r.json.versions)
-  )
 
   // -------------------------------------------------------------------
-  section('4. A good save commits to main under new versions')
+  section('4. A good save commits the stylesheet to main, and no version')
   // -------------------------------------------------------------------
   resetRepo()
   const before = gh.main
@@ -251,19 +243,14 @@ async function main_() {
   check('other theme edited too', t['ocean-light']['--color-border'] === '#9cc3dc')
   check('the committed file passes the contract', checkThemes(t).length === 0)
   for (const p of PKGS) {
-    const was = version(must(real.get(p)))
-    const now = must(made.files.get(p))
-    check(`${p}: ${was} → ${nextVersion(was)}`, version(now) === nextVersion(was), version(now))
-    check(
-      `${p}: nothing but the version changed`,
-      now === must(real.get(p)).replace(`"version": "${was}"`, `"version": "${nextVersion(was)}"`)
-    )
+    check(`${p}: untouched — CI sets versions`, made.files.get(p) === real.get(p))
   }
   check(
-    'response reports the new versions',
-    r.json.versions?.['@wolffm/task'] === nextVersion(version(must(real.get('package.json')))),
-    JSON.stringify(r.json.versions)
+    'the commit sent mgmt-api the stylesheet alone',
+    gh.lastCommitPaths.join() === STYLE,
+    gh.lastCommitPaths.join()
   )
+  check('response reports no versions', !('versions' in r.json), JSON.stringify(r.json))
   check(
     'commit message lists every change and who saved',
     /theme editor — light, ocean-light \(3 tokens\)/.test(made.message) &&
@@ -271,11 +258,6 @@ async function main_() {
       made.message.includes('Visible borders') &&
       made.message.includes('by matt'),
     made.message
-  )
-  check(
-    'not a feat: commit, so the version stays a patch bump',
-    !/^feat/.test(made.message),
-    made.message.split('\n')[0]
   )
 
   // -------------------------------------------------------------------
@@ -423,9 +405,8 @@ async function main_() {
   )
   check('the concurrent push’s file survives', final.files.get('README.md') === 'a concurrent push')
   check(
-    'versions still bumped exactly once',
-    version(must(final.files.get('themes/package.json'))) ===
-      nextVersion(version(must(real.get('themes/package.json'))))
+    'no package.json touched on the retry either',
+    PKGS.every(p => final.files.get(p) === real.get(p))
   )
 
   resetRepo()
@@ -449,27 +430,6 @@ async function main_() {
   check('save → 502', r.status === 502, `status=${r.status}`)
   r = await call('GET', '/themes/source')
   check('source → 502', r.status === 502, `status=${r.status}`)
-
-  // -------------------------------------------------------------------
-  section('11. nextVersion matches scripts/version-bump.mjs')
-  // -------------------------------------------------------------------
-  // Run the hook's OWN nextVersion in a child process rather than importing it:
-  // bundled into this harness, version-bump.mjs's "am I the CLI?" check sees
-  // itself as argv[1] and runs main() — which exits the process mid-test.
-  const samples = ['5.10.1', '5.10.19', '5.10.20', '1.0.0']
-  const hook = spawnSync(
-    process.execPath,
-    [
-      '--input-type=module',
-      '-e',
-      `import { nextVersion } from ${JSON.stringify(join(process.cwd(), 'scripts/version-bump.mjs'))}; console.log(JSON.stringify(${JSON.stringify(samples)}.map(nextVersion)))`
-    ],
-    { encoding: 'utf8' }
-  )
-  const hookNext = JSON.parse(hook.stdout) as string[]
-  samples.forEach((v, i) =>
-    check(`${v} → ${hookNext[i]}`, nextVersion(v) === hookNext[i], nextVersion(v))
-  )
 
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail) process.exit(1)

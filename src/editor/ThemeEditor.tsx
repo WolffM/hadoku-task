@@ -41,7 +41,6 @@ const DRAFTS_KEY = 'hadoku-theme-editor:drafts'
 
 interface Loaded {
   commit: string
-  versions: Record<string, string>
   originals: ThemeTokenMap
 }
 
@@ -238,7 +237,7 @@ export function ThemeEditor({ api, initialTheme }: { api: EditorApi; initialThem
   const load = useCallback(async () => {
     try {
       const src = await api.source()
-      setLoaded({ commit: src.commit, versions: src.versions, originals: parseThemes(src.css) })
+      setLoaded({ commit: src.commit, originals: parseThemes(src.css) })
       setLoadError(null)
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e))
@@ -354,7 +353,7 @@ export function ThemeEditor({ api, initialTheme }: { api: EditorApi; initialThem
           </select>
         </label>
         <span className="te-bar__meta" title={loaded.commit}>
-          main @ {loaded.commit.slice(0, 7)} · themes {loaded.versions['@wolffm/themes']}
+          main @ {loaded.commit.slice(0, 7)}
         </span>
         <span className="te-bar__spacer" />
         <input
@@ -557,8 +556,7 @@ function BannerView({
         <Icon name="check" />
         <span>
           Committed {result.changes.length} token{result.changes.length === 1 ? '' : 's'} to main —
-          publishing @wolffm/themes {result.versions['@wolffm/themes']}, @wolffm/task{' '}
-          {result.versions['@wolffm/task']}. Live on hadoku.me once the deploy finishes.{' '}
+          publishing @wolffm/themes and @wolffm/task. Live on hadoku.me once the deploy finishes.{' '}
           <a href={result.url} target="_blank" rel="noreferrer">
             View commit <Icon name="external" />
           </a>

@@ -3,8 +3,8 @@
  *
  *   GET  /task/api/themes/source — style.css as it stands on main, plus the
  *                                  commit it was read at
- *   POST /task/api/themes/save   — apply token edits and commit them to main
- *                                  under a new version, which publishes
+ *   POST /task/api/themes/save   — apply token edits and commit them to main,
+ *                                  which publishes
  *
  * Both are service tier and up. The page shell is gated at the edge too
  * (ROUTE_TIERS in hadoku_site), but the editor bundle under /mf/task/ is public
@@ -16,17 +16,17 @@
  * it that could go wrong here:
  *   - the theme contract (contract.mjs — the same code lint:css runs) must pass
  *     on the resulting file, or nothing is committed (422)
- *   - the version bump mirrors scripts/version-bump.mjs: a themes/ change bumps
- *     themes, task-ui-components and task, by nextVersion's patch/.20 rule.
- *     Bumping here means publish.yml finds unpublished versions and writes no
- *     chore(release) follow-up commit
  *   - values are re-serialized by normalizeColor, never copied from the request,
  *     so a request cannot smuggle CSS into the file
  *
  * The commit itself is made by mgmt-api (POST /api/repo/commit) as this
  * worker's own service key; the worker holds only a read token. mgmt-api allows
- * hadoku-task exactly these four paths, and a package.json may change only its
- * version.
+ * hadoku-task exactly the stylesheet.
+ *
+ * NO VERSION. A save commits style.css and nothing else: publish.yml sees a
+ * themes/ change, republishes @wolffm/themes and @wolffm/task (which bundles it),
+ * and sets each version at publish time (hadoku-actions/next-version). No
+ * commit in this repo carries a version number.
  *
  * Edits are token-level, so they re-apply cleanly onto a main that moved since
  * the editor loaded. The one case that refuses (409) is someone else having
@@ -53,20 +53,8 @@ import { githubToken, mgmtKey } from './board-automation'
 const REPO = 'WolffM/hadoku-task'
 const BRANCH = 'main'
 const STYLE_PATH = 'themes/src/style.css'
-/** Bumped together on a themes/ change — classify() in scripts/version-bump.mjs. */
-const BUMPED_PACKAGES = [
-  { name: '@wolffm/themes', file: 'themes/package.json' },
-  { name: '@wolffm/task-ui-components', file: 'task-ui-components/package.json' },
-  { name: '@wolffm/task', file: 'package.json' }
-]
 const MAX_ATTEMPTS = 3
 const GITHUB_TIMEOUT_MS = 10_000
-
-/** Next patch, rolling over to the next minor at .20 — nextVersion() in scripts/version-bump.mjs. */
-export function nextVersion(version: string): string {
-  const [maj, min, pat] = version.split('.').map(Number)
-  return pat === 20 ? `${maj}.${min + 1}.0` : `${maj}.${min}.${pat + 1}`
-}
 
 class GitHubError extends Error {
   constructor(
@@ -108,7 +96,7 @@ function github(token: string) {
 /**
  * The save's one write, through mgmt-api as this worker's own service key:
  * mgmt-api makes the tree, the commit on `base` and the fast-forward of main,
- * and allows only the stylesheet and the three package.json version bumps.
+ * and allows only the stylesheet.
  * Returns the new commit, or null when main moved past `base` (409).
  */
 async function commitThroughMgmt(
@@ -138,17 +126,6 @@ async function commitThroughMgmt(
   return body.commit
 }
 
-/** Rewrite only the `"version"` value, so the rest of package.json keeps its exact bytes. */
-function bumpPackageJson(text: string): { text: string; from: string; to: string } {
-  const from = (JSON.parse(text) as { version: string }).version
-  const to = nextVersion(from)
-  const out = text.replace(/("version"\s*:\s*")[^"]+(")/, `$1${to}$2`)
-  if ((JSON.parse(out) as { version: string }).version !== to) {
-    throw new Error('version rewrite did not take')
-  }
-  return { text: out, from, to }
-}
-
 function commitMessage(changes: TokenChange[], savedBy: string | undefined, note?: string) {
   const themes = [...new Set(changes.map(c => c.theme))]
   const subject = `style(themes): theme editor — ${themes.join(', ')} (${changes.length} token${changes.length === 1 ? '' : 's'})`
@@ -172,8 +149,7 @@ const ColorEditsSchema = z
 
 const SourceResponseSchema = z.object({
   commit: z.string(),
-  css: z.string(),
-  versions: z.record(z.string(), z.string())
+  css: z.string()
 })
 
 const SaveBodySchema = z.object({
@@ -193,7 +169,6 @@ const SaveResponseSchema = z.object({
   committed: z.boolean(),
   commit: z.string().optional(),
   url: z.string().optional(),
-  versions: z.record(z.string(), z.string()).optional(),
   changes: z.array(ChangeSchema)
 })
 
@@ -212,7 +187,7 @@ const json = <T extends z.ZodTypeAny>(schema: T, description: string) => ({
 })
 
 type SaveOutcome =
-  | { kind: 'committed'; commit: string; versions: Record<string, string>; changes: TokenChange[] }
+  | { kind: 'committed'; commit: string; changes: TokenChange[] }
   | { kind: 'unchanged' }
   | { kind: 'invalid'; message: string }
   | {
@@ -260,23 +235,12 @@ async function attemptSave(
   const problems = checkThemes(parseThemes(css))
   if (problems.length) return { kind: 'contract', problems }
 
-  const files: Record<string, string> = { [STYLE_PATH]: css }
-  const versions: Record<string, string> = {}
-  for (const pkg of BUMPED_PACKAGES) {
-    const bumped = bumpPackageJson(await gh.file(pkg.file, head))
-    files[pkg.file] = bumped.text
-    versions[pkg.name] = bumped.to
-  }
-
-  const commit = await commitThroughMgmt(
-    serviceKey,
-    head,
-    commitMessage(changes, savedBy, note),
-    files
-  )
+  const commit = await commitThroughMgmt(serviceKey, head, commitMessage(changes, savedBy, note), {
+    [STYLE_PATH]: css
+  })
   // The commit object mgmt-api made is now unreferenced; GitHub collects it.
   if (commit === null) return { kind: 'moved' }
-  return { kind: 'committed', commit, versions, changes }
+  return { kind: 'committed', commit, changes }
 }
 
 export function createThemeEditorRoutes() {
@@ -288,7 +252,7 @@ export function createThemeEditorRoutes() {
     tags: ['Theme editor'],
     summary: 'Read the theme stylesheet from main',
     description:
-      'themes/src/style.css exactly as it stands on main, the commit it was read at (send it back as `baseCommit` on save), and the current package versions. Service tier and up.',
+      'themes/src/style.css exactly as it stands on main, and the commit it was read at (send it back as `baseCommit` on save). Service tier and up.',
     responses: {
       200: json(SourceResponseSchema, 'The stylesheet at the head of main'),
       403: json(ErrorResponseSchema, 'Service tier required'),
@@ -307,13 +271,7 @@ export function createThemeEditorRoutes() {
     try {
       const commit = await gh.headCommit()
       const css = await gh.file(STYLE_PATH, commit)
-      const versions: Record<string, string> = {}
-      for (const pkg of BUMPED_PACKAGES) {
-        versions[pkg.name] = (
-          JSON.parse(await gh.file(pkg.file, commit)) as { version: string }
-        ).version
-      }
-      return c.json({ commit, css, versions }, 200)
+      return c.json({ commit, css }, 200)
     } catch (e) {
       logger.warn('theme editor: source read failed', { error: String(e) })
       return c.json({ error: 'Could not read the stylesheet from GitHub' }, 502)
@@ -326,7 +284,7 @@ export function createThemeEditorRoutes() {
     tags: ['Theme editor'],
     summary: 'Commit theme token edits to main',
     description:
-      'Applies `{ [theme]: { [--color-token]: color } }` to themes/src/style.css on main, re-runs the theme contract (the gate lint:css runs), bumps @wolffm/themes, @wolffm/task-ui-components and @wolffm/task, and commits — which publishes. Service tier and up.',
+      'Applies `{ [theme]: { [--color-token]: color } }` to themes/src/style.css on main, re-runs the theme contract (the gate lint:css runs), and commits the stylesheet alone — which publishes @wolffm/themes and @wolffm/task under versions CI sets. Service tier and up.',
     request: {
       body: { content: { 'application/json': { schema: SaveBodySchema } }, required: true }
     },
@@ -381,7 +339,6 @@ export function createThemeEditorRoutes() {
           case 'committed':
             logger.info('theme editor: committed', {
               commit: outcome.commit,
-              versions: outcome.versions,
               tokens: outcome.changes.length,
               savedBy
             })
@@ -390,7 +347,6 @@ export function createThemeEditorRoutes() {
                 committed: true,
                 commit: outcome.commit,
                 url: `https://github.com/${REPO}/commit/${outcome.commit}`,
-                versions: outcome.versions,
                 changes: outcome.changes
               },
               200

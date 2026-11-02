@@ -7,10 +7,9 @@
  * NOT run. `core.hooksPath` is `.husky/_`, which husky generates during install
  * and self-ignores (`.husky/_/.gitignore` is `*`), so it is never checked out —
  * only `.husky/pre-commit` and `.husky/README.md` are tracked. git finds no
- * hook directory, runs nothing, and says nothing. Every gate is skipped and
- * scripts/version-bump.mjs never fires, so the push lands unversioned and
- * publish.yml's backstop writes the follow-up commit on main that the hook
- * exists to prevent.
+ * hook directory, runs nothing, and says nothing. Every gate is skipped, so a
+ * commit that breaks typecheck, lint or the theme contract reaches main and is
+ * caught only by ci.yml after it landed.
  *
  * `pnpm install` fixes both halves of that: it runs husky's `prepare`, which
  * regenerates `.husky/_`, and it populates node_modules, without which the

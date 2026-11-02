@@ -26,6 +26,8 @@ export class FakeGitHub {
   commits = new Map<string, FakeCommit>()
   main = ''
   calls: string[] = []
+  /** The paths the last mgmt-api commit request carried, in request order. */
+  lastCommitPaths: string[] = []
   /** Refuse the next N saves with 409, as mgmt-api does when main moved. */
   refuseNextMoves = 0
   /** Runs between our read of main and our ref update — a concurrent push. */
@@ -144,6 +146,7 @@ export class FakeGitHub {
       message: string
       files: Record<string, string>
     }
+    this.lastCommitPaths = Object.keys(files)
     this.calls.push(`GET /git/commits/${base}`)
     const parent = this.commits.get(base)
     if (!parent) return reply(400, { success: false, error: `no commit ${base}` })

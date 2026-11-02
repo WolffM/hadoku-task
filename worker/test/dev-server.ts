@@ -202,6 +202,7 @@ const env = {
 } as Record<string, unknown>
 
 // ── The theme editor's repo ─────────────────────────────────────────────────
+// The package.json files are seeded so e2e can prove a save leaves them alone.
 const THEME_FILES = [
   'themes/src/style.css',
   'themes/package.json',

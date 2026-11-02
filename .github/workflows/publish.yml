@@ -6,15 +6,20 @@ on:
       - main  # Trigger on every push to main
     paths-ignore:
       # The Kate plugin and docs don't affect the published npm packages —
-      # skip the auto-bump/publish for plugin- or docs-only commits.
+      # skip the publish for plugin- or docs-only commits.
       - 'plugins/**'
       - 'docs/**'
       - '**/*.md'
       - '.github/workflows/kate-plugin.yml'
   workflow_dispatch:  # Allow manual trigger
 
+# No commit carries a version. Each changed package's version is set below
+# (hadoku-actions/next-version: one patch above the registry's newest) in this
+# workspace only, and nothing is written back to main. A committed version
+# ABOVE the registry's newest is published as it stands — the one way to make a
+# deliberate minor or major bump.
 permissions:
-  contents: write  # Changed from 'read' to allow auto-bumping versions
+  contents: read
   packages: write
 
 jobs:
@@ -24,12 +29,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
-          # The DEFAULT token, deliberately. It cannot push protected main, and
-          # does not need to: the release commit goes to bot/release and mgmt-api
-          # fast-forwards main onto it (hadoku-actions repo-action), so this repo
-          # holds no credential that can push main or reach any other repo.
-
-      - uses: WolffM/hadoku-actions/repo-action-cli@v1
 
       - uses: WolffM/hadoku-actions/setup-pnpm@v1
         id: pnpm
@@ -50,9 +49,9 @@ jobs:
           #
           # This used to fall through to the HEAD~1 branch below, on the argument
           # that re-evaluating the last commit still recovers a stranded publish.
-          # That holds for the version WALK, which starts from the registry and
-          # will publish a missing version as-is — but not for this gate, which
-          # vetoes the walk before it runs. A three-commit push where themes
+          # That holds for the version step, which reads the registry and so
+          # always has a fresh version to publish — but not for this gate, which
+          # vetoes the publish before it runs. A three-commit push where themes
           # changed first left no dispatch that could ship it, and the only way
           # out was a no-op commit under themes/.
           if [ "$EVENT" = "workflow_dispatch" ]; then
@@ -90,8 +89,7 @@ jobs:
           # a prefix that means "task", but `files` is ["dist", ...] so neither can
           # reach the tarball — only worker/src does, compiled into dist/worker.
           # Test harnesses and migration SQL must not burn a version, same as
-          # docs/, e2e/, scripts/ and plugins/. Mirrors DEV_ONLY in
-          # scripts/version-bump.mjs — the two must agree or CI keeps stepping in.
+          # docs/, e2e/, scripts/ and plugins/.
           if echo "$CHANGED" | grep -Ev "^(themes|task-ui-components)/" | grep -Ev "^worker/(test|migrations)/" | grep -qE "^(src/|worker/|package\.json|vite\.config\.|tsconfig\.|tsup\.)"; then task=true; fi
 
           # Dependency chain: `task` bundles both themes + task-ui-components,
@@ -179,6 +177,77 @@ jobs:
 
           echo "✅ All required source files present"
 
+      # Versions BEFORE any build: src/utils/version.ts imports each
+      # package.json and embeds the version in the bundle, and pnpm publish
+      # rewrites `workspace:*` to the dependency's version as it stands here.
+      # One patch above the registry's newest, in this workspace only. A
+      # package that did not change is never read; the dependency chain is the
+      # detect step's job.
+      #
+      # `published: 'true'` means the registry's newest was published by this
+      # very commit (its gitHead), so a re-run skips that publish and keeps the
+      # notify. CAVEAT, measured 2026-11-02: `pnpm publish` records NO gitHead
+      # (@wolffm/themes@5.13.17 and task@5.28.17 carry none), so here it is
+      # never 'true' and a re-run publishes one more patch. Harmless — newest
+      # wins — and pnpm publish stays: it is what rewrites `workspace:*`.
+      - name: Version UI Components package
+        id: version_ui
+        if: steps.changes.outputs.ui == 'true'
+        uses: WolffM/hadoku-actions/next-version@v1
+        with:
+          package-dir: task-ui-components
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+
+      - name: Version Themes package
+        id: version_themes
+        if: steps.changes.outputs.themes == 'true'
+        uses: WolffM/hadoku-actions/next-version@v1
+        with:
+          package-dir: themes
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+
+      - name: Version Task package
+        id: version_task
+        if: steps.changes.outputs.task == 'true'
+        uses: WolffM/hadoku-actions/next-version@v1
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+
+      # @wolffm/task's `dependencies` name themes and task-ui-components as
+      # `workspace:*`, which pnpm publish turns into the version in THIS
+      # workspace. For a package that changed, next-version just set it. For one
+      # that did not, package.json holds whatever was last committed — stale by
+      # design, since no commit carries a version — so task would ship pinned to
+      # an old release (and version.ts would log it). Point those at the
+      # registry's newest instead. An unreadable registry fails the step.
+      - name: Unchanged workspace dependencies carry the registry's newest
+        if: steps.changes.outputs.task == 'true' && (steps.changes.outputs.ui != 'true' || steps.changes.outputs.themes != 'true')
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
+          UI_CHANGED: ${{ steps.changes.outputs.ui }}
+          THEMES_CHANGED: ${{ steps.changes.outputs.themes }}
+        run: |
+          pin() {
+            local dir=$1 name newest
+            name=$(node -p "require('./$dir/package.json').name")
+            if ! newest=$(cd "$dir" && npm view "$name" version) || [ -z "$newest" ]; then
+              echo "::error::could not read $name's newest version from the registry"
+              exit 1
+            fi
+            node -e '
+              const fs = require("fs"); const [p, v] = process.argv.slice(1);
+              const src = fs.readFileSync(p, "utf8");
+              const next = src.replace(/("version"\s*:\s*")[^"]*(")/, (_, a, b) => a + v + b);
+              if (!next.includes(`"version": "${v}"`)) { console.error("could not patch " + p); process.exit(1); }
+              fs.writeFileSync(p, next);
+            ' "$dir/package.json" "$newest"
+            echo "$name: unchanged, depended on at the registry's newest $newest"
+          }
+          [ "$UI_CHANGED" = "true" ] || pin task-ui-components
+          [ "$THEMES_CHANGED" = "true" ] || pin themes
+
       # Build in dependency order: UI Components → Themes → Task
       # themes FIRST: task-ui-components imports the theme model (context,
       # icons, types) from it now, so its build needs themes/dist present.
@@ -194,349 +263,31 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
 
-      # Fallback version bump check - ensures the version was incremented even if
-      # the pre-commit hook was skipped. Uses the up-front change flags (never a
-      # fresh diff) so the auto-bump commit can't mask the real changes.
-      - name: Verify version bump (fallback check)
-        id: version_check
-        run: |
-          echo "🔍 Checking if version was properly bumped..."
-
-          # Function to check if a package version was published
-          check_version_published() {
-            local pkg_name=$1
-            local pkg_path=$2
-            local current_version=$(node -p "require('$pkg_path/package.json').version")
-
-            echo "Checking $pkg_name@$current_version..."
-
-            # Try to fetch the package info from registry
-            if npm view "$pkg_name@$current_version" version 2>/dev/null | grep -q "$current_version"; then
-              echo "⚠️  $pkg_name@$current_version already exists in registry!"
-              return 1
-            else
-              echo "✓ $pkg_name@$current_version is a new version"
-              return 0
-            fi
-          }
-
-          version_issues=0
-          needs_ui_bump=false
-          needs_themes_bump=false
-          needs_task_bump=false
-
-          if [ "${{ steps.changes.outputs.ui }}" = "true" ]; then
-            echo "📦 task-ui-components changed, checking version..."
-            if ! check_version_published "@wolffm/task-ui-components" "./task-ui-components"; then
-              echo "::notice::task-ui-components: version is already published — CI will assign the next free one."
-              version_issues=1
-              needs_ui_bump=true
-            fi
-          else
-            echo "ℹ️  task-ui-components: no changes (skipping version check)"
-          fi
-
-          if [ "${{ steps.changes.outputs.themes }}" = "true" ]; then
-            echo "📦 themes changed, checking version..."
-            if ! check_version_published "@wolffm/themes" "./themes"; then
-              echo "::notice::themes: version is already published — CI will assign the next free one."
-              version_issues=1
-              needs_themes_bump=true
-            fi
-          else
-            echo "ℹ️  themes: no changes (skipping version check)"
-          fi
-
-          if [ "${{ steps.changes.outputs.task }}" = "true" ]; then
-            echo "📦 task changed, checking version..."
-            if ! check_version_published "@wolffm/task" "."; then
-              echo "::notice::task: version is already published — CI will assign the next free one."
-              version_issues=1
-              needs_task_bump=true
-            fi
-          else
-            echo "ℹ️  task: no changes (skipping version check)"
-          fi
-
-          # Export flags for the auto-bump step
-          echo "version_issues=$version_issues" >> $GITHUB_OUTPUT
-          echo "needs_ui_bump=$needs_ui_bump" >> $GITHUB_OUTPUT
-          echo "needs_themes_bump=$needs_themes_bump" >> $GITHUB_OUTPUT
-          echo "needs_task_bump=$needs_task_bump" >> $GITHUB_OUTPUT
-
-          if [ $version_issues -eq 1 ]; then
-            echo ""
-            echo "🔢 A changed package is sitting on a version that is already on the"
-            echo "   registry — assigning the next free one in the next step."
-            echo ""
-            echo "   Normally .husky/pre-commit (scripts/version-bump.mjs) has already"
-            echo "   bumped it and this step is a no-op. CI takes over for the cases a"
-            echo "   local hook can't cover:"
-            echo "     1. a commit made by automation (bot, Copilot) — no hook runs"
-            echo "     2. a commit made with --no-verify, or with hooks not installed"
-            echo "        (run 'pnpm prepare')"
-            echo "     3. the bumped version was taken since — e.g. a prior CI run"
-            echo "        burned it, or two branches bumped to the same number"
-            echo ""
-          else
-            echo "✅ All changed packages carry an unpublished version — nothing to bump."
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-
-      # Auto-bump versions if pre-commit hook was bypassed
-      - name: Auto-bump versions
-        if: steps.version_check.outputs.version_issues == '1'
-        run: |
-          echo "🔢 Assigning the next free version for packages CI had to bump..."
-
-          # Function to compute the next version (handles .20 rollover to next minor)
-          next_version() {
-            local v=$1
-            local maj=$(echo "$v" | cut -d. -f1)
-            local min=$(echo "$v" | cut -d. -f2)
-            local pat=$(echo "$v" | cut -d. -f3)
-            # -ge, not -eq: an exact match leaves anything that lands past
-            # .20 incrementing forever (.21, .22, ...) instead of rolling over.
-            if [[ $pat -ge 20 ]]; then
-              echo "$maj.$((min + 1)).0"
-            else
-              echo "$maj.$min.$((pat + 1))"
-            fi
-          }
-
-          # Function to bump version for a package.
-          # Loops until it finds an unpublished version: a single-step bump is
-          # insufficient because if the pre-commit bump didn't run AND a prior
-          # CI run already burned current+1, we'd write a duplicate version and
-          # pnpm publish silently no-ops ("no new packages") in pnpm 9+.
-          bump_package_version() {
-            local pkg_path=$1
-            local pkg_name=$2
-
-            local current_version=$(node -p "require('${pkg_path}/package.json').version")
-
-            # START FROM THE REGISTRY, NOT FROM package.json.
-            #
-            # The bump below is written into the runner's workspace and
-            # published, but never committed back to main. So package.json
-            # stays frozen while the registry marches on, and this loop used to
-            # re-walk the whole gap one patch at a time, from scratch, on every
-            # run.
-            #
-            # tenhands hit the wall first, on 2026-08-05: its package.json said
-            # 1.14.5, the registry was past 1.18.20, and walking that gap is 99
-            # steps. It exhausted a 100-attempt cap and published nothing. The
-            # loop was never retrying, it was counting. This one has a cap of
-            # 50, so it fails at half the drift.
-            local latest_published=$(npm view "$pkg_name" version 2>/dev/null || echo "")
-            local base_version="$current_version"
-            if [ -n "$latest_published" ]; then
-              # Whichever is higher: usually the registry, but a pre-commit
-              # bump that already moved past it must not be dragged backwards.
-              base_version=$(printf '%s\n%s\n' "$current_version" "$latest_published" \
-                               | sort -V | tail -1)
-              echo "ℹ️  $pkg_name: package.json $current_version, registry $latest_published, starting from $base_version"
-            else
-              echo "ℹ️  $pkg_name: no published version found; starting from $current_version"
-            fi
-            local new_version=$(next_version "$base_version")
-
-            # Genuinely a retry now rather than a catch-up, so 10 is generous:
-            # from the true latest the first candidate is essentially always
-            # free. Ten still absorbs a real race between concurrent publishes.
-            local max_attempts=10
-            local attempts=0
-            while npm view "$pkg_name@$new_version" version 2>/dev/null | grep -q "$new_version"; do
-              echo "⚠️  $pkg_name: $new_version already published, trying next..."
-              attempts=$((attempts + 1))
-              if [ $attempts -ge $max_attempts ]; then
-                echo "❌ $pkg_name: reached max bump attempts ($max_attempts)."
-                echo "   Started from $base_version (package.json: $current_version," \
-                     "registry: ${latest_published:-<unreadable>})."
-                echo "   From the registry's latest this should take one step, so"
-                echo "   this many collisions means the lookup failed and it fell"
-                echo "   back to the stale committed version."
-                exit 1
-              fi
-              new_version=$(next_version "$new_version")
-            done
-
-            # Update package.json with new version
-            node -e "
-          const fs = require('fs');
-          const p = '${pkg_path}/package.json';
-          const src = fs.readFileSync(p, 'utf8');
-          const next = src.replace(/(\"version\"\s*:\s*\")[^\"]*(\")/, (m, a, b) => a + '$new_version' + b);
-          if (next === src) { console.error('could not patch version in ' + p); process.exit(1); }
-          fs.writeFileSync(p, next);
-          "
-
-            echo "✅ $pkg_name: Version bumped: $current_version → $new_version"
-          }
-
-          # Handle dependency chain: if ui-components bumps, themes and task must also bump
-          needs_ui_bump="${{ steps.version_check.outputs.needs_ui_bump }}"
-          needs_themes_bump="${{ steps.version_check.outputs.needs_themes_bump }}"
-          needs_task_bump="${{ steps.version_check.outputs.needs_task_bump }}"
-
-          # If ui-components needs bump, dependents must also bump
-          if [[ "$needs_ui_bump" = "true" ]]; then
-            echo "📦 task-ui-components changed → bumping dependent packages (themes, task)"
-            needs_themes_bump=true
-            needs_task_bump=true
-          fi
-
-          # If themes needs bump, task must also bump
-          if [[ "$needs_themes_bump" = "true" ]]; then
-            echo "📦 themes changed → bumping dependent package (task)"
-            needs_task_bump=true
-          fi
-
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Assign versions, commit, push — retrying against a moving main.
-          #
-          # Several merges landing on main inside a minute each start their own
-          # run, and every run that bumps pushes a chore(release) commit. The
-          # loser of that push race used to die right here with
-          # "! [rejected] main -> main (fetch first)", abandoning its publish
-          # even though its version was already committed locally.
-          #
-          # Rebasing the loser's commit is not a fix: both commits rewrite the
-          # same version line (guaranteed conflict), and worse, the version this
-          # run picked may have been published by the winner in the meantime.
-          # So on rejection we throw our commit away, take the new main, and
-          # re-run the whole assignment. bump_package_version always steps at
-          # least one patch past whatever main now carries and skips anything
-          # already on the registry, so the two runs cannot land on the same
-          # number. Resetting to the new main is also safe to build from: main
-          # is linear here, so the new tip is a superset of the commit that
-          # triggered this run.
-          #
-          # No workflow-level `concurrency` group instead: GitHub keeps only one
-          # pending run per group and cancels the rest, and a cancelled run
-          # takes its `event.before..sha` detection window with it — the next
-          # run would never see those files change and would silently skip a
-          # package's publish. That is the exact stranding bug the "Detect
-          # changed packages" step exists to prevent. Every push keeps its own
-          # run; they just tolerate each other now.
-          push_attempts=0
-          max_push_attempts=5
-          while :; do
-            # Perform bumps in dependency order
-            if [[ "$needs_ui_bump" = "true" ]]; then
-              bump_package_version "./task-ui-components" "@wolffm/task-ui-components"
-            fi
-
-            if [[ "$needs_themes_bump" = "true" ]]; then
-              bump_package_version "./themes" "@wolffm/themes"
-            fi
-
-            if [[ "$needs_task_bump" = "true" ]]; then
-              bump_package_version "." "@wolffm/task"
-            fi
-
-            # Update lock file
-            echo "🔄 Updating lock file..."
-            pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --lockfile-only
-
-            # Commit and push changes.
-            # [skip ci] is REQUIRED: this run already builds + publishes below with
-            # the freshly bumped versions, so the bump commit is only a bookkeeping
-            # record. Without it the push re-triggers this workflow, which then sees
-            # its own bump commit as "task changed", bumps again, and churns the
-            # patch number on every run.
-            # Name what actually moved, so `git log` on main reads as a release
-            # record instead of an accusation about a hook.
-            BUMPED=""
-            [ "$needs_ui_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task-ui-components@$(node -p "require('./task-ui-components/package.json').version")"
-            [ "$needs_themes_bump" = "true" ] && BUMPED="$BUMPED @wolffm/themes@$(node -p "require('./themes/package.json').version")"
-            [ "$needs_task_bump" = "true" ] && BUMPED="$BUMPED @wolffm/task@$(node -p "require('./package.json').version")"
-
-            git add -A
-            git commit -m "chore(release):${BUMPED} [skip ci]"
-
-            # Publish the commit on bot/release, then ask mgmt-api to move main
-            # onto it. Exit 2 means main moved since this run read it: fall
-            # through and re-assign on top of the new main, as before.
-            git push -q --force origin HEAD:refs/heads/bot/release
-            rc=0
-            REPO_ACTION_VERB=promote REPO_ACTION_BODY='{"branch":"bot/release"}' bash "$REPO_ACTION" || rc=$?
-            if [ "$rc" -eq 0 ]; then
-              git push -q origin --delete bot/release || echo "::warning::could not delete bot/release; the next release force-pushes it"
-              break
-            fi
-            [ "$rc" -eq 2 ] || exit 1
-
-            push_attempts=$((push_attempts + 1))
-            if [ "$push_attempts" -ge "$max_push_attempts" ]; then
-              echo "❌ main moved under this run $max_push_attempts times — giving up."
-              echo "   Nothing was published; re-run this workflow once main is quiet."
-              exit 1
-            fi
-            echo "⚠️  main moved while this run was assigning versions"
-            echo "   (attempt $push_attempts/$max_push_attempts) — re-assigning on top of the new main..."
-            git fetch origin main
-            git reset --hard FETCH_HEAD
-          done
-
-          echo "✅ Versions assigned and pushed:${BUMPED}"
-          echo ""
-          echo "🔄 Rebuilding with new versions..."
-
-      # Rebuild if versions were auto-bumped
-        env:
-          # `npm view` here reads the private registry. It used to authenticate
-          # implicitly off the literal token in .npmrc; with the placeholder the
-          # step must declare its own, or every read resolves an empty token.
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-          REPO_ACTION_KEY: ${{ secrets.KEY_SERVICE_TASK }}
-
-      - name: Rebuild after version bump
-        if: steps.version_check.outputs.version_issues == '1'
-        run: |
-          echo "🔨 Rebuilding packages with new versions..."
-
-          # Reinstall to pick up new versions
-          pnpm --config.store-dir=${{ runner.tool_cache }}/pnpm-store install --frozen-lockfile
-
-          # Rebuild in dependency order
-          pnpm --filter @wolffm/task-ui-components run build
-          pnpm --filter @wolffm/themes run build
-          pnpm run build:all
-
-          echo "✅ Rebuild complete!"
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-
       # Publish in dependency order: UI Components → Themes → Task, gated on the
-      # up-front change flags (steps.changes) — NOT a fresh diff, which the
-      # auto-bump commit would have corrupted.
+      # up-front change flags (steps.changes).
       - name: Publish UI Components package
-        if: steps.changes.outputs.ui == 'true'
+        if: steps.changes.outputs.ui == 'true' && steps.version_ui.outputs.published != 'true'
         run: pnpm --filter @wolffm/task-ui-components publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Themes package
-        if: steps.changes.outputs.themes == 'true'
+        if: steps.changes.outputs.themes == 'true' && steps.version_themes.outputs.published != 'true'
         run: pnpm --filter @wolffm/themes publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Task package
-        if: steps.changes.outputs.task == 'true'
+        if: steps.changes.outputs.task == 'true' && steps.version_task.outputs.published != 'true'
         run: pnpm --filter @wolffm/task publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Defense in depth: pnpm publish does not fail loudly on duplicate-version
       # no-ops in pnpm 9+. Verify each package that was SUPPOSED to publish
-      # actually landed on the registry, so any bump/detection regression fails
-      # the workflow loudly instead of stranding a dependent on a missing pin.
+      # actually landed on the registry, so any version/detection regression
+      # fails the workflow loudly instead of stranding a dependent on a missing
+      # pin.
       - name: Verify publishes appeared on registry
         if: steps.changes.outputs.ui == 'true' || steps.changes.outputs.themes == 'true' || steps.changes.outputs.task == 'true'
         run: |

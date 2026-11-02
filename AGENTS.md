@@ -13,7 +13,11 @@ Pnpm monorepo publishing 3 packages to GitHub Packages (@wolffm scope).
 `pnpm run build:all` builds everything in dependency order.
 Package build order: task-ui-components -> themes -> task.
 
-Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate, then bumps the version of every publishable package whose files are staged (`scripts/version-bump.mjs`), so a push to main already carries a publishable version. CI's bump in `publish.yml` is only a backstop, for what a local hook can't cover: bot commits, `--no-verify`, and a version taken on the registry since.
+Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate.
+
+## Versions — CI's, never a commit's
+
+**Never edit a version number.** `publish.yml` sets each changed package's version at publish time with `WolffM/hadoku-actions/next-version@v1`: one patch above the newest on the registry, written into the runner's workspace only and never committed back. The committed `version` fields are therefore stale by design. A committed version ABOVE the registry's newest is published as it stands — that is the one way to make a deliberate minor or major bump. The version is set BEFORE the builds, because `src/utils/version.ts` embeds package.json's version in the bundle.
 
 ## CI — what it does and does NOT cover
 
@@ -25,13 +29,11 @@ Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate, then bumps 
 
 Create one with **`node scripts/new-worktree.mjs <name>`**, never a bare `git worktree add`.
 
-`core.hooksPath` is `.husky/_`, which husky generates during `pnpm install` and self-ignores (`.husky/_/.gitignore` is `*`). Only `.husky/pre-commit` is tracked, so a fresh worktree has no hook directory: git runs no hook and prints nothing. Every gate is skipped and no version is bumped, so CI's backstop writes the `chore(release)` commit on main that the hook exists to prevent.
+`core.hooksPath` is `.husky/_`, which husky generates during `pnpm install` and self-ignores (`.husky/_/.gitignore` is `*`). Only `.husky/pre-commit` is tracked, so a fresh worktree has no hook directory: git runs no hook and prints nothing. Every gate is skipped, so a broken commit is caught only by ci.yml after it landed.
 
 `pnpm install` in the worktree fixes both halves — husky's `prepare` regenerates `.husky/_`, and the gates get their `node_modules`. Symlinking or resolving up to the main checkout's `node_modules` is NOT enough; it produces no `.husky/_`. The script does the install and then verifies the hook is actually live.
 
 It also runs `build:packages`. `dist/` is gitignored, so a fresh worktree has none, and the pre-commit typecheck resolves `@wolffm/themes` and `@wolffm/task-ui-components` through their BUILT entrypoints — without the build the first commit dies on "has no exported member X" for an export sitting right there in source. A worktree that cannot pass its own gate is not bootstrapped.
-
-Known and deliberate: `git commit --amend` **with staged changes to a publishable path** bumps a second time (3.4.155 → 3.4.156). The guard in version-bump.mjs can't see an amend — HEAD is still the commit being amended, so its version already equals the working tree. A bare `--amend --no-edit` is safe, because nothing is staged and no package matches. A skipped patch number is harmless: CI rolls forward to a free version.
 
 ## Colors
 
@@ -53,9 +55,9 @@ commits you didn't make.
   `themes/scripts/lib/contract.mjs` (`@wolffm/themes/contract`). `check-contrast.mjs`,
   the editor's live verdict and the save route all call it — change the rules there.
 - The save route (`worker/src/routes/theme-editor.ts`) skips the pre-commit hook, so it
-  re-does the hook's work: contract check, version bump mirroring `version-bump.mjs`,
-  and values re-serialized (never copied from the request). Pinned by
-  `worker/test/theme-editor-verify.ts`.
+  re-does the hook's work: contract check, and values re-serialized (never copied from
+  the request). It commits `themes/src/style.css` only — no version; publish.yml sets
+  that. Pinned by `worker/test/theme-editor-verify.ts`.
 - Locally the editor's GitHub is an in-memory repo (`worker/test/lib/fake-github.ts`),
   even with the real PAT bound — `dev:api` + vite serve it at `/editor.html`; inspect a
   "commit" at `:3001/__dev/github`.

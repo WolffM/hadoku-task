@@ -18,7 +18,7 @@ pnpm run dev
 2. **Make changes** following guidelines below
 3. **Build**: `pnpm run build:all`
 4. **Test** — see [Testing](#testing). Manual clicking is not the bar.
-5. **Commit** - pre-commit hooks auto-lint and bump versions (see `.husky/README.md`)
+5. **Commit** - pre-commit hooks run the gates (see `.husky/README.md`); never edit a version number, CI sets it at publish
 6. **Land it.** Work reaches `main` by direct push (`git push origin HEAD:main`)
    as often as by PR. CI (`typecheck`, `lint`, `worker-tests`) runs on **both**,
    so either way a failure shows up — but on a push it lands first and goes red
