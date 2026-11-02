@@ -10,12 +10,15 @@ import { mockShellApi } from './helpers/mock-api'
  *
  * The operator's gift goes through the real admin route, by name, with
  * `X-Dev-Tier: admin` (worker/test/prefs-dev-server.ts). The dev user is
- * shared across the run, so each test starts by taking everything off.
+ * shared across the run, so each test starts by taking everything off, and
+ * puts back the settings tab it opens: the popout remembers its last tab in
+ * the user's `portfolio` row, and later specs expect it to open on App.
  *
  * watchparty's character table is the only stub: it is another app's API.
  */
 
 const AVATAR = `${PREFS_BASE}/api/v1/_avatar`
+const PORTFOLIO = `${PREFS_BASE}/api/v1/portfolio`
 const CHARACTERS = {
   sets: [
     {
@@ -84,14 +87,27 @@ test.describe('avatar cosmetics', () => {
   // One dev user for the whole run: these tests change the same loadout.
   test.describe.configure({ mode: 'serial' })
 
+  let savedTabs: Record<string, string> = {}
+
   test.beforeEach(async ({ request }) => {
     test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    const row = (await (await request.get(PORTFOLIO)).json()) as {
+      user: { blob: { settingsTabs?: Record<string, string> } } | null
+    }
+    savedTabs = row.user?.blob.settingsTabs ?? {}
     await gift(request, ['overlay.crown', 'effect.glint'])
     const res = await request.put(`${AVATAR}/cosmetics`, {
       data: {
         equip: { effect: null, gradient: null, font: null, overlay: null, message: null },
         placement: { 'overlay.crown': { x: 0, y: 0, r: 0, s: 100 } }
       }
+    })
+    expect(res.ok(), await res.text()).toBe(true)
+  })
+
+  test.afterEach(async ({ request }) => {
+    const res = await request.put(PORTFOLIO, {
+      data: { scope: 'user', patch: { settingsTabs: savedTabs } }
     })
     expect(res.ok(), await res.text()).toBe(true)
   })
