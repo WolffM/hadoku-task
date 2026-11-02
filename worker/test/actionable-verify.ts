@@ -28,6 +28,7 @@ const MIGRATION = join(process.cwd(), 'worker/migrations')
 const PRESETS_URL = 'https://tenhands.test/tenhands/automation/presets'
 const ACTIONABLE_PREFIX = 'https://tenhands.test/tenhands/api/taskauto/actionable'
 const SERVICE_KEY = 'tenhands-service-key-value'
+const WAKE_URL = 'https://hadoku.me/mgmt/api/repo/dispatch'
 
 let pass = 0
 let fail = 0
@@ -83,6 +84,10 @@ let respond: () => { status?: number; body?: unknown; throws?: 'timeout' | 'refu
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  // Activating an automation board writes a lane, which wakes the runner. The
+  // wake is lane-dispatch-verify's subject; here it only has to stay off the
+  // network, where it reached production on every run.
+  if (url === WAKE_URL) return Response.json({ success: true })
   if (!url.startsWith(ACTIONABLE_PREFIX)) return realFetch(input as RequestInfo, init)
   const headers = new Headers(init?.headers as HeadersInit)
   calls.push({ url, key: headers.get('X-User-Key') })

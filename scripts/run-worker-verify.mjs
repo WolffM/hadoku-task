@@ -25,10 +25,12 @@ import { spawnSync } from 'node:child_process'
 import { readdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const testDirs = [join(root, 'worker/test'), join(root, 'src/test')]
+/** Refuses every non-loopback fetch in a harness (verify-no-network.mjs). */
+const NO_NETWORK = pathToFileURL(join(root, 'scripts/verify-no-network.mjs')).href
 
 /** Harnesses as {dir, file} so the two trees can hold same-named files. */
 function discover() {
@@ -84,7 +86,9 @@ try {
         logLevel: 'error'
       })
     }
-    const result = spawnSync(process.execPath, [outfile], { stdio: 'inherit' })
+    const result = spawnSync(process.execPath, ['--import', NO_NETWORK, outfile], {
+      stdio: 'inherit'
+    })
     if (result.status !== 0) failures.push(harness.file)
   }
 } finally {
