@@ -213,7 +213,7 @@ export const ReconcileSharesInputSchema = z
     }),
     allOwners: z.boolean().optional().openapi({
       description:
-        "Sweep EVERY owner's boards, not just your own. Needs a service-tier key (403 otherwise). Safe to expose at that tier because the grantee is fully determined by the board's own repo, or is the fixed automation runner — a caller cannot choose who gets access, so this can only create the shares the system would have made automatically."
+        "Sweep EVERY owner's boards, not just your own. Needs admin (403 otherwise): the grantee is fully determined by the board's own repo, or is the fixed automation runner, but the sweep re-creates shares an owner removed and reports every owner's linked boards."
     })
   })
   .openapi('ReconcileSharesInput')

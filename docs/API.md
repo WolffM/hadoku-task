@@ -1046,11 +1046,10 @@ Either check failing is reported as `outcome: "skipped"` with a `reason`, and gr
 boards: [ { boardId, repo, mode, grants: [ { kind, name, outcome, previousLevel?, granteeUserId?,
 reason? } ] } ] }`. Boards with no link at all are omitted entirely.
 
-**`allOwners: true` sweeps every owner's boards, and needs a service-tier key** (403 below that).
-This is deliberately _not_ privileged information: the grantee is fully determined by the board's
-own `repo`, or is the fixed automation runner, so **a caller cannot choose who gets access**. The
-sweep can only create the shares the system would already have made automatically on the next
-write. Report rows carry `ownerId` in this mode.
+**`allOwners: true` sweeps every owner's boards, and needs admin** (403 below that). The grantee
+is fully determined by the board's own `repo`, or is the fixed automation runner, so **a caller
+cannot choose who gets access**. It still re-creates a share an owner removed, and report rows
+carry `ownerId` in this mode, so it is not for every service key.
 
 The one thing it must not do is let one owner's agent overwrite **another** owner's deliberate
 level, so **`force` silently does not apply to boards you don't own** — an existing `readonly` set
@@ -1070,9 +1069,9 @@ curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
 curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
   -H "X-User-Key: $KEY" -H 'Content-Type: application/json' -d '{"dryRun":false}'
 
-# Every owner's boards (service-tier key required):
+# Every owner's boards (admin required):
 curl -s -X POST https://hadoku.me/task/api/boards/reconcile-shares \
-  -H "X-User-Key: $SERVICE_KEY" -H 'Content-Type: application/json' \
+  -H "X-User-Key: $ADMIN_KEY" -H 'Content-Type: application/json' \
   -d '{"allOwners":true,"dryRun":false}'
 ```
 

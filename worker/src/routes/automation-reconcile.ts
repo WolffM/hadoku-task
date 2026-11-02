@@ -39,9 +39,9 @@ export function registerReconcileRoute(app: OpenAPIHono<AppContext>) {
     method: 'post',
     path: '/boards/reconcile-shares',
     tags: ['Sharing'],
-    summary: 'Backfill repo + automation shares (yours, or every owner at service tier)',
+    summary: 'Backfill repo + automation shares (yours, or every owner as admin)',
     description:
-      'For every linked board: a `repo` grants that repo\'s service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`), and an automation board grants the automation runner. Both the repo (probed against GitHub) and the derived key name (resolved in the registry) must check out first. Defaults to your own boards; `allOwners: true` sweeps everyone\'s and needs a service-tier key. `dryRun` defaults to TRUE — pass `false` to write.',
+      'For every linked board: a `repo` grants that repo\'s service key (`<repo minus a leading "hadoku-"/"hadoku_">-service-key`), and an automation board grants the automation runner. Both the repo (probed against GitHub) and the derived key name (resolved in the registry) must check out first. Defaults to your own boards; `allOwners: true` sweeps everyone\'s and needs admin. `dryRun` defaults to TRUE — pass `false` to write.',
     request: {
       body: { content: { 'application/json': { schema: ReconcileSharesInputSchema } } }
     },
@@ -51,7 +51,7 @@ export function registerReconcileRoute(app: OpenAPIHono<AppContext>) {
         content: { 'application/json': { schema: ReconcileSharesResponseSchema } }
       },
       403: {
-        description: 'allOwners without a service-tier key (FORBIDDEN)',
+        description: 'allOwners without admin (FORBIDDEN)',
         content: forbidden
       }
     }
@@ -68,17 +68,18 @@ export function registerReconcileRoute(app: OpenAPIHono<AppContext>) {
     const dryRun = body.dryRun !== false
     const force = body.force !== false
 
-    // A cross-owner sweep needs SERVICE tier. It isn't privileged information —
+    // A cross-owner sweep needs ADMIN. A caller cannot choose who gets access —
     // the grantee is fully determined by the board's own repo (or the fixed
-    // runner), so a caller cannot choose who gets access and this can only ever
-    // create the shares the system would have made automatically. What it must not
-    // do is let one owner's agent overwrite ANOTHER owner's deliberate level, so
+    // runner) — but the sweep still re-creates a share an owner removed, and its
+    // report lists every owner's linked boards. It was service tier until
+    // 2026-11-02, which is every service key in the fleet; nothing had used it.
+    // Even as admin it must not overwrite ANOTHER owner's deliberate level, so
     // `force` is dropped on boards the caller doesn't own (see below).
     const allOwners = body.allOwners === true
-    if (allOwners && !tierAtLeast(auth, 'service')) {
+    if (allOwners && !tierAtLeast(auth, 'admin')) {
       return c.json(
         {
-          error: "Reconciling every owner's boards needs a service-tier key.",
+          error: "Reconciling every owner's boards needs admin.",
           code: 'FORBIDDEN' as const
         },
         403

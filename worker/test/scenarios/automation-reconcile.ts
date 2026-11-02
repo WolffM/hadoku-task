@@ -204,7 +204,7 @@ export async function runReconcile(ctx: Ctx) {
   )
 
   // ---------------------------------------------------------------------
-  section('15. allOwners: a service-tier sweep across every owner (§7)')
+  section('15. allOwners: an admin sweep across every owner (§7)')
   // ---------------------------------------------------------------------
   // A SECOND owner with a legacy link the caller can't otherwise touch.
   const OTHER: User = { key: 'other-key', id: 'other-uid' }
@@ -236,12 +236,22 @@ export async function runReconcile(ctx: Ctx) {
     `status=${r.status} ${JSON.stringify(r.json)}`
   )
 
-  // A service-tier caller may sweep. RUNNER is registered tier:'service'.
+  // Service tier is refused too: it names every service key in the fleet.
   r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
     allOwners: true
   })
   check(
-    'allOwners from a service-tier caller → 200, and reports it',
+    'allOwners from a service-tier caller → 403 FORBIDDEN',
+    r.status === 403 && r.json?.code === 'FORBIDDEN',
+    `status=${r.status} ${JSON.stringify(r.json)}`
+  )
+
+  // An admin may sweep. RUNNER owns no board here, so every board is another owner's.
+  r = await reqTier(RUNNER, 'admin', 'POST', '/task/api/boards/reconcile-shares', {
+    allOwners: true
+  })
+  check(
+    'allOwners from an admin caller → 200, and reports it',
     r.status === 200 && r.json?.allOwners === true && r.json?.dryRun === true,
     `status=${r.status} ${JSON.stringify(r.json?.summary)}`
   )
@@ -254,7 +264,7 @@ export async function runReconcile(ctx: Ctx) {
   )
   check('that dry run still wrote nothing', (await theirShares()).length === 0)
 
-  r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
+  r = await reqTier(RUNNER, 'admin', 'POST', '/task/api/boards/reconcile-shares', {
     allOwners: true,
     dryRun: false
   })
@@ -266,7 +276,7 @@ export async function runReconcile(ctx: Ctx) {
     JSON.stringify(await theirShares())
   )
 
-  // The boundary that matters: a service caller must NOT overwrite a level another
+  // The boundary that matters: a cross-owner sweep must NOT overwrite a level another
   // owner set by hand, even with force (the default).
   await req(OTHER, 'POST', '/task/api/boards/their-board/shares', {
     name: 'tenhands-service-key',
@@ -275,7 +285,7 @@ export async function runReconcile(ctx: Ctx) {
   d1.__raw
     .prepare("UPDATE boards SET mode = 'automation', lanes = ? WHERE user_id = ? AND id = ?")
     .run(JSON.stringify(LANES), OTHER.id, 'their-board')
-  r = await reqTier(RUNNER, 'service', 'POST', '/task/api/boards/reconcile-shares', {
+  r = await reqTier(RUNNER, 'admin', 'POST', '/task/api/boards/reconcile-shares', {
     allOwners: true,
     dryRun: false
   })
