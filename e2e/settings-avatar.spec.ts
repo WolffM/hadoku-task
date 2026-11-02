@@ -2,7 +2,7 @@ import { test, expect, type Page, type Route } from '@playwright/test'
 
 /**
  * The Avatar row: the person's picture (character, Discord, Steam, upload) and
- * their character, chosen in place in the settings popout (AvatarPicker).
+ * their character, chosen in a dialog opened from the settings popout (AvatarDialog).
  *
  * Pinned here:
  *   - opening the gear fetches no avatar (settings-prefetch.spec.ts is why the
@@ -93,9 +93,10 @@ async function openSettings(page: Page, userType: 'friend' | 'public') {
 
 const avatarRow = (page: Page) =>
   page.locator('.settings-popout__row', { has: page.getByText('Avatar', { exact: true }) })
+const avatarDialog = (page: Page) => page.getByRole('dialog', { name: 'Avatar' })
 
 test.describe('settings avatar row', () => {
-  test('opening the gear fetches no avatar; Change loads it in place', async ({ page }) => {
+  test('opening the gear fetches no avatar; Change loads it in a dialog', async ({ page }) => {
     let avatarFetches = 0
     page.on('request', req => {
       if (req.url().includes(AVATAR_PATH)) avatarFetches++
@@ -106,7 +107,7 @@ test.describe('settings avatar row', () => {
     expect(avatarFetches, 'opening the gear fetched the avatar').toBe(0)
 
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    await expect(avatarRow(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
+    await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
     expect(avatarFetches).toBe(1)
   })
 
@@ -132,8 +133,8 @@ test.describe('settings avatar row', () => {
       })
     })
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    await avatarRow(page).getByRole('radio', { name: 'Fern' }).click()
-    await expect(avatarRow(page).getByRole('radio', { name: 'Fern' })).toHaveAttribute(
+    await avatarDialog(page).getByRole('radio', { name: 'Fern' }).click()
+    await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toHaveAttribute(
       'aria-checked',
       'true'
     )
@@ -172,15 +173,15 @@ test.describe('settings avatar row', () => {
     })
     await openSettings(page, 'friend')
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    const picture = avatarRow(page).getByRole('radiogroup', { name: 'Picture' })
+    const picture = avatarDialog(page).getByRole('radiogroup', { name: 'Picture' })
     await expect(picture.getByRole('radio', { name: 'Discord' })).toHaveAttribute(
       'aria-checked',
       'true'
     )
-    await expect(avatarRow(page).getByRole('radiogroup', { name: 'Character' })).toHaveCount(0)
+    await expect(avatarDialog(page).getByRole('radiogroup', { name: 'Character' })).toHaveCount(0)
 
     await picture.getByRole('radio', { name: 'Character' }).click()
-    await expect(avatarRow(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
+    await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
   })
 
   test('linking opens a popup after the consent step, and reads back when it reports', async ({
@@ -214,11 +215,11 @@ test.describe('settings avatar row', () => {
     await openSettings(page, 'friend')
     const url = page.url()
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    await avatarRow(page).getByRole('button', { name: 'Link' }).first().click()
-    await expect(avatarRow(page).getByText(/identify/)).toBeVisible()
+    await avatarDialog(page).getByRole('button', { name: 'Link' }).first().click()
+    await expect(avatarDialog(page).getByText(/identify/)).toBeVisible()
 
     const popupPromise = page.waitForEvent('popup')
-    await avatarRow(page).getByRole('button', { name: 'Continue to Discord' }).click()
+    await avatarDialog(page).getByRole('button', { name: 'Continue to Discord' }).click()
     const popup = await popupPromise
     await popup.waitForURL('**/fake-discord-consent')
 
@@ -229,8 +230,33 @@ test.describe('settings avatar row', () => {
       c.postMessage({ type: 'hadoku-avatar-link', ok: true, provider: 'discord' })
       c.close()
     })
-    await expect(avatarRow(page).getByText('Discord · linked')).toBeVisible()
+    await expect(avatarDialog(page).getByText('Discord · linked')).toBeVisible()
     expect(page.url(), 'the page navigated').toBe(url)
+  })
+
+  test('the dialog is wider than the popout; Escape and Done close it, the popout stays', async ({
+    page
+  }) => {
+    await stubBoot(page, 'friend')
+    await page.route(`**${AVATAR_PATH}`, route => json(route, settings()))
+    await openSettings(page, 'friend')
+    const change = avatarRow(page).getByRole('button', { name: 'Change' })
+    await change.click()
+    const dialog = avatarDialog(page)
+    await expect(dialog.getByRole('radio', { name: 'Fern' })).toBeVisible()
+    const panel = page.locator('.settings-popout__panel')
+    const [d, p] = await Promise.all([dialog.boundingBox(), panel.boundingBox()])
+    expect(d?.width ?? 0, 'dialog no wider than the popout').toBeGreaterThan(p?.width ?? Infinity)
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(panel, 'Escape in the dialog closed the popout too').toBeVisible()
+    await expect(change).toBeFocused()
+
+    await change.click()
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(panel).toBeVisible()
   })
 
   test('a public visitor gets no avatar row: an avatar needs a session', async ({ page }) => {

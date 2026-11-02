@@ -1,5 +1,5 @@
 /**
- * AvatarPicker — the avatar section of ConnectedSettings: the picture people
+ * AvatarPicker — the body of AvatarDialog (opened from ConnectedSettings): the picture people
  * see (character, Discord, Steam or an upload) and the character games use as
  * the piece. One resolved avatar per person, stored in hadoku_site's prefs-api
  * and rendered by every app (`@wolffm/prefs-client/avatar`, bundled into this
@@ -10,7 +10,7 @@
  * (`linkInPopup`), so the page under the popout never navigates and a game
  * keeps running.
  *
- * Loaded only when the person opens it ("Change"), never at mount: the avatar
+ * Loaded only when the person opens the dialog ("Change"), never at mount: the avatar
  * read can refresh a linked picture from Discord or Steam, which no page load
  * should cost, and opening the gear itself must stay free (settings-prefetch
  * e2e).
@@ -84,8 +84,8 @@ const S = {
   stack: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%' },
   current: { display: 'flex', alignItems: 'center', gap: 10 },
   preview: {
-    width: 48,
-    height: 48,
+    width: 64,
+    height: 64,
     borderRadius: '50%',
     overflow: 'hidden',
     flex: 'none',
@@ -119,7 +119,7 @@ const S = {
     background: 'var(--color-bg-alt)'
   },
   sets: { display: 'flex', gap: 4, flexWrap: 'wrap' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: 6 },
   cell: {
     padding: 0,
     aspectRatio: '1',

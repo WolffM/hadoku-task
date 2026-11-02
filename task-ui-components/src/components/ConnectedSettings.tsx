@@ -4,7 +4,7 @@
  * property of the PERSON (not the app):
  *   - current access tier (read-only, friendly label)
  *   - display name (inline edit → POST /session/name)
- *   - avatar: picture and character, chosen in place (AvatarPicker)
+ *   - avatar: picture and character, chosen in a dialog (AvatarDialog)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
  *   - switch key (an inline sign-in form, on the site's own sign-in client)
  *
@@ -32,7 +32,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
-import { AvatarPicker } from './AvatarPicker'
+import { AvatarDialog } from './AvatarDialog'
 
 // A grantee's own service credentials, with a QR encoder for TOTP enrolment:
 // its own chunk, fetched only when a grantee opens it.
@@ -265,8 +265,9 @@ export function ConnectedSettings({
   const passkeyCtl = useRef<AbortController | null>(null)
   const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
 
-  // Avatar: the picker loads only when opened, never at mount (AvatarPicker).
+  // Avatar: the dialog's picker loads only when opened, never at mount (AvatarPicker).
   const [avatarOpen, setAvatarOpen] = useState(false)
+  const avatarBtn = useRef<HTMLButtonElement>(null)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
   const [serviceOpen, setServiceOpen] = useState(false)
@@ -414,15 +415,15 @@ export function ConnectedSettings({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Escape closes.
+  // Escape closes — unless the avatar dialog is open: that Escape is the dialog's.
   useEffect(() => {
-    if (!open) return
+    if (!open || avatarOpen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, avatarOpen])
 
   const saveName = useCallback(async () => {
     const trimmed = nameDraft.trim()
@@ -708,9 +709,9 @@ export function ConnectedSettings({
                   )}
                 </section>
 
-                {/* Avatar: picture and character, chosen in place (AvatarPicker).
-              Collapsed until Change, so opening the gear costs no request and no
-              page load reads the avatar. Hidden for public callers, like the
+                {/* Avatar: picture and character, chosen in a dialog (AvatarDialog).
+              Nothing loads until Change, so opening the gear costs no request and
+              no page load reads the avatar. Hidden for public callers, like the
               content pill: an avatar needs a session. */}
                 {!resolving && userType !== 'public' && (
                   <section className="settings-popout__row settings-popout__row--stack">
@@ -719,20 +720,26 @@ export function ConnectedSettings({
                         Avatar
                       </span>
                       <button
+                        ref={avatarBtn}
                         type="button"
                         className="settings-popout__btn"
+                        aria-haspopup="dialog"
                         aria-expanded={avatarOpen}
-                        onClick={() => setAvatarOpen(v => !v)}
+                        onClick={() => setAvatarOpen(true)}
                       >
-                        {avatarOpen ? 'Done' : 'Change'}
+                        Change
                       </button>
                     </span>
-                    {avatarOpen && <AvatarPicker />}
+                    <AvatarDialog
+                      open={avatarOpen}
+                      onClose={() => setAvatarOpen(false)}
+                      returnFocus={avatarBtn}
+                    />
                   </section>
                 )}
 
                 {/* Service access: only for someone the operator granted a
-              service identity. Collapsed until Open, like Avatar. */}
+              service identity. Collapsed until Open. */}
                 {!resolving && serviceGrants > 0 && (
                   <section className="settings-popout__row settings-popout__row--stack">
                     <span className="settings-popout__inline">
