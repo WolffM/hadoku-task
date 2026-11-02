@@ -10,9 +10,10 @@ import { test, expect, type Page, type Route } from '@playwright/test'
  *   - picking a character writes it through prefs-api, and the page never
  *     navigates;
  *   - the character grid shows only while the picture is the character;
- *   - linking signs in through a POPUP opened inside the click, and the picker
- *     re-reads its settings when the callback page reports back on the
- *     BroadcastChannel (hadoku_site src/pages/account/link/callback.astro).
+ *   - linking lives under Account (Linked accounts), not in the avatar dialog;
+ *     it signs in through a POPUP opened inside the click, and re-reads the
+ *     settings when the callback page reports back on the BroadcastChannel
+ *     (hadoku_site src/pages/account/link/callback.astro).
  */
 
 const APP_HEADER = 'h1.app-header__title'
@@ -191,7 +192,7 @@ test.describe('settings avatar row', () => {
     await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
   })
 
-  test('linking opens a popup after the consent step, and reads back when it reports', async ({
+  test('linking is under Account: a popup after the consent step, read back when it reports', async ({
     page,
     context
   }) => {
@@ -221,12 +222,22 @@ test.describe('settings avatar row', () => {
     )
     await openSettings(page, 'friend')
     const url = page.url()
+    // Not in the avatar dialog any more.
     await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    await avatarDialog(page).getByRole('button', { name: 'Link' }).first().click()
-    await expect(avatarDialog(page).getByText(/identify/)).toBeVisible()
+    await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
+    await expect(avatarDialog(page).getByRole('button', { name: 'Link' })).toHaveCount(0)
+    await avatarDialog(page).getByRole('button', { name: 'Done' }).click()
+
+    await page.getByRole('tab', { name: 'Account' }).click()
+    const links = page.locator('.settings-popout__row', {
+      has: page.getByText('Linked accounts', { exact: true })
+    })
+    await links.getByRole('button', { name: 'Open' }).click()
+    await links.getByRole('button', { name: 'Link' }).first().click()
+    await expect(links.getByText(/identify/)).toBeVisible()
 
     const popupPromise = page.waitForEvent('popup')
-    await avatarDialog(page).getByRole('button', { name: 'Continue to Discord' }).click()
+    await links.getByRole('button', { name: 'Continue to Discord' }).click()
     const popup = await popupPromise
     await popup.waitForURL('**/fake-discord-consent')
 
@@ -237,7 +248,7 @@ test.describe('settings avatar row', () => {
       c.postMessage({ type: 'hadoku-avatar-link', ok: true, provider: 'discord' })
       c.close()
     })
-    await expect(avatarDialog(page).getByText('Discord · linked')).toBeVisible()
+    await expect(links.getByText('Discord · linked')).toBeVisible()
     expect(page.url(), 'the page navigated').toBe(url)
   })
 

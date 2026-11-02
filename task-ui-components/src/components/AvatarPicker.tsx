@@ -7,29 +7,19 @@
  * protocol cannot drift from the callback page).
  *
  * Everything happens in place: picking, uploading and removing are requests
- * from here, and linking Discord or Steam signs in through a popup
- * (`linkInPopup`), so the page under the popout never navigates and a game
- * keeps running.
+ * from here. Linking Discord or Steam lives in the popout's Account tab
+ * (LinkedAccounts); a linked account's picture is a choice here.
  *
  * AvatarBuilder owns the settings and the character table and loads them only
  * when the dialog opens; this component draws them and sends changes through
  * `run`, which applies the answer everywhere in the dialog.
- *
- * COMPLIANCE (Steam Web API terms; Discord developer terms), carried over from
- * hadoku.me/account: nothing is fetched from a provider until the person reads
- * what is read and kept and presses Continue; Steam attribution and a privacy
- * link sit under the controls; no provider logos, and no implied endorsement.
  *
  * Styles are inline for the reason PASSKEY_DOT's are (ConnectedSettings.tsx):
  * apps compile app-header.css at their own build, so a new rule there reaches
  * an app only when it rebuilds.
  */
 import React, { useEffect, useState } from 'react'
-import {
-  type AvatarSettings,
-  type AvatarSource,
-  type LinkProvider
-} from '@wolffm/prefs-client/avatar'
+import { type AvatarSettings, type AvatarSource } from '@wolffm/prefs-client/avatar'
 import { avatarClient, portraitUrl, type CharacterSet } from '../lib/avatarData'
 
 const LABEL: Record<AvatarSource, string> = {
@@ -37,27 +27,6 @@ const LABEL: Record<AvatarSource, string> = {
   discord: 'Discord',
   steam: 'Steam',
   upload: 'Upload'
-}
-
-const CONSENT: Record<LinkProvider, { points: string[]; go: string }> = {
-  discord: {
-    points: [
-      'Discord asks you to share your basic profile ("identify").',
-      'Kept: your Discord user ID and the address of your profile picture, refreshed while linked.',
-      'Not kept: your username, email, servers or any token.',
-      'Unlink deletes both.'
-    ],
-    go: 'Continue to Discord'
-  },
-  steam: {
-    points: [
-      'You sign in on steamcommunity.com; your password never reaches hadoku.me.',
-      'Your public Steam profile picture is then read through the Steam Web API, now and periodically while linked.',
-      'Kept: your Steam ID and the address of that picture.',
-      'Unlink deletes both and stops the reads.'
-    ],
-    go: 'Continue to Steam'
-  }
 }
 
 const S = {
@@ -100,8 +69,7 @@ const S = {
     cursor: 'pointer'
   },
   line: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  grow: { flex: 1, minWidth: 0 },
-  list: { margin: 0, paddingLeft: 18, fontSize: '0.75rem', lineHeight: 1.45 }
+  grow: { flex: 1, minWidth: 0 }
 } satisfies Record<string, React.CSSProperties>
 
 function Picture({ src, style }: { src: string | null; style: React.CSSProperties }) {
@@ -132,7 +100,6 @@ export interface AvatarPickerProps {
 
 export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
   const [setIdx, setSetIdx] = useState(0)
-  const [consent, setConsent] = useState<LinkProvider | null>(null)
   // Open on the set holding the person's character.
   useEffect(() => {
     const at = sets?.findIndex(s => s.characters.some(c => c.id === settings.sprite)) ?? -1
@@ -162,17 +129,6 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
   const shown = settings.avatar
   const current = sets?.[setIdx]
 
-  // Must stay synchronous up to linkInPopup: the popup opens before its first
-  // await, inside this click, which is what popup blockers allow.
-  const link = (provider: LinkProvider) => {
-    setConsent(null)
-    run(async () => {
-      const next = await avatarClient.linkInPopup(provider)
-      // Linking is choosing, when the account came back with a picture.
-      return next.linked[provider]?.avatarUrl ? avatarClient.choose(provider) : next
-    }).catch(reportErr)
-  }
-
   return (
     <div style={S.stack}>
       {settings.choice && settings.choice !== shown.source && (
@@ -189,7 +145,13 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
             role="radio"
             aria-checked={shown.source === src}
             disabled={busy || !available[src]}
-            title={available[src] ? undefined : 'Link or upload one first'}
+            title={
+              available[src]
+                ? undefined
+                : src === 'upload'
+                  ? 'Upload a picture below first'
+                  : `Link ${LABEL[src]} under Settings › Account first`
+            }
             style={{
               ...S.source,
               ...(shown.source === src ? S.sourceOn : {}),
@@ -248,69 +210,6 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
         ) : (
           <span className="settings-popout__hint">…</span>
         ))}
-
-      {(['discord', 'steam'] as const).map(p => {
-        const linked = settings.linked[p]
-        return (
-          <div key={p} style={S.line}>
-            <span className="settings-popout__label" style={S.grow}>
-              {LABEL[p]}
-              {!settings.providers[p]
-                ? ' · not available yet'
-                : linked
-                  ? linked.avatarUrl
-                    ? ' · linked'
-                    : ' · linked, no picture'
-                  : ''}
-            </span>
-            {settings.providers[p] && !linked && (
-              <button
-                type="button"
-                className="settings-popout__btn"
-                disabled={busy}
-                onClick={() => setConsent(consent === p ? null : p)}
-              >
-                Link
-              </button>
-            )}
-            {linked && (
-              <button
-                type="button"
-                className="settings-popout__btn"
-                disabled={busy}
-                onClick={() => {
-                  run(() => avatarClient.unlink(p)).catch(reportErr)
-                }}
-              >
-                Unlink
-              </button>
-            )}
-          </div>
-        )
-      })}
-
-      {consent && (
-        <div style={S.stack}>
-          <ul style={S.list}>
-            {CONSENT[consent].points.map(t => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-          <span style={S.line}>
-            <button
-              type="button"
-              className="settings-popout__btn settings-popout__btn--primary"
-              disabled={busy}
-              onClick={() => link(consent)}
-            >
-              {CONSENT[consent].go}
-            </button>
-            <button type="button" className="settings-popout__btn" onClick={() => setConsent(null)}>
-              Cancel
-            </button>
-          </span>
-        </div>
-      )}
 
       <div style={S.line}>
         <span className="settings-popout__label" style={S.grow}>

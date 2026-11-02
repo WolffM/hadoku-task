@@ -147,6 +147,31 @@ test.describe('avatar cosmetics', () => {
     await expect(preview.locator('.hc-name.hc-fx-glint')).toBeAttached()
   })
 
+  test('the tab strip drags sideways, so every tab can be reached', async ({ page }) => {
+    const dialog = await openDialog(page)
+    const strip = dialog.getByRole('tablist', { name: 'Avatar' })
+    const message = dialog.getByRole('tab', { name: /Message/ })
+    const sb = await strip.boundingBox()
+    if (!sb) throw new Error('the tab strip has no box')
+    // Six tabs with their counts are wider than the dialog's right column.
+    expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+    const before = await message.boundingBox()
+    expect(before && before.x + before.width > sb.x + sb.width).toBe(true)
+    // A drag from right to left scrolls the strip and chooses no tab.
+    await page.mouse.move(sb.x + sb.width - 10, sb.y + sb.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(sb.x + 10, sb.y + sb.height / 2, { steps: 8 })
+    await page.mouse.up()
+    await expect(dialog.getByRole('tab', { name: 'Picture' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
+    await message.click()
+    await expect(message).toHaveAttribute('aria-selected', 'true')
+    await expect(dialog.getByRole('button', { name: /^Typewriter, locked\./ })).toBeVisible()
+  })
+
   test('an item not yet earned can be tried on, and saves nothing', async ({ page, request }) => {
     const dialog = await openDialog(page)
     await dialog.getByRole('tab', { name: /Overlay/ }).click()

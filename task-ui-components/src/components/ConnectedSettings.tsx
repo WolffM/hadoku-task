@@ -33,6 +33,7 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
 import { AvatarDialog } from './AvatarDialog'
+import { LinkedAccounts } from './LinkedAccounts'
 
 // A grantee's own service credentials, with a QR encoder for TOTP enrolment:
 // its own chunk, fetched only when a grantee opens it.
@@ -267,6 +268,8 @@ export function ConnectedSettings({
 
   // Avatar: the dialog's picker loads only when opened, never at mount (AvatarPicker).
   const [avatarOpen, setAvatarOpen] = useState(false)
+  // Linked accounts: loaded only when the row is opened (LinkedAccounts).
+  const [linksOpen, setLinksOpen] = useState(false)
   const avatarBtn = useRef<HTMLButtonElement>(null)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
@@ -949,6 +952,28 @@ export function ConnectedSettings({
                         {passkeyError}
                       </span>
                     )}
+                  </section>
+                )}
+
+                {/* Discord and Steam: linked here, so their pictures can be chosen in
+              the avatar dialog. Collapsed until Open: the read can refresh a
+              linked picture, which opening the gear must not cost. */}
+                {!resolving && userType !== 'public' && (
+                  <section className="settings-popout__row settings-popout__row--stack">
+                    <span className="settings-popout__inline">
+                      <span className="settings-popout__label settings-popout__label--grow">
+                        Linked accounts
+                      </span>
+                      <button
+                        type="button"
+                        className="settings-popout__btn"
+                        aria-expanded={linksOpen}
+                        onClick={() => setLinksOpen(v => !v)}
+                      >
+                        {linksOpen ? 'Done' : 'Open'}
+                      </button>
+                    </span>
+                    {linksOpen && <LinkedAccounts />}
                   </section>
                 )}
 

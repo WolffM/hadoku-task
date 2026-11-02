@@ -158,6 +158,8 @@ const S = {
   tabs: {
     display: 'flex',
     gap: 2,
+    cursor: 'grab',
+    touchAction: 'pan-x',
     borderBottom: '1px solid var(--color-border)',
     overflowX: 'auto',
     scrollbarWidth: 'none'
@@ -280,6 +282,68 @@ function withLoadout(s: AvatarSettings, loadout: Loadout): AvatarSettings {
   }
 }
 
+/**
+ * A row that overflows sideways scrolls by dragging it (the operator's ask: the
+ * tab strip is wider than its column and hides its scrollbar) and by the
+ * mouse wheel. A drag of more than a few pixels is not a click.
+ */
+function useDragScroll<T extends HTMLElement>() {
+  // A callback ref, not useRef: the row appears only once the settings load,
+  // after the first render, and the listeners must attach when it does.
+  const [el, setEl] = useState<T | null>(null)
+  useEffect(() => {
+    if (!el) return
+    let start: { x: number; left: number } | null = null
+    let dragged = false
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0) return
+      start = { x: e.clientX, left: el.scrollLeft }
+      dragged = false
+    }
+    const move = (e: PointerEvent) => {
+      if (!start) return
+      const dx = e.clientX - start.x
+      if (!dragged && Math.abs(dx) > 4) {
+        dragged = true
+        el.setPointerCapture(e.pointerId)
+        el.style.cursor = 'grabbing'
+      }
+      if (dragged) el.scrollLeft = start.left - dx
+    }
+    const up = () => {
+      start = null
+      el.style.cursor = ''
+    }
+    // The click that ends a drag is not a tab choice.
+    const click = (e: MouseEvent) => {
+      if (!dragged) return
+      e.preventDefault()
+      e.stopPropagation()
+      dragged = false
+    }
+    const wheel = (e: globalThis.WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      e.preventDefault()
+      el.scrollLeft += e.deltaY
+    }
+    el.addEventListener('pointerdown', down)
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', up)
+    el.addEventListener('pointercancel', up)
+    el.addEventListener('click', click, true)
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => {
+      el.removeEventListener('pointerdown', down)
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', up)
+      el.removeEventListener('pointercancel', up)
+      el.removeEventListener('click', click, true)
+      el.removeEventListener('wheel', wheel)
+    }
+  }, [el])
+  return setEl
+}
+
 export interface AvatarBuilderProps {
   /** The person's display name, for the preview. */
   name: string | null
@@ -296,6 +360,7 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
   const [replay, setReplay] = useState(0)
   const narrow = useNarrow()
   const root = useRef<HTMLDivElement>(null)
+  const tabStrip = useDragScroll<HTMLDivElement>()
   // Only the newest cosmetics request may set state: equips sent quickly in a
   // row can answer out of order.
   const seq = useRef(0)
@@ -550,7 +615,7 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
         {placement}
       </div>
       <div style={{ minWidth: 0 }}>
-        <div style={S.tabs} role="tablist" aria-label="Avatar">
+        <div ref={tabStrip} style={S.tabs} role="tablist" aria-label="Avatar">
           {tabs.map(t => {
             const items = t === 'picture' ? [] : COSMETICS.filter(i => i.slot === t)
             return (
@@ -560,9 +625,10 @@ export function AvatarBuilder({ name }: AvatarBuilderProps) {
                 role="tab"
                 aria-selected={tab === t}
                 style={{ ...S.tab, ...(tab === t ? S.tabOn : {}) }}
-                onClick={() => {
+                onClick={e => {
                   setTab(t)
                   setTryOn(null)
+                  e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })
                 }}
               >
                 {tabLabel(t)}
