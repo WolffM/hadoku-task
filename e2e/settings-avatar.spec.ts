@@ -52,6 +52,13 @@ function settings(over: Record<string, unknown> = {}) {
       perDay: 10,
       outputSize: 256
     },
+    cosmetics: {
+      owned: [],
+      loadout: {
+        equipped: { effect: null, gradient: null, font: null, overlay: null, message: null },
+        placement: {}
+      }
+    },
     ...over
   }
 }

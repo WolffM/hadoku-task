@@ -1,19 +1,19 @@
 /**
- * AvatarPicker — the body of AvatarDialog (opened from ConnectedSettings): the picture people
- * see (character, Discord, Steam or an upload) and the character games use as
- * the piece. One resolved avatar per person, stored in hadoku_site's prefs-api
- * and rendered by every app (`@wolffm/prefs-client/avatar`, bundled into this
- * package at build so the link protocol cannot drift from the callback page).
+ * AvatarPicker — the Picture tab of AvatarBuilder (inside AvatarDialog, opened
+ * from ConnectedSettings): the picture people see (character, Discord, Steam or
+ * an upload) and the character games use as the piece. One resolved avatar per
+ * person, stored in hadoku_site's prefs-api and rendered by every app
+ * (`@wolffm/prefs-client/avatar`, bundled into this package at build so the link
+ * protocol cannot drift from the callback page).
  *
  * Everything happens in place: picking, uploading and removing are requests
  * from here, and linking Discord or Steam signs in through a popup
  * (`linkInPopup`), so the page under the popout never navigates and a game
  * keeps running.
  *
- * Loaded only when the person opens the dialog ("Change"), never at mount: the avatar
- * read can refresh a linked picture from Discord or Steam, which no page load
- * should cost, and opening the gear itself must stay free (settings-prefetch
- * e2e).
+ * AvatarBuilder owns the settings and the character table and loads them only
+ * when the dialog opens; this component draws them and sends changes through
+ * `run`, which applies the answer everywhere in the dialog.
  *
  * COMPLIANCE (Steam Web API terms; Discord developer terms), carried over from
  * hadoku.me/account: nothing is fetched from a provider until the person reads
@@ -24,33 +24,13 @@
  * apps compile app-header.css at their own build, so a new rule there reaches
  * an app only when it rebuilds.
  */
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
-  createAvatarClient,
-  AvatarError,
   type AvatarSettings,
   type AvatarSource,
-  type LinkProvider,
-  type ResolvedAvatar
+  type LinkProvider
 } from '@wolffm/prefs-client/avatar'
-import { AVATAR_EVENT } from '../lib/avatarEvent'
-
-const client = createAvatarClient({ baseUrl: '/prefs' })
-
-/** watchparty's public character table: GET /watchparty/api/characters. */
-const CHARACTERS_URL = '/watchparty/api/characters'
-const WATCHPARTY_BASE = '/watchparty'
-
-interface Character {
-  id: string
-  name: string
-  color: string
-  portrait: string
-}
-interface CharacterSet {
-  id: string
-  characters: Character[]
-}
+import { avatarClient, portraitUrl, type CharacterSet } from '../lib/avatarData'
 
 const LABEL: Record<AvatarSource, string> = {
   sprite: 'Character',
@@ -82,16 +62,6 @@ const CONSENT: Record<LinkProvider, { points: string[]; go: string }> = {
 
 const S = {
   stack: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%' },
-  current: { display: 'flex', alignItems: 'center', gap: 10 },
-  preview: {
-    width: 64,
-    height: 64,
-    borderRadius: '50%',
-    overflow: 'hidden',
-    flex: 'none',
-    background: 'var(--color-bg-alt)',
-    border: '1px solid var(--color-border)'
-  },
   img: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   sources: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 },
   source: {
@@ -134,10 +104,6 @@ const S = {
   list: { margin: 0, paddingLeft: 18, fontSize: '0.75rem', lineHeight: 1.45 }
 } satisfies Record<string, React.CSSProperties>
 
-function portraitUrl(c: Character): string {
-  return c.portrait.startsWith('/') ? `${WATCHPARTY_BASE}${c.portrait}` : c.portrait
-}
-
 function Picture({ src, style }: { src: string | null; style: React.CSSProperties }) {
   const [failed, setFailed] = useState(false)
   useEffect(() => setFailed(false), [src])
@@ -156,62 +122,29 @@ function Picture({ src, style }: { src: string | null; style: React.CSSPropertie
   )
 }
 
-export function AvatarPicker() {
-  const [settings, setSettings] = useState<AvatarSettings | null>(null)
-  const [sets, setSets] = useState<CharacterSet[] | null>(null)
+export interface AvatarPickerProps {
+  settings: AvatarSettings
+  sets: CharacterSet[] | null
+  busy: boolean
+  /** Send a change; the builder applies the answer and reports failures. */
+  run: (work: () => Promise<AvatarSettings>) => Promise<void>
+}
+
+export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
   const [setIdx, setSetIdx] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [consent, setConsent] = useState<LinkProvider | null>(null)
-
+  // Open on the set holding the person's character.
   useEffect(() => {
-    let live = true
-    client
-      .get()
-      .then(s => live && setSettings(s))
-      .catch((err: unknown) => live && setError(message(err)))
-    fetch(CHARACTERS_URL)
-      .then(r =>
-        r.ok
-          ? (r.json() as Promise<{ sets: CharacterSet[] }>)
-          : Promise.reject(new Error(`characters ${r.status}`))
-      )
-      .then(d => live && setSets(d.sets))
-      .catch((err: unknown) => live && setError(message(err)))
-    return () => {
-      live = false
-    }
-  }, [])
-
-  const run = useCallback(async (work: () => Promise<AvatarSettings>) => {
-    setBusy(true)
-    setError(null)
-    try {
-      const next = await work()
-      setSettings(next)
-      // The page under the popout (a watchparty room, a game) re-reads the
-      // avatar from this instead of waiting for its next join.
-      window.dispatchEvent(new window.CustomEvent<AvatarSettings>(AVATAR_EVENT, { detail: next }))
-    } catch (err) {
-      setError(message(err))
-    } finally {
-      setBusy(false)
-    }
-  }, [])
+    const at = sets?.findIndex(s => s.characters.some(c => c.id === settings.sprite)) ?? -1
+    if (at > 0) setSetIdx(at)
+    // Only when the table arrives: afterwards the person moves between sets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sets])
 
   const characters = new Map((sets ?? []).flatMap(s => s.characters).map(c => [c.id, c]))
   const spriteSrc = (id: string | null | undefined) => {
     const c = id ? characters.get(id) : undefined
     return c ? portraitUrl(c) : null
-  }
-  const srcOf = (a: ResolvedAvatar) => a.url ?? spriteSrc(a.sprite)
-
-  if (!settings) {
-    return (
-      <span className="settings-popout__hint" role={error ? 'alert' : undefined}>
-        {error ?? '…'}
-      </span>
-    )
   }
 
   const available: Record<AvatarSource, boolean> = {
@@ -234,23 +167,19 @@ export function AvatarPicker() {
   const link = (provider: LinkProvider) => {
     setConsent(null)
     run(async () => {
-      const next = await client.linkInPopup(provider)
+      const next = await avatarClient.linkInPopup(provider)
       // Linking is choosing, when the account came back with a picture.
-      return next.linked[provider]?.avatarUrl ? client.choose(provider) : next
+      return next.linked[provider]?.avatarUrl ? avatarClient.choose(provider) : next
     }).catch(reportErr)
   }
 
   return (
     <div style={S.stack}>
-      <div style={S.current}>
-        <Picture src={srcOf(shown)} style={S.preview} />
-        <span className="settings-popout__value">
-          {LABEL[shown.source]}
-          {settings.choice && settings.choice !== shown.source
-            ? ` (${LABEL[settings.choice]} unavailable)`
-            : ''}
+      {settings.choice && settings.choice !== shown.source && (
+        <span className="settings-popout__hint">
+          {LABEL[settings.choice]} is unavailable, so your character shows instead.
         </span>
-      </div>
+      )}
 
       <div style={S.sources} role="radiogroup" aria-label="Picture">
         {(Object.keys(LABEL) as AvatarSource[]).map(src => (
@@ -267,7 +196,7 @@ export function AvatarPicker() {
               opacity: available[src] ? 1 : 0.5
             }}
             onClick={() => {
-              run(() => client.choose(src)).catch(reportErr)
+              run(() => avatarClient.choose(src)).catch(reportErr)
             }}
           >
             <Picture src={thumbOf[src]} style={S.thumb} />
@@ -308,7 +237,7 @@ export function AvatarPicker() {
                     borderColor: settings.sprite === c.id ? c.color : 'transparent'
                   }}
                   onClick={() => {
-                    run(() => client.update({ sprite: c.id })).catch(reportErr)
+                    run(() => avatarClient.update({ sprite: c.id })).catch(reportErr)
                   }}
                 >
                   <img src={portraitUrl(c)} alt="" style={S.img} />
@@ -350,7 +279,7 @@ export function AvatarPicker() {
                 className="settings-popout__btn"
                 disabled={busy}
                 onClick={() => {
-                  run(() => client.unlink(p)).catch(reportErr)
+                  run(() => avatarClient.unlink(p)).catch(reportErr)
                 }}
               >
                 Unlink
@@ -397,7 +326,7 @@ export function AvatarPicker() {
             onChange={e => {
               const file = e.currentTarget.files?.[0]
               e.currentTarget.value = ''
-              if (file) run(() => client.upload(file)).catch(reportErr)
+              if (file) run(() => avatarClient.upload(file)).catch(reportErr)
             }}
           />
         </label>
@@ -407,26 +336,15 @@ export function AvatarPicker() {
             className="settings-popout__btn"
             disabled={busy}
             onClick={() => {
-              run(() => client.removeUpload()).catch(reportErr)
+              run(() => avatarClient.removeUpload()).catch(reportErr)
             }}
           >
             Remove
           </button>
         )}
       </div>
-
-      {error && (
-        <span className="settings-popout__error" role="alert">
-          {error}
-        </span>
-      )}
     </div>
   )
-}
-
-function message(err: unknown): string {
-  if (err instanceof AvatarError && err.status === 401) return 'Sign in to set an avatar.'
-  return err instanceof Error ? err.message : String(err)
 }
 
 function reportErr(err: unknown) {

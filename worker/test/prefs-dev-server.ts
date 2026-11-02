@@ -36,6 +36,14 @@
  * imported from a sibling ../hadoku_site checkout, which CI can never have
  * (the repo is private, and this one holds no token for it), so the nightly
  * e2e skipped every prefs-backed spec.
+ *
+ * THE OPERATOR, FOR SPECS THAT NEED ONE
+ * -------------------------------------
+ * Every caller is the dev user at friend tier, as a signed-in browser is. A spec
+ * that must act as the operator (gifting avatar cosmetics: admin routes that
+ * name a person through the key registry) sends `X-Dev-Tier: admin` from the
+ * test runner; the browser never sends it. The registry holds the dev user's
+ * row so a name resolves the way it does in production.
  */
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
@@ -48,7 +56,7 @@ const PREFS_PORT = Number(process.env.DEV_PREFS_PORT ?? 3003)
 const EDGE_SECRET = 'dev-edge-secret'
 
 /** Must match dev-server.ts's user, or the two rows key to different people. */
-const USER = { key: 'dev-key', id: 'dev-uid', tier: 'friend' }
+const USER = { key: 'dev-key', id: 'dev-uid', tier: 'friend', name: 'dev' }
 
 // Real schema: the migration files prod runs, shipped in the same package as
 // the worker. Resolved from the repo root (dev-api.mjs's cwd), not from this
@@ -80,9 +88,22 @@ function makeKV() {
   }
 }
 
+/** The registry row edge-router keeps for the dev user's key (worker-utils KeyRegistryRecord). */
+const registry = makeKV()
+await registry.put(`key:${USER.key}`, {
+  name: USER.name,
+  tier: USER.tier,
+  createdAt: 0,
+  lastSeenAt: 0,
+  userId: USER.id
+})
+
+/** Tiers a spec may ask for with X-Dev-Tier. */
+const SPEC_TIERS = new Set(['admin'])
+
 const env = {
   PREFS_DB: makeSqliteD1(PREFS_MIGRATIONS),
-  SESSIONS_KV: makeKV(),
+  SESSIONS_KV: registry,
   EDGE_AUTH_SECRET: EDGE_SECRET
 } as unknown as Record<string, unknown>
 
@@ -106,7 +127,7 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
             valid: true,
             userId: USER.id,
             userType: USER.tier,
-            name: 'dev'
+            name: USER.name
           })
         )
       return
@@ -125,7 +146,12 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
     // EDGE_AUTH_SECRET, so without these every request is tier 'public' and each
     // authed route answers 401.
     headers.set('X-Edge-Auth', EDGE_SECRET)
-    headers.set('X-Hadoku-Tier', USER.tier)
+    const asked = req.headers['x-dev-tier']
+    headers.delete('x-dev-tier')
+    headers.set(
+      'X-Hadoku-Tier',
+      typeof asked === 'string' && SPEC_TIERS.has(asked) ? asked : USER.tier
+    )
     headers.set('X-User-Key', USER.key)
     headers.set('X-User-Id', USER.id)
 

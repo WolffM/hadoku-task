@@ -734,6 +734,7 @@ export function ConnectedSettings({
                       open={avatarOpen}
                       onClose={() => setAvatarOpen(false)}
                       returnFocus={avatarBtn}
+                      name={displayName}
                     />
                   </section>
                 )}

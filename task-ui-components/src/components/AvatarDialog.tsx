@@ -1,7 +1,7 @@
 /**
- * AvatarDialog — the avatar picker in its own dialog, opened from the settings
- * popout's "Change". The popout is 300px wide; the picker (and the cosmetics
- * that will join it) needs the room.
+ * AvatarDialog — the avatar builder (picture, character and cosmetics, with a
+ * live preview) in its own dialog, opened from the settings popout's "Change".
+ * The popout is 300px wide; the builder needs the room.
  *
  * Rendered into document.body, so no ancestor of the popout (a transform, an
  * overflow, a stacking context) can clip or trap it. The popout stays open
@@ -13,7 +13,7 @@
  */
 import React, { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { AvatarPicker } from './AvatarPicker'
+import { AvatarBuilder } from './AvatarBuilder'
 
 const S: Record<string, React.CSSProperties> = {
   overlay: {
@@ -55,9 +55,11 @@ export interface AvatarDialogProps {
   onClose: () => void
   /** Where focus goes when the dialog closes (the Change button). */
   returnFocus?: React.RefObject<HTMLElement | null>
+  /** The person's display name, shown in the preview. */
+  name?: string | null
 }
 
-export function AvatarDialog({ open, onClose, returnFocus }: AvatarDialogProps) {
+export function AvatarDialog({ open, onClose, returnFocus, name = null }: AvatarDialogProps) {
   const titleId = useId()
   const cardRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -108,7 +110,7 @@ export function AvatarDialog({ open, onClose, returnFocus }: AvatarDialogProps) 
             Done
           </button>
         </div>
-        <AvatarPicker />
+        <AvatarBuilder name={name} />
       </div>
     </div>,
     document.body
