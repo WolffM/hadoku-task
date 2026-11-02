@@ -128,6 +128,11 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
   }
   const shown = settings.avatar
   const current = sets?.[setIdx]
+  // The tab on show. Picking an available source also wears it; Upload opens
+  // with nothing uploaded yet, to choose a file.
+  const [view, setView] = useState<AvatarSource>(shown.source)
+  useEffect(() => setView(shown.source), [shown.source])
+  const openable = (src: AvatarSource) => src === 'upload' || available[src]
 
   return (
     <div style={S.stack}>
@@ -143,22 +148,19 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
             key={src}
             type="button"
             role="radio"
-            aria-checked={shown.source === src}
-            disabled={busy || !available[src]}
-            title={
-              available[src]
-                ? undefined
-                : src === 'upload'
-                  ? 'Upload a picture below first'
-                  : `Link ${LABEL[src]} under Settings › Account first`
-            }
+            aria-checked={view === src}
+            disabled={busy || !openable(src)}
+            title={openable(src) ? undefined : `Link ${LABEL[src]} under Settings › Account first`}
             style={{
               ...S.source,
-              ...(shown.source === src ? S.sourceOn : {}),
-              opacity: available[src] ? 1 : 0.5
+              ...(view === src ? S.sourceOn : {}),
+              opacity: openable(src) ? 1 : 0.5
             }}
             onClick={() => {
-              run(() => avatarClient.choose(src)).catch(reportErr)
+              setView(src)
+              if (available[src] && shown.source !== src) {
+                run(() => avatarClient.choose(src)).catch(reportErr)
+              }
             }}
           >
             <Picture src={thumbOf[src]} style={S.thumb} />
@@ -167,7 +169,7 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
         ))}
       </div>
 
-      {shown.source === 'sprite' &&
+      {view === 'sprite' &&
         (sets ? (
           <>
             {sets.length > 1 && (
@@ -211,37 +213,44 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
           <span className="settings-popout__hint">…</span>
         ))}
 
-      <div style={S.line}>
-        <span className="settings-popout__label" style={S.grow}>
-          Upload
-        </span>
-        <label className="settings-popout__btn" style={{ opacity: busy ? 0.5 : 1 }}>
-          {settings.upload ? 'Replace' : 'Choose image'}
-          <input
-            type="file"
-            accept={settings.limits.acceptedTypes.join(',')}
-            hidden
-            disabled={busy}
-            onChange={e => {
-              const file = e.currentTarget.files?.[0]
-              e.currentTarget.value = ''
-              if (file) run(() => avatarClient.upload(file)).catch(reportErr)
-            }}
-          />
-        </label>
-        {settings.upload && (
-          <button
-            type="button"
-            className="settings-popout__btn"
-            disabled={busy}
-            onClick={() => {
-              run(() => avatarClient.removeUpload()).catch(reportErr)
-            }}
-          >
-            Remove
-          </button>
-        )}
-      </div>
+      {view === 'upload' && (
+        <div style={S.line}>
+          <span className="settings-popout__label" style={S.grow}>
+            {settings.upload ? 'Your picture' : 'Choose a picture to use'}
+          </span>
+          <label className="settings-popout__btn" style={{ opacity: busy ? 0.5 : 1 }}>
+            {settings.upload ? 'Replace' : 'Choose image'}
+            <input
+              type="file"
+              accept={settings.limits.acceptedTypes.join(',')}
+              hidden
+              disabled={busy}
+              onChange={e => {
+                const file = e.currentTarget.files?.[0]
+                e.currentTarget.value = ''
+                // An upload is worn at once: picking a file on this tab means "use this".
+                if (file)
+                  run(async () => {
+                    await avatarClient.upload(file)
+                    return avatarClient.choose('upload')
+                  }).catch(reportErr)
+              }}
+            />
+          </label>
+          {settings.upload && (
+            <button
+              type="button"
+              className="settings-popout__btn"
+              disabled={busy}
+              onClick={() => {
+                run(() => avatarClient.removeUpload()).catch(reportErr)
+              }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -125,8 +125,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
       '@wolffm/prefs-client':
-        specifier: ^1.1.17
-        version: 1.1.17(react@19.2.8)(zod@4.6.7)
+        specifier: ^1.1.18
+        version: 1.1.18(react@19.2.8)(zod@4.6.7)
       '@wolffm/themes':
         specifier: workspace:*
         version: link:../themes
@@ -967,6 +967,13 @@ packages:
 
   '@wolffm/prefs-client@1.1.17':
     resolution: {integrity: sha512-h214rILSBKAUqjDm8BrFFZoFEFSi0bDtHAdJRM9cSUiXzBiRCwDAvrH+H1L8ZKGzwCpuFPrpXXEIoORC1spI7A==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.17/3cd27506b41b5e7cb3f84733be31320a697f7ecb}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      zod: ^4.0.0
+
+  '@wolffm/prefs-client@1.1.18':
+    resolution: {integrity: sha512-y7RafZO8crtNze3FHmcMaH5mddxA7+4DJ21EGpZCes9BWdrh+m3s/5Q/MoEUJSmPXmfeYepa5bD3oCNgBaQLBQ==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.18/29b9995c6fb9079820a5194888f7f8013c49ed2c}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -3172,7 +3179,7 @@ snapshots:
       react: 19.2.7
       zod: 4.1.12
 
-  '@wolffm/prefs-client@1.1.17(react@19.2.8)(zod@4.6.7)':
+  '@wolffm/prefs-client@1.1.18(react@19.2.8)(zod@4.6.7)':
     dependencies:
       react: 19.2.8
       zod: 4.6.7

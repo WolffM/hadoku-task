@@ -18,9 +18,17 @@
  *
  * Styles are inline for the reason AvatarPicker's are: apps compile this
  * package's CSS at their own build. Tokens only; the cosmetics' own colours come
- * from the person's character colour (and, for overlay images, the art).
+ * from the person's colour, their picture's average or else their character's
+ * (and, for overlay images, the art).
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore
+} from 'react'
 import { Icon } from '@wolffm/themes'
 import type { AvatarSettings, LoadoutUpdate } from '@wolffm/prefs-client/avatar'
 import {
@@ -35,7 +43,10 @@ import {
   fitPlacement,
   messageHtml,
   nameHtml,
+  onPictureColour,
+  pictureColour,
   placementTransform,
+  readPictureColour,
   wornCosmetics,
   type AvatarCosmetics,
   type CosmeticSlot,
@@ -344,6 +355,22 @@ function useDragScroll<T extends HTMLElement>() {
   return setEl
 }
 
+/**
+ * The colour a picture gives a person's name: its average, read once
+ * (@wolffm/prefs-client, the same reader watchparty's chat uses). Null for no
+ * picture, or while it is unread or unreadable.
+ */
+function usePictureColour(url: string | null): string | null {
+  useEffect(() => {
+    if (url) void readPictureColour(url)
+  }, [url])
+  return useSyncExternalStore(
+    onPictureColour,
+    () => (url ? (pictureColour(url) ?? null) : null),
+    () => null
+  )
+}
+
 export interface AvatarBuilderProps {
   /** The person's display name, for the preview. */
   name: string | null
@@ -358,7 +385,6 @@ export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('picture')
   const [tryOn, setTryOn] = useState<{ slot: CosmeticSlot; id: string } | null>(null)
-  const [showLocked, setShowLocked] = useState(true)
   const [replay, setReplay] = useState(0)
   const narrow = useNarrow()
   const root = useRef<HTMLDivElement>(null)
@@ -368,6 +394,8 @@ export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
   const seq = useRef(0)
 
   useEffect(() => ensureCosmeticsStyles(), [])
+  // A Discord, Steam or uploaded picture colours the name; a character, its own colour.
+  const tint = usePictureColour(settings?.avatar.url ?? null)
 
   useEffect(() => {
     let live = true
@@ -475,11 +503,11 @@ export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
   const characters = new Map((sets ?? []).flatMap(s => s.characters).map(c => [c.id, c]))
   const character = settings.sprite ? characters.get(settings.sprite) : undefined
   const picture = settings.avatar.url ?? (character ? portraitUrl(character) : null)
-  // Every name cosmetic derives its colours from the character's.
-  const colour: React.CSSProperties =
-    character && /^#[0-9a-f]{6}$/i.test(character.color)
-      ? ({ '--hc-base': character.color } as React.CSSProperties)
-      : {}
+  // Every name cosmetic derives its colours from the person's: the picture's
+  // average, else the character's, as the chat draws them.
+  const base =
+    tint ?? (character && /^#[0-9a-f]{6}$/i.test(character.color) ? character.color : null)
+  const colour: React.CSSProperties = base ? ({ '--hc-base': base } as React.CSSProperties) : {}
   const displayName = name || 'You'
 
   const worn: AvatarCosmetics = { ...(settings.avatar.cosmetics ?? {}) }
@@ -656,8 +684,6 @@ export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
               owned={owned}
               equipped={loadout?.equipped[tab] ?? null}
               tryOn={tryOn}
-              showLocked={showLocked}
-              onShowLocked={setShowLocked}
               isAdmin={isAdmin}
               preview={id => {
                 const only: AvatarCosmetics = { [tab]: id ?? undefined }
@@ -817,8 +843,6 @@ interface SlotGridProps {
   owned: ReadonlySet<string>
   equipped: string | null
   tryOn: { slot: CosmeticSlot; id: string } | null
-  showLocked: boolean
-  onShowLocked: (on: boolean) => void
   /** Admins see archived items, greyed and not selectable. */
   isAdmin: boolean
   preview: (id: string | null) => string
@@ -836,8 +860,6 @@ function SlotGrid({
   owned,
   equipped,
   tryOn,
-  showLocked,
-  onShowLocked,
   isAdmin,
   preview,
   colour,
@@ -846,7 +868,6 @@ function SlotGrid({
 }: SlotGridProps) {
   const items = COSMETICS.filter(i => i.slot === slot && (!i.hidden || isAdmin))
   const locked = items.filter(i => !i.hidden && !owned.has(i.id))
-  const shown = showLocked ? items : items.filter(i => i.hidden || owned.has(i.id))
 
   return (
     <>
@@ -860,7 +881,7 @@ function SlotGrid({
           <Html html={preview(null)} style={{ ...S.tilePv, ...colour }} />
           <span style={S.tileName}>None</span>
         </button>
-        {shown.map(item => {
+        {items.map(item => {
           if (item.hidden) {
             return (
               <button
@@ -884,7 +905,9 @@ function SlotGrid({
               key={item.id}
               type="button"
               aria-pressed={own ? on : trying}
-              aria-label={own ? item.label : `${item.label}, locked. ${item.earn ?? ''}. Try it on.`}
+              aria-label={
+                own ? item.label : `${item.label}, locked. ${item.earn ?? ''}. Try it on.`
+              }
               style={{
                 ...S.tile,
                 ...(on ? S.tileOn : {}),
@@ -913,14 +936,6 @@ function SlotGrid({
             {locked.length === 1 ? 'One to earn.' : `${locked.length} to earn.`} Pick one to try it
             on.
           </span>
-          <label>
-            <input
-              type="checkbox"
-              checked={showLocked}
-              onChange={e => onShowLocked(e.currentTarget.checked)}
-            />{' '}
-            Show locked
-          </label>
         </div>
       )}
     </>

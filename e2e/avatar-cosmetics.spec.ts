@@ -51,6 +51,7 @@ async function stored(request: APIRequestContext) {
   const res = await request.get(AVATAR)
   expect(res.ok()).toBe(true)
   return (await res.json()) as {
+    avatar: { source: string }
     cosmetics: {
       owned: string[]
       loadout: {
@@ -214,6 +215,41 @@ test.describe('avatar cosmetics', () => {
     await dialog.getByRole('button', { name: 'Take off' }).click()
     await expect(preview.getByText(/Trying on Twinkle/)).toHaveCount(0)
     await expect(preview.locator('.hc-name.hc-fx-twinkle')).toHaveCount(0)
+  })
+
+  test('upload controls live on the Upload tab only, which opens with nothing uploaded', async ({
+    page,
+    request
+  }) => {
+    const res = await request.put(AVATAR, { data: { source: 'sprite' } })
+    expect(res.ok(), await res.text()).toBe(true)
+    const dialog = await openDialog(page)
+    const sources = dialog.getByRole('radiogroup', { name: 'Picture' })
+    await expect(sources.getByRole('radio', { name: /Character/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    await expect(dialog.getByRole('radiogroup', { name: 'Character' })).toBeVisible()
+    await expect(dialog.getByText('Choose image')).toHaveCount(0)
+
+    const upload = sources.getByRole('radio', { name: /Upload/ })
+    await expect(upload).toBeEnabled()
+    await upload.click()
+    await expect(upload).toHaveAttribute('aria-checked', 'true')
+    await expect(dialog.getByText('Choose image')).toBeVisible()
+    await expect(dialog.getByRole('radiogroup', { name: 'Character' })).toHaveCount(0)
+    // Opening the tab wears nothing: there is no picture to wear yet.
+    expect((await stored(request)).avatar.source).toBe('sprite')
+
+    await sources.getByRole('radio', { name: /Character/ }).click()
+    await expect(dialog.getByText('Choose image')).toHaveCount(0)
+  })
+
+  test('locked items always show, with no toggle to hide them', async ({ page }) => {
+    const dialog = await openDialog(page)
+    await dialog.getByRole('tab', { name: /Effect/ }).click()
+    await expect(dialog.getByRole('button', { name: /^Twinkle, locked\./ })).toBeVisible()
+    await expect(dialog.getByText('Show locked')).toHaveCount(0)
   })
 
   test('archived items show to nobody: five fonts, no Metal', async ({ page }) => {
