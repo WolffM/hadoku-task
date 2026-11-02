@@ -18,8 +18,8 @@ importers:
         specifier: ^1.4.3
         version: 1.4.3
       '@wolffm/prefs-client':
-        specifier: ^1.1.12
-        version: 1.1.12(react@19.2.7)(zod@4.1.12)
+        specifier: ^1.1.13
+        version: 1.1.13(react@19.2.7)(zod@4.1.12)
       '@wolffm/task-ui-components':
         specifier: workspace:*
         version: link:task-ui-components
@@ -125,8 +125,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
       '@wolffm/prefs-client':
-        specifier: ^1.1.12
-        version: 1.1.12(react@19.2.8)(zod@4.6.7)
+        specifier: ^1.1.13
+        version: 1.1.13(react@19.2.8)(zod@4.6.7)
       '@wolffm/themes':
         specifier: workspace:*
         version: link:../themes
@@ -143,8 +143,8 @@ importers:
   themes:
     dependencies:
       '@wolffm/prefs-client':
-        specifier: ^1.1.12
-        version: 1.1.12(react@19.2.7)(zod@4.1.12)
+        specifier: ^1.1.13
+        version: 1.1.13(react@19.2.7)(zod@4.1.12)
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.7
@@ -965,8 +965,8 @@ packages:
     resolution: {integrity: sha512-Slc+zFMo1PODZ0+YuhmbdISNl/UPnB7//M+VMTN8ZbR1YMMDKnkFMR2I8gvt7invaYMno5N0iOW3iJkeCC5lUw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.3/b567775fac1a91f83fe006c9be7fa778fe76e073}
     engines: {node: '>=18'}
 
-  '@wolffm/prefs-client@1.1.12':
-    resolution: {integrity: sha512-N/zCBuZuD8tt7i0FJGTgW8T5oKHscMz+uAC1OFeLIBlDClcx4WiiZ4mYsJZXrMUTgoeHygxYMDW2EH/IVUhpNw==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.12/7b68d14ccc124fa67d327174d7331ace5c7c12fb}
+  '@wolffm/prefs-client@1.1.13':
+    resolution: {integrity: sha512-fonGhUu3l43ubBjmxlrOUbIpqwwHdUOoHo6pfgUABOOwPQcB8dG+p0+S199iZru8F6TZb3nIkBpD7F/2DgGlgQ==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.13/f9f5405509e0987b24c5c74d049f351cf00c43d0}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -3167,12 +3167,12 @@ snapshots:
 
   '@wolffm/logger@1.4.3': {}
 
-  '@wolffm/prefs-client@1.1.12(react@19.2.7)(zod@4.1.12)':
+  '@wolffm/prefs-client@1.1.13(react@19.2.7)(zod@4.1.12)':
     dependencies:
       react: 19.2.7
       zod: 4.1.12
 
-  '@wolffm/prefs-client@1.1.12(react@19.2.8)(zod@4.6.7)':
+  '@wolffm/prefs-client@1.1.13(react@19.2.8)(zod@4.6.7)':
     dependencies:
       react: 19.2.8
       zod: 4.6.7
