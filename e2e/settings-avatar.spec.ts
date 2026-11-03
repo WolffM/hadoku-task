@@ -232,7 +232,6 @@ test.describe('settings avatar row', () => {
     const links = page.locator('.settings-popout__row', {
       has: page.getByText('Linked accounts', { exact: true })
     })
-    await links.getByRole('button', { name: 'Open' }).click()
     await links.getByRole('button', { name: 'Link' }).first().click()
     await expect(links.getByText(/identify/)).toBeVisible()
 

@@ -4,9 +4,9 @@
  * part of changing the avatar). A linked account's picture then shows up as a
  * choice in the avatar dialog's Picture tab.
  *
- * Loaded only when the person opens the row, never at mount: the read can
- * refresh a linked picture from Discord or Steam, which opening the gear must
- * not cost (settings-prefetch e2e).
+ * Mounted only with the Account tab, never when the gear opens elsewhere: the
+ * read can refresh a linked picture from Discord or Steam, which opening the
+ * gear must not cost (settings-prefetch e2e).
  *
  * Linking signs in through a popup (`linkInPopup`), so the page under the
  * popout never navigates and a game keeps running.

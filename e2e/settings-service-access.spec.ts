@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test'
 
 /**
- * Service access in the settings popout (ServiceAccess.tsx): a grantee enrols
+ * Service access in the settings popout's Account tab (ServiceAccess.tsx): a grantee enrols
  * their own authenticator and mints a 7-day credential, both behind a passkey
  * tap (hadoku_site docs/planning/service-grants-2026-10-31.md).
  *
@@ -26,6 +26,10 @@ const json = (route: Route, body: unknown, status = 200) =>
 
 async function boot(page: Page, serviceGrants: number) {
   await page.route('**/prefs/api/**', route => json(route, {}))
+  // The Account tab mounts Linked accounts, which reads the avatar settings.
+  await page.route('**/prefs/api/v1/_avatar', route =>
+    json(route, { linked: {}, providers: { discord: true, steam: true } })
+  )
   await page.route('**/session/whoami', route =>
     json(route, { valid: true, userType: 'friend', name: 'alice', passkeys: 1, serviceGrants })
   )
@@ -100,14 +104,14 @@ function edge(page: Page) {
   return posts
 }
 
-async function openProfile(page: Page) {
+async function openAccount(page: Page) {
   await page.goto('/?userType=friend')
   await page.waitForSelector(APP_HEADER, { timeout: 15000 })
   await page.getByRole('button', { name: 'User settings' }).click()
   const panel = page.locator('.settings-popout__panel')
   await expect(panel).toBeVisible()
-  await panel.getByRole('tab', { name: 'Profile' }).click()
-  await expect(page.locator('.settings-popout__tier')).toBeVisible({ timeout: 5000 })
+  await panel.getByRole('tab', { name: 'Account' }).click()
+  await expect(panel.getByText('Linked accounts', { exact: true })).toBeVisible({ timeout: 5000 })
   return panel
 }
 
@@ -123,7 +127,7 @@ test.describe('settings service access', () => {
     page.on('request', r => {
       if (r.url().includes('/session/service-access')) fetched++
     })
-    await openProfile(page)
+    await openAccount(page)
     await expect(row(page)).toHaveCount(0)
     expect(fetched).toBe(0)
   })
@@ -131,7 +135,7 @@ test.describe('settings service access', () => {
   test('enrol an authenticator, mint a credential shown once, then revoke it', async ({ page }) => {
     await boot(page, 1)
     const posts = edge(page)
-    await openProfile(page)
+    await openAccount(page)
     await row(page).getByRole('button', { name: 'Open' }).click()
 
     // 1. Enrol: passkey tap, QR + secret, one code.
