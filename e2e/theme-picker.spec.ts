@@ -48,6 +48,24 @@ test.describe('Theme Picker', () => {
     await expect(page.getByRole('checkbox')).toHaveCount(0)
   })
 
+  // A keyboard or TV remote: Enter opens it with focus inside, Escape (a remote's
+  // Back) closes it and gives focus back to the toggle. Without this a remote
+  // could open the picker and never leave it.
+  test('opens and closes from the keyboard, with focus following', async ({ page }) => {
+    const toggle = page.locator('.theme-toggle-btn')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await toggle.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.theme-picker__dropdown')).toBeVisible()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('.theme-picker__dropdown button:focus')).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.theme-picker__dropdown')).not.toBeVisible()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggle).toBeFocused()
+  })
+
   test('should close dropdown when overlay is clicked', async ({ page }) => {
     // Open the picker
     await page.locator('.theme-toggle-btn').click()

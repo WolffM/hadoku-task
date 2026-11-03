@@ -4,7 +4,7 @@
  * Designed to work with any theme system via configuration
  */
 
-import React, { useRef, useLayoutEffect, useState } from 'react'
+import React, { useEffect, useRef, useLayoutEffect, useState } from 'react'
 import { Tooltip } from './Tooltip'
 import type { ThemePickerProps } from '../types'
 import { SettingsIcon, getFallbackIcon } from './ThemeIcons'
@@ -42,6 +42,11 @@ export function ThemePicker({
   dropdownPlacement = 'auto'
 }: ThemePickerProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  // The latest onToggle, so the open/close effect below runs on isOpen alone:
+  // callers pass a new arrow every render, and re-running it would steal focus.
+  const onToggleRef = useRef(onToggle)
+  onToggleRef.current = onToggle
   const [resolvedPlacement, setResolvedPlacement] = useState<'left' | 'right'>('right')
 
   // Edge detection: when 'auto', measure the dropdown after render and flip if it overflows
@@ -69,6 +74,26 @@ export function ThemePicker({
     return () => cancelAnimationFrame(frameId)
   }, [isOpen, dropdownPlacement])
 
+  // Keyboard and TV remote: opening moves focus into the dropdown (onto the
+  // theme in use), and Escape or a TV's Back key closes it and hands focus back
+  // to the toggle. Without this a remote could open the picker and never leave.
+  useEffect(() => {
+    if (!isOpen) return
+    const dropdown = dropdownRef.current
+    const target =
+      dropdown?.querySelector<HTMLButtonElement>('.theme-pill__btn.active') ??
+      dropdown?.querySelector<HTMLButtonElement>('button')
+    target?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (!isCloseKey(e)) return
+      e.preventDefault()
+      onToggleRef.current()
+      toggleRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen])
+
   // Get icon for current theme (use provided function or fallback to MoonIcon)
   const currentIcon = getThemeIcon ? getThemeIcon(currentTheme) : <MoonIcon />
 
@@ -78,9 +103,12 @@ export function ThemePicker({
     <div className={`theme-picker ${openLeftClass} ${className}`.trim()}>
       <Tooltip content="Choose theme">
         <button
+          ref={toggleRef}
           className="app-header__icon-btn theme-toggle-btn"
           onClick={onToggle}
           aria-label="Choose theme"
+          aria-expanded={isOpen}
+          aria-haspopup="true"
         >
           {currentIcon}
         </button>
@@ -145,5 +173,16 @@ export function ThemePicker({
       )}
       {isOpen && <div className="theme-picker__overlay" onClick={onToggle} />}
     </div>
+  )
+}
+
+/** Escape, or a TV remote's Back: GoBack/BrowserBack, webOS 461, Tizen 10009. */
+function isCloseKey(e: KeyboardEvent): boolean {
+  return (
+    e.key === 'Escape' ||
+    e.key === 'GoBack' ||
+    e.key === 'BrowserBack' ||
+    e.keyCode === 461 ||
+    e.keyCode === 10009
   )
 }
