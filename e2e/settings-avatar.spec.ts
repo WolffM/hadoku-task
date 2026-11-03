@@ -10,10 +10,12 @@ import { test, expect, type Page, type Route } from '@playwright/test'
  *   - picking a character writes it through prefs-api, and the page never
  *     navigates;
  *   - the character grid shows only while the picture is the character;
- *   - linking lives under Account (Linked accounts), not in the avatar dialog;
- *     it signs in through a POPUP opened inside the click, and re-reads the
+ *   - linking lives under Account (Linked accounts), and an unlinked Discord
+ *     or Steam tile in the Picture tab offers the same consent step; either
+ *     signs in through a POPUP opened inside the click, and re-reads the
  *     settings when the callback page reports back on the BroadcastChannel
- *     (hadoku_site src/pages/account/link/callback.astro).
+ *     (hadoku_site src/pages/account/link/callback.astro);
+ *   - a tile that was selected leaves no ring behind once another is picked.
  */
 
 const APP_HEADER = 'h1.app-header__title'
@@ -222,12 +224,6 @@ test.describe('settings avatar row', () => {
     )
     await openSettings(page, 'friend')
     const url = page.url()
-    // Not in the avatar dialog any more.
-    await avatarRow(page).getByRole('button', { name: 'Change' }).click()
-    await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
-    await expect(avatarDialog(page).getByRole('button', { name: 'Link' })).toHaveCount(0)
-    await avatarDialog(page).getByRole('button', { name: 'Done' }).click()
-
     await page.getByRole('tab', { name: 'Account' }).click()
     const links = page.locator('.settings-popout__row', {
       has: page.getByText('Linked accounts', { exact: true })
@@ -249,6 +245,99 @@ test.describe('settings avatar row', () => {
     })
     await expect(links.getByText('Discord · linked')).toBeVisible()
     expect(page.url(), 'the page navigated').toBe(url)
+  })
+
+  test('an unlinked Discord links from the Picture tab, and its picture is worn', async ({
+    page,
+    context
+  }) => {
+    await stubBoot(page, 'friend')
+    const discord = {
+      avatarUrl: 'https://cdn.discordapp.com/avatars/1/abc.png',
+      linkedAt: 1,
+      refreshedAt: 1
+    }
+    let linked = false
+    const puts: unknown[] = []
+    await page.route(`**${AVATAR_PATH}`, route => {
+      if (route.request().method() === 'PUT') {
+        puts.push(route.request().postDataJSON())
+        return json(
+          route,
+          settings({
+            linked: { discord },
+            choice: 'discord',
+            avatar: { source: 'discord', url: discord.avatarUrl }
+          })
+        )
+      }
+      return json(route, linked ? settings({ linked: { discord } }) : settings())
+    })
+    await page.route(`**${AVATAR_PATH}/link/discord`, route =>
+      json(route, { authorizeUrl: `${new URL(page.url()).origin}/fake-discord-consent` })
+    )
+    await context.route('**/fake-discord-consent', route =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<p>consent</p>' })
+    )
+    await page.route('https://cdn.discordapp.com/**', route => route.fulfill({ status: 404 }))
+    await openSettings(page, 'friend')
+    await avatarRow(page).getByRole('button', { name: 'Change' }).click()
+    const dialog = avatarDialog(page)
+    await dialog.getByRole('radio', { name: 'Discord' }).click()
+    await expect(dialog.getByText(/identify/)).toBeVisible()
+
+    const popupPromise = page.waitForEvent('popup')
+    await dialog.getByRole('button', { name: 'Continue to Discord' }).click()
+    const popup = await popupPromise
+    await popup.waitForURL('**/fake-discord-consent')
+    linked = true
+    await popup.evaluate(() => {
+      const c = new BroadcastChannel('hadoku-avatar-link')
+      c.postMessage({ type: 'hadoku-avatar-link', ok: true, provider: 'discord' })
+      c.close()
+    })
+    // Linked with a picture: it is worn, and the consent step is gone.
+    await expect.poll(() => puts).toEqual([{ source: 'discord' }])
+    await expect(dialog.getByText(/identify/)).toHaveCount(0)
+    await expect(dialog.getByRole('radio', { name: 'Discord' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+  })
+
+  test('a tile picked and then left keeps no ring', async ({ page }) => {
+    await stubBoot(page, 'friend')
+    await page.route(`**${AVATAR_PATH}`, route => json(route, settings()))
+    await page.route(`**${AVATAR_PATH}/cosmetics`, route => {
+      const body = route.request().postDataJSON() as { equip: { effect?: string | null } }
+      const effect = body.equip.effect ?? null
+      const base = settings()
+      return json(route, {
+        ...base,
+        cosmetics: {
+          ...base.cosmetics,
+          loadout: {
+            ...base.cosmetics.loadout,
+            equipped: { ...base.cosmetics.loadout.equipped, effect }
+          }
+        }
+      })
+    })
+    await openSettings(page, 'friend')
+    await avatarRow(page).getByRole('button', { name: 'Change' }).click()
+    const dialog = avatarDialog(page)
+    await dialog.getByRole('tab', { name: 'Effect' }).click()
+    // Nothing is owned here, so a pick is a try-on: the dashed ring, the same
+    // borderStyle and borderColor overrides a worn item's ring uses.
+    const tile = (name: string) => dialog.getByRole('button', { name: new RegExp(`\\b${name}\\b`) })
+    const border = (name: string) => tile(name).evaluate(el => getComputedStyle(el).borderTopColor)
+    const untouched = await border('Outline')
+    await tile('Glint').click()
+    await expect(tile('Glint')).toHaveAttribute('aria-pressed', 'true')
+    await tile('Aura').click()
+    await expect(tile('Aura')).toHaveAttribute('aria-pressed', 'true')
+    await expect(tile('Glint')).toHaveAttribute('aria-pressed', 'false')
+    expect(await border('Glint')).toBe(untouched)
   })
 
   test('the dialog is wider than the popout; Escape and Done close it, the popout stays', async ({

@@ -201,7 +201,12 @@ const S = {
     gap: 5,
     padding: 6,
     borderRadius: 8,
-    border: '1px solid var(--color-border)',
+    // Longhands, not the `border` shorthand: the selected styles override
+    // borderColor, and when one comes off React clears borderColor to '', which
+    // would reset it to currentColor and leave a text-coloured ring behind.
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'var(--color-border)',
     background: 'var(--color-bg)',
     color: 'var(--color-text)',
     cursor: 'pointer',
@@ -225,16 +230,7 @@ const S = {
     fontSize: '0.8rem'
   },
   tileName: { fontSize: '0.8rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 },
-  tileEarn: { fontSize: '0.7rem', lineHeight: 1.3, color: 'var(--color-text-muted)' },
-  foot: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    fontSize: '0.75rem',
-    color: 'var(--color-text-muted)'
-  }
+  tileEarn: { fontSize: '0.7rem', lineHeight: 1.3, color: 'var(--color-text-muted)' }
 } satisfies Record<string, React.CSSProperties>
 
 /**
@@ -867,77 +863,64 @@ function SlotGrid({
   onTry
 }: SlotGridProps) {
   const items = COSMETICS.filter(i => i.slot === slot && (!i.hidden || isAdmin))
-  const locked = items.filter(i => !i.hidden && !owned.has(i.id))
 
   return (
-    <>
-      <div style={S.grid}>
-        <button
-          type="button"
-          aria-pressed={equipped === null}
-          style={{ ...S.tile, ...(equipped === null ? S.tileOn : {}) }}
-          onClick={() => onEquip(null)}
-        >
-          <Html html={preview(null)} style={{ ...S.tilePv, ...colour }} />
-          <span style={S.tileName}>None</span>
-        </button>
-        {items.map(item => {
-          if (item.hidden) {
-            return (
-              <button
-                key={item.id}
-                type="button"
-                disabled
-                aria-label={`${item.label}, archived`}
-                style={{ ...S.tile, cursor: 'not-allowed', opacity: 0.45 }}
-              >
-                <Html html={preview(item.id)} style={{ ...S.tilePv, ...colour }} />
-                <span style={S.tileName}>{item.label}</span>
-                <span style={S.tileEarn}>Archived</span>
-              </button>
-            )
-          }
-          const own = owned.has(item.id)
-          const on = equipped === item.id
-          const trying = tryOn?.slot === slot && tryOn.id === item.id
+    <div style={S.grid}>
+      <button
+        type="button"
+        aria-pressed={equipped === null}
+        style={{ ...S.tile, ...(equipped === null ? S.tileOn : {}) }}
+        onClick={() => onEquip(null)}
+      >
+        <Html html={preview(null)} style={{ ...S.tilePv, ...colour }} />
+        <span style={S.tileName}>None</span>
+      </button>
+      {items.map(item => {
+        if (item.hidden) {
           return (
             <button
               key={item.id}
               type="button"
-              aria-pressed={own ? on : trying}
-              aria-label={
-                own ? item.label : `${item.label}, locked. ${item.earn ?? ''}. Try it on.`
-              }
-              style={{
-                ...S.tile,
-                ...(on ? S.tileOn : {}),
-                ...(trying ? S.tileTrying : {})
-              }}
-              onClick={() => (own ? onEquip(item.id) : onTry(item.id))}
-              // A message reveal plays once; hovering its tile plays it again.
-              onMouseEnter={e => slot === 'message' && replayPreview(e.currentTarget)}
+              disabled
+              aria-label={`${item.label}, archived`}
+              style={{ ...S.tile, cursor: 'not-allowed', opacity: 0.45 }}
             >
-              <Html
-                html={preview(item.id)}
-                style={{ ...S.tilePv, ...colour, opacity: own ? 1 : 0.55 }}
-              />
-              <span style={{ ...S.tileName, color: own ? undefined : 'var(--color-text-muted)' }}>
-                {!own && <Icon name="lock" size={12} />}
-                {item.label}
-              </span>
-              {!own && <span style={S.tileEarn}>{item.earn}</span>}
+              <Html html={preview(item.id)} style={{ ...S.tilePv, ...colour }} />
+              <span style={S.tileName}>{item.label}</span>
+              <span style={S.tileEarn}>Archived</span>
             </button>
           )
-        })}
-      </div>
-      {locked.length > 0 && (
-        <div style={S.foot}>
-          <span>
-            {locked.length === 1 ? 'One to earn.' : `${locked.length} to earn.`} Pick one to try it
-            on.
-          </span>
-        </div>
-      )}
-    </>
+        }
+        const own = owned.has(item.id)
+        const on = equipped === item.id
+        const trying = tryOn?.slot === slot && tryOn.id === item.id
+        return (
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={own ? on : trying}
+            aria-label={own ? item.label : `${item.label}, locked. ${item.earn ?? ''}. Try it on.`}
+            style={{
+              ...S.tile,
+              ...(on ? S.tileOn : {}),
+              ...(trying ? S.tileTrying : {})
+            }}
+            onClick={() => (own ? onEquip(item.id) : onTry(item.id))}
+            // A message reveal plays once; hovering its tile plays it again.
+            onMouseEnter={e => slot === 'message' && replayPreview(e.currentTarget)}
+          >
+            <Html
+              html={preview(item.id)}
+              style={{ ...S.tilePv, ...colour, opacity: own ? 1 : 0.55 }}
+            />
+            <span style={{ ...S.tileName, color: own ? undefined : 'var(--color-text-muted)' }}>
+              {!own && <Icon name="lock" size={12} />}
+              {item.label}
+            </span>
+            {!own && <span style={S.tileEarn}>{item.earn}</span>}
+          </button>
+        )
+      })}
+    </div>
   )
 }

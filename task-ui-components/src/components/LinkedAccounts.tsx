@@ -51,6 +51,60 @@ const S = {
   list: { margin: 0, paddingLeft: 18, fontSize: '0.75rem', lineHeight: 1.45 }
 } satisfies Record<string, React.CSSProperties>
 
+/**
+ * Link `provider` in a popup, and wear its picture when it came back with one:
+ * linking from either place means "use this". Call it inside the click, with
+ * nothing awaited first — the popup opens before its first await, which is
+ * what popup blockers allow.
+ */
+export function linkAndWear(provider: LinkProvider): Promise<AvatarSettings> {
+  return avatarClient
+    .linkInPopup(provider)
+    .then(next => (next.linked[provider]?.avatarUrl ? avatarClient.choose(provider) : next))
+}
+
+/**
+ * What linking reads and keeps, then Continue. Shared by Account → Linked
+ * accounts and the avatar dialog's Picture tab, so the consent is one text.
+ */
+export function LinkConsent({
+  provider,
+  busy,
+  onLink,
+  onCancel
+}: {
+  provider: LinkProvider
+  busy: boolean
+  /** Must open the popup synchronously: call {@link linkAndWear} directly. */
+  onLink: () => void
+  onCancel?: () => void
+}) {
+  return (
+    <div style={S.stack}>
+      <ul style={S.list}>
+        {CONSENT[provider].points.map(t => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
+      <span style={S.line}>
+        <button
+          type="button"
+          className="settings-popout__btn settings-popout__btn--primary"
+          disabled={busy}
+          onClick={onLink}
+        >
+          {CONSENT[provider].go}
+        </button>
+        {onCancel && (
+          <button type="button" className="settings-popout__btn" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
+
 export function LinkedAccounts() {
   const [settings, setSettings] = useState<AvatarSettings | null>(null)
   const [busy, setBusy] = useState(false)
@@ -90,17 +144,6 @@ export function LinkedAccounts() {
         {error ?? '…'}
       </span>
     )
-  }
-
-  // Must stay synchronous up to linkInPopup: the popup opens before its first
-  // await, inside this click, which is what popup blockers allow.
-  const link = (provider: LinkProvider) => {
-    setConsent(null)
-    void run(async () => {
-      const next = await avatarClient.linkInPopup(provider)
-      // Linking is choosing, when the account came back with a picture.
-      return next.linked[provider]?.avatarUrl ? avatarClient.choose(provider) : next
-    })
   }
 
   return (
@@ -144,26 +187,15 @@ export function LinkedAccounts() {
       })}
 
       {consent && (
-        <div style={S.stack}>
-          <ul style={S.list}>
-            {CONSENT[consent].points.map(t => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-          <span style={S.line}>
-            <button
-              type="button"
-              className="settings-popout__btn settings-popout__btn--primary"
-              disabled={busy}
-              onClick={() => link(consent)}
-            >
-              {CONSENT[consent].go}
-            </button>
-            <button type="button" className="settings-popout__btn" onClick={() => setConsent(null)}>
-              Cancel
-            </button>
-          </span>
-        </div>
+        <LinkConsent
+          provider={consent}
+          busy={busy}
+          onLink={() => {
+            setConsent(null)
+            void run(() => linkAndWear(consent))
+          }}
+          onCancel={() => setConsent(null)}
+        />
       )}
 
       {error && (

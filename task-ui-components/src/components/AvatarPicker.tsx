@@ -7,8 +7,9 @@
  * protocol cannot drift from the callback page).
  *
  * Everything happens in place: picking, uploading and removing are requests
- * from here. Linking Discord or Steam lives in the popout's Account tab
- * (LinkedAccounts); a linked account's picture is a choice here.
+ * from here. Discord and Steam are managed in the popout's Account tab
+ * (LinkedAccounts); one not linked yet can also be linked from its tile here,
+ * with the same consent step, and its picture is then worn.
  *
  * AvatarBuilder owns the settings and the character table and loads them only
  * when the dialog opens; this component draws them and sends changes through
@@ -21,6 +22,7 @@
 import React, { useEffect, useState } from 'react'
 import { type AvatarSettings, type AvatarSource } from '@wolffm/prefs-client/avatar'
 import { avatarClient, portraitUrl, type CharacterSet } from '../lib/avatarData'
+import { LinkConsent, linkAndWear } from './LinkedAccounts'
 
 const LABEL: Record<AvatarSource, string> = {
   sprite: 'Character',
@@ -40,7 +42,12 @@ const S = {
     gap: 4,
     padding: 6,
     borderRadius: 8,
-    border: '1px solid var(--color-border)',
+    // Longhands, not the `border` shorthand: the selected styles override
+    // borderColor, and when one comes off React clears borderColor to '', which
+    // would reset it to currentColor and leave a text-coloured ring behind.
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'var(--color-border)',
     background: 'var(--color-bg)',
     color: 'var(--color-text)',
     fontSize: '0.72rem',
@@ -128,11 +135,10 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
   }
   const shown = settings.avatar
   const current = sets?.[setIdx]
-  // The tab on show. Picking an available source also wears it; Upload opens
-  // with nothing uploaded yet, to choose a file.
+  // The tab on show. Picking an available source also wears it; one that is
+  // not yet opens to get it: Upload to choose a file, Discord or Steam to link.
   const [view, setView] = useState<AvatarSource>(shown.source)
   useEffect(() => setView(shown.source), [shown.source])
-  const openable = (src: AvatarSource) => src === 'upload' || available[src]
 
   return (
     <div style={S.stack}>
@@ -149,13 +155,8 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
             type="button"
             role="radio"
             aria-checked={view === src}
-            disabled={busy || !openable(src)}
-            title={openable(src) ? undefined : `Link ${LABEL[src]} under Settings › Account first`}
-            style={{
-              ...S.source,
-              ...(view === src ? S.sourceOn : {}),
-              opacity: openable(src) ? 1 : 0.5
-            }}
+            disabled={busy}
+            style={{ ...S.source, ...(view === src ? S.sourceOn : {}) }}
             onClick={() => {
               setView(src)
               if (available[src] && shown.source !== src) {
@@ -211,6 +212,23 @@ export function AvatarPicker({ settings, sets, busy, run }: AvatarPickerProps) {
           </>
         ) : (
           <span className="settings-popout__hint">…</span>
+        ))}
+
+      {(view === 'discord' || view === 'steam') &&
+        !available[view] &&
+        (!settings.providers[view] ? (
+          <span className="settings-popout__hint">{LABEL[view]} is not available yet.</span>
+        ) : settings.linked[view] ? (
+          <span className="settings-popout__hint">Your {LABEL[view]} account has no picture.</span>
+        ) : (
+          <LinkConsent
+            key={view}
+            provider={view}
+            busy={busy}
+            onLink={() => {
+              run(() => linkAndWear(view)).catch(reportErr)
+            }}
+          />
         ))}
 
       {view === 'upload' && (
