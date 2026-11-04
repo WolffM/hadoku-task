@@ -1,128 +1,16 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 /**
- * E2E tests for data synchronization between localStorage and API
+ * Sync between localStorage and the boards API, against a mocked API: a newer
+ * server copy replaces an older local one.
  *
- * These tests verify:
- * 1. API data is fetched and stored in localStorage on auth
- * 2. localStorage is updated when API has newer data
- * 3. The sync flow works correctly with real production API
- *
- * Uses test keys from .env for authenticated testing
+ * Two production tests used to sit here, signing in on hadoku.me with a key
+ * that was never registered. They could not pass anywhere and CI skipped
+ * them, so they were deleted on 2026-11-04. A real production sign-in is the
+ * opt-in RUN_PROD_SIGNIN probe (prod-inline-sign-in.spec.ts).
  */
-
-// Test keys - these should be registered on the production server
-const FRIEND_TEST_KEY = 'friend-12345678-1234-1234-1234-1234567890ab'
-
-/**
- * Sign in the way a person does: through the site's /auth page, which is the
- * only thing allowed to create a session (it signs a funnel token and takes the
- * device fingerprint). It returns to the task app with the session cookie.
- */
-async function signInViaAuthPage(page: Page, key: string) {
-  await page.goto('https://hadoku.me/auth?switch=1&return=' + encodeURIComponent('/task/'))
-  await page.locator('#auth-key').fill(key)
-  await page.locator('#submit-btn').click()
-  await page.waitForURL(/hadoku\.me\/task\//, { timeout: 15000 })
-}
 
 test.describe('Data Sync Flow', () => {
-  test.describe('Production API Integration', () => {
-    // Skip in CI - these tests hit real production API
-    test.skip(() => !!process.env.CI, 'Skipping production tests in CI')
-
-    test('should fetch boards from API after authentication', async ({ page }) => {
-      // Clear localStorage before test
-      await page.goto('https://hadoku.me/task/')
-      await page.evaluate(() => {
-        localStorage.clear()
-      })
-      await page.reload()
-
-      // Wait for app to load
-      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-
-      await signInViaAuthPage(page, FRIEND_TEST_KEY)
-      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-
-      // Give time for sync to complete
-      await page.waitForTimeout(3000)
-
-      // Verify localStorage was updated
-      const sessionId = await page.evaluate(() => localStorage.getItem('hadoku_session_id'))
-      const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
-
-      expect(sessionId).toBeTruthy()
-      expect(sessionId).not.toMatch(/^public-/)
-      expect(userType).toBe('friend')
-
-      // Check that boards data was synced to localStorage
-      const localStorageKeys = await page.evaluate(() => {
-        const keys: string[] = []
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i)
-          if (key) keys.push(key)
-        }
-        return keys
-      })
-
-      // Should have boards key like "friend-{sessionId}-boards"
-      const hasBoardsKey = localStorageKeys.some(k => k.includes('-boards'))
-      expect(hasBoardsKey).toBe(true)
-
-      console.log('localStorage keys after auth:', localStorageKeys)
-    })
-
-    test('should show API data after page reload', async ({ page }) => {
-      // First, authenticate
-      await page.goto('https://hadoku.me/task/')
-
-      // Check if already authenticated
-      const userType = await page.evaluate(() => localStorage.getItem('hadoku_user_type'))
-
-      if (userType !== 'friend') {
-        await signInViaAuthPage(page, FRIEND_TEST_KEY)
-      }
-
-      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-
-      // Wait for data to load
-      await page.waitForTimeout(3000)
-
-      // Get current localStorage state
-      const beforeReload = await page.evaluate(() => {
-        const sessionId = localStorage.getItem('hadoku_session_id')
-        const boardsKey = Object.keys(localStorage).find(k => k.includes('-boards'))
-        const boardsData = boardsKey ? localStorage.getItem(boardsKey) : null
-        return { sessionId, boardsKey, boardsData }
-      })
-
-      console.log('Before reload:', beforeReload)
-
-      // Reload the page
-      await page.reload()
-      await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-
-      // Wait for sync
-      await page.waitForTimeout(3000)
-
-      // Verify data persists
-      const afterReload = await page.evaluate(() => {
-        const sessionId = localStorage.getItem('hadoku_session_id')
-        const userType = localStorage.getItem('hadoku_user_type')
-        const boardsKey = Object.keys(localStorage).find(k => k.includes('-boards'))
-        const boardsData = boardsKey ? localStorage.getItem(boardsKey) : null
-        return { sessionId, userType, boardsKey, boardsData }
-      })
-
-      console.log('After reload:', afterReload)
-
-      expect(afterReload.sessionId).toBe(beforeReload.sessionId)
-      expect(afterReload.userType).toBe('friend')
-      expect(afterReload.boardsData).toBeTruthy()
-    })
-  })
-
   test.describe('Sync Logic with Mocked API', () => {
     test('should update localStorage when API returns newer data', async ({ page }) => {
       const oldTimestamp = '2024-01-01T00:00:00.000Z'
