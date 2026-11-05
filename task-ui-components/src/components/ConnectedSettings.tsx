@@ -37,6 +37,9 @@ import { LinkedAccounts } from './LinkedAccounts'
 
 // A grantee's own service credentials, with a QR encoder for TOTP enrolment:
 // its own chunk, fetched only when a grantee opens it.
+const Authenticator = React.lazy(() =>
+  import('./Authenticator').then(m => ({ default: m.Authenticator }))
+)
 const ServiceAccess = React.lazy(() =>
   import('./ServiceAccess').then(m => ({ default: m.ServiceAccess }))
 )
@@ -946,6 +949,21 @@ export function ConnectedSettings({
                   </section>
                 )}
 
+                {/* The authenticator, and the sign-in link it makes: offered only
+              once a passkey is saved, since setting one up takes a passkey tap. */}
+                {!resolving &&
+                  userType !== 'public' &&
+                  ((passkeyCount ?? 0) > 0 || passkeySaved) && (
+                    <section
+                      className="settings-popout__row settings-popout__row--stack"
+                      aria-label="Authenticator"
+                    >
+                      <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
+                        <Authenticator />
+                      </React.Suspense>
+                    </section>
+                  )}
+
                 {/* Discord and Steam: linked here, so their pictures can be chosen in
               the avatar dialog. Mounted with the Account tab: the read can refresh
               a linked picture, which opening the gear on another tab must not cost. */}
@@ -957,8 +975,8 @@ export function ConnectedSettings({
                 )}
 
                 {/* Service access: only for someone the operator granted a
-              service identity. No heading of its own: its first line (the
-              authenticator, or the code once enrolled) says what it is. */}
+              service identity. No heading of its own: its lines (the code, a
+              Mint per identity) say what it is. */}
                 {!resolving && serviceGrants > 0 && (
                   <section
                     className="settings-popout__row settings-popout__row--stack"

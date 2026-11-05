@@ -1,19 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { renderSVG } from 'uqr'
-import { loadSignInClient, type PasskeyAssertion } from '../lib/settingsClient'
+import {
+  ACCOUNT_STYLES as S,
+  AUTHENTICATOR_ON_EVENT,
+  errorMessage as message,
+  sessionCall,
+  stepUp
+} from '../lib/accountApi'
+import { CodeInput, isCode } from './CodeInput'
 
 /**
  * Service access: a grantee's own credentials for the service identities the
  * operator granted them (hadoku_site docs/planning/service-grants-2026-10-31.md).
  *
- * Two steps, both behind a fresh passkey tap:
- *   1. enrol an authenticator app once (the QR is shown once, then confirmed
- *      with one code);
- *   2. mint a credential: passkey tap + a current code. The key is shown once
- *      and lives 7 days.
+ * A credential takes a passkey tap and a current code from the person's
+ * authenticator, which they set up in the Authenticator section above
+ * (Authenticator.tsx); until it is on, this section says so. The key is shown
+ * once and lives 7 days.
  *
- * Mounted only for a grantee (React.lazy in ConnectedSettings), so the QR
- * encoder and the state read cost a grantee one chunk and everyone else nothing.
+ * Mounted only for a grantee (React.lazy in ConnectedSettings), so the state
+ * read costs a grantee one chunk and everyone else nothing.
  */
 
 const BASE = '/session/service-access'
@@ -38,32 +43,7 @@ interface State {
   credentials: Credential[]
 }
 
-const S = {
-  stack: { display: 'flex', flexDirection: 'column', gap: 8 },
-  line: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  grow: { flex: 1, minWidth: 0 },
-  mono: { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', wordBreak: 'break-all' },
-  code: { width: '7ch', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.1em' },
-  qr: { width: 168, height: 168 }
-} satisfies Record<string, React.CSSProperties>
-
-async function call<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    credentials: 'same-origin',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body)
-  })
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string }
-  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
-  return data
-}
-
-async function stepUp(): Promise<PasskeyAssertion> {
-  const client = await loadSignInClient()
-  if (!client?.stepUpPasskey) throw new Error('Passkeys unavailable here')
-  return client.stepUpPasskey()
-}
+const call = <T,>(path: string, body?: unknown) => sessionCall<T>(`${BASE}${path}`, body)
 
 function left(expiresAt: number | null): string {
   if (expiresAt === null) return ''
@@ -71,13 +51,10 @@ function left(expiresAt: number | null): string {
   return h >= 24 ? `${Math.floor(h / 24)}d left` : h >= 1 ? `${h}h left` : 'under 1h left'
 }
 
-const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
-
 export function ServiceAccess() {
   const [state, setState] = useState<State | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [enrol, setEnrol] = useState<{ uri: string; secret: string } | null>(null)
   const [code, setCode] = useState('')
   const [minted, setMinted] = useState<{ key: string; name: string; expiresAt: number } | null>(
     null
@@ -89,6 +66,12 @@ export function ServiceAccess() {
 
   useEffect(() => {
     load().catch((err: unknown) => setError(message(err)))
+    // The authenticator section turning on unlocks minting here.
+    const reload = () => {
+      load().catch((err: unknown) => setError(message(err)))
+    }
+    window.addEventListener(AUTHENTICATOR_ON_EVENT, reload)
+    return () => window.removeEventListener(AUTHENTICATOR_ON_EVENT, reload)
   }, [load])
 
   const run = async (work: () => Promise<void>) => {
@@ -111,74 +94,14 @@ export function ServiceAccess() {
     )
   }
 
-  const codeOk = /^\d{6}$/.test(code)
-  const codeInput = (
-    <input
-      value={code}
-      onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      placeholder="123456"
-      aria-label="Authenticator code"
-      className="settings-popout__input"
-      style={S.code}
-    />
-  )
+  const codeOk = isCode(code)
 
   return (
     <div style={S.stack}>
-      {state.totp !== 'active' && !enrol && (
-        <span style={S.line}>
-          <span className="settings-popout__label" style={S.grow}>
-            Authenticator
-          </span>
-          <button
-            type="button"
-            className="settings-popout__btn settings-popout__btn--primary"
-            disabled={busy}
-            onClick={() => {
-              run(async () => {
-                setEnrol(
-                  await call<{ uri: string; secret: string }>('/totp/start', {
-                    assertion: await stepUp()
-                  })
-                )
-              }).catch(console.error)
-            }}
-          >
-            Set up
-          </button>
+      {state.totp !== 'active' && (
+        <span className="settings-popout__hint">
+          Minting takes the authenticator: set it up above.
         </span>
-      )}
-
-      {enrol && (
-        <div style={S.stack}>
-          <span
-            role="img"
-            aria-label="Authenticator QR code"
-            style={S.qr}
-            dangerouslySetInnerHTML={{ __html: renderSVG(enrol.uri) }}
-          />
-          <span style={S.mono}>{enrol.secret}</span>
-          <span style={S.line}>
-            {codeInput}
-            <button
-              type="button"
-              className="settings-popout__btn settings-popout__btn--primary"
-              disabled={busy || !codeOk}
-              onClick={() => {
-                run(async () => {
-                  await call('/totp/confirm', { code })
-                  setEnrol(null)
-                  setCode('')
-                  await load()
-                }).catch(console.error)
-              }}
-            >
-              Confirm
-            </button>
-          </span>
-        </div>
       )}
 
       {minted && (
@@ -209,7 +132,7 @@ export function ServiceAccess() {
           <span className="settings-popout__label" style={S.grow}>
             Code
           </span>
-          {codeInput}
+          <CodeInput value={code} onChange={setCode} />
         </span>
       )}
 

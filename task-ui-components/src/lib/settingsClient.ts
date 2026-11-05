@@ -300,7 +300,16 @@ export interface SignInClient {
   /** Saves a passkey for the signed-in person on this device. Throws Error(message). */
   addPasskey?: (opts?: { signal?: AbortSignal }) => Promise<{ saved: boolean; passkeys: number }>
   /** A fresh passkey tap from the signed-in person; the assertion to post. Throws Error(message). */
-  stepUpPasskey?: (opts?: { signal?: AbortSignal }) => Promise<PasskeyAssertion>
+  /**
+   * Re-prove the signed-in person with a passkey tap. `challengePath` names
+   * the route that issues the challenge (service access's by default);
+   * `flow` labels the failure beacon.
+   */
+  stepUpPasskey?: (opts?: {
+    signal?: AbortSignal
+    challengePath?: string
+    flow?: string
+  }) => Promise<PasskeyAssertion>
 }
 
 /** What `stepUpPasskey` resolves to: the WebAuthn assertion, base64url fields. */
