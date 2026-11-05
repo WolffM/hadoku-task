@@ -107,9 +107,25 @@ const env = {
   EDGE_AUTH_SECRET: EDGE_SECRET
 } as unknown as Record<string, unknown>
 
+/**
+ * Who this request is. The dev user, unless the spec set a `dev_user` cookie
+ * (helpers/prefs.ts `asFreshUser`) to be someone with no rows yet.
+ *
+ * Device rows are isolated per test for free (a fresh context mints a fresh
+ * device id), user rows are not: every spec is the same person, so one that
+ * picks a theme leaves a user-scope theme every later spec inherits. A spec
+ * whose premise is "this person has no shared prefs" must be a new person.
+ */
+function userIdOf(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const cookie = typeof req.headers.cookie === 'string' ? req.headers.cookie : ''
+  const m = /(?:^|;\s*)dev_user=([a-z0-9-]{1,64})(?:;|$)/.exec(cookie)
+  return m ? m[1] : USER.id
+}
+
 createServer(NO_IDLE_CLOSE, async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', 'http://localhost')
+    const userId = userIdOf(req)
 
     // Edge-router's endpoint, not prefs-api's. The SDK derives it by stripping
     // `/prefs` off apiBase, and uses the userId purely to key its localStorage
@@ -125,7 +141,7 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
         .end(
           JSON.stringify({
             valid: true,
-            userId: USER.id,
+            userId,
             userType: USER.tier,
             name: USER.name
           })
@@ -153,7 +169,7 @@ createServer(NO_IDLE_CLOSE, async (req, res) => {
       typeof asked === 'string' && SPEC_TIERS.has(asked) ? asked : USER.tier
     )
     headers.set('X-User-Key', USER.key)
-    headers.set('X-User-Id', USER.id)
+    headers.set('X-User-Id', userId)
 
     // Edge-router strips the /prefs prefix before forwarding; the worker mounts
     // its routes at /api/v1/*. Forwarding the prefix unchanged would 404 every

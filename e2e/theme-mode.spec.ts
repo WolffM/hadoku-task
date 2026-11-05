@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
+import { asFreshUser, prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 
 /**
@@ -21,11 +21,10 @@ import { mockShellApi } from './helpers/mock-api'
 const PUBLIC_USER_TYPE = 'public'
 const PUBLIC_SESSION_ID = 'public-test-session'
 // @wolffm/prefs-client optimistic cache: `prefs-cache:{userId}:{appId}`.
-// The local stack's edge-router shim resolves /session/whoami to the dev user
-// it stamps on every request, so this is the real resolved identity rather
-// than a mock's idea of one.
-const DEV_USER_ID = 'dev-uid'
-const SHARED_CACHE_KEY = `prefs-cache:${DEV_USER_ID}:portfolio`
+// The local stack's edge-router shim resolves /session/whoami to the user it
+// stamps on every request, so this is the real resolved identity rather than
+// a mock's idea of one.
+const sharedCacheKey = (userId: string) => `prefs-cache:${userId}:portfolio`
 
 /** Read a prefs-client cache envelope's blob from localStorage. */
 function readSdkCacheBlob(page: Page, key: string): Promise<Record<string, unknown> | null> {
@@ -52,7 +51,11 @@ async function setupRoutes(page: Page) {
  * `hadoku_session_id` — the host page's mf-loader owns the latter and wipes it
  * on every boot for a public user (see `src/api/session.ts`).
  */
-async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Promise<void> {
+async function seedPublicSession(
+  page: Page,
+  prefs: Record<string, unknown>,
+  userId?: string
+): Promise<void> {
   await page.addInitScript(
     ({ userType, sessionId }) => {
       window.localStorage.setItem('hadoku_user_type', userType)
@@ -60,7 +63,7 @@ async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Pr
     },
     { userType: PUBLIC_USER_TYPE, sessionId: PUBLIC_SESSION_ID }
   )
-  await seedDevicePrefs(page, prefs)
+  await seedDevicePrefs(page, prefs, userId)
 }
 
 async function waitForApp(page: Page) {
@@ -104,9 +107,12 @@ test.describe('Theme Mode', () => {
     // the people it exists for: anyone whose only hadoku app is this one has
     // no shared row, so their theme stayed stranded in the task row and the
     // app opened on the default forever.
-    await seedPublicSession(page, {
-      theme: 'coffee-dark'
-    })
+    //
+    // A new person: the premise is an EMPTY shared row, and the dev user's
+    // carries whatever theme an earlier spec picked (a pick is saved at user
+    // scope, so every device of theirs inherits it).
+    const userId = await asFreshUser(page)
+    await seedPublicSession(page, { theme: 'coffee-dark' }, userId)
 
     await page.goto('/')
     await waitForApp(page)
@@ -120,7 +126,7 @@ test.describe('Theme Mode', () => {
     // And it landed in the SHARED row, so every other hadoku app sees it too —
     // not just re-read from the task row this app is migrating away from.
     await expect
-      .poll(async () => (await readSdkCacheBlob(page, SHARED_CACHE_KEY))?.theme ?? null, {
+      .poll(async () => (await readSdkCacheBlob(page, sharedCacheKey(userId)))?.theme ?? null, {
         timeout: 10000
       })
       .toBe('coffee-dark')

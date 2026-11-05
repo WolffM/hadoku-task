@@ -21,13 +21,17 @@
  *   sessionStorage — what the pre-paint inline <head> script reads; per tab.
  *   localStorage   — what survives a browser restart, so the NEXT cold load
  *                    paints the right theme directly with no default-then-swap.
- *   prefs (device) — cross-device, via @wolffm/prefs-client; resolves async.
+ *   prefs          — cross-device, via @wolffm/prefs-client; resolves async.
+ *                    A pick is written at user scope (what a device with no
+ *                    pick of its own inherits) and device scope (this device's
+ *                    own answer, which wins in the merge).
  *
  * The async layer is why `userOverrodeRef` exists: a late prefs resolve must
  * not yank the user back to the previously persisted theme if they've already
  * picked a new one this session.
  */
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
+import type { Scope } from '@wolffm/prefs-client'
 import { usePrefs } from '@wolffm/prefs-client/react'
 import { setTheme as applyTheme, saveTheme, setThemeMode } from './index'
 import type { Theme } from './index'
@@ -137,22 +141,34 @@ export function useTheme(options: UseThemeOptions = {}) {
     []
   )
 
-  const setTheme = useCallback((next: string) => {
+  const commitTheme = useCallback((next: string, scopes: readonly Scope[]) => {
     setThemeState(next)
     userOverrodeRef.current = true
     // Synchronous local write first: it is what preserves no-FOUC and same-tab
     // behaviour regardless of whether the network write lands.
     saveTheme(next as Theme)
-    savePrefsRef.current({ theme: next }, { scope: 'device' }).catch((err: unknown) => {
-      // Logged, never swallowed — silent save failures were the original
-      // "my theme keeps resetting" bug. This package stays free of the logger
-      // dependency, so console is the sink.
-      console.error('[useTheme] prefs save failed', {
-        error: (err as Error)?.message ?? String(err),
-        theme: next
+    for (const scope of scopes) {
+      savePrefsRef.current({ theme: next }, { scope }).catch((err: unknown) => {
+        // Logged, never swallowed — silent save failures were the original
+        // "my theme keeps resetting" bug. This package stays free of the logger
+        // dependency, so console is the sink.
+        console.error('[useTheme] prefs save failed', {
+          error: (err as Error)?.message ?? String(err),
+          theme: next,
+          scope
+        })
       })
-    })
+    }
   }, [])
+
+  // A pick from a picker. Device scope keeps "dark on the phone, light on the
+  // desktop"; user scope is what a device with no pick of its own inherits —
+  // and what tells the host page's pre-paint script that this person has
+  // chosen, so it stops dealing them a random dark theme on every device.
+  const setTheme = useCallback(
+    (next: string) => commitTheme(next, ['user', 'device']),
+    [commitTheme]
+  )
 
   // Another tab changing the theme should be reflected here.
   useEffect(() => {
@@ -210,6 +226,20 @@ export function useTheme(options: UseThemeOptions = {}) {
     }
   }, [persisted?.theme, propsTheme, theme, isThemeAvailable])
 
+  // Has anyone picked a theme, here or on another device? localStorage, not
+  // sessionStorage: the host page echoes its random draw into the tab-local
+  // layer, and only saveTheme() — a pick, or one adopted from prefs — writes
+  // the durable one.
+  const persistedTheme = persisted?.theme
+  const hasChoice = useCallback(() => {
+    if (userOverrodeRef.current || persistedTheme) return true
+    try {
+      return localStorage.getItem('hadoku-theme') !== null
+    } catch {
+      return false
+    }
+  }, [persistedTheme])
+
   // Follow the OS light/dark switch WITHIN the active family, so someone on
   // `coffee-light` moves to `coffee-dark` at sunset rather than to plain dark.
   // Base light/dark are left alone — those are explicit choices, not families.
@@ -219,17 +249,22 @@ export function useTheme(options: UseThemeOptions = {}) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
     const onChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      // Only a CHOSEN theme follows the OS. One nobody picked is the host's
+      // random dark draw, which is dark whatever the OS says — following the
+      // OS would also persist it, turning the draw into a pick nobody made.
+      if (!hasChoice()) return
       const family = theme.replace(/-light$|-dark$/, '')
       if (family === 'light' || family === 'dark') return
 
       const current = theme.endsWith('-dark') ? 'dark' : 'light'
       const target = e.matches ? 'dark' : 'light'
-      if (current !== target) setTheme(`${family}-${target}`)
+      // This device's sunset, not a pick: device scope only.
+      if (current !== target) commitTheme(`${family}-${target}`, ['device'])
     }
 
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
-  }, [theme, setTheme])
+  }, [theme, commitTheme, hasChoice])
 
   return {
     theme,

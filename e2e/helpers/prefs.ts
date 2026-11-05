@@ -61,6 +61,22 @@ export async function pointPrefsAtLocalStack(page: Page): Promise<void> {
   }, PREFS_BASE)
 }
 
+/**
+ * Make this page someone with no prefs rows at all: the prefs shim reads the
+ * `dev_user` cookie as the caller's userId (worker/test/prefs-dev-server.ts).
+ * For a spec whose premise is "nothing shared yet" — user-scope rows are
+ * shared by every spec that runs as the dev user. Returns the userId, which
+ * keys the SDK's cache (`prefs-cache:{userId}:{appId}`).
+ */
+export async function asFreshUser(page: Page): Promise<string> {
+  const userId = `e2e-${randomUUID()}`
+  // Path `/`: whoami is served outside /prefs, and must answer as the same person.
+  await page
+    .context()
+    .addCookies([{ name: 'dev_user', value: userId, domain: 'localhost', path: '/' }])
+  return userId
+}
+
 /** The task row's endpoint on the local prefs-api. */
 const TASK_PREFS = `${PREFS_BASE}/api/v1/task`
 
@@ -68,7 +84,12 @@ const TASK_PREFS = `${PREFS_BASE}/api/v1/task`
  * The SDK's localStorage cache of the task row: `prefs-cache:{userId}:{appId}`.
  * The local whoami shim answers `dev-uid` for every caller.
  */
-export const TASK_PREFS_CACHE_KEY = 'prefs-cache:dev-uid:task'
+export const TASK_PREFS_CACHE_KEY = taskPrefsCacheKey('dev-uid')
+
+/** The task row's cache key for `userId` (see asFreshUser). */
+export function taskPrefsCacheKey(userId: string): string {
+  return `prefs-cache:${userId}:task`
+}
 
 /**
  * Give this page a device whose saved prefs already hold `prefs` — the state a
@@ -89,7 +110,11 @@ export const TASK_PREFS_CACHE_KEY = 'prefs-cache:dev-uid:task'
  * init scripts run in registration order. It seeds once per empty storage, so a
  * reload keeps what the previous load left.
  */
-export async function seedDevicePrefs(page: Page, prefs: Record<string, unknown>): Promise<string> {
+export async function seedDevicePrefs(
+  page: Page,
+  prefs: Record<string, unknown>,
+  userId = 'dev-uid'
+): Promise<string> {
   const deviceId = randomUUID()
   const resp = await page.request.put(TASK_PREFS, {
     headers: { 'X-Device-Id': deviceId },
@@ -110,7 +135,7 @@ export async function seedDevicePrefs(page: Page, prefs: Record<string, unknown>
     },
     {
       id: deviceId,
-      key: TASK_PREFS_CACHE_KEY,
+      key: taskPrefsCacheKey(userId),
       envelope: JSON.stringify({
         blob: prefs,
         userVersion: 0,
