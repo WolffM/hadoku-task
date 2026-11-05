@@ -12,8 +12,8 @@ import { loadSignInClient, type PasskeyAssertion } from '../lib/settingsClient'
  *   2. mint a credential: passkey tap + a current code. The key is shown once
  *      and lives 7 days.
  *
- * Loaded only when opened (React.lazy in ConnectedSettings), so the QR encoder
- * costs a grantee one chunk and everyone else nothing.
+ * Mounted only for a grantee (React.lazy in ConnectedSettings), so the QR
+ * encoder and the state read cost a grantee one chunk and everyone else nothing.
  */
 
 const BASE = '/session/service-access'

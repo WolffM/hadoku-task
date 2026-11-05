@@ -276,7 +276,6 @@ export function ConnectedSettings({
   const avatarBtn = useRef<HTMLButtonElement>(null)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
-  const [serviceOpen, setServiceOpen] = useState(false)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -950,27 +949,16 @@ export function ConnectedSettings({
                 )}
 
                 {/* Service access: only for someone the operator granted a
-              service identity. Collapsed until Open. */}
+              service identity. No heading of its own: its first line (the
+              authenticator, or the code once enrolled) says what it is. */}
                 {!resolving && serviceGrants > 0 && (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <span className="settings-popout__inline">
-                      <span className="settings-popout__label settings-popout__label--grow">
-                        Service access
-                      </span>
-                      <button
-                        type="button"
-                        className="settings-popout__btn"
-                        aria-expanded={serviceOpen}
-                        onClick={() => setServiceOpen(v => !v)}
-                      >
-                        {serviceOpen ? 'Done' : 'Open'}
-                      </button>
-                    </span>
-                    {serviceOpen && (
-                      <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
-                        <ServiceAccess />
-                      </React.Suspense>
-                    )}
+                  <section
+                    className="settings-popout__row settings-popout__row--stack"
+                    aria-label="Service access"
+                  >
+                    <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
+                      <ServiceAccess />
+                    </React.Suspense>
                   </section>
                 )}
 

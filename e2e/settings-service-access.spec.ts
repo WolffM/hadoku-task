@@ -115,13 +115,10 @@ async function openAccount(page: Page) {
   return panel
 }
 
-const row = (page: Page) =>
-  page.locator('.settings-popout__row', {
-    has: page.getByText('Service access', { exact: true })
-  })
+const row = (page: Page) => page.getByRole('region', { name: 'Service access' })
 
 test.describe('settings service access', () => {
-  test('a person with no grant sees no Service access row', async ({ page }) => {
+  test('a person with no grant sees no Service access, and fetches none', async ({ page }) => {
     await boot(page, 0)
     let fetched = 0
     page.on('request', r => {
@@ -136,7 +133,8 @@ test.describe('settings service access', () => {
     await boot(page, 1)
     const posts = edge(page)
     await openAccount(page)
-    await row(page).getByRole('button', { name: 'Open' }).click()
+    // No heading or Open toggle: the authenticator line leads, ready to use.
+    await expect(page.getByText('Service access', { exact: true })).toHaveCount(0)
 
     // 1. Enrol: passkey tap, QR + secret, one code.
     await row(page).getByRole('button', { name: 'Set up' }).click()
