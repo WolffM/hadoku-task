@@ -126,7 +126,7 @@ async function req(
   method: string,
   path: string,
   body?: unknown
-): Promise<{ status: number; json: ResponseBody | null }> {
+): Promise<{ status: number; json: ResponseBody | null; headers: Headers }> {
   const res = await app.request(
     'http://localhost' + path,
     {
@@ -148,7 +148,7 @@ async function req(
   } catch {
     /* non-json */
   }
-  return { status: res.status, json }
+  return { status: res.status, json, headers: res.headers }
 }
 
 let pass = 0
@@ -302,6 +302,24 @@ async function main() {
     JSON.stringify(shared)
   )
   check("contributor reads the OWNER's 2 tasks", (await tasksOn(CONTRIB, handle)).length === 2)
+  check(
+    "GET /boards hydrates the OWNER's 2 tasks onto the shared board",
+    shared?.tasks?.length === 2,
+    JSON.stringify(shared?.tasks)
+  )
+  // GET /boards reports its latency split; the edge stores it on the request
+  // row (#110). Every step is named, so a slow load says which one it was.
+  {
+    const r = await req(CONTRIB, 'GET', '/task/api/boards')
+    const timing = r.headers.get('Server-Timing') ?? ''
+    check(
+      'GET /boards sets Server-Timing for every step',
+      ['boards', 'shared', 'claims', 'shares', 'total'].every(step =>
+        new RegExp(`(^|, )${step};dur=\\d+(,|$)`).test(timing)
+      ),
+      timing
+    )
+  }
   // Only an OWNER may see who a board is shared with — hydration must not leak
   // the grantee list to someone who merely has access to the board.
   check(

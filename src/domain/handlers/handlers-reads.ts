@@ -78,10 +78,11 @@ export async function getBoards(storage: Storage, auth: AuthContext): Promise<Bo
   // Populate each board with its tasks and stats from separate storage
   const populatedBoards = await Promise.all(
     boardsFile.boards.map(async board => {
-      // Fetch tasks for this board
-      const tasksFile = await storage.getTasks(auth.userType, auth.sessionId, board.id)
-      // Fetch stats for this board
-      const statsFile = await storage.getStats(auth.userType, auth.sessionId, board.id)
+      // Tasks and stats are independent reads: one round trip, not two (#110).
+      const [tasksFile, statsFile] = await Promise.all([
+        storage.getTasks(auth.userType, auth.sessionId, board.id),
+        storage.getStats(auth.userType, auth.sessionId, board.id)
+      ])
 
       const populated = {
         ...board,

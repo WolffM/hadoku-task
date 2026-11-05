@@ -41,6 +41,9 @@ export {
   type ResolvedIdentity
 } from '@wolffm/worker-utils/identity'
 
+/** How old a registry scan the board-load share labels accept. */
+const SHARE_NAMES_MAX_AGE_MS = 60_000
+
 /** Shared because grants and routes both stamp rows with it. */
 export const nowIso = () => new Date().toISOString()
 
@@ -84,7 +87,10 @@ export async function annotatedSharesByBoard(
     .bind(ownerId)
     .all<{ boardId: string; granteeUserId: string; level: string; createdAt: string }>()
   if (!results.length) return byBoard
-  const names = await registryNameMap(env)
+  // Every board load lands here, so take a scan up to a minute old rather than
+  // listing the whole `key:` registry each time (#110). The names only label
+  // the Share panel; a rename shows there within the minute.
+  const names = await registryNameMap(env, { maxAgeMs: SHARE_NAMES_MAX_AGE_MS })
   for (const s of results) {
     const who = names.get(s.granteeUserId)
     const arr = byBoard.get(s.boardId) ?? []
