@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { pointPrefsAtLocalStack, prefsUp, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
+import { openSettingsAppTab } from './helpers/settings'
 
 /**
  * The dogfood check: the icons this repo migrated off emoji must actually render as
@@ -34,8 +35,7 @@ async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Pr
 /** The settings panel renders a live preview TaskItem — where the migrated icons sit. */
 async function openSettings(page: Page) {
   await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-  await page.locator('.settings-toggle-btn').click()
-  await expect(page.locator('.settings-preview-stage')).toBeVisible()
+  await openSettingsAppTab(page)
 }
 
 test.describe('migrated icons in the running app', () => {

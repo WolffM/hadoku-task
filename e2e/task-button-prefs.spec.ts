@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
+import { openSettingsAppTab } from './helpers/settings'
 
 /**
  * E2E for the task-button preferences block (settings popout → Task buttons).
@@ -58,8 +59,7 @@ async function seedPublicSession(page: Page, prefs: Record<string, unknown>): Pr
 
 async function openSettings(page: Page) {
   await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-  await page.locator('.settings-toggle-btn').click()
-  await expect(page.locator(PREVIEW)).toBeVisible()
+  await openSettingsAppTab(page)
 }
 
 /** The checkbox inside the chip whose text label is `name`. */

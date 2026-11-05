@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { pointPrefsAtLocalStack, prefsUp } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
+import { openSettingsAppTab } from './helpers/settings'
 
 /**
  * The task app ADOPTS the themed controls: scrollbars on the app root,
@@ -35,8 +36,7 @@ async function boot(page: Page) {
 /** The settings panel renders a live preview TaskItem, so opening it puts
  *  every optional action button on screen for the title sweep. */
 async function openPreview(page: Page) {
-  await page.locator('.settings-toggle-btn').click()
-  await expect(page.locator('.settings-preview-stage')).toBeVisible()
+  await openSettingsAppTab(page)
 }
 
 /** The real card's action row (the preview's is pointer-events: none). */
