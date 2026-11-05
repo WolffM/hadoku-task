@@ -222,6 +222,11 @@ const TIER_LABEL: Record<Tier, string> = {
   public: 'Guest'
 }
 
+/** A member the operator made or verified reads as such; every other tier is verified by rank. */
+function tierLabel(tier: Tier, verified: boolean): string {
+  return tier === 'member' && verified ? 'Member-verified' : TIER_LABEL[tier]
+}
+
 export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
@@ -276,6 +281,8 @@ export function ConnectedSettings({
   const avatarBtn = useRef<HTMLButtonElement>(null)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
+  // The operator verified this person (whoami.verified); a member shows it.
+  const [verified, setVerified] = useState(false)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -393,10 +400,11 @@ export function ConnectedSettings({
   useEffect(() => {
     let live = true
     prefetchSettings({ userType: userTypeProp, name: nameProp })
-      .then(({ identity, content: state, passkeys, serviceGrants: grants }) => {
+      .then(({ identity, content: state, passkeys, serviceGrants: grants, verified: v }) => {
         if (!live) return
         setPasskeyCount(passkeys)
         setServiceGrants(grants)
+        setVerified(v)
         // Props stay authoritative: the host passed them because it can see an
         // identity this component can't resolve for itself.
         if (userTypeProp === undefined) {
@@ -647,7 +655,7 @@ export function ConnectedSettings({
                     <span className="settings-popout__value">…</span>
                   ) : (
                     <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
-                      {TIER_LABEL[userType]}
+                      {tierLabel(userType, verified)}
                     </span>
                   )}
                 </section>
