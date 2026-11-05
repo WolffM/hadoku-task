@@ -67,7 +67,7 @@
   "devDependencies": {
     "@types/react": "^19.2.16",
     "@vitejs/plugin-react": "^5.1.1",
-    "@wolffm/prefs-client": "^1.1.21",
+    "@wolffm/prefs-client": "^1.1.22",
     "@wolffm/themes": "workspace:*",
     "typescript": "^5.0.0",
     "uqr": "0.1.3",
