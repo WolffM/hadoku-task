@@ -32,31 +32,26 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
-import { AvatarDialog } from './AvatarDialog'
-import { LinkedAccounts } from './LinkedAccounts'
-import { NAME_EVENT, type NameEventDetail } from '../lib/nameEvent'
-
-// A grantee's own service credentials, with a QR encoder for TOTP enrolment:
-// its own chunk, fetched only when a grantee opens it.
-const Authenticator = React.lazy(() =>
-  import('./Authenticator').then(m => ({ default: m.Authenticator }))
-)
-const ServiceAccess = React.lazy(() =>
-  import('./ServiceAccess').then(m => ({ default: m.ServiceAccess }))
-)
 import {
-  deleteOwnAccount,
   prefetchSettings,
-  setContentLevel,
-  setDisplayName,
-  loadSignIn,
-  loadSignInClient,
-  passkeyHref,
   passkeysSupported,
-  switchKeyHref,
   type ContentLevelState,
   type Tier
 } from '../lib/settingsClient'
+import { PASSKEY_PULSE_CLASS, reportErr } from './settingsShared'
+
+// The Profile, Content and Account tab bodies are most of this component, and
+// opened now and then, but this module is on every page of every app through
+// the site's shared vendor bundle (#111). So they are a chunk of their own,
+// fetched when the popout opens and preloaded on the gear's hover or focus.
+const loadSiteTabs = () => import('./SettingsSiteTabs')
+const SettingsSiteTabs = React.lazy(() =>
+  loadSiteTabs().then(m => ({ default: m.SettingsSiteTabs }))
+)
+const SITE_TABS = new Set(['profile', 'content', 'account'])
+function preloadSiteTabs() {
+  loadSiteTabs().catch(reportErr)
+}
 import '../app-header.css'
 
 export interface ConnectedSettingsProps {
@@ -92,27 +87,6 @@ export interface AppSettingsTab {
   render: () => React.ReactNode
 }
 
-/** Rejects once `signal` aborts, so a call that ignores the signal (an older
- *  site client, a prompt that never settles) still lets the UI go. */
-function untilAborted(signal: AbortSignal): Promise<never> {
-  return new Promise((_, reject) => {
-    const fail = () => reject(new Error('cancelled'))
-    if (signal.aborted) fail()
-    else signal.addEventListener('abort', fail, { once: true })
-  })
-}
-
-/** Abort reason when the popout closes: a dismissal, not an error to show. */
-const CLOSED = 'closed'
-
-/** Rejection sink for fire-and-forget settings actions. The client helpers
- *  already resolve to null on failure (state reflects it), so this only trips
- *  on truly unexpected throws — log rather than swallow silently. */
-function reportErr(err: unknown) {
-  // task-ui-components v2 dropped its logger; keep the package dependency-free.
-  console.error('[ConnectedSettings] action failed', (err as Error)?.message ?? err)
-}
-
 /** Inline, not in app-header.css: every app runs this component from the
  *  site's shared vendor module, but compiles app-header.css into its own
  *  stylesheet at ITS build, so a new rule reaches an app only when it rebuilds. */
@@ -135,7 +109,6 @@ const PANEL_WIDTH: React.CSSProperties = { width: 400 }
 /** Save passkey pulses while the dot is asking for it. Keyframes cannot be
  *  inline, so the rule is injected once into the document instead, for the
  *  same reason PASSKEY_DOT is inline. */
-const PASSKEY_PULSE_CLASS = 'settings-popout__btn--pulse'
 const PASSKEY_PULSE_CSS = `
 @keyframes settings-passkey-pulse {
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 70%, transparent); }
@@ -217,20 +190,6 @@ function useInjectedStyle(id: string, css: string, active: boolean) {
   }, [id, css, active])
 }
 
-const TIER_LABEL: Record<Tier, string> = {
-  admin: 'Administrator',
-  wife: 'Wife',
-  service: 'Service',
-  friend: 'Friend',
-  member: 'Member',
-  public: 'Guest'
-}
-
-/** A member the operator made or verified reads as such; every other tier is verified by rank. */
-function tierLabel(tier: Tier, verified: boolean): string {
-  return tier === 'member' && verified ? 'Member-verified' : TIER_LABEL[tier]
-}
-
 export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
@@ -248,41 +207,19 @@ export function ConnectedSettings({
 
   // Identity — from props if supplied, else resolved lazily via whoami().
   const [userType, setUserType] = useState<Tier>(userTypeProp ?? 'public')
-  const [resolvedName, setResolvedName] = useState<string | null>(nameProp ?? null)
+  // The name: from props or whoami, then any rename saved in the popout.
+  const [displayName, setLocalName] = useState<string | null>(nameProp ?? null)
 
-  // Name editing
-  const [nameDraft, setNameDraft] = useState(resolvedName ?? '')
-  const [editingName, setEditingName] = useState(false)
-  const [nameSaving, setNameSaving] = useState(false)
-  const [nameError, setNameError] = useState<string | null>(null)
-  const [displayName, setLocalName] = useState<string | null>(resolvedName)
-
-  // Key swap. The draft lives only in this state and the input: it is never
-  // logged, stored or sent anywhere but the site's sign-in client.
-  const [keyFormOpen, setKeyFormOpen] = useState(false)
-  const [keyDraft, setKeyDraft] = useState('')
-  const [keyBusy, setKeyBusy] = useState(false)
-  const [keyError, setKeyError] = useState<string | null>(null)
-
-  // Passkeys, through the same site client: save one while signed in, or
-  // sign in with one from the key form. One prompt at a time, and always
-  // cancellable: a password manager can dismiss the browser's prompt without
-  // ever answering it, so Cancel, closing the popout and the site client's own
-  // time limit each end the wait.
-  const [passkeyMode, setPasskeyMode] = useState<'save' | 'signin' | null>(null)
-  const [passkeySaved, setPasskeySaved] = useState(false)
-  // How many passkeys sign this person in, from whoami; null = unknown.
+  // How many passkeys sign this person in, from whoami; null = unknown. A save
+  // in the popout sets passkeySaved, which retires the gear's dot.
   const [passkeyCount, setPasskeyCount] = useState<number | null>(null)
-  const [passkeyError, setPasskeyError] = useState<string | null>(null)
-  // Delete account: one click arms it, a second, separate button confirms.
-  const [deleteStage, setDeleteStage] = useState<'idle' | 'confirm' | 'busy'>('idle')
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const passkeyCtl = useRef<AbortController | null>(null)
-  const cancelPasskey = useCallback((reason?: string) => passkeyCtl.current?.abort(reason), [])
+  const [passkeySaved, setPasskeySaved] = useState(false)
 
-  // Avatar: the dialog's picker loads only when opened, never at mount (AvatarPicker).
+  // The Switch key form stays open across a close of the popout.
+  const [keyFormOpen, setKeyFormOpen] = useState(false)
+
+  // Avatar: the dialog loads only when opened, never at mount (AvatarPicker).
   const [avatarOpen, setAvatarOpen] = useState(false)
-  const avatarBtn = useRef<HTMLButtonElement>(null)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
   // The operator verified this person (whoami.verified); a member shows it.
@@ -290,7 +227,6 @@ export function ConnectedSettings({
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
-  const [levelSaving, setLevelSaving] = useState(false)
 
   // One flag for the whole prefetch, not one per request — the panel body
   // reveals when everything has settled, so nothing pops in a beat late. In
@@ -381,9 +317,7 @@ export function ConnectedSettings({
   }, [userTypeProp])
   useEffect(() => {
     if (nameProp !== undefined) {
-      setResolvedName(nameProp)
       setLocalName(nameProp)
-      setNameDraft(nameProp ?? '')
     }
   }, [nameProp])
 
@@ -413,9 +347,7 @@ export function ConnectedSettings({
         // identity this component can't resolve for itself.
         if (userTypeProp === undefined) {
           setUserType(identity.userType)
-          setResolvedName(identity.name)
           setLocalName(identity.name)
-          setNameDraft(identity.name ?? '')
         }
         if (state) setContent(state)
       })
@@ -442,149 +374,7 @@ export function ConnectedSettings({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, avatarOpen])
 
-  const saveName = useCallback(async () => {
-    const trimmed = nameDraft.trim()
-    if (!trimmed || trimmed === displayName) {
-      setEditingName(false)
-      return
-    }
-    setNameSaving(true)
-    const result = await setDisplayName(trimmed)
-    setNameSaving(false)
-    // A refusal keeps the editor open on the draft, saying why.
-    if (!result.ok) {
-      setNameError(result.error)
-      return
-    }
-    setNameError(null)
-    setLocalName(result.name)
-    setNameDraft(result.name ?? '')
-    if (result.name !== null) {
-      onNameChange?.(result.name)
-      window.dispatchEvent(
-        new window.CustomEvent<NameEventDetail>(NAME_EVENT, { detail: { name: result.name } })
-      )
-    }
-    setEditingName(false)
-  }, [nameDraft, displayName, onNameChange])
-
-  // Open the form AND start loading the site's sign-in client, which begins its
-  // fingerprint collection as it evaluates — so it is ready by submit. Where the
-  // client cannot load at all (not on hadoku.me), the page-level /auth flow is
-  // the only way to sign in, so go there.
-  const openKeyForm = useCallback(() => {
-    setKeyFormOpen(true)
-    setKeyError(null)
-    loadSignIn()
-      .then(signIn => {
-        if (!signIn) window.location.assign(switchKeyHref())
-      })
-      .catch(reportErr)
-  }, [])
-
-  const submitKey = useCallback(async () => {
-    setKeyBusy(true)
-    setKeyError(null)
-    const signIn = await loadSignIn()
-    if (!signIn) {
-      window.location.assign(switchKeyHref())
-      return
-    }
-    try {
-      await signIn(keyDraft)
-    } catch (err) {
-      // A refused key is an inline error, never a redirect.
-      setKeyError((err as Error)?.message || 'Invalid key')
-      setKeyBusy(false)
-      return
-    }
-    // The page now acts for a different identity: everything must re-mount.
-    // Busy stays on through the reload so the form can't be resubmitted.
-    window.location.reload()
-  }, [keyDraft])
-
-  const savePasskey = useCallback(async () => {
-    const ctl = new AbortController()
-    passkeyCtl.current = ctl
-    setPasskeyMode('save')
-    setPasskeyError(null)
-    try {
-      const client = await Promise.race([loadSignInClient(), untilAborted(ctl.signal)])
-      if (!client?.addPasskey) {
-        window.location.assign(passkeyHref('add'))
-        return
-      }
-      await Promise.race([client.addPasskey({ signal: ctl.signal }), untilAborted(ctl.signal)])
-      setPasskeySaved(true)
-    } catch (err) {
-      if (ctl.signal.reason !== CLOSED) {
-        setPasskeyError(
-          ctl.signal.aborted ? 'Passkey not saved' : (err as Error)?.message || 'Passkey not saved'
-        )
-      }
-    } finally {
-      if (passkeyCtl.current === ctl) passkeyCtl.current = null
-      setPasskeyMode(null)
-    }
-  }, [])
-
-  const signInWithPasskey = useCallback(async () => {
-    const ctl = new AbortController()
-    passkeyCtl.current = ctl
-    setPasskeyMode('signin')
-    setKeyBusy(true)
-    setKeyError(null)
-    let leaving = false
-    try {
-      const client = await Promise.race([loadSignInClient(), untilAborted(ctl.signal)])
-      if (!client?.signInWithPasskey) {
-        leaving = true
-        window.location.assign(passkeyHref('signin'))
-        return
-      }
-      await Promise.race([
-        client.signInWithPasskey({ signal: ctl.signal }),
-        untilAborted(ctl.signal)
-      ])
-      // The page now acts for a different identity: everything must re-mount.
-      // Busy stays on through the reload so nothing can be resubmitted.
-      leaving = true
-      window.location.reload()
-    } catch (err) {
-      if (ctl.signal.reason !== CLOSED) {
-        setKeyError(
-          ctl.signal.aborted
-            ? 'Passkey sign-in cancelled'
-            : (err as Error)?.message || 'Passkey sign-in cancelled'
-        )
-      }
-    } finally {
-      if (passkeyCtl.current === ctl) passkeyCtl.current = null
-      if (!leaving) {
-        setPasskeyMode(null)
-        setKeyBusy(false)
-      }
-    }
-  }, [])
-
-  // Closing the popout (or leaving the page) abandons an open prompt.
-  useEffect(() => {
-    if (!open) cancelPasskey(CLOSED)
-  }, [open, cancelPasskey])
-  useEffect(() => () => cancelPasskey(CLOSED), [cancelPasskey])
-
-  const pickLevel = useCallback(
-    async (level: number) => {
-      if (!content || level === content.level || levelSaving) return
-      const prev = content
-      setContent({ ...content, level }) // optimistic
-      setLevelSaving(true)
-      const result = await setContentLevel(level)
-      setLevelSaving(false)
-      setContent(result ?? prev) // adopt server truth, or revert
-    },
-    [content, levelSaving]
-  )
+  const onPasskeySaved = useCallback(() => setPasskeySaved(true), [])
 
   // No caller-supplied class on the root. The four rows below are the
   // platform's, not the app's, and a className here is enough to restyle or
@@ -598,6 +388,8 @@ export function ConnectedSettings({
         aria-label={needsPasskey ? 'User settings, no passkey saved' : 'User settings'}
         style={needsPasskey ? { position: 'relative' } : undefined}
         aria-expanded={open}
+        onPointerEnter={preloadSiteTabs}
+        onFocus={preloadSiteTabs}
         onClick={() => setOpen(v => !v)}
       >
         <SettingsIcon />
@@ -652,414 +444,36 @@ export function ConnectedSettings({
             id={panelDomId}
             aria-labelledby={tabDomId(activeTab)}
           >
-            {activeTab === 'profile' && (
-              <>
-                {/* Access tier. While resolving, the state still says 'public' —
-              rendering "Guest" there would be a wrong answer that corrects
-              itself a moment later, which reads exactly like the lag this
-              placeholder exists to remove. */}
-                <section className="settings-popout__row">
-                  <span className="settings-popout__label">Access tier</span>
-                  {resolving ? (
-                    <span className="settings-popout__value">…</span>
-                  ) : (
-                    <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
-                      {tierLabel(userType, verified)}
-                    </span>
-                  )}
-                </section>
-
-                {/* Display name */}
-                <section className="settings-popout__row">
-                  <span className="settings-popout__label">Display name</span>
-                  {resolving ? (
-                    <span className="settings-popout__value">…</span>
-                  ) : editingName ? (
-                    <span className="settings-popout__inline">
-                      <input
-                        className="settings-popout__input"
-                        value={nameDraft}
-                        maxLength={64}
-                        autoFocus
-                        disabled={nameSaving}
-                        aria-invalid={nameError !== null}
-                        aria-describedby={nameError ? 'settings-popout-name-error' : undefined}
-                        onChange={e => {
-                          setNameDraft(e.target.value)
-                          setNameError(null)
-                        }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            saveName().catch(reportErr)
-                          }
-                          if (e.key === 'Escape') {
-                            // The edit's Escape, not the popout's (window listener).
-                            e.stopPropagation()
-                            setEditingName(false)
-                            setNameError(null)
-                            setNameDraft(displayName ?? '')
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="settings-popout__btn settings-popout__btn--primary"
-                        disabled={nameSaving}
-                        onClick={() => {
-                          saveName().catch(reportErr)
-                        }}
-                      >
-                        {nameSaving ? '…' : 'Save'}
-                      </button>
-                      {nameError && (
-                        <span
-                          id="settings-popout-name-error"
-                          className="settings-popout__error"
-                          role="alert"
-                        >
-                          {nameError}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="settings-popout__value settings-popout__value--editable"
-                      aria-label="Edit display name"
-                      onClick={() => {
-                        setNameDraft(displayName ?? '')
-                        setEditingName(true)
-                      }}
-                    >
-                      {displayName || 'Unnamed'}
-                    </button>
-                  )}
-                </section>
-
-                {/* Avatar: picture and character, chosen in a dialog (AvatarDialog).
-              Nothing loads until Change, so opening the gear costs no request and
-              no page load reads the avatar. Hidden for public callers, like the
-              content pill: an avatar needs a session. */}
-                {!resolving && userType !== 'public' && (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <span className="settings-popout__inline">
-                      <span className="settings-popout__label settings-popout__label--grow">
-                        Avatar
-                      </span>
-                      <button
-                        ref={avatarBtn}
-                        type="button"
-                        className="settings-popout__btn"
-                        aria-haspopup="dialog"
-                        aria-expanded={avatarOpen}
-                        onClick={() => setAvatarOpen(true)}
-                      >
-                        Change
-                      </button>
-                    </span>
-                    <AvatarDialog
-                      open={avatarOpen}
-                      onClose={() => setAvatarOpen(false)}
-                      returnFocus={avatarBtn}
-                      name={displayName}
-                      isAdmin={userType === 'admin'}
-                    />
-                  </section>
-                )}
-              </>
-            )}
-
-            {/* Content visibility level. Held back until the first-open fetch
-              settles, so it lands in the same paint as the tier and name
-              rather than a round trip behind them. `content` is fetched
-              concurrently with whoami(), so by then it is already here. */}
-            {activeTab === 'content' && (
-              <section className="settings-popout__row settings-popout__row--stack">
-                <span className="settings-popout__label">Content visibility</span>
-                {content ? (
-                  <>
-                    <div
-                      className="settings-popout__pill"
-                      role="radiogroup"
-                      aria-label="Content visibility level"
-                    >
-                      {Array.from({ length: content.maxLevel }, (_, i) => i + 1).map(lvl => (
-                        <button
-                          key={lvl}
-                          type="button"
-                          role="radio"
-                          aria-checked={lvl === content.level}
-                          aria-label={`Level ${lvl}`}
-                          className={`settings-popout__seg${
-                            lvl <= content.level ? ' settings-popout__seg--filled' : ''
-                          }`}
-                          disabled={levelSaving}
-                          onClick={() => {
-                            pickLevel(lvl).catch(reportErr)
-                          }}
-                        >
-                          {lvl}
-                        </button>
-                      ))}
-                    </div>
-                    <span className="settings-popout__hint">
-                      Higher levels reveal more mature content across apps. Level 1 is
-                      safe-for-everyone.
-                    </span>
-                  </>
-                ) : (
-                  // Not "Loading…" — the fetch has already settled by the time
-                  // this section renders at all, so a null here means it failed.
-                  <span className="settings-popout__hint">Currently unavailable.</span>
-                )}
-              </section>
-            )}
-
-            {/* Switch key. Signs in inline through the SITE's sign-in client
-              (the /auth page's own code path), never a post of ours. A real
-              <form> with a username + current-password pair, so password
-              managers offer and save the key. */}
-            {activeTab === 'account' && (
-              <>
-                {keyFormOpen ? (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <form
-                      className="settings-popout__key-form"
-                      onSubmit={e => {
-                        e.preventDefault()
-                        submitKey().catch(reportErr)
-                      }}
-                    >
-                      <input
-                        type="text"
-                        name="username"
-                        autoComplete="username"
-                        value="hadoku"
-                        readOnly
-                        hidden
-                      />
-                      <label className="settings-popout__label" htmlFor="settings-popout-key">
-                        Access key
-                      </label>
-                      <span className="settings-popout__inline">
-                        <input
-                          id="settings-popout-key"
-                          className="settings-popout__input"
-                          type="password"
-                          name="password"
-                          autoComplete="current-password"
-                          autoCapitalize="none"
-                          spellCheck={false}
-                          autoFocus
-                          value={keyDraft}
-                          disabled={keyBusy}
-                          aria-invalid={keyError !== null}
-                          aria-describedby={keyError ? 'settings-popout-key-error' : undefined}
-                          onChange={e => setKeyDraft(e.target.value)}
-                        />
-                        <button
-                          type="submit"
-                          className="settings-popout__btn settings-popout__btn--primary"
-                          disabled={keyBusy}
-                        >
-                          {keyBusy ? 'Signing in…' : 'Sign in'}
-                        </button>
-                      </span>
-                      {passkeysSupported() && (
-                        <span className="settings-popout__inline">
-                          <button
-                            type="button"
-                            className="settings-popout__btn"
-                            disabled={keyBusy}
-                            onClick={() => {
-                              signInWithPasskey().catch(reportErr)
-                            }}
-                          >
-                            {passkeyMode === 'signin' ? 'Waiting for passkey…' : 'Use a passkey'}
-                          </button>
-                        </span>
-                      )}
-                      {/* Cancel on a line of its own: in the row it would slide under
-                    the pointer, and a double click would cancel what it started. */}
-                      {passkeyMode === 'signin' && (
-                        <span className="settings-popout__inline">
-                          <button
-                            type="button"
-                            className="settings-popout__btn"
-                            onClick={() => cancelPasskey()}
-                          >
-                            Cancel
-                          </button>
-                        </span>
-                      )}
-                      {keyError && (
-                        <span
-                          id="settings-popout-key-error"
-                          className="settings-popout__error"
-                          role="alert"
-                        >
-                          {keyError}
-                        </span>
-                      )}
-                    </form>
-                  </section>
-                ) : (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <span className="settings-popout__inline">
-                      <span className="settings-popout__label settings-popout__label--grow">
-                        Access key
-                      </span>
-                      {/* Signed-in people only: the site refuses to save one for anyone else. */}
-                      {!resolving && userType !== 'public' && passkeysSupported() && (
-                        <button
-                          type="button"
-                          className={`settings-popout__btn${needsPasskey ? ` settings-popout__btn--primary ${PASSKEY_PULSE_CLASS}` : ''}`}
-                          disabled={passkeyMode !== null || passkeySaved}
-                          onClick={() => {
-                            savePasskey().catch(reportErr)
-                          }}
-                        >
-                          {passkeySaved
-                            ? 'Passkey saved'
-                            : passkeyMode === 'save'
-                              ? 'Saving…'
-                              : 'Save passkey'}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="settings-popout__btn"
-                        disabled={passkeyMode === 'save'}
-                        onClick={openKeyForm}
-                      >
-                        Switch key
-                      </button>
-                    </span>
-                    {/* Its own line, so nothing moves under a double click. */}
-                    {passkeyMode === 'save' && (
-                      <span className="settings-popout__inline">
-                        <button
-                          type="button"
-                          className="settings-popout__btn"
-                          onClick={() => cancelPasskey()}
-                        >
-                          Cancel
-                        </button>
-                      </span>
-                    )}
-                    {passkeyError && (
-                      <span className="settings-popout__error" role="alert">
-                        {passkeyError}
-                      </span>
-                    )}
-                  </section>
-                )}
-
-                {/* The authenticator, and the sign-in link it makes: offered only
-              once a passkey is saved, since setting one up takes a passkey tap. */}
-                {!resolving &&
-                  userType !== 'public' &&
-                  ((passkeyCount ?? 0) > 0 || passkeySaved) && (
-                    <section
-                      className="settings-popout__row settings-popout__row--stack"
-                      aria-label="Authenticator"
-                    >
-                      <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
-                        <Authenticator />
-                      </React.Suspense>
-                    </section>
-                  )}
-
-                {/* Discord and Steam: linked here, so their pictures can be chosen in
-              the avatar dialog. Mounted with the Account tab: the read can refresh
-              a linked picture, which opening the gear on another tab must not cost. */}
-                {!resolving && userType !== 'public' && (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <span className="settings-popout__label">Linked accounts</span>
-                    <LinkedAccounts />
-                  </section>
-                )}
-
-                {/* Service access: only for someone the operator granted a
-              service identity. No heading of its own: its lines (the code, a
-              Mint per identity) say what it is. */}
-                {!resolving && serviceGrants > 0 && (
-                  <section
-                    className="settings-popout__row settings-popout__row--stack"
-                    aria-label="Service access"
-                  >
-                    <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
-                      <ServiceAccess />
-                    </React.Suspense>
-                  </section>
-                )}
-
-                {/* A self-made account (member) can delete itself. The confirm is a
-              separate button on its own line, so a double click on Delete
-              never confirms. */}
-                {!resolving && userType === 'member' && (
-                  <section className="settings-popout__row settings-popout__row--stack">
-                    <span className="settings-popout__inline">
-                      <span className="settings-popout__label settings-popout__label--grow">
-                        Account
-                      </span>
-                      {deleteStage === 'idle' ? (
-                        <button
-                          type="button"
-                          className="settings-popout__btn"
-                          onClick={() => {
-                            setDeleteError(null)
-                            setDeleteStage('confirm')
-                          }}
-                        >
-                          Delete account
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="settings-popout__btn"
-                          disabled={deleteStage === 'busy'}
-                          onClick={() => setDeleteStage('idle')}
-                        >
-                          Keep
-                        </button>
-                      )}
-                    </span>
-                    {deleteStage !== 'idle' && (
-                      <span className="settings-popout__inline">
-                        <button
-                          type="button"
-                          className="settings-popout__btn settings-popout__btn--primary"
-                          disabled={deleteStage === 'busy'}
-                          onClick={() => {
-                            setDeleteStage('busy')
-                            deleteOwnAccount()
-                              .then(deleted => {
-                                if (!deleted) {
-                                  setDeleteError('Account not deleted')
-                                  setDeleteStage('confirm')
-                                  return
-                                }
-                                localStorage.removeItem('hadoku_session_id')
-                                localStorage.removeItem('hadoku_user_type')
-                                window.location.assign('/')
-                              })
-                              .catch(reportErr)
-                          }}
-                        >
-                          {deleteStage === 'busy' ? 'Deleting…' : 'Delete for good'}
-                        </button>
-                      </span>
-                    )}
-                    {deleteError && (
-                      <span className="settings-popout__error" role="alert">
-                        {deleteError}
-                      </span>
-                    )}
-                  </section>
-                )}
-              </>
-            )}
+            {/* The site's own tabs: their own chunk (#111), mounted while the
+              popout is open whichever tab shows, so a draft survives a visit
+              to an app tab. Only a site tab waits on it; an app tab's content
+              below renders at once. */}
+            <React.Suspense
+              fallback={
+                SITE_TABS.has(activeTab) ? <span className="settings-popout__hint">…</span> : null
+              }
+            >
+              <SettingsSiteTabs
+                activeTab={activeTab}
+                resolving={resolving}
+                userType={userType}
+                verified={verified}
+                displayName={displayName}
+                onNameSaved={setLocalName}
+                onNameChange={onNameChange}
+                content={content}
+                setContent={setContent}
+                needsPasskey={needsPasskey}
+                passkeyCount={passkeyCount}
+                passkeySaved={passkeySaved}
+                onPasskeySaved={onPasskeySaved}
+                serviceGrants={serviceGrants}
+                keyFormOpen={keyFormOpen}
+                setKeyFormOpen={setKeyFormOpen}
+                avatarOpen={avatarOpen}
+                setAvatarOpen={setAvatarOpen}
+              />
+            </React.Suspense>
 
             {/* App-specific settings (optional) — same popout, one gear. */}
             {activeTab === 'app:' && (
