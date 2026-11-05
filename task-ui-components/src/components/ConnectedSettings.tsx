@@ -34,6 +34,7 @@ import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
 import { AvatarDialog } from './AvatarDialog'
 import { LinkedAccounts } from './LinkedAccounts'
+import { NAME_EVENT, type NameEventDetail } from '../lib/nameEvent'
 
 // A grantee's own service credentials, with a QR encoder for TOTP enrolment:
 // its own chunk, fetched only when a grantee opens it.
@@ -458,7 +459,12 @@ export function ConnectedSettings({
     setNameError(null)
     setLocalName(result.name)
     setNameDraft(result.name ?? '')
-    if (result.name !== null) onNameChange?.(result.name)
+    if (result.name !== null) {
+      onNameChange?.(result.name)
+      window.dispatchEvent(
+        new window.CustomEvent<NameEventDetail>(NAME_EVENT, { detail: { name: result.name } })
+      )
+    }
     setEditingName(false)
   }, [nameDraft, displayName, onNameChange])
 

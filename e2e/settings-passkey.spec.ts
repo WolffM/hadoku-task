@@ -371,6 +371,15 @@ test.describe('settings popout: display name', () => {
       })
     })
     await load(page)
+    // Every rename is also announced on window, for components that did not
+    // render the gear (cardtable's embedded watchparty roster).
+    await page.evaluate(() => {
+      const w = window as unknown as { __names: unknown[] }
+      w.__names = []
+      window.addEventListener('hadoku:name', e =>
+        w.__names.push((e as Event & { detail: unknown }).detail)
+      )
+    })
     const panel = await openSettings(page, 'Profile')
     await expect(panel.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0)
     await panel.getByRole('button', { name: 'Edit display name' }).click()
@@ -381,6 +390,8 @@ test.describe('settings popout: display name', () => {
     await input.press('Enter')
     await expect(panel.getByRole('button', { name: 'Edit display name' })).toHaveText('Alice W')
     expect(posted).toEqual(['Alice W'])
+    const heard = await page.evaluate(() => (window as unknown as { __names: unknown[] }).__names)
+    expect(heard).toEqual([{ name: 'Alice W' }])
   })
 
   test('a refused name keeps the editor open and says why', async ({ page }) => {
