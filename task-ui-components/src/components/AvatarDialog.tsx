@@ -1,7 +1,7 @@
 /**
  * AvatarDialog — the avatar builder (picture, character and cosmetics, with a
  * live preview) in its own dialog, opened from the settings popout's "Change".
- * The popout is 300px wide; the builder needs the room.
+ * The popout is 400px wide; the builder needs the room.
  *
  * Rendered into document.body, so no ancestor of the popout (a transform, an
  * overflow, a stacking context) can clip or trap it. The popout stays open

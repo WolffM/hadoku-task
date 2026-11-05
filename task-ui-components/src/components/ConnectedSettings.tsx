@@ -123,6 +123,11 @@ const PASSKEY_DOT: React.CSSProperties = {
   pointerEvents: 'none'
 }
 
+/** The panel's width, inline for the same reason as PASSKEY_DOT. 300px wrapped
+ *  rows onto extra lines and left an app's own sections scrolling; app-header.css
+ *  still caps it at the viewport (`max-width: calc(100vw - 32px)`). */
+const PANEL_WIDTH: React.CSSProperties = { width: 400 }
+
 /** Save passkey pulses while the dot is asking for it. Keyframes cannot be
  *  inline, so the rule is injected once into the document instead, for the
  *  same reason PASSKEY_DOT is inline. */
@@ -588,7 +593,12 @@ export function ConnectedSettings({
       {open && <div className="settings-popout__overlay" onClick={() => setOpen(false)} />}
 
       {open && (
-        <div className="settings-popout__panel" role="dialog" aria-label="User settings">
+        <div
+          className="settings-popout__panel"
+          style={PANEL_WIDTH}
+          role="dialog"
+          aria-label="User settings"
+        >
           <div className="settings-popout__top">
             <div className="settings-popout__header">Settings</div>
             <div

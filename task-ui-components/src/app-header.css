@@ -93,9 +93,10 @@
   /* These apps ship without a Tailwind preflight, so box-sizing is content-box
    * unless a rule says otherwise: without this, `width: 300px` renders 334px
    * (+32 padding +2 border) and `max-width` clamps the CONTENT box, leaving the
-   * popout 2px wider than a 320px viewport. */
+   * popout 2px wider than a 320px viewport.
+   * `width` is NOT here: ConnectedSettings sets it inline (PANEL_WIDTH), so a
+   * change reaches every app without waiting for it to rebuild this file. */
   box-sizing: border-box;
-  width: 300px;
   max-width: calc(100vw - 32px);
   /* Cap height so an app that adds its own preferences section stays on screen;
    * the popout scrolls rather than overflowing the viewport. */
