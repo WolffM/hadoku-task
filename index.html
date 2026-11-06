@@ -48,9 +48,12 @@
     console.log('[mount] Mounting with:', { userType })
     
     // Mount the app
+    // ?theme= plays hadoku.me's mf-loader, which always hands the app the
+    // theme on screen (e2e/theme-choice.spec.ts).
     mount(document.getElementById('app'), {
       basename: '/',
-      userType: userType
+      userType: userType,
+      theme: params.get('theme') || undefined
     })
   </script>
 </body>

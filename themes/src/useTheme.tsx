@@ -108,6 +108,17 @@ function seedTheme(propsTheme?: string): string {
   return prefersDark() ? 'dark' : 'light'
 }
 
+/** Has this device picked a theme? localStorage, not sessionStorage: the host
+ *  page echoes its random draw into the tab-local layer, and only saveTheme()
+ *  — a pick, or one adopted from prefs — writes the durable one. */
+function hasLocalChoice(): boolean {
+  try {
+    return localStorage.getItem('hadoku-theme') !== null
+  } catch {
+    return false
+  }
+}
+
 export function useTheme(options: UseThemeOptions = {}) {
   const { propsTheme, containerRef } = options
   // State, not the ref: the container can attach after the first apply (#102).
@@ -212,10 +223,13 @@ export function useTheme(options: UseThemeOptions = {}) {
     setIsThemeReady(true)
   }, [theme, container, isInitialThemeLoad, isThemeAvailable])
 
-  // Adopt the cross-device theme once the SDK resolves — unless the parent
-  // shell forced one, or the user already chose this session.
+  // Adopt the cross-device theme once the SDK resolves — unless the user
+  // already chose this session, or the parent shell handed down a theme this
+  // DEVICE chose. hadoku.me's loader always passes one, and on a device that
+  // never picked it is the random draw: letting that block adoption kept a
+  // pick made on another device from ever arriving here.
   useEffect(() => {
-    if (propsTheme) return
+    if (propsTheme && hasLocalChoice()) return
     if (userOverrodeRef.current) return
     const remote = persisted?.theme
     if (remote && remote !== theme && isThemeAvailable(remote)) {
@@ -226,19 +240,12 @@ export function useTheme(options: UseThemeOptions = {}) {
     }
   }, [persisted?.theme, propsTheme, theme, isThemeAvailable])
 
-  // Has anyone picked a theme, here or on another device? localStorage, not
-  // sessionStorage: the host page echoes its random draw into the tab-local
-  // layer, and only saveTheme() — a pick, or one adopted from prefs — writes
-  // the durable one.
+  // Has anyone picked a theme, here or on another device?
   const persistedTheme = persisted?.theme
-  const hasChoice = useCallback(() => {
-    if (userOverrodeRef.current || persistedTheme) return true
-    try {
-      return localStorage.getItem('hadoku-theme') !== null
-    } catch {
-      return false
-    }
-  }, [persistedTheme])
+  const hasChoice = useCallback(
+    () => userOverrodeRef.current || !!persistedTheme || hasLocalChoice(),
+    [persistedTheme]
+  )
 
   // Follow the OS light/dark switch WITHIN the active family, so someone on
   // `coffee-light` moves to `coffee-dark` at sunset rather than to plain dark.

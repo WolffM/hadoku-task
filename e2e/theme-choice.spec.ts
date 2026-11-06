@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Request } from '@playwright/test'
 import { mockShellApi } from './helpers/mock-api'
-import { prefsUp, pointPrefsAtLocalStack, PREFS_BASE } from './helpers/prefs'
+import { asFreshUser, prefsUp, pointPrefsAtLocalStack, PREFS_BASE } from './helpers/prefs'
 
 /**
  * What counts as a theme CHOICE, and where one is recorded.
@@ -115,5 +115,42 @@ test.describe('Theme choice', () => {
     await expect
       .poll(() => puts, { timeout: 5000 })
       .toEqual([{ scope: 'device', theme: 'ocean-light' }])
+  })
+
+  // hadoku.me's loader always passes the theme on screen into the app, and on a
+  // device that never picked that is the random draw. It must not stand in the
+  // way of a pick made on another device.
+  test('a host-passed draw yields to a pick from another device', async ({ page }) => {
+    await asFreshUser(page)
+    const put = await page.request.put(PORTFOLIO, {
+      headers: { 'X-Device-Id': crypto.randomUUID() },
+      data: { scope: 'user', patch: { theme: 'nature-light' } }
+    })
+    expect(put.ok()).toBe(true)
+
+    await page.addInitScript(() => sessionStorage.setItem('hadoku-theme', 'pink-dark'))
+    await page.goto('/?theme=pink-dark')
+    await waitForApp(page)
+    await expect.poll(() => theme(page), { timeout: 10000 }).toBe('nature-light')
+    // …and is this device's now, so the next cold load paints it directly.
+    expect(await page.evaluate(() => localStorage.getItem('hadoku-theme'))).toBe('nature-light')
+  })
+
+  test("a host-passed theme this device chose is kept over another device's", async ({ page }) => {
+    await asFreshUser(page)
+    const put = await page.request.put(PORTFOLIO, {
+      headers: { 'X-Device-Id': crypto.randomUUID() },
+      data: { scope: 'user', patch: { theme: 'nature-light' } }
+    })
+    expect(put.ok()).toBe(true)
+
+    await page.addInitScript(() => {
+      localStorage.setItem('hadoku-theme', 'pink-dark')
+      sessionStorage.setItem('hadoku-theme', 'pink-dark')
+    })
+    await page.goto('/?theme=pink-dark')
+    await waitForApp(page)
+    await page.waitForTimeout(2000)
+    expect(await theme(page)).toBe('pink-dark')
   })
 })
