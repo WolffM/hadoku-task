@@ -69,6 +69,12 @@ const aborted = (page: Page) =>
  * about.
  */
 const promptOpen = (page: Page, n = 1) => expect.poll(() => calls(page)).toBe(n)
+/**
+ * Waits for the held prompt to have been abandoned. Closing the popout aborts
+ * it from the unmount cleanup, which React may run after the panel is already
+ * gone from the DOM, so a single read straight after the close can still see 0.
+ */
+const abandoned = (page: Page) => expect.poll(() => aborted(page)).toBe(1)
 const settle = (page: Page, msg: string) =>
   page.evaluate(m => (window as unknown as { __settle: (m: string) => void }).__settle(m), msg)
 
@@ -221,7 +227,7 @@ test.describe('settings popout: save a passkey', () => {
     await promptOpen(page)
     await page.keyboard.press('Escape')
     await expect(panel).toBeHidden()
-    expect(await aborted(page)).toBe(1)
+    await abandoned(page)
 
     panel = await openSettings(page)
     await expect(panel.getByRole('alert')).toHaveCount(0)
@@ -234,6 +240,12 @@ test.describe('settings popout: save a passkey', () => {
     const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Save passkey' }).dblclick()
     await expect(panel.getByRole('button', { name: 'Saving…' })).toBeVisible()
+    // "Saving…" renders before the site's sign-in client has loaded, so the
+    // prompt opens some time after it: wait for it, then let it answer. A second
+    // prompt from the second click would have opened by then.
+    await promptOpen(page)
+    await settle(page, 'ok')
+    await expect(panel.getByRole('button', { name: 'Passkey saved' })).toBeVisible()
     expect(await calls(page)).toBe(1)
     expect(await aborted(page)).toBe(0)
   })
@@ -248,7 +260,7 @@ test.describe('settings popout: save a passkey', () => {
     await promptOpen(page)
     await page.locator('.settings-popout__overlay').click({ position: { x: 5, y: 5 } })
     await expect(panel).toBeHidden()
-    expect(await aborted(page)).toBe(1)
+    await abandoned(page)
   })
 
   test('a site client without passkeys sends you to /auth to save one', async ({ page }) => {
@@ -336,6 +348,11 @@ test.describe('settings popout: sign in with a passkey', () => {
     const form = await openKeyForm(page)
     await form.getByRole('button', { name: 'Use a passkey' }).dblclick()
     await expect(form.getByRole('button', { name: 'Waiting for passkey…' })).toBeVisible()
+    // As with saving: the prompt opens only once the sign-in client has loaded.
+    await promptOpen(page)
+    expect(await aborted(page)).toBe(0)
+    await settle(page, 'No passkey chosen')
+    await expect(form.getByRole('alert')).toHaveText('No passkey chosen')
     expect(await calls(page)).toBe(1)
     expect(await aborted(page)).toBe(0)
   })
@@ -347,7 +364,7 @@ test.describe('settings popout: sign in with a passkey', () => {
     await form.getByRole('button', { name: 'Use a passkey' }).click()
     await promptOpen(page)
     await page.keyboard.press('Escape')
-    expect(await aborted(page)).toBe(1)
+    await abandoned(page)
     const panel = await openSettings(page)
     await expect(panel.getByRole('alert')).toHaveCount(0)
     await expect(panel.getByLabel('Access key')).toBeEnabled()
@@ -471,10 +488,12 @@ test.describe('settings popout: a member deletes their own account', () => {
     // Keep backs out; the next try confirms.
     await panel.getByRole('button', { name: 'Keep' }).click()
     await panel.getByRole('button', { name: 'Delete account' }).click()
-    await Promise.all([
-      page.waitForURL(url => url.pathname === '/'),
-      panel.getByRole('button', { name: 'Delete for good' }).click()
-    ])
+    // Deleting sends you to `/`, which is where this page already is, so
+    // waitForURL would return at once. Wait for the page to actually load again:
+    // that happens only after the delete has been answered.
+    const reloaded = page.waitForEvent('load')
+    await panel.getByRole('button', { name: 'Delete for good' }).click()
+    await reloaded
     expect(deletes).toBe(1)
   })
 
