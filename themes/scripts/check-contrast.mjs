@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Gate: the token set must be structurally symmetric and every WCAG pair in
- * docs/THEME_SYSTEM_RULES.md must hold, in all 18 themes.
+ * docs/THEME_SYSTEM_RULES.md must hold, in all 18 themes — plus the OKLCH
+ * floors WCAG has no word for: surface separation and status-family hue.
  *
  * audit-tokens.mjs reports; this one fails the build. The rules themselves live
  * in lib/contract.mjs, which the hosted theme editor and the worker's save route
@@ -20,5 +21,5 @@ if (problems.length) {
 }
 
 console.log(
-  `check-contrast: OK — ${THEMES.length} themes, symmetric token set, ${WCAG_PAIR_COUNT} WCAG pairs pass, surfaces separated.`
+  `check-contrast: OK — ${THEMES.length} themes, symmetric token set, ${WCAG_PAIR_COUNT} WCAG pairs pass, surfaces separated, status families distinct.`
 )

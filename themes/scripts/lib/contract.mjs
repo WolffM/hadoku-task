@@ -135,6 +135,103 @@ export function checkTheme(theme, tk) {
       problems.push(`${theme}: ${a} vs ${b} is ΔL ${d.toFixed(3)} (needs ${floor} OKLCH)`)
     }
   }
+
+  problems.push(...statusProblems(theme, tk, surface))
+  return problems
+}
+
+/**
+ * Status families must be told apart by hue — #98.
+ *
+ * WCAG checks each family against its own `on-` text and nothing else, so a
+ * theme could pass every pair while success, warning and danger were three
+ * shades of amber. Measured 2026-10-23 across all 18 themes: the pairs reported
+ * as reading the same sat 12–38° apart in OKLCH hue (light's orange danger vs
+ * amber warning at 22°, dark's yellow success vs amber warning at 23°, ocean's
+ * orange success vs gold warning at 37°). The closest pair nobody flagged sat at
+ * 45°. Adjacent named hues — red→orange→amber→yellow in Tailwind's palette —
+ * are ~20° apart and are the ones readers confuse; 40° is two names apart (red
+ * vs amber is 43°), and sits in the gap between the confused and the fine.
+ */
+export const STATUS_HUE_GAP = 40
+/**
+ * A fill below this OKLCH chroma has no hue a reader can name — coffee-dark's
+ * grey danger (#57534e, C 0.010) read as "disabled". The mutest status fill
+ * that still reads as its colour is izakaya-light's sage success at C 0.079.
+ */
+export const STATUS_CHROMA_FLOOR = 0.06
+/**
+ * `neutral-bg` is the "nothing to report" tint, so it must not read as a status
+ * tint. It passes either by being near-grey — izakaya-light's beige (C 0.037)
+ * reads as beige even 11° from warning — or by sitting STATUS_HUE_GAP away from
+ * every status family. coffee-light's amber-200 (C 0.115, h96) read as warning.
+ */
+export const NEUTRAL_BG_CHROMA_CEILING = 0.05
+
+const STATUS = ['success', 'warning', 'danger']
+
+/** Shortest distance between two hues on the colour wheel, 0–180. */
+export function hueGap(a, b) {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
+function statusProblems(theme, tk, surface) {
+  const problems = []
+  const lch = {}
+  for (const f of STATUS) {
+    const v = tk[`--color-${f}`]
+    if (!v) return problems // the symmetry check already reported it
+    lch[f] = rgbToOklch(flatten(v, surface))
+    if (lch[f].C < STATUS_CHROMA_FLOOR) {
+      problems.push(
+        `${theme}: ${f} is achromatic — C ${lch[f].C.toFixed(3)} (needs ${STATUS_CHROMA_FLOOR} OKLCH to carry a hue)`
+      )
+    }
+  }
+
+  for (const [a, b] of [
+    ['success', 'warning'],
+    ['success', 'danger'],
+    ['warning', 'danger']
+  ]) {
+    const d = hueGap(lch[a].H, lch[b].H)
+    if (d < STATUS_HUE_GAP) {
+      problems.push(
+        `${theme}: ${a} vs ${b} hue is ${Math.round(d)}° apart (needs ${STATUS_HUE_GAP}° OKLCH)`
+      )
+    }
+  }
+
+  // The three are a scale — fine, needs attention, failed — and readers map
+  // it onto the traffic-light progression red → amber → green. Walking the
+  // wheel from danger the way hue increases, warning must come before
+  // success; otherwise success is the "redder" of the two and reads as the
+  // worse state (ocean's orange success beside its gold warning). Themes whose
+  // danger is pink or violet still pass: the walk just starts there.
+  // An achromatic family was reported above; its hue is noise, so no order.
+  const fromDanger = h => (((h - lch.danger.H) % 360) + 360) % 360
+  const chromatic = STATUS.every(f => lch[f].C >= STATUS_CHROMA_FLOOR)
+  if (chromatic && fromDanger(lch.warning.H) > fromDanger(lch.success.H)) {
+    problems.push(
+      `${theme}: success (h${Math.round(lch.success.H)}) sits between danger (h${Math.round(lch.danger.H)}) and warning (h${Math.round(lch.warning.H)}) — the scale reads backwards`
+    )
+  }
+
+  const nbg = tk['--color-neutral-bg']
+  if (nbg) {
+    const n = rgbToOklch(flatten(nbg, surface))
+    if (n.C >= NEUTRAL_BG_CHROMA_CEILING) {
+      for (const f of STATUS) {
+        const d = hueGap(n.H, lch[f].H)
+        if (d < STATUS_HUE_GAP) {
+          problems.push(
+            `${theme}: neutral-bg reads as ${f} — C ${n.C.toFixed(3)} at ${Math.round(d)}° from it (needs C < ${NEUTRAL_BG_CHROMA_CEILING} or ${STATUS_HUE_GAP}° apart)`
+          )
+        }
+      }
+    }
+  }
   return problems
 }
 

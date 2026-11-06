@@ -315,6 +315,64 @@ async function main_() {
   )
   check('nothing committed for the washed-out page', gh.main === headWashed)
 
+  // Every AA pair holds: black on orange clears 4.5:1, exactly as it did when
+  // light's danger shipped this orange. What fails is that danger and warning
+  // are now 22° apart, i.e. two ambers (#98).
+  resetRepo()
+  const headStatus = gh.main
+  r = await save({ baseCommit: gh.main, edits: { light: { '--color-danger': '#f97316' } } })
+  check('danger tuned into warning → 422', r.status === 422, `status=${r.status}`)
+  check(
+    'the problem names the colliding pair',
+    (r.json.problems ?? []).some(p => p.startsWith('light: warning vs danger hue')),
+    JSON.stringify(r.json.problems)
+  )
+  check(
+    'and only that pair — no AA failure rode along',
+    (r.json.problems ?? []).length === 1,
+    JSON.stringify(r.json.problems)
+  )
+  check('nothing committed for the colliding status', gh.main === headStatus)
+
+  // A grey danger (coffee-dark's old #57534e) has no hue to compare — the
+  // chroma floor is what catches it.
+  resetRepo()
+  r = await save({ baseCommit: gh.main, edits: { light: { '--color-danger': '#78716c' } } })
+  check('achromatic danger → 422', r.status === 422, `status=${r.status}`)
+  check(
+    'the problem names the achromatic family',
+    (r.json.problems ?? []).some(p => p.startsWith('light: danger is achromatic')),
+    JSON.stringify(r.json.problems)
+  )
+
+  // Success redder than warning reads as the worse state, even at distances
+  // that pass. ocean-light's pink danger (h354) and gold warning (h86) leave
+  // room for an orange success 46° from both — the shape ocean shipped.
+  resetRepo()
+  r = await save({
+    baseCommit: gh.main,
+    edits: { 'ocean-light': { '--color-success': '#f86f3c' } }
+  })
+  check('success on the red side of warning → 422', r.status === 422, `status=${r.status}`)
+  check(
+    'the only problem is that the scale reads backwards',
+    (r.json.problems ?? []).length === 1 &&
+      (r.json.problems ?? [])[0].startsWith('ocean-light: success') &&
+      (r.json.problems ?? [])[0].includes('backwards'),
+    JSON.stringify(r.json.problems)
+  )
+
+  // A neutral tint in the warning hue is a second warning tint.
+  resetRepo()
+  r = await save({ baseCommit: gh.main, edits: { light: { '--color-neutral-bg': '#fde68a' } } })
+  check('amber neutral-bg → 422', r.status === 422, `status=${r.status}`)
+  check(
+    'the only problem is neutral-bg reading as warning',
+    (r.json.problems ?? []).length === 1 &&
+      (r.json.problems ?? [])[0].startsWith('light: neutral-bg reads as warning'),
+    JSON.stringify(r.json.problems)
+  )
+
   // -------------------------------------------------------------------
   section('7. A save that changes nothing commits nothing')
   // -------------------------------------------------------------------

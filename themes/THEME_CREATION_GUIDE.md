@@ -163,20 +163,18 @@ You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 
 ## Real Examples from Existing Themes
 
-### How Success & Danger Colors Vary:
+### How Success, Warning & Danger Vary:
 
-| Theme          | Success          | Danger             | Notes                |
-| -------------- | ---------------- | ------------------ | -------------------- |
-| **Light**      | #0ea5e9 (cyan)   | #f97316 (orange)   | Cool + warm contrast |
-| **Dark**       | #fde047 (yellow) | #c084fc (purple)   | High contrast neons  |
-| **Strawberry** | #22c55e (green)  | #ec4899 (hot pink) | Traditional green    |
-| **Ocean**      | #f97316 (orange) | #ec4899 (pink)     | Coral reef vibes     |
-| **Cyberpunk**  | #00f5d4 (cyan)   | #fb5607 (orange)   | Neon dystopia        |
-| **Coffee**     | #eab308 (gold)   | #78350f (brown)    | Warm earth tones     |
-| **Lavender**   | #84cc16 (lime)   | #6366f1 (indigo)   | Unexpected pops      |
-| **Nature**     | #a7d88f (sage)   | #c8643b (rust)     | Organic palette      |
+| Theme         | Success           | Warning           | Danger             |
+| ------------- | ----------------- | ----------------- | ------------------ |
+| **Light**     | #0ea5e9 (sky)     | #f59e0b (amber)   | #ef4444 (red)      |
+| **Ocean**     | #10b981 (emerald) | #eab308 (gold)    | #ec4899 (pink)     |
+| **Cyberpunk** | #00f5d4 (cyan)    | #ff9f1c (orange)  | #fd4c5c (neon red) |
+| **Coffee**    | #65a30d (olive)   | #ca8a04 (mustard) | #b91c1c (brick)    |
+| **Lavender**  | #84cc16 (lime)    | #f59e0b (amber)   | #5e60ea (indigo)   |
+| **Nature**    | #a7d88f (sage)    | #ca8a04 (ochre)   | #ca6050 (rust)     |
 
-**Takeaway:** Success and Danger are **theme-specific**, not fixed to green/red!
+**Takeaway:** the shade is theme-specific, the separation is not. `check:contrast` requires the three status fills to carry a hue (OKLCH C ≥ 0.06), sit ≥ 40° apart pairwise, and run danger → warning → success in hue order — so a gold success beside an amber warning, or an orange success on the red side of warning, fails the gate. See `docs/THEME_SYSTEM_RULES.md`.
 
 ---
 

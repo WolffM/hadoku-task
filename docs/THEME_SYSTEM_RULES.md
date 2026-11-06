@@ -127,6 +127,17 @@ Radix Colors defines the most rigorous scale structure in the industry. Key rule
 
   The 0.05 page step is where every dark theme already sat (0.052–0.098). "Near-white" is the card's job, not the page's: a light page sits around L 0.93–0.95, and carries the theme's hue at C ≥ 0.012 or it reads as dirty grey.
 
+- **Status families must be told apart by hue (#98).** WCAG checks each family against its own `on-` text only, so success, warning and danger could be three shades of amber and pass. Enforced by `check:contrast` (and so by the theme editor and its save route), per theme, in OKLCH:
+
+  | rule                                                 | floor                                       |
+  | ---------------------------------------------------- | ------------------------------------------- |
+  | each of `success`, `warning`, `danger` carries a hue | C ≥ 0.06                                    |
+  | every pair of those three fills                      | ≥ 40° hue apart                             |
+  | order, walking hue upward from `danger`              | `warning` before `success`                  |
+  | `neutral-bg` vs every status fill                    | C < 0.05 (reads grey/beige), or ≥ 40° apart |
+
+  Pairs reported as reading the same sat 12–38° apart (orange danger vs amber warning at 22°, yellow success vs amber warning at 23°); the closest pair nobody flagged sat at 45°. Adjacent named hues (red → orange → amber → yellow) are ~20° apart; 40° is two names apart. The order rule is the traffic-light scale: a success redder than warning (ocean's old orange success) reads as the worse state even at a passing distance. A theme whose danger is pink or violet still passes — the walk starts there.
+
 ### Mapping to Our System:
 
 ```

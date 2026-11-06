@@ -27,10 +27,14 @@ export const FAMILIES: readonly string[]
 export const STRUCTURAL: readonly string[]
 export const AA_TEXT: number
 export const WCAG_PAIR_COUNT: number
+export const STATUS_HUE_GAP: number
+export const STATUS_CHROMA_FLOOR: number
+export const NEUTRAL_BG_CHROMA_CEILING: number
 
 export function isDarkTheme(theme: string): boolean
 export function parseThemes(css: string): ThemeTokenMap
 export function checkTheme(theme: string, tokens: ThemeTokens): string[]
+export function hueGap(a: number, b: number): number
 export function checkThemes(themes: ThemeTokenMap): string[]
 export function comfortMetrics(theme: string, tokens: ThemeTokens): ComfortMetric[]
 export function formatColor(rgba: number[]): string
