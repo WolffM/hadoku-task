@@ -15,9 +15,6 @@ import { defineConfig, devices } from '@playwright/test'
  */
 const PORT = Number(process.env.E2E_PORT ?? 5199)
 
-/** See the solo project below. */
-const SOLO_SPECS = ['**/settings-tabs.spec.ts']
-
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -36,20 +33,7 @@ export default defineConfig({
   projects: [
     {
       name: 'hadoku-task-chromium',
-      use: { ...devices['Desktop Chrome'] },
-      testIgnore: SOLO_SPECS
-    },
-    // Specs that write the stack's ONE shared user-scoped prefs row on purpose
-    // run after everything else, never beside it. settings-tabs saves the
-    // popout's open tab there; run in parallel, every other spec that opens the
-    // popout found it on Account, and settings-tabs' own reload check saw their
-    // writes. CI runs one worker so it never raced there; locally it did.
-    // To run just this file: `playwright test e2e/settings-tabs.spec.ts --no-deps`.
-    {
-      name: 'hadoku-task-chromium-solo',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: SOLO_SPECS,
-      dependencies: ['hadoku-task-chromium']
+      use: { ...devices['Desktop Chrome'] }
     }
   ],
   webServer: {

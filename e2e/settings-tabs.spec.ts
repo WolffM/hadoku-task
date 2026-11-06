@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { mockShellApi } from './helpers/mock-api'
-import { PREFS_BASE, prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
+import { PREFS_BASE, asFreshUser, prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 
 /**
  * The settings popout's tabs: the site's groups, then the app's, as an ARIA
@@ -14,14 +14,6 @@ import { PREFS_BASE, prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 
 const PORTFOLIO_ROW = `${PREFS_BASE}/api/v1/portfolio`
 const TABS = ['Profile', 'Content', 'Account', 'App']
-
-/** Forget any remembered tab, so each test starts from the default. */
-async function clearSavedTab(page: Page) {
-  const resp = await page.request.put(PORTFOLIO_ROW, {
-    data: { scope: 'user', patch: { settingsTabs: {} } }
-  })
-  expect(resp.ok(), `clearing settingsTabs: ${resp.status()}`).toBe(true)
-}
 
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'User settings' }).click()
@@ -40,14 +32,13 @@ const rect = (el: Locator) =>
   })
 
 test.describe('settings tabs', () => {
-  // Every test signs in as the stack's one dev user and writes its one row:
-  // in parallel, one test's reset bumps the version under another's save,
-  // which the SDK answers by adopting the server's blob (a 409, save dropped).
-  test.describe.configure({ mode: 'serial' })
-
+  // Each test is a new person, so nothing is remembered and nothing this
+  // writes reaches another spec. On the stack's shared dev user, the saved tab
+  // was every other spec's starting tab, and their writes landed under this
+  // one's reload check.
   test.beforeEach(async ({ page, request }) => {
     test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
-    await clearSavedTab(page)
+    await asFreshUser(page)
     await mockShellApi(page)
     await pointPrefsAtLocalStack(page)
     await page.addInitScript(() => {
@@ -56,10 +47,6 @@ test.describe('settings tabs', () => {
     })
     await page.goto('/?userType=friend')
     await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
-  })
-
-  test.afterEach(async ({ page }) => {
-    await clearSavedTab(page)
   })
 
   test('site groups, then the app; opens on the app tab; one panel at a time', async ({ page }) => {

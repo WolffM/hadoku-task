@@ -31,21 +31,6 @@ function portfolioPuts(page: Page): Array<{ scope: string; theme: unknown }> {
   return puts
 }
 
-/**
- * The one state the shared dev user's real row cannot express: "no pick on the
- * server". Every spec signs in as the same `dev-uid`, and any pick writes its
- * user scope, so the real row may already hold a theme the hook would adopt.
- * Answer the read with the real worker's shape for an empty row; writes still
- * go to the real worker.
- */
-async function serverHoldsNoPick(page: Page) {
-  await page.route(`${PORTFOLIO}*`, route =>
-    route.request().method() === 'GET'
-      ? route.fulfill({ json: { user: null, device: null, merged: {} } })
-      : route.fallback()
-  )
-}
-
 async function waitForApp(page: Page) {
   await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 }
@@ -54,10 +39,13 @@ const theme = (page: Page) =>
   page.evaluate(() => document.documentElement.getAttribute('data-theme'))
 
 test.describe('Theme choice', () => {
-  test.describe.configure({ mode: 'serial' })
-
+  // Each test is a new person with no prefs rows. A pick saves the user scope,
+  // and on the stack's shared dev user that row is read by every spec running
+  // beside this one: a pick made here repainted their theme mid-test. A fresh
+  // user also makes "no pick on the server" true rather than a mocked read.
   test.beforeEach(async ({ page, request }) => {
     test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    await asFreshUser(page)
     await mockShellApi(page)
     await pointPrefsAtLocalStack(page)
   })
@@ -80,7 +68,6 @@ test.describe('Theme choice', () => {
   })
 
   test('a random draw ignores the OS light/dark switch', async ({ page }) => {
-    await serverHoldsNoPick(page)
     const puts = portfolioPuts(page)
     await page.emulateMedia({ colorScheme: 'dark' })
     // The host's draw, echoed into the tab-local layer only.
@@ -97,7 +84,6 @@ test.describe('Theme choice', () => {
   })
 
   test('a chosen theme follows the OS switch, on this device only', async ({ page }) => {
-    await serverHoldsNoPick(page)
     const puts = portfolioPuts(page)
     await page.emulateMedia({ colorScheme: 'dark' })
     await page.addInitScript(() => {
@@ -121,7 +107,6 @@ test.describe('Theme choice', () => {
   // device that never picked that is the random draw. It must not stand in the
   // way of a pick made on another device.
   test('a host-passed draw yields to a pick from another device', async ({ page }) => {
-    await asFreshUser(page)
     const put = await page.request.put(PORTFOLIO, {
       headers: { 'X-Device-Id': crypto.randomUUID() },
       data: { scope: 'user', patch: { theme: 'nature-light' } }
@@ -137,7 +122,6 @@ test.describe('Theme choice', () => {
   })
 
   test("a host-passed theme this device chose is kept over another device's", async ({ page }) => {
-    await asFreshUser(page)
     const put = await page.request.put(PORTFOLIO, {
       headers: { 'X-Device-Id': crypto.randomUUID() },
       data: { scope: 'user', patch: { theme: 'nature-light' } }
