@@ -245,3 +245,55 @@
 .task-app__clear-btn:hover {
   background: color-mix(in oklch, var(--color-danger-dark) 86%, black);
 }
+
+/* Touch targets (#84). These rows are compact by design, and on a mouse they
+ * stay that way: 4px vertical padding around a 16px line made every board,
+ * filter and icon button 24px tall, which is fine for a cursor and too small
+ * for a thumb. Gated on the INPUT DEVICE, not the width — a touch laptop gets
+ * the floor, a narrow desktop window does not.
+ *
+ * A <button> centres its content vertically on its own, so min-height alone
+ * grows the target without touching `display` (the board pills rely on
+ * block-level text-overflow for their ellipsis). The icon-only buttons also
+ * get a width floor; a labelled pill already has its label for width.
+ *
+ * Listed here, once, so the next pill or icon button inherits the floor by
+ * joining the selector instead of repeating the arithmetic. Pinned by
+ * e2e/touch-targets-mobile.spec.ts. */
+@media (pointer: coarse) {
+  .pill-btn,
+  .board-add-btn,
+  .board-edit-btn,
+  .sync-btn,
+  .task-app__sort-btn {
+    min-height: 44px;
+  }
+
+  .board-add-btn,
+  .board-edit-btn,
+  .sync-btn,
+  .task-app__filter-add,
+  .task-app__sort-btn {
+    min-width: 44px;
+  }
+
+  /* A pill painted 44px tall reads as a blob (the active "main" pill went
+   * 47x44). So the BOX grows and the PAINT does not: a transparent vertical
+   * border takes the extra height, the fill is clipped inside it, and the
+   * visible pill stays the compact shape the row was designed around. The
+   * active shadow is dropped because it would trace the invisible border box. */
+  .pill-btn {
+    border-block: 10px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .pill-btn--active {
+    box-shadow: none;
+  }
+
+  /* The sort button is a fixed 28px square; its size must give way too. */
+  .task-app__sort-btn {
+    width: auto;
+    height: auto;
+  }
+}
