@@ -105,6 +105,7 @@ export {
   DuplicateSourceError,
   NotesTooLargeError,
   MAX_NOTES_BYTES,
+  MAX_BATCH_DELETE_BOARDS,
   assertNotesWithinLimit,
   LaneNotEditableError,
   LaneInvalidError,

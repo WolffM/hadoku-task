@@ -17,18 +17,38 @@ const MAIN = { id: 'main', name: 'Main', tasks: [], tags: [] }
 const NAMES = ['Alpha', 'Beta', 'Gamma', 'Delta']
 
 /**
- * A boards endpoint that remembers DELETEs, so rows can actually go away.
+ * A boards endpoint that remembers deletes, so rows can actually go away.
+ *
+ * Edit Boards deletes through `POST /task/api/batch/delete-boards` (#86), one
+ * request per confirmed action; each one's `boardIds` is kept in `batches` so a
+ * spec can tell one batch from N single deletes. A single `DELETE
+ * /boards/{id}` is still honoured (the board context menu uses it), and lands
+ * in `singles`.
  *
  * `names` is a knob because the search box only renders above six boards —
  * the spec that filters needs to clear that threshold.
  */
 async function statefulBoards(page: Page, names: string[] = NAMES) {
   const deleted: string[] = []
+  const batches: string[][] = []
+  const singles: string[] = []
+
+  await page.route('**/task/api/batch/delete-boards', route => {
+    const { boardIds } = route.request().postDataJSON() as { boardIds: string[] }
+    batches.push(boardIds)
+    deleted.push(...boardIds)
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, deleted: boardIds, notFound: [] })
+    })
+  })
 
   await page.route('**/task/api/boards**', route => {
     const req = route.request()
     if (req.method() === 'DELETE') {
       const id = decodeURIComponent(new URL(req.url()).pathname.split('/').pop() ?? '')
+      singles.push(id)
       deleted.push(id)
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     }
@@ -46,7 +66,7 @@ async function statefulBoards(page: Page, names: string[] = NAMES) {
     })
   })
 
-  return deleted
+  return { deleted, batches, singles }
 }
 
 async function suppressNativeDialogs(page: Page) {
@@ -83,7 +103,7 @@ test.beforeEach(async ({ page }) => {
 
 test('three boards are deleted through a single confirmation', async ({ page }) => {
   const fuse = dialogFuse(page)
-  const deleted = await statefulBoards(page)
+  const { deleted, batches, singles } = await statefulBoards(page)
   await openEditBoards(page)
 
   for (const name of ['Alpha', 'Beta', 'Gamma']) {
@@ -113,11 +133,15 @@ test('three boards are deleted through a single confirmation', async ({ page }) 
   await expect(row(page, 'Delta')).toBeVisible()
   await expect.poll(() => deleted.sort()).toEqual(['alpha', 'beta', 'gamma'])
 
+  // ONE request for the three, not three DELETEs (#86).
+  expect(batches.map(b => [...b].sort())).toEqual([['alpha', 'beta', 'gamma']])
+  expect(singles).toEqual([])
+
   expect(fuse.raised, 'the app must not raise native browser dialogs').toEqual([])
 })
 
 test('select all takes every board except main', async ({ page }) => {
-  const deleted = await statefulBoards(page)
+  const { deleted, batches } = await statefulBoards(page)
   await openEditBoards(page)
 
   await page
@@ -136,11 +160,12 @@ test('select all takes every board except main', async ({ page }) => {
   await expect(row(page, 'Main')).toBeVisible()
   await expect(page.locator('.edit-boards__row')).toHaveCount(1)
   await expect.poll(() => deleted.length).toBe(4)
+  expect(batches, 'select-all is one batch request').toHaveLength(1)
 })
 
 test('a selection survives filtering, and says how much it is hiding', async ({ page }) => {
   // Seven boards, so the modal renders its search box.
-  const deleted = await statefulBoards(page, [...NAMES, 'Epsilon', 'Zeta', 'Eta'])
+  const { deleted } = await statefulBoards(page, [...NAMES, 'Epsilon', 'Zeta', 'Eta'])
   await openEditBoards(page)
 
   await checkFor(page, 'Alpha').check()
@@ -162,7 +187,7 @@ test('a selection survives filtering, and says how much it is hiding', async ({ 
 })
 
 test('cancelling a bulk delete keeps every board and the selection', async ({ page }) => {
-  const deleted = await statefulBoards(page)
+  const { deleted } = await statefulBoards(page)
   await openEditBoards(page)
 
   await checkFor(page, 'Alpha').check()
@@ -179,7 +204,7 @@ test('cancelling a bulk delete keeps every board and the selection', async ({ pa
 })
 
 test('a single row button still deletes just that board', async ({ page }) => {
-  const deleted = await statefulBoards(page)
+  const { deleted, batches } = await statefulBoards(page)
   await openEditBoards(page)
 
   await row(page, 'Delta').getByRole('button', { name: 'Delete Delta' }).click()
@@ -190,4 +215,40 @@ test('a single row button still deletes just that board', async ({ page }) => {
   await expect(row(page, 'Delta')).toHaveCount(0)
   await expect(row(page, 'Alpha')).toBeVisible()
   await expect.poll(() => deleted).toEqual(['delta'])
+  // Through the same batch path as a multi-board delete: a batch of one.
+  expect(batches).toEqual([['delta']])
+})
+
+test('a bulk delete that fails keeps every board, checked, and names them', async ({ page }) => {
+  const { deleted } = await statefulBoards(page)
+  await openEditBoards(page)
+
+  await checkFor(page, 'Alpha').check()
+  await checkFor(page, 'Beta').check()
+
+  // The one write the batch makes is the local boards file; fail it the way a
+  // full origin does. Nothing reaches the server, so nothing is deleted there.
+  await page.evaluate(() => {
+    const realSetItem = window.localStorage.setItem.bind(window.localStorage)
+    window.localStorage.setItem = (key: string, value: string) => {
+      if (key.endsWith('-boards')) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+      }
+      realSetItem(key, value)
+    }
+  })
+
+  await page.getByRole('button', { name: 'Delete 2 boards' }).first().click()
+  await page.locator('.confirm-modal').getByRole('button', { name: 'Delete 2 boards' }).click()
+
+  // One write for both, so both failed: both are named, both stay, and both stay
+  // checked so the retry is one click.
+  const toast = page.locator('.toast, [role="alert"]').first()
+  await expect(toast).toContainText('Could not delete 2 boards')
+  await expect(toast).toContainText('Alpha')
+  await expect(toast).toContainText('Beta')
+  await expect(row(page, 'Alpha')).toBeVisible()
+  await expect(row(page, 'Beta')).toBeVisible()
+  await expect(page.locator('.edit-boards__bulk').first()).toContainText('2 selected')
+  expect(deleted).toEqual([])
 })

@@ -129,6 +129,7 @@ async function main() {
     'createTask',
     'deactivateAutomation',
     'deleteBoard',
+    'deleteBoards',
     'deleteTag',
     'deleteTask',
     'getBoards',
@@ -315,6 +316,18 @@ async function main() {
     'renameBoard PATCHes /task/api/boards/{id}',
     renamed.some(c => c.method === 'PATCH' && c.url.includes('/task/api/boards/b1')),
     JSON.stringify(renamed.map(c => `${c.method} ${c.url}`))
+  )
+
+  await w.createBoard('b3')
+  await w.createBoard('b4')
+  const bulk = await wire('deleteBoards', () => w.deleteBoards(['b3', 'b4']))
+  check(
+    'deleteBoards is ONE POST to /task/api/batch/delete-boards naming every board',
+    bulk.length === 1 &&
+      bulk[0].method === 'POST' &&
+      bulk[0].url === '/task/api/batch/delete-boards' &&
+      JSON.stringify((bulk[0].body as { boardIds?: string[] })?.boardIds) === '["b3","b4"]',
+    JSON.stringify(bulk.map(c => `${c.method} ${c.url} ${JSON.stringify(c.body)}`))
   )
 
   const pinned = await wire('setPinnedBoards', () => w.setPinnedBoards(['a', 'b']))

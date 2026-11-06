@@ -72,6 +72,8 @@ interface AppModalsProps {
 
   onCloseBoardContextMenu: () => void
   onDeleteBoard: (boardId: string) => Promise<void>
+  /** Edit Boards' delete: every chosen board in one write, one sync, one reload. */
+  onDeleteBoards: (boardIds: string[]) => Promise<void>
 
   onCloseTagContextMenu: () => void
 
@@ -119,6 +121,7 @@ export function AppModals({
   onToggleTagPill,
   onCloseBoardContextMenu,
   onDeleteBoard,
+  onDeleteBoards,
   onCloseTagContextMenu,
   onDismissToast,
   onError
@@ -165,7 +168,7 @@ export function AppModals({
         onClose={onCloseEditBoards}
         onCreate={onConfirmCreateBoard}
         onRename={onRenameBoard}
-        onDelete={onDeleteBoard}
+        onDelete={onDeleteBoards}
         onSetPinned={onSetPinnedBoards}
         shareApi={shareApi}
         onReloadBoards={onReloadBoards}

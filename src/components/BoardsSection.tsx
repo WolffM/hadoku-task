@@ -20,7 +20,9 @@ export interface BoardsSectionProps {
   onBoardSwitch: (boardId: string) => void
   onBoardContextMenu: (boardId: string, x: number, y: number) => void
   onDragOverFilter: (filter: string | null) => void
-  onMoveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<void>
+  onMoveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<boolean>
+  /** Keep drag teardown from clearing the selection; see useDragAndDrop. */
+  onHoldSelection: () => void
   onClearSelection: () => void
   onCreateBoardClick: () => void
   onEditBoardsClick: () => void
@@ -35,6 +37,7 @@ export function BoardsSection({
   onBoardContextMenu,
   onDragOverFilter,
   onMoveTasksToBoard,
+  onHoldSelection,
   onClearSelection,
   onCreateBoardClick,
   onEditBoardsClick,
@@ -79,6 +82,7 @@ export function BoardsSection({
       onContextMenu={onBoardContextMenu}
       onDragOverFilter={onDragOverFilter}
       onMoveTasksToBoard={onMoveTasksToBoard}
+      onHoldSelection={onHoldSelection}
       onClearSelection={onClearSelection}
     />
   )

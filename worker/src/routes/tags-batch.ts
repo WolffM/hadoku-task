@@ -9,6 +9,7 @@ import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import {
   getBoardContext,
+  getContext,
   handleOperation,
   handleBatchOperation,
   handleBoardOperation,
@@ -39,8 +40,11 @@ import {
   BatchClearTagResponseSchema,
   BatchCreateTasksInputSchema,
   BatchCreateTasksResponseSchema,
+  BatchDeleteBoardsInputSchema,
+  BatchDeleteBoardsResponseSchema,
   MAX_BATCH_CREATE
 } from '../schemas'
+import { boardsKey } from '../kv-keys'
 import { ErrorResponseSchema } from '../schemas-common'
 import {
   boardErrorResponses,
@@ -551,6 +555,69 @@ export function createTagsBatchRoutes() {
         boardLockKey(sessionId, body.targetBoardId as string)
       ]
     )
+  })
+
+  // Batch Delete Boards (#86)
+  const batchDeleteBoardsRoute = createRoute({
+    method: 'post',
+    path: '/batch/delete-boards',
+    tags: ['Batch'],
+    summary: 'Delete many boards',
+    description:
+      'Deletes several of your boards, each with all of its tasks, in one board-collection ' +
+      'write and one D1 batch — what `DELETE /boards/{boardId}` does for one board. Ids that ' +
+      'name no board of yours come back in `notFound` rather than failing the batch. `main` ' +
+      'is refused and nothing is written. Honours `If-Match` and returns the new board-' +
+      'collection version as the ETag.',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: BatchDeleteBoardsInputSchema
+          }
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Boards deleted',
+        content: {
+          'application/json': {
+            schema: BatchDeleteBoardsResponseSchema
+          }
+        }
+      },
+      400: {
+        description: 'Invalid request (including `main`) — nothing was written',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema
+          }
+        }
+      }
+    }
+  })
+
+  app.openapi(batchDeleteBoardsRoute, async c => {
+    const { boardIds } = c.req.valid('json')
+
+    logRequest('POST', '/task/api/batch/delete-boards', {
+      userType: c.get('authContext').userType,
+      count: boardIds.length
+    })
+
+    // The single delete's lock and handler path, once for the whole set.
+    const { storage, auth } = getContext(c)
+    const expectedVersion = parseIfMatch(c)
+    const result = await withBoardLock(boardsKey(auth.sessionId), async () =>
+      TaskHandlers.deleteBoards(storage, auth, boardIds, expectedVersion)
+    )
+
+    const v = (result as unknown as { version?: number }).version
+    if (typeof v === 'number') {
+      c.header('ETag', `"${v}"`)
+    }
+    return c.json(result, 200)
   })
 
   // Batch Clear Tag

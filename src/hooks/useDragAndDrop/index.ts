@@ -85,6 +85,12 @@ export function useDragAndDrop({
    * element, for the same reason: the element may be gone by cleanup time.
    */
   const dragImageRef = useRef<HTMLElement | null>(null)
+  /**
+   * Set by a drop target whose outcome is not known yet (holdSelection): drag
+   * teardown then leaves the selection alone, and the target clears it itself
+   * once its write succeeds. Reset by the next drag.
+   */
+  const selectionHeldRef = useRef(false)
 
   /**
    * Extract dragged task IDs from drag event
@@ -112,6 +118,7 @@ export function useDragAndDrop({
 
   function onDragStart(e: React.DragEvent, taskId: string) {
     setIsDragging(true)
+    selectionHeldRef.current = false
     const idsToDrag =
       selectedIds.has(taskId) && selectedIds.size > 0 ? Array.from(selectedIds) : [taskId]
     logger.info('[useDragAndDrop] onDragStart', {
@@ -208,7 +215,18 @@ export function useDragAndDrop({
     document
       .querySelectorAll('.task-app__item.dragging')
       .forEach(el => el.classList.remove('dragging'))
-    clearSelection()
+    if (!selectionHeldRef.current) clearSelection()
+  }
+
+  /**
+   * Called by a drop target, synchronously in its `drop` handler, when it will
+   * settle the selection itself after an async write: teardown runs as that drop
+   * bubbles to `document` (and again on the source's `dragend`), long before the
+   * write resolves, and would otherwise clear a selection the write may fail to
+   * move — leaving the user to re-select every card to retry (#85).
+   */
+  function holdSelection() {
+    selectionHeldRef.current = true
   }
 
   // The document listeners below are attached once, so they call through this ref
@@ -496,6 +514,7 @@ export function useDragAndDrop({
     selectionMoveHandler,
     selectionEndHandler,
     clearSelection,
+    holdSelection,
     onDragStart,
     onDragOver,
     onDragLeave,

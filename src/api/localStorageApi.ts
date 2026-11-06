@@ -96,6 +96,16 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
     },
 
+    /** Several boards in one boards-file write, one broadcast (#86). */
+    async deleteBoards(boardIds: string[]): Promise<{ deleted: string[]; notFound: string[] }> {
+      const { deleted, notFound } = await TaskHandlers.deleteBoards(storage, authContext, boardIds)
+      for (const boardId of deleted) {
+        await storage.deleteBoardData(userType, sessionId, boardId)
+      }
+      deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })
+      return { deleted, notFound }
+    },
+
     async renameBoard(boardId: string, name: string): Promise<void> {
       await TaskHandlers.updateBoard(storage, authContext, boardId, { name })
       deferredBroadcast('boards-updated', { sessionId: SESSION_ID, userType })

@@ -206,6 +206,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     currentBoardId,
     createBoard,
     deleteBoard,
+    deleteBoards,
     renameBoard,
     setPinnedBoards,
     switchBoard,
@@ -456,6 +457,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           onBoardContextMenu={(boardId, x, y) => modals.setBoardContextMenu({ boardId, x, y })}
           onDragOverFilter={dragAndDrop.setDragOverFilter}
           onMoveTasksToBoard={moveTasksToBoard}
+          onHoldSelection={dragAndDrop.holdSelection}
           onClearSelection={dragAndDrop.clearSelection}
           onCreateBoardClick={() => {
             modals.setInputValue('')
@@ -632,6 +634,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           onToggleTagPill={handlers.toggleTagPill}
           onCloseBoardContextMenu={() => modals.setBoardContextMenu(null)}
           onDeleteBoard={deleteBoard}
+          onDeleteBoards={deleteBoards}
           onCloseTagContextMenu={() => modals.setTagContextMenu(null)}
           onDismissToast={dismissToast}
           onError={reportOperationError}

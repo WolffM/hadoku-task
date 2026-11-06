@@ -114,6 +114,7 @@ async function main() {
     'createTask',
     'createTasks',
     'deleteBoard',
+    'deleteBoards',
     'deleteTag',
     'deleteTask',
     'getBoardCalendar',
@@ -271,6 +272,49 @@ async function main() {
       'and the timeline recorded the run',
       stats.timeline.length > 0,
       JSON.stringify(stats.timeline.map(e => e.event))
+    )
+  }
+
+  // -------------------------------------------------------------------
+  section('5. deleteBoards — several boards, one collection write')
+  // -------------------------------------------------------------------
+  {
+    const s = makeStorage()
+    for (const id of ['main', 'a', 'b', 'c']) await seedBoard(s, id)
+    let saves = 0
+    const save = s.saveBoards.bind(s)
+    s.saveBoards = async (...args) => {
+      saves++
+      return save(...args)
+    }
+
+    const res = await H.deleteBoards(s, AUTH, ['a', 'b', 'gone', 'a'])
+    check(
+      'deletes the boards that exist, once each',
+      JSON.stringify(res.deleted) === '["a","b"]',
+      JSON.stringify(res)
+    )
+    check(
+      'names the ones that did not, instead of failing the batch',
+      JSON.stringify(res.notFound) === '["gone"]',
+      JSON.stringify(res)
+    )
+    check('in ONE board-collection save', saves === 1, `saves=${saves}`)
+    check(
+      'leaving the rest',
+      JSON.stringify(s.boardsRaw().boards.map(b => b.id)) === '["main","c"]',
+      JSON.stringify(s.boardsRaw().boards.map(b => b.id))
+    )
+
+    const refused = await H.deleteBoards(s, AUTH, ['c', 'main']).then(
+      () => '',
+      (e: Error) => e.message
+    )
+    check('main is refused, as the single delete refuses it', /main board/.test(refused), refused)
+    check(
+      'and the refusal wrote nothing',
+      s.boardsRaw().boards.some(b => b.id === 'c'),
+      JSON.stringify(s.boardsRaw().boards.map(b => b.id))
     )
   }
 

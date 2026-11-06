@@ -31,7 +31,11 @@ export interface EditBoardsModalProps {
   onClose: () => void
   onCreate: (name: string) => Promise<void>
   onRename: (boardId: string, name: string) => Promise<void>
-  onDelete: (boardId: string) => Promise<void>
+  /**
+   * Delete the given boards — all of them in one local write, one sync and one
+   * reload (#86). Rejects when that write fails, and then none were deleted.
+   */
+  onDelete: (boardIds: string[]) => Promise<void>
   onSetPinned: (order: string[]) => Promise<void>
   shareApi: ShareApi
   /** Reload boards from the server (after activate/deactivate changes a board's mode). */
@@ -269,14 +273,15 @@ export function EditBoardsModal({
   }
 
   /**
-   * Run the confirmed action over every target, then repaint once.
+   * Run the confirmed action over every target.
    *
-   * SEQUENTIAL, and it keeps going after a failure. Each delete ends in a
-   * reload, and those reloads share a sequence guard that discards superseded
-   * results — firing them concurrently would leave the last one to win by
-   * timing. Going one at a time also means a board that fails is the only one
-   * reported, instead of the whole batch dying on the first error with the rest
-   * in an unknown state.
+   * DELETE is one call for the whole selection: one local write, one batch
+   * sync, one repaint (#86). That write is all-or-nothing, so a failure leaves
+   * every target in place and every target is reported.
+   *
+   * LEAVE is SEQUENTIAL, one revoke per board, and it keeps going after a
+   * failure, so a board that fails is the only one reported instead of the whole
+   * batch dying on the first error with the rest in an unknown state.
    */
   const runPendingAction = async () => {
     const action = pendingAction
@@ -285,10 +290,17 @@ export function EditBoardsModal({
 
     const failed: Board[] = []
     await run(async () => {
+      if (action.kind === 'delete') {
+        try {
+          await onDelete(action.boards.map(b => b.id))
+        } catch {
+          failed.push(...action.boards)
+        }
+        return
+      }
       for (const board of action.boards) {
         try {
-          if (action.kind === 'delete') await onDelete(board.id)
-          else await shareApi.revokeShare(boardRef(board), 'me')
+          await shareApi.revokeShare(boardRef(board), 'me')
         } catch {
           failed.push(board)
         }

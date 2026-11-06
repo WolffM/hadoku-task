@@ -19,7 +19,8 @@ import { TagFilterButton } from '../components/TagFilterButton'
 import { StatusChip } from '../components/StatusChip'
 
 const noop = () => {}
-const noopAsync = async () => {}
+// A preview drop moves nothing, so it reports "not moved" and the selection stays.
+const noMove = async () => false
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
 
@@ -82,7 +83,8 @@ export function Preview({ theme, tokens }: { theme: string; tokens: ThemeTokens 
                   onSwitch={noop}
                   onContextMenu={noop}
                   onDragOverFilter={noop}
-                  onMoveTasksToBoard={noopAsync}
+                  onMoveTasksToBoard={noMove}
+                  onHoldSelection={noop}
                   onClearSelection={noop}
                 />
               ))}

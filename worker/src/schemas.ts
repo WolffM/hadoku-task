@@ -7,7 +7,11 @@
  */
 
 import { z } from '@hono/zod-openapi'
-import { TASK_STATUS_KINDS, MAX_STATUS_LABEL_LENGTH } from '@wolffm/task/api'
+import {
+  TASK_STATUS_KINDS,
+  MAX_STATUS_LABEL_LENGTH,
+  MAX_BATCH_DELETE_BOARDS
+} from '@wolffm/task/api'
 
 // ============================================================================
 // Base Entity Schemas
@@ -327,6 +331,34 @@ export const DeleteBoardResponseSchema = z
     message: z.string().openapi({ example: 'Board work-board deleted' })
   })
   .openapi('DeleteBoardResponse')
+
+// POST /batch/delete-boards
+export const BatchDeleteBoardsInputSchema = z
+  .object({
+    boardIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(MAX_BATCH_DELETE_BOARDS)
+      .refine(ids => !ids.includes('main'), { message: 'Cannot delete the main board' })
+      .openapi({
+        example: ['work-board', 'archive'],
+        description: `1–${MAX_BATCH_DELETE_BOARDS} ids of boards you own. \`main\` is refused.`
+      })
+  })
+  .openapi('BatchDeleteBoardsInput')
+
+export const BatchDeleteBoardsResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    deleted: z
+      .array(z.string())
+      .openapi({ example: ['work-board'], description: 'Deleted, each with all of its tasks.' }),
+    notFound: z.array(z.string()).openapi({
+      example: ['archive'],
+      description: 'Named no board of yours; nothing to delete. Not an error.'
+    })
+  })
+  .openapi('BatchDeleteBoardsResponse')
 
 // ============================================================================
 // Tag Endpoint Schemas

@@ -46,6 +46,7 @@ export const ROUTE_MANIFEST: ReadonlyArray<
   ['PATCH', '/task/api/batch-tag', 'tags-batch'],
   ['POST', '/task/api/batch/move-tasks', 'tags-batch'],
   ['POST', '/task/api/batch-move', 'tags-batch'],
+  ['POST', '/task/api/batch/delete-boards', 'tags-batch'],
   ['POST', '/task/api/batch-clear-tag', 'tags-batch'],
   ['GET', '/task/api/tasks', 'tasks'],
   ['POST', '/task/api', 'tasks'],

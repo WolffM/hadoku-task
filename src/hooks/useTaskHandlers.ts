@@ -18,7 +18,7 @@ interface UseTaskHandlersProps {
   bulkUpdateTaskTags: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
   createTagOnBoard: (tag: string) => Promise<void>
   createBoard: (name: string) => Promise<void>
-  moveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<void>
+  moveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<boolean>
   clearSelection: () => void
   setEditTagModal: (modal: { taskId: string; currentTag: string | null } | null) => void
   setEditTagInput: (input: string) => void
@@ -161,8 +161,8 @@ export function useTaskHandlers({
         pendingTaskOperation?.type === 'move-to-board' &&
         pendingTaskOperation.taskIds.length > 0
       ) {
-        await moveTasksToBoard(name, pendingTaskOperation.taskIds)
-        clearSelection()
+        // A failed move has already been reported by the hook.
+        if (await moveTasksToBoard(name, pendingTaskOperation.taskIds)) clearSelection()
       }
 
       setPendingTaskOperation(null)

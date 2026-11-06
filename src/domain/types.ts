@@ -449,6 +449,13 @@ export class DuplicateSourceError extends DomainError {
 export const MAX_NOTES_BYTES = 64 * 1024
 
 /**
+ * Most boards one `POST /batch/delete-boards` may name (#86). Each board costs
+ * the D1 batch three statements; the client splits a larger selection into
+ * requests of this size rather than having the server refuse it.
+ */
+export const MAX_BATCH_DELETE_BOARDS = 100
+
+/**
  * Error thrown when a task's `notes` exceeds MAX_NOTES_BYTES.
  * HTTP status: 413 Payload Too Large
  */

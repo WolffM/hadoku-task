@@ -22,10 +22,24 @@ const MAIN = { id: 'main', name: 'Main', tasks: [], tags: [] }
 const DOOMED = { id: 'doomed', name: 'Doomed Board', tasks: [], tags: [] }
 const KEEPER = { id: 'keeper', name: 'Keeper Board', tasks: [], tags: [] }
 
-/** A boards endpoint that actually remembers a DELETE, so the row can go away. */
+/**
+ * A boards endpoint that actually remembers a delete, so the row can go away.
+ * Edit Boards deletes through `POST /batch/delete-boards` (#86); the single
+ * `DELETE /boards/{id}` is the board context menu's path. Both land in `deleted`.
+ */
 async function statefulBoards(page: Page) {
   const boards = [MAIN, DOOMED, KEEPER]
   const deleted: string[] = []
+
+  await page.route('**/task/api/batch/delete-boards', route => {
+    const { boardIds } = route.request().postDataJSON() as { boardIds: string[] }
+    deleted.push(...boardIds)
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, deleted: boardIds, notFound: [] })
+    })
+  })
 
   await page.route('**/task/api/boards**', route => {
     const req = route.request()

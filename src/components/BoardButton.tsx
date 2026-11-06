@@ -6,8 +6,6 @@ import React from 'react'
 import { useLongPress } from '../hooks/useLongPress'
 import { getTaskIdsFromDragEvent } from '../utils/dragDrop'
 import type { Board } from '../domain/types'
-import { formatError } from '../domain/utils/tags'
-import { logger } from '@wolffm/logger/client'
 
 interface BoardButtonProps {
   board: Board
@@ -16,7 +14,9 @@ interface BoardButtonProps {
   onSwitch: (boardId: string) => void
   onContextMenu: (boardId: string, x: number, y: number) => void
   onDragOverFilter: (filter: string | null) => void
-  onMoveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<void>
+  onMoveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<boolean>
+  /** Keep drag teardown from clearing the selection while the move is pending. */
+  onHoldSelection: () => void
   onClearSelection: () => void
 }
 
@@ -28,6 +28,7 @@ export function BoardButton({
   onContextMenu,
   onDragOverFilter,
   onMoveTasksToBoard,
+  onHoldSelection,
   onClearSelection
 }: BoardButtonProps) {
   const longPressHandlers = useLongPress({
@@ -61,24 +62,12 @@ export function BoardButton({
         onDragOverFilter(null)
         const ids = getTaskIdsFromDragEvent(e.dataTransfer)
         if (ids.length === 0) return
-        try {
-          await onMoveTasksToBoard(board.id, ids)
-          try {
-            onClearSelection()
-          } catch {
-            // Ignore selection clear errors
-          }
-        } catch (err) {
-          // Defensive only: moveTasksToBoard reports its own failures (as a
-          // toast) and resolves, so this branch does not fire on the live
-          // wiring. It must not raise a dialog — the browser can be told to
-          // stop drawing those, and then the message goes nowhere.
-          logger.error('[BoardButton] Failed moving tasks to board', {
-            error: formatError(err),
-            boardId: board.id,
-            taskCount: ids.length
-          })
-        }
+        // The selection is settled HERE, once the move resolves: cleared when it
+        // landed, kept when it failed (the hook has already reported that as a
+        // toast) so a retry needs no re-selecting every card (#85). Held first,
+        // synchronously, or drag teardown clears it before the move is known.
+        onHoldSelection()
+        if (await onMoveTasksToBoard(board.id, ids)) onClearSelection()
       }}
     >
       {board.name}

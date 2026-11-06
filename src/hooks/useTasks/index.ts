@@ -510,10 +510,15 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
     await reload()
   }
 
-  // Move multiple tasks to another board
-  async function moveTasksToBoard(targetBoardId: string, ids: string[]) {
+  /**
+   * Move multiple tasks to another board. Reports its own failure (a toast) and
+   * RESOLVES false rather than throwing, so a caller only has to skip its
+   * success work — BoardButton keeps the selection, so a failed drop can be
+   * retried without re-selecting every card (#85).
+   */
+  async function moveTasksToBoard(targetBoardId: string, ids: string[]): Promise<boolean> {
     logger.info('[useTasks] moveTasksToBoard START', { targetBoardId, ids, currentBoardId })
-    if (!boards) return
+    if (!boards) return false
 
     // Find which boards the tasks are on
     const sourceBoardIds = new Set<string>()
@@ -545,8 +550,10 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
       selectBoard(targetBoardId)
       await reload()
       logger.info('[useTasks] moveTasksToBoard END')
+      return true
     } catch (error) {
       report('moveTasksToBoard ERROR', error, 'Failed to move tasks')
+      return false
     }
   }
 
@@ -554,6 +561,18 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
     await api.deleteBoard(boardId)
     // If we're deleting the current board, fall back to main before reloading.
     if (currentBoardId === boardId) {
+      selectBoard('main')
+    }
+    await reload()
+  }
+
+  /**
+   * Delete several boards: one local write, one background sync, ONE reload
+   * (#86). Throws if the local write fails, and then nothing was deleted.
+   */
+  async function deleteBoards(boardIds: string[]) {
+    await api.deleteBoards(boardIds)
+    if (boardIds.includes(currentBoardId)) {
       selectBoard('main')
     }
     await reload()
@@ -664,6 +683,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
     // Board operations
     createBoard,
     deleteBoard,
+    deleteBoards,
     renameBoard,
     setPinnedBoards,
     switchBoard,

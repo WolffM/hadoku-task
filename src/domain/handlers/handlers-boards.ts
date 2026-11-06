@@ -80,6 +80,52 @@ export async function deleteBoard(
 }
 
 /**
+ * Delete several boards in ONE board-collection write — what deleting N boards
+ * one `deleteBoard` at a time costs N of (#86). Storage removes each board with
+ * its tasks exactly as it does for the single delete, because it is the same
+ * reconcile: every board missing from the saved collection goes, tasks first.
+ *
+ * Ids that name no board are reported in `notFound` instead of failing the
+ * batch. The client syncs fire-and-forget, so a board it deleted locally may
+ * never have reached the server; that must not keep the other deletes from
+ * landing. `main` is refused outright, as the single delete refuses it.
+ */
+export async function deleteBoards(
+  storage: Storage,
+  auth: AuthContext,
+  boardIds: string[],
+  expectedVersion?: number
+): Promise<{ ok: true; deleted: string[]; notFound: string[] }> {
+  if (boardIds.includes('main')) {
+    throw new Error('Cannot delete the main board')
+  }
+
+  return withBoardOperation(
+    storage,
+    auth,
+    (boards, timestamp) => {
+      const existing = new Set(boards.boards.map(b => b.id))
+      const unique = [...new Set(boardIds)]
+      const deleted = unique.filter(id => existing.has(id))
+      const notFound = unique.filter(id => !existing.has(id))
+      const gone = new Set(deleted)
+
+      const updatedBoards: BoardsFile = {
+        ...boards,
+        updatedAt: timestamp,
+        boards: boards.boards.filter(b => !gone.has(b.id))
+      }
+
+      return {
+        updatedBoards,
+        result: { ok: true as const, deleted, notFound }
+      }
+    },
+    expectedVersion
+  )
+}
+
+/**
  * Rename a board (and, in future tranches, other board metadata). Goes through
  * the board-collection OCC so a concurrent rename/reorder yields 409, not a
  * silent clobber.
