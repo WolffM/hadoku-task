@@ -74,8 +74,28 @@ fi
 # previous "lint everything + format everything" approach which was
 # (a) slow on every commit regardless of scope and (b) auto-staged
 # unrelated worktree changes via `git add -u`, breaking parallel work.
+#
+# --no-stash: lint-staged's default backs up the index and working tree in a
+# `git stash` entry. refs/stash lives in the COMMON git dir, so every worktree
+# shares one stack, and parallel agents committing at once push and pop each
+# other's entries. AGENTS.md forbids git stash in this repo for that reason.
+#
+# --no-stash also turns off hiding unstaged hunks, so a fixer's re-add would
+# sweep a partially staged file's UNSTAGED changes into the commit. Refuse that
+# case up front instead.
+staged_list=$(mktemp)
+git diff --cached --name-only --diff-filter=ACMR > "$staged_list"
+partial=$(git diff --name-only | grep -Fx -f "$staged_list" || true)
+rm -f "$staged_list"
+if [ -n "$partial" ]; then
+  echo "❌ These files have both staged and unstaged changes:"
+  echo "$partial" | sed 's/^/     /'
+  echo "   The formatters would fold the unstaged part into this commit. Stage the"
+  echo "   whole file, or set the rest aside in a WIP commit (never git stash)."
+  exit 1
+fi
 echo "📋 Running lint-staged on staged files..."
-if ! pnpm exec lint-staged; then
+if ! pnpm exec lint-staged --no-stash; then
   echo "❌ Lint or format failed on staged files."
   exit 1
 fi
