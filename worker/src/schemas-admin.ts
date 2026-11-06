@@ -53,3 +53,28 @@ export const UnblacklistResponseSchema = z
     message: z.string().openapi({ example: 'Session sess_***abc unblacklisted' })
   })
   .openapi('UnblacklistResponse')
+
+// GET /admin/orphans
+export const OrphanTaskSchema = z
+  .object({
+    userId: z.string().openapi({ example: 'e3592686-8c23-4bbc-b2f3-85ab02dc38d0' }),
+    boardId: z.string().openapi({ example: 'tenhands' }),
+    taskId: z.string().openapi({ example: '01KCG33G9W9GDE8N09K9QSC0MT' }),
+    createdAt: z.string().openapi({ example: '2026-07-25T16:42:46.537Z' })
+  })
+  .openapi('OrphanTask')
+
+export const GetOrphansResponseSchema = z
+  .object({
+    orphanTasks: z.number().openapi({
+      example: 0,
+      description: 'Tasks whose board_id has no boards row for the same owner. No route lists them.'
+    }),
+    sample: z.array(OrphanTaskSchema).openapi({ description: 'Up to 50, oldest first.' }),
+    sentinelRows: z.number().openapi({
+      example: 0,
+      description:
+        "Board, board_meta, board_prefs and task rows owned by the 'public' sentinel, which no account owns or can erase (#107)."
+    })
+  })
+  .openapi('GetOrphansResponse')

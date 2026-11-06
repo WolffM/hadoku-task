@@ -55,6 +55,7 @@ export const ROUTE_MANIFEST: ReadonlyArray<
   ['GET', '/task/api/stats', 'tasks'],
   ['GET', '/task/api/admin/throttle/:sessionId', 'admin'],
   ['POST', '/task/api/admin/unblacklist/:sessionId', 'admin'],
+  ['GET', '/task/api/admin/orphans', 'admin'],
   ['GET', '/task/api/themes/source', 'theme-editor'],
   ['POST', '/task/api/themes/save', 'theme-editor']
 ]
