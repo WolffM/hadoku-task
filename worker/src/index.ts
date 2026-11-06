@@ -31,8 +31,9 @@ import {
   type ThrottledTier
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
+import { storageRefusal } from './storage-access'
 import { healthBody } from './routes/health'
-import { ROUTE_GROUPS, type RouteGroup } from './route-groups'
+import { ROUTE_GROUPS, STORAGE_GROUPS, type RouteGroup } from './route-groups'
 import { ROUTE_MANIFEST } from './route-manifest'
 import { OPENAPI_SPEC } from './openapi-spec'
 import type { AppContext, TaskAuthExtension } from './types'
@@ -222,6 +223,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
           auth.legacyId = auth.sessionId
         }
         auth.sessionId = userId
+        auth.verified = c.req.header('X-Hadoku-Verified') === '1'
       }
     }
     return next()
@@ -336,7 +338,11 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
   // MCP endpoint (stateless Streamable-HTTP). Auth/scoping come from the shared
   // authContext (X-User-Key); it runs on root's Context, so it needs no shell.
-  app.post('/task/api/mcp', async c => (await import('./mcp/handler')).handleMcp(c))
+  app.post('/task/api/mcp', async c => {
+    const refused = storageRefusal(c.get('authContext'))
+    if (refused) return c.json(refused.body, refused.status)
+    return (await import('./mcp/handler')).handleMcp(c)
+  })
   app.get('/task/api/mcp', c => c.text('Method Not Allowed', 405))
 
   // Account-erase hook (hadoku_site IDENTITY_MODEL R12): edge-internal, called
@@ -359,7 +365,12 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   }
 
   for (const [method, path, group] of ROUTE_MANIFEST) {
+    const gated = STORAGE_GROUPS.has(group)
     app.on(method, path, async c => {
+      // No server storage without a verified identity (#107) — refused before
+      // the group even loads.
+      const refused = gated ? storageRefusal(c.get('authContext')) : null
+      if (refused) return c.json(refused.body, refused.status)
       forwardedAuth.set(c.req.raw, c.get('authContext'))
       const shell = await loadShell(group)
       return shell.fetch(c.req.raw, c.env, executionCtxOf(c))

@@ -61,6 +61,13 @@ export interface TaskAppProps {
    * the edge header, so the app never needs to send or key anything by it.
    */
   userId?: string | null
+  /**
+   * whoami's `verified`, as the host resolved it: the operator verifies this
+   * person. Only a member's storage turns on it — a verified member syncs to the
+   * server like a friend, an unverified one stays on this device (#107). Absent
+   * (an older host) reads as unverified, which is the safe side.
+   */
+  verified?: boolean
   sessionId?: string
   theme?: string // Theme to apply (overrides user preferences)
   /**
@@ -95,7 +102,11 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   const storedSessionId = getStoredSessionId()
   const storedUserType = getStoredUserType()
 
-  const userType = storedUserType || props.userType || 'public'
+  const hostTier = storedUserType || props.userType || 'public'
+  // The server stores nothing for an unverified member (worker/src/storage-access.ts),
+  // so the app runs them exactly as it runs a public visitor: local-only, keyed
+  // by the anon session id. Every other tier keeps what the host said.
+  const userType = hostTier === 'member' && props.verified !== true ? 'public' : hostTier
 
   // Authed users' sessionId comes from the host (via hadoku_session_id / props).
   // Public users get the stable, host-independent anon id so their local tasks

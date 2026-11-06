@@ -29,6 +29,8 @@ export const DOMAIN_ERROR_CODES = [
   // one is a 400 ZodError from the shared hook, not a coded DomainError. The last
   // hand-rolled emitter went when POST /boards/{ref}/repo became a createRoute.)
   'FORBIDDEN', // 403 — readonly grantee, or not the board owner
+  'IDENTITY_REQUIRED', // 401 — no edge-stamped identity: no server storage (#107)
+  'MEMBER_NOT_VERIFIED', // 403 — a member the operator has not verified: no server storage
   'RATE_LIMITED', // 429 — throttled (carries `retryAfter`)
   // Lookup
   'BOARD_NOT_FOUND', // 404

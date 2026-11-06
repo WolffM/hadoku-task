@@ -86,6 +86,12 @@ export interface TaskAuthExtension {
   /** Edge-injected X-User-Id — the stable per-key UUID from the registry. */
   userId?: string
   /**
+   * The edge's `X-Hadoku-Verified: 1`: the operator verifies this identity
+   * (friend and up always; a member only once verified). Read with a userId
+   * only — the edge stamps both from the same registry row. See storage-access.ts.
+   */
+  verified?: boolean
+  /**
    * The RAW-credential namespace this user's data used to live under, before the
    * move to userId-scoped storage. Set only when we actually flipped (i.e. a
    * userId was present). The storage layer dual-reads this and copy-forwards on a

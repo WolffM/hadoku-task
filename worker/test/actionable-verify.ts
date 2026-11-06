@@ -274,9 +274,13 @@ async function main() {
     check('automation board with no repo → reason no_repo', noRepo.body.reason === 'no_repo')
     check('…and ok:true — definitely nothing to do', noRepo.body.ok === true)
 
+    // No identity, no storage (#107): the root gate answers before the scan.
     const pub = await scan('no-repo-board', { tier: 'public' })
-    check('public caller → signed_out', pub.body.reason === 'signed_out')
-    check('public caller → ok:false', pub.body.ok === false)
+    check('public caller → 401', pub.status === 401, `status=${pub.status}`)
+    check(
+      'public caller → IDENTITY_REQUIRED',
+      (pub.body as { code?: string }).code === 'IDENTITY_REQUIRED'
+    )
 
     check('none of the above contacted the provider', calls.length === before, `${calls.length}`)
   }

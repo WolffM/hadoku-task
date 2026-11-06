@@ -16,7 +16,7 @@
  * convention) and share-grants (granting without a human).
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { tierAtLeast } from '@wolffm/worker-utils'
+import { hasStorage } from '../storage-access'
 import { logRequest } from '../logger'
 import { getBoardContext } from './route-utils'
 import { listShares, upsertShare, removeShare, resolveOwnBoard } from './board-sharing'
@@ -81,8 +81,9 @@ export function createShareRoutes() {
   })
   app.openapi(searchRoute, async c => {
     const auth = c.get('authContext')
-    // Only signed-in users may enumerate names (avoids anonymous scraping).
-    if (!tierAtLeast(auth, 'friend')) {
+    // Only people with storage may enumerate names (avoids anonymous scraping):
+    // a verified member shares boards exactly as a friend does.
+    if (!hasStorage(auth)) {
       return c.json({ users: [] }, 200)
     }
     const { q, limit } = c.req.valid('query')

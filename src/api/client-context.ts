@@ -267,7 +267,7 @@ export interface CreateApiOptions {
  * here becomes a cast at every caller, which is how `service` went unlisted
  * for months while being passed in at runtime.
  */
-export type TaskUserTier = 'public' | 'friend' | 'service' | 'wife' | 'admin'
+export type TaskUserTier = 'public' | 'member' | 'friend' | 'service' | 'wife' | 'admin'
 
 /** What every method group needs from `createApi`, and nothing more. */
 export interface ApiCtx {

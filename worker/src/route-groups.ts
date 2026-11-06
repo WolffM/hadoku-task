@@ -43,6 +43,21 @@ export const ROUTE_GROUPS = {
 
 export type RouteGroup = keyof typeof ROUTE_GROUPS
 
+/**
+ * Groups that read or write a person's boards and tasks: root refuses them to
+ * any caller without server storage (storage-access.ts, #107). The rest gate
+ * themselves (admin, theme-editor) or need no identity (misc).
+ */
+export const STORAGE_GROUPS: ReadonlySet<RouteGroup> = new Set<RouteGroup>([
+  'boards',
+  'shares',
+  'calendar',
+  'automation',
+  'agent',
+  'tags-batch',
+  'tasks'
+])
+
 /** Rows a group registers that root answers itself, so the manifest leaves them
  * out. /health must not load a group: it is what monitoring hits on a cold isolate. */
 export const ROOT_SERVED: ReadonlySet<string> = new Set(['GET /task/api/health'])

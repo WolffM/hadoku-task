@@ -206,11 +206,14 @@ async function main() {
   section('5. Signed out')
   // -------------------------------------------------------------------
   lastRequest = null
+  // No identity, no storage (#107): the root gate answers before validation.
   r = await validate('WolffM/hadoku-task', { tier: 'public', token: 'tok-123' })
-  check('a public caller still gets 200', r.status === 200, `status=${r.status}`)
-  check('reason token', r.json.reason === 'token', JSON.stringify(r.json))
-  check('the message asks them to sign in', /Sign in/.test(r.json.message ?? ''), r.json.message)
-  check('the repo echoes back empty', r.json.repo === '', JSON.stringify(r.json))
+  check('a public caller gets 401', r.status === 401, `status=${r.status}`)
+  check(
+    'IDENTITY_REQUIRED',
+    (r.json as { code?: string }).code === 'IDENTITY_REQUIRED',
+    JSON.stringify(r.json)
+  )
   check('and GitHub is never consulted for them', lastRequest === null, JSON.stringify(lastRequest))
 
   console.log(`\n${pass} passed, ${fail} failed`)

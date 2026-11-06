@@ -44,8 +44,9 @@
     // Get params from URL
     const params = new URLSearchParams(window.location.search)
     const userType = params.get('userType') || 'public'
+    const verified = params.get('verified') === '1'
     
-    console.log('[mount] Mounting with:', { userType })
+    console.log('[mount] Mounting with:', { userType, verified })
     
     // Mount the app
     // ?theme= plays hadoku.me's mf-loader, which always hands the app the
@@ -53,6 +54,7 @@
     mount(document.getElementById('app'), {
       basename: '/',
       userType: userType,
+      verified: verified,
       theme: params.get('theme') || undefined
     })
   </script>

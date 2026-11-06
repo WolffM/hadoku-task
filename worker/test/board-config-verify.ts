@@ -58,6 +58,7 @@ function headers(extra: Record<string, string> = {}) {
     'X-Edge-Auth': EDGE_SECRET,
     'X-Hadoku-Tier': 'friend',
     'X-User-Key': USER,
+    'X-User-Id': USER,
     'Content-Type': 'application/json',
     ...extra
   }

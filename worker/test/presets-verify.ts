@@ -138,16 +138,16 @@ function envWith(sources: unknown): Record<string, unknown> {
 }
 
 async function getPresets(
-  env: Record<string, unknown>,
-  tier = 'friend'
+  env: Record<string, unknown>
 ): Promise<{ presets: PresetRow[]; sources: SourceRow[] }> {
   const res = await app.request(
     'http://localhost/task/api/automation/presets',
     {
       headers: {
         'X-Edge-Auth': EDGE_SECRET,
-        'X-Hadoku-Tier': tier,
-        ...(tier === 'public' ? {} : { 'X-User-Key': 'owner-key', 'X-User-Id': 'owner-uid' })
+        'X-Hadoku-Tier': 'friend',
+        'X-User-Key': 'owner-key',
+        'X-User-Id': 'owner-uid'
       }
     },
     env
@@ -377,12 +377,29 @@ async function main() {
     )
     check('http://localhost source is allowed (dev stub)', loopback.presets.length === 1)
 
-    const pub = await getPresets(
-      envWith([{ id: 'p', label: 'P', url: 'https://p.test/wrapped' }]),
-      'public'
+    // No identity, no storage (#107): the root gate refuses before the group loads.
+    const pub = await app.request(
+      'http://localhost/task/api/automation/presets',
+      { headers: { 'X-Edge-Auth': EDGE_SECRET, 'X-Hadoku-Tier': 'public' } },
+      envWith([{ id: 'p', label: 'P', url: 'https://p.test/wrapped' }])
     )
-    check('public caller → no presets', pub.presets.length === 0)
-    check('public caller → no sources', pub.sources.length === 0)
+    check('public caller → 401', pub.status === 401, `status=${pub.status}`)
+    const verifiedMember = await app.request(
+      'http://localhost/task/api/automation/presets',
+      {
+        headers: {
+          'X-Edge-Auth': EDGE_SECRET,
+          'X-Hadoku-Tier': 'member',
+          'X-User-Key': 'member-key',
+          'X-User-Id': 'member-uid',
+          'X-Hadoku-Verified': '1'
+        }
+      },
+      envWith([{ id: 'p', label: 'P', url: 'https://p.test/wrapped' }])
+    )
+    const vm = (await verifiedMember.json()) as { presets: PresetRow[]; sources: SourceRow[] }
+    check('verified member → no presets (automation stays friend+)', vm.presets.length === 0)
+    check('verified member → no sources', vm.sources.length === 0)
   }
 
   // ────────────────────────────────────────────────────────────────────────────

@@ -55,6 +55,7 @@ function headers() {
     'X-Edge-Auth': EDGE_SECRET,
     'X-Hadoku-Tier': 'friend',
     'X-User-Key': 'sess-t3-user',
+    'X-User-Id': 'sess-t3-user',
     'Content-Type': 'application/json'
   }
 }
