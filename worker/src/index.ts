@@ -38,6 +38,9 @@ import { ROUTE_MANIFEST } from './route-manifest'
 import { OPENAPI_SPEC } from './openapi-spec'
 import type { AppContext, TaskAuthExtension } from './types'
 
+// The host's daily cron runs this and reports it into the fleet job log (#109).
+export { checkIntegrity, type OrphanReport } from './integrity'
+
 // NOTHING imported above may build a zod schema at module scope. Root is
 // evaluated on every cold isolate, before any request is routed; each route
 // group (and its schemas) loads on first use instead — see route-groups.ts.

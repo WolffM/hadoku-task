@@ -20,7 +20,7 @@ import {
   GetThrottleStatusResponseSchema,
   UnblacklistResponseSchema
 } from '../schemas-admin'
-import { DEFAULT_SESSION_ID } from '../constants'
+import { countOrphans } from '../integrity'
 
 export function createAdminRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -153,12 +153,7 @@ export function createAdminRoutes() {
     )
   })
 
-  // Data integrity (#109): rows no route can reach. A task with no board is
-  // invisible to its owner (every read goes through a board) and still holds a
-  // `source` uniqueness slot; a row owned by the 'public' sentinel belongs to no
-  // account, so no account erase removes it. Both should always be zero — the
-  // writes delete a board with its tasks in one batch, and storage-access.ts
-  // refuses callers without an identity — so nonzero means a path regressed.
+  // Data integrity (#109) — see integrity.ts, which the daily cron shares.
   const orphansRoute = createRoute({
     method: 'get',
     path: '/admin/orphans',
@@ -184,43 +179,7 @@ export function createAdminRoutes() {
       return c.json({ error: 'Admin access required' }, 403)
     }
     logRequest('GET', '/task/api/admin/orphans', { userType: auth.userType })
-    const db = c.env.DB as unknown as {
-      prepare(sql: string): {
-        bind(...a: unknown[]): {
-          all<T>(): Promise<{ results: T[] }>
-          first<T>(): Promise<T | null>
-        }
-      }
-    }
-    const ORPHANS = `FROM tasks t LEFT JOIN boards b ON b.user_id = t.user_id AND b.id = t.board_id
-                     WHERE b.id IS NULL`
-    const [count, sample, sentinel] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) AS n ${ORPHANS}`).bind().first<{ n: number }>(),
-      db
-        .prepare(
-          `SELECT t.user_id AS userId, t.board_id AS boardId, t.id AS taskId, t.created_at AS createdAt
-             ${ORPHANS} ORDER BY t.created_at LIMIT 50`
-        )
-        .bind()
-        .all<{ userId: string; boardId: string; taskId: string; createdAt: string }>(),
-      db
-        .prepare(
-          `SELECT (SELECT COUNT(*) FROM boards WHERE user_id = ?1)
-                + (SELECT COUNT(*) FROM board_meta WHERE user_id = ?1)
-                + (SELECT COUNT(*) FROM board_prefs WHERE user_id = ?1)
-                + (SELECT COUNT(*) FROM tasks WHERE user_id = ?1) AS n`
-        )
-        .bind(DEFAULT_SESSION_ID)
-        .first<{ n: number }>()
-    ])
-    return c.json(
-      {
-        orphanTasks: count?.n ?? 0,
-        sample: sample.results,
-        sentinelRows: sentinel?.n ?? 0
-      },
-      200
-    )
+    return c.json(await countOrphans(c.env.DB as Parameters<typeof countOrphans>[0]), 200)
   })
 
   return app

@@ -7,12 +7,14 @@
  *   - a task whose board row is gone is counted and named in the sample (the
  *     tasks table has no foreign key to boards, which is how prod got three);
  *   - a row owned by the 'public' sentinel is counted (#107);
- *   - admin only.
+ *   - admin only;
+ *   - checkIntegrity (the host's daily cron) resolves on a clean database and
+ *     throws, naming the orphans, on a dirty one — a throw is a failed job, which pages.
  *
  * Run via: pnpm run test:worker  (or `... orphans-verify`).
  */
 import { join } from 'node:path'
-import { createTaskHandler } from '../src/index'
+import { checkIntegrity, createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
 const EDGE_SECRET = 'test-edge-secret'
@@ -106,6 +108,9 @@ async function main() {
   check('no orphans', o.orphanTasks === 0 && o.sample.length === 0, JSON.stringify(o))
   check('no sentinel rows', o.sentinelRows === 0, JSON.stringify(o))
 
+  const clean = await checkIntegrity(env)
+  check('checkIntegrity resolves on a clean database', clean.orphanTasks === 0)
+
   section('2. The ordinary board delete leaves none behind')
   const del = await req('friend', OWNER, 'DELETE', '/task/api/boards/gone')
   check(
@@ -130,6 +135,18 @@ async function main() {
     JSON.stringify(o.sample)
   )
 
+  const thrown = await checkIntegrity(env).then(
+    () => null,
+    (e: Error) => e.message
+  )
+  check(
+    'checkIntegrity throws, naming the orphan',
+    thrown !== null &&
+      thrown.includes('1 task(s) with no board') &&
+      thrown.includes('owner-uid/work/kept'),
+    String(thrown)
+  )
+
   section("4. A row owned by the 'public' sentinel is reported")
   await d1
     .prepare('INSERT INTO board_meta (user_id, version, updated_at) VALUES (?, 1, ?)')
@@ -137,6 +154,26 @@ async function main() {
     .run()
   o = await orphans()
   check('one sentinel row counted', o.sentinelRows === 1, JSON.stringify(o))
+
+  await d1.prepare("DELETE FROM tasks WHERE id = 'kept'").bind().run()
+  const sentinelOnly = await checkIntegrity(env).then(
+    () => null,
+    (e: Error) => e.message
+  )
+  check(
+    'checkIntegrity throws on a sentinel row alone',
+    sentinelOnly !== null && sentinelOnly.includes("1 row(s) owned by 'public'"),
+    String(sentinelOnly)
+  )
+  check(
+    'checkIntegrity throws with no DB binding',
+    (
+      await checkIntegrity({}).then(
+        () => '',
+        (e: Error) => e.message
+      )
+    ).includes('no DB binding')
+  )
 
   section('5. Admin only')
   for (const tier of ['wife', 'service', 'friend']) {
