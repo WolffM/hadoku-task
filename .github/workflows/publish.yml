@@ -372,13 +372,13 @@ jobs:
       # AFTER the notify, so a failure here never holds back a fleet release.
       - name: Stage UI Components package for npmjs
         if: steps.changes.outputs.ui == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@2b262d3036ef44e29631c5b0c8e15610110d0002
+        uses: WolffM/hadoku-actions/publish-npmjs@v1
         with:
           package-dir: task-ui-components
 
       - name: Stage Themes package for npmjs
         if: steps.changes.outputs.themes == 'true'
-        uses: WolffM/hadoku-actions/publish-npmjs@2b262d3036ef44e29631c5b0c8e15610110d0002
+        uses: WolffM/hadoku-actions/publish-npmjs@v1
         with:
           package-dir: themes
 
@@ -394,4 +394,4 @@ jobs:
       id-token: write
       actions: read
     steps:
-      - uses: WolffM/hadoku-actions/publish-npmjs/publish@2b262d3036ef44e29631c5b0c8e15610110d0002
+      - uses: WolffM/hadoku-actions/publish-npmjs/publish@v1
