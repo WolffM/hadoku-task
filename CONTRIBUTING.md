@@ -30,13 +30,13 @@ There are no unit tests. Two suites cover the code:
 
 ```bash
 pnpm run test:worker                 # worker verify harnesses (real SQLite D1)
-pnpm run dev:api                     # required by server-backed e2e specs
-pnpm exec playwright test            # ~110 e2e specs
+pnpm exec playwright test            # e2e; starts its own stack on free ports
 ```
 
-- **`pnpm run dev:api` is not optional.** Without it ~80 specs skip themselves
-  (it serves the real task worker on :3001 and the real prefs-api on :3003).
-  A skipped spec is not a passing one — check the counts.
+- **Playwright brings its own stack.** It starts the real task worker and the
+  real prefs-api (`scripts/dev-api.mjs`) and vite on ports it picks free, so a
+  running `pnpm run dev:api` or a parallel run cannot collide with it. A
+  skipped spec is not a passing one — check the counts.
 - **CI runs the e2e suite, but after you push.** The `e2e` job in `ci.yml`
   runs it against the real stack; on a direct push to main that is detection,
   not prevention. Run it yourself first.

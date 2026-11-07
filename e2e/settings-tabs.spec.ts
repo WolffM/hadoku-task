@@ -6,7 +6,7 @@ import { PREFS_BASE, asFreshUser, prefsUp, pointPrefsAtLocalStack } from './help
  * The settings popout's tabs: the site's groups, then the app's, as an ARIA
  * tablist, with the open tab remembered per user on the shared prefs row.
  *
- * Runs against the REAL prefs-api on :3003, because "remembered" means the
+ * Runs against the REAL prefs-api, because "remembered" means the
  * value survives a reload through the server, not only the SDK's local cache.
  * The task app passes `children` and no `appTabs`, so its strip is
  * Profile · Content · Account · App.
@@ -37,7 +37,7 @@ test.describe('settings tabs', () => {
   // was every other spec's starting tab, and their writes landed under this
   // one's reload check.
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await asFreshUser(page)
     await mockShellApi(page)
     await pointPrefsAtLocalStack(page)

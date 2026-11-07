@@ -49,13 +49,11 @@ pnpm run dev
 
 ```bash
 pnpm run test:worker         # worker harnesses against a real SQLite D1
-pnpm run dev:api             # required by the server-backed e2e specs
-pnpm exec playwright test    # ~110 e2e specs
+pnpm exec playwright test    # e2e; starts the real stack + vite on free ports
 ```
 
-CI runs `typecheck`, `lint` and `test:worker` — **not** Playwright — so a green
-build is not evidence the e2e suite passes. Run it locally, with `dev:api` up,
-or ~33 specs skip themselves and the counts quietly look fine.
+CI runs the e2e suite too, but on a direct push to main that is detection, not
+prevention — run it locally first.
 
 ### Build for Production
 

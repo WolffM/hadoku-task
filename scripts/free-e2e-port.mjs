@@ -29,7 +29,15 @@ import { readlinkSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PORT = Number(process.env.E2E_PORT ?? 5199)
+/** The port hadoku-registry gives this repo. Only it is ours to reclaim. */
+const REGISTERED_PORT = 5199
+const PORT = Number(process.env.E2E_PORT)
+
+// playwright.config.ts normally hands vite a port the kernel just picked, so
+// nothing should be on it — and if something is, it is another run that
+// raced us there, which is not a squatter to kill. vite's --strictPort fails
+// that run loudly instead. Only a pinned E2E_PORT=5199 is reclaimed.
+if (PORT !== REGISTERED_PORT) process.exit(0)
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** `ss -ltnp` is the only listener source that also gives us the pid. */

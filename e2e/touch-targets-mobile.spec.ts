@@ -71,7 +71,7 @@ test.describe('touch targets on a touch phone', () => {
   test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await seedBoards(request)
     await openBoard(page, probeTitle())
   })
@@ -140,7 +140,7 @@ test.describe('touch targets on a touch phone', () => {
 test.describe('touch targets with a mouse', () => {
   // Desktop Chrome from the project: fine pointer, hover.
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await seedBoards(request)
     await openBoard(page, probeTitle())
   })

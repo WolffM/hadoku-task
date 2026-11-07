@@ -15,9 +15,9 @@ import { API, apiUp, signIn } from './helpers/stack'
  * tag — a wiring mistake here files "Address" under a lane called "42", with
  * every worker test still green.
  *
- * Requires the local API stack (`node scripts/dev-api.mjs`): the real worker on
- * :3001 and the provider stub on :3002, which serves the two issues and one PR
- * asserted below. Skipped when it isn't up.
+ * Requires the local API stack (`node scripts/dev-api.mjs`, started by
+ * playwright.config.ts): the real worker and the provider stub, which serves
+ * the two issues and one PR asserted below. Skipped when it isn't up.
  */
 
 /**

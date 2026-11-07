@@ -102,7 +102,7 @@ test.describe('autoland v3 card surface', () => {
   let boardId: string
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     boardId = freshBoardId()
     await createAutomationBoard(request, boardId)
     await request.post(API, {

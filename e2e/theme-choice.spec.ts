@@ -44,7 +44,7 @@ test.describe('Theme choice', () => {
   // beside this one: a pick made here repainted their theme mid-test. A fresh
   // user also makes "no pick on the server" true rather than a mocked read.
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await asFreshUser(page)
     await mockShellApi(page)
     await pointPrefsAtLocalStack(page)

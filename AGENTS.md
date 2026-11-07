@@ -23,7 +23,7 @@ Pre-commit hook runs typecheck, lint-staged, and the CSS/theme gate.
 
 `ci.yml` runs **typecheck, lint, worker-tests and e2e** on `pull_request` AND on pushes to `main`. The push trigger exists because work here lands by direct push at least as often as by PR; before it, those commits were verified by nothing at all. On a push it is DETECTION, not prevention — the commit has already landed, so a failure is a red main to fix forward.
 
-**The `e2e` job runs the full Playwright suite** (~220 tests) against the real local stack (`scripts/start-e2e-stack.sh`: task worker :3001, preset stub :3002, real prefs-api :3003), and fails on a skip e2e.json's `e2eSkipAllow` does not name — so a stack that never came up is red, not a green run of skips. Before it, Playwright ran only locally, and three `theme-inheritance` specs sat red on `main` for weeks. It shares a concurrency group (`task-e2e-stack`) with the nightly `e2e.yml`: e2e runs queue rather than fight over one claw's ports, and a newer queued run cancels an older _pending_ one. On main a running CI build is never cancelled by a newer push (only PRs cancel in progress), so the e2e job finishes. On a push it is still detection — run `pnpm exec playwright test` (with `pnpm run dev:api` up) before pushing frontend changes.
+**The `e2e` job runs the full Playwright suite** (~220 tests) against the real local stack (task worker, preset stub, real prefs-api — `playwright.config.ts` starts it on kernel-picked free ports), and fails on a skip e2e.json's `e2eSkipAllow` does not name — so a stack that never came up is red, not a green run of skips. Before it, Playwright ran only locally, and three `theme-inheritance` specs sat red on `main` for weeks. There is no shared concurrency group with the nightly `e2e.yml` any more: every run picks its own ports, so parallel runs and a developer's `dev:api` on the same claw cannot collide (#114). On main a running CI build is never cancelled by a newer push (only PRs cancel in progress), so the e2e job finishes. On a push it is still detection — run `pnpm exec playwright test` before pushing frontend changes.
 
 ## Worktrees — bootstrap them, or the hook silently does nothing
 
@@ -198,15 +198,18 @@ their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest
 
 - `pnpm run dev:api` runs the REAL worker on :3001 (what vite proxies `/task/api` to) behind an
   edge-router shim, a stub automation-preset provider on :3002, and the REAL prefs-api worker on
-  :3003 against a real sqlite D1. Needed by any e2e spec that exercises the server path — those
-  specs skip themselves when it isn't up.
+  :3003 against a real sqlite D1. That is the stack for `pnpm dev`; e2e does not need it.
 
-- **Another worktree holding :3001–:3003?** Move the whole stack: `DEV_API_PORT`, `DEV_PROVIDER_PORT`
-  and `DEV_PREFS_PORT` are read by `scripts/dev-api.mjs`, the vite proxy and the e2e helpers alike.
-  Set the same three (plus `E2E_PORT`) for both `dev:api` and `playwright test`.
+- **`playwright test` starts its own stack on free ports** (#114). `playwright.config.ts` picks a
+  kernel-assigned port for each of `DEV_API_PORT`, `DEV_PROVIDER_PORT`, `DEV_PREFS_PORT` and
+  `E2E_PORT` the environment leaves unset, then starts `dev-api.mjs` and vite on them; workers,
+  vite's proxy and `e2e/helpers/{stack,prefs}.ts` all read the same vars. The helpers have no
+  fallback port — they throw if loaded outside the config. A running `dev:api` or a parallel run
+  on the same host therefore cannot collide with it. Pin all four to reuse servers you already
+  have up (from THIS checkout — reuse cannot tell whose source answers).
 
 - **Prefs are not mocked.** `@wolffm/prefs-client` defaults to `https://hadoku.me/prefs`; specs
-  point it at :3003 via `pointPrefsAtLocalStack()` (`e2e/helpers/prefs.ts`), which sets the
+  point it at the local prefs-api via `pointPrefsAtLocalStack()` (`e2e/helpers/prefs.ts`), which sets the
   `__HADOKU_PREFS_API_BASE__` global that `resolvePrefsApiBase()` in @wolffm/themes reads. Route
   mocking `/prefs/api/v1/*` is what hid the `useThemePrefsMigration` bug for months — the mock
   answered 404 for an unset row where the real worker answers 200 with `merged:{}`, and only the

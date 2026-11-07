@@ -10,9 +10,9 @@ import { apiUp, signIn } from './helpers/stack'
  * instead. This drives the whole path: browser → worker → provider stub, then
  * activation with the fetched lanes.
  *
- * Requires the local API stack (`node scripts/dev-api.mjs`): the real worker on
- * :3001 with a stub provider on :3002. Skipped when it isn't up, so the default
- * `pnpm test:e2e` (which only runs vite) stays green.
+ * Requires the local API stack (`node scripts/dev-api.mjs`, started by
+ * playwright.config.ts): the real worker with a stub provider. Skipped when it
+ * isn't up.
  */
 
 const APP_HEADER = 'h1.app-header__title'

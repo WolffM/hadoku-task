@@ -94,7 +94,7 @@ test.describe('avatar cosmetics', () => {
   let savedTabs: Record<string, string> = {}
 
   test.beforeEach(async ({ request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     const row = (await (await request.get(PORTFOLIO)).json()) as {
       user: { blob: { settingsTabs?: Record<string, string> } } | null
     }

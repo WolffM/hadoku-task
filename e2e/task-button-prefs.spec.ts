@@ -37,7 +37,7 @@ function readSdkCacheBlob(page: Page): Promise<Record<string, unknown> | null> {
 async function setupRoutes(page: Page) {
   await mockShellApi(page)
 
-  // Prefs go to the REAL prefs-api on :3003 (scripts/dev-api.mjs) against a
+  // Prefs go to the REAL prefs-api (scripts/dev-api.mjs) against a
   // real sqlite D1 — no interception. See helpers/prefs.ts.
   await pointPrefsAtLocalStack(page)
 }
@@ -69,7 +69,7 @@ function chip(page: Page, name: string) {
 
 test.describe('Task button preferences', () => {
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await setupRoutes(page)
   })
 

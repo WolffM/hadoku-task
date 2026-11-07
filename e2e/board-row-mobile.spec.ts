@@ -57,7 +57,7 @@ test.describe('board bar on a phone', () => {
   test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await seedBoards(request, BOARD_NAMES)
     await signIn(page)
     await page.goto('/')

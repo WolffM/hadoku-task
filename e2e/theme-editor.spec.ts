@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiUp } from './helpers/stack'
+import { stackPort } from './helpers/ports'
 
 /**
  * The hosted theme editor (hadoku.me/task/editor), driven end to end against
@@ -8,11 +9,11 @@ import { apiUp } from './helpers/stack'
  * Saves go to the dev stack's in-memory GitHub (worker/test/lib/fake-github.ts),
  * never the real repo — the dev server pins the editor's git traffic there even
  * when the real PAT is bound. What a save "committed" is read back from
- * :3001/__dev/github, so these specs assert on the commit itself, not on a
+ * the worker's /__dev/github, so these specs assert on the commit itself, not on a
  * banner claiming one happened.
  */
 
-const DEV = `http://127.0.0.1:${process.env.DEV_API_PORT ?? 3001}/__dev/github`
+const DEV = `http://127.0.0.1:${stackPort('DEV_API_PORT')}/__dev/github`
 
 interface DevRepo {
   main: string
@@ -52,7 +53,7 @@ test.describe('Theme editor', () => {
   test.describe.configure({ mode: 'serial' })
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'needs the dev stack: pnpm run dev:api')
+    test.skip(!(await apiUp(request)), 'needs the dev stack (playwright.config.ts starts it)')
     await request.post(`${DEV}/reset`)
     // The editor must never raise a native dialog (AGENTS.md "Dialogs").
     page.on('dialog', d => {

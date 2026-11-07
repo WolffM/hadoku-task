@@ -16,6 +16,13 @@
  * node_modules, here and on the nightly e2e runner alike.
  *
  *   node scripts/dev-api.mjs        # foreground
+ *
+ * The ports above are the defaults for a developer's stack. DEV_API_PORT,
+ * DEV_PROVIDER_PORT and DEV_PREFS_PORT move them; playwright.config.ts always
+ * sets all three to free ports and starts this itself (hadoku-task#114).
+ *
+ * Prints `[dev-api] ready` once BOTH workers answer over HTTP — not on spawn,
+ * and not when only one is up. Playwright waits for that line.
  */
 import { build } from 'esbuild'
 import { spawn } from 'node:child_process'
@@ -46,7 +53,9 @@ for (const entry of entries) {
   built.push(outfile)
 }
 
-const children = built.map(outfile => spawn(process.execPath, [outfile], { stdio: 'inherit', cwd: root }))
+const children = built.map(outfile =>
+  spawn(process.execPath, [outfile], { stdio: 'inherit', cwd: root })
+)
 
 let shuttingDown = false
 const cleanup = code => {
@@ -61,3 +70,20 @@ process.on('SIGTERM', () => cleanup(0))
 // Any server dying takes the stack down: a half-up stack is worse than none,
 // because specs would silently test against whichever half survived.
 for (const c of children) c.on('exit', code => cleanup(code))
+
+const apiPort = process.env.DEV_API_PORT ?? 3001
+const prefsPort = process.env.DEV_PREFS_PORT ?? 3003
+const probes = [
+  `http://127.0.0.1:${apiPort}/task/api/automation/presets`,
+  `http://127.0.0.1:${prefsPort}/prefs/api/v1/_health`
+]
+const answers = url =>
+  fetch(url).then(
+    r => r.ok,
+    () => false
+  )
+for (;;) {
+  if ((await Promise.all(probes.map(answers))).every(Boolean)) break
+  await new Promise(r => setTimeout(r, 250))
+}
+console.log(`[dev-api] ready (worker :${apiPort}, prefs :${prefsPort})`)

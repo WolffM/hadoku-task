@@ -1,5 +1,5 @@
 /**
- * Point a spec's prefs traffic at the REAL prefs-api on :3003 instead of
+ * Point a spec's prefs traffic at the REAL prefs-api (DEV_PREFS_PORT) instead of
  * mocking it.
  *
  * WHY THERE IS NO MOCK HERE
@@ -16,7 +16,7 @@
  * unset row; the real worker answers 200 with `{user:null, device:null,
  * merged:{}}`. Nothing in the suite could have told you that.
  *
- * So: `pnpm run dev:api` runs the real prefs-api worker against a real sqlite
+ * So: the stack playwright.config.ts starts runs the real prefs-api worker against a real sqlite
  * D1, and these helpers point the SDK at it. What the spec exercises is the
  * actual fetch → edge-auth → D1 path.
  *
@@ -32,13 +32,14 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { APIRequestContext, Page } from '@playwright/test'
+import { stackPort } from './ports'
 
-/** Where scripts/dev-api.mjs serves the real prefs worker (DEV_PREFS_PORT moves it). */
-export const PREFS_BASE = `http://localhost:${process.env.DEV_PREFS_PORT ?? 3003}/prefs`
+/** Where scripts/dev-api.mjs serves the real prefs worker: this run's DEV_PREFS_PORT. */
+export const PREFS_BASE = `http://localhost:${stackPort('DEV_PREFS_PORT')}/prefs`
 
 /**
  * Is the real prefs stack up? Specs skip on false, the same way the ones
- * needing :3001 do — both come up together with `pnpm run dev:api`.
+ * needing the task worker do — playwright.config.ts starts both together.
  */
 export async function prefsUp(request: APIRequestContext): Promise<boolean> {
   try {

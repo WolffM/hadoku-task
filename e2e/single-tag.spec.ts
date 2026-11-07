@@ -51,7 +51,7 @@ const storedTag = async (page: Page, title: string) =>
  * the prefs SDK on load, and if that migration can't reach a prefs backend
  * every pref falls back to its default — silently dropping `showTagButton`
  * and hiding the modal under test. This used to be a route stub; it is now the
- * REAL prefs-api on :3003 against a real sqlite D1. See helpers/prefs.ts.
+ * REAL prefs-api against a real sqlite D1. See helpers/prefs.ts.
  */
 async function usePrefsBackend(page: Page) {
   await pointPrefsAtLocalStack(page)
@@ -174,7 +174,7 @@ test.describe('One tag per task', () => {
 test.describe('One tag per task: the edit-tag modal', () => {
   // The pill grid is only reachable with the tag button pref turned on.
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await usePrefsBackend(page)
     await seedPublicSession(page, { showTagButton: true })
     await page.goto('/?userType=public')

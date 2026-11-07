@@ -40,7 +40,7 @@ async function openSettings(page: Page) {
 
 test.describe('migrated icons in the running app', () => {
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await setupRoutes(page)
     await seedPublicSession(page, { theme: 'light', showNotesButton: true })
   })

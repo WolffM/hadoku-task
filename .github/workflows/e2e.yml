@@ -3,8 +3,8 @@ name: e2e
 # Fleet nightly e2e (hadoku_site programme 3). Dispatched by hadoku_site's
 # nightly-e2e.yml with nightly_run_id set, or run by hand for a first proof.
 # Most specs are route-mocked (e2e/helpers/mock-api.ts). The rest run against
-# the local stack, started below: the real task worker on :3001, the preset
-# stub on :3002 and the real prefs-api on :3003 (from @wolffm/e2e-harness —
+# the local stack, which playwright.config.ts starts on free ports: the real
+# task worker, the preset stub and the real prefs-api (from @wolffm/e2e-harness —
 # no sibling hadoku_site checkout, no key). Only the specs that would hit
 # production skip, each listed in e2e.json's e2eSkipAllow with its reason.
 on:
@@ -25,12 +25,9 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER) }}
     # From e2e.json's timeoutMinutes.
     timeout-minutes: 20
-    # Shared with ci.yml's e2e job. Two e2e runs on one claw would fight over
-    # :3001/:3003 and vite's :5199 — free-e2e-port.mjs kills a vite running out
-    # of any other checkout — so they queue instead.
-    concurrency:
-      group: task-e2e-stack
-      cancel-in-progress: false
+    # No shared concurrency group: playwright.config.ts starts the stack and
+    # vite on ports the kernel picks, so runs on one claw cannot collide
+    # (hadoku-task#114).
     steps:
       - name: Mark the start, so the reported duration is real
         run: echo "JOB_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
@@ -59,19 +56,8 @@ jobs:
       - name: Install browser
         run: pnpm exec playwright install chromium
 
-      # Started and proven ours by the script — see its header. Shared with
-      # ci.yml's e2e job.
-      - name: Start the local stack (:3001 task worker, :3002 preset stub, :3003 prefs-api)
-        run: bash scripts/start-e2e-stack.sh
-
       - name: e2e
         run: pnpm run test:e2e:ci
-
-      - name: Stop the local stack
-        if: always()
-        run: |
-          [ -n "${DEV_API_PID:-}" ] && kill "$DEV_API_PID" 2>/dev/null || true
-          [ -f dev-api.log ] && tail -50 dev-api.log || true
 
       - name: Report results to the fleet e2e store
         if: always()

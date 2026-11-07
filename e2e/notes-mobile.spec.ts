@@ -132,7 +132,7 @@ test.describe('notes popout on a phone', () => {
   test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await createAutomationBoard(request, BOARD_ID)
     // One task per test, so a test that edits notes can't disturb another's.
     const taskTitle = `Plan ${test
@@ -361,7 +361,7 @@ test.describe('a paragraph-length task title', () => {
     'drive the story forward but with more alteration. There are two distinct asks here.'
 
   test.beforeEach(async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await createAutomationBoard(request, BOARD_ID)
     // Unique per test. The dev stack keeps one in-memory DB for the whole run
     // and a POST to an existing id does not rewrite its title, so a fixed id
@@ -449,7 +449,7 @@ test.describe('the popout inside the mobile app shell', () => {
   })
 
   test('the header clears the status bar', async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'dev API stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'dev API stack not running (playwright.config.ts starts it)')
     await createAutomationBoard(request, BOARD_ID)
     await request.post(API, {
       data: {

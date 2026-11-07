@@ -16,7 +16,7 @@ import {
  * always answered 200 — with DEFAULTS when it held nothing — and saved that
  * over the real prefs. Theme included. Loading now never writes.
  *
- * The task worker on :3001 is the real one, so on the old code the legacy
+ * The task worker on the stack is the real one, so on the old code the legacy
  * route really answers and the overwrite really happens.
  */
 
@@ -34,8 +34,8 @@ async function signInAs(page: Page, sessionId: string): Promise<void> {
 
 test.describe('Saved prefs across sessions', () => {
   test.beforeEach(async ({ request }) => {
-    test.skip(!(await apiUp(request)), 'API stack not running (pnpm run dev:api)')
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'API stack not running (playwright.config.ts starts it)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
   })
 
   test('a second session leaves the saved prefs alone', async ({ page }) => {

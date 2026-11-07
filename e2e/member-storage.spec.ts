@@ -52,7 +52,7 @@ test.describe('member storage', () => {
   })
 
   test('a verified member syncs to the server, as a friend does', async ({ page, request }) => {
-    test.skip(!(await apiUp(request)), 'local stack not running (pnpm run dev:api)')
+    test.skip(!(await apiUp(request)), 'local stack not running (playwright.config.ts starts it)')
     const calls = taskApiCalls(page)
     const boards = page.waitForResponse(
       r => new URL(r.url()).pathname === '/task/api/boards' && r.request().method() === 'GET'

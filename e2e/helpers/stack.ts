@@ -1,8 +1,9 @@
 import type { APIRequestContext, Page } from '@playwright/test'
+import { stackPort } from './ports'
 
 /**
  * Shared plumbing for every spec that talks to the local dev stack
- * (`pnpm run dev:api`).
+ * (scripts/dev-api.mjs, which playwright.config.ts starts).
  *
  * These three pieces were copy-pasted verbatim into thirteen specs. They are
  * not incidental repetition: they encode one contract each — where the worker
@@ -10,9 +11,9 @@ import type { APIRequestContext, Page } from '@playwright/test'
  * and thirteen copies is thirteen places to miss when any of those change.
  */
 
-/** The REAL worker on :3001 (or DEV_API_PORT), behind the edge-router shim (see
+/** The REAL worker on this run's DEV_API_PORT, behind the edge-router shim (see
  * scripts/dev-api.mjs). */
-export const API = `http://127.0.0.1:${process.env.DEV_API_PORT ?? 3001}/task/api`
+export const API = `http://127.0.0.1:${stackPort('DEV_API_PORT')}/task/api`
 
 /**
  * Sign in the way the key-swap flow does: the app reads these on boot.
@@ -29,9 +30,9 @@ export async function signIn(page: Page): Promise<void> {
 }
 
 /**
- * Is the local API stack up? Server-path specs skip themselves when it isn't,
- * because CI never runs Playwright and a developer without the stack should get
- * a skip, not a wall of connection errors.
+ * Is the local API stack up? playwright.config.ts starts it, so it normally
+ * is; server-path specs still skip themselves when it isn't, and CI fails a
+ * skip e2e.json's e2eSkipAllow does not name.
  *
  * `headers` is for the specs that must probe as a specific user key.
  */

@@ -38,7 +38,7 @@ async function setupRoutes(page: Page) {
   await mockShellApi(page)
 
   // No prefs routing here on purpose. Both rows and /session/whoami are served
-  // by the REAL prefs-api worker on :3003 (scripts/dev-api.mjs), against a real
+  // by the REAL prefs-api worker (scripts/dev-api.mjs), against a real
   // sqlite D1 — see helpers/prefs.ts for why the mocks were removed and what
   // they were hiding.
   await pointPrefsAtLocalStack(page)
@@ -81,7 +81,7 @@ test.describe('Theme Mode', () => {
   test.beforeEach(async ({ page, request }) => {
     // Prefs are served by the real worker now, so these specs need the local
     // stack up — same contract as every other server-backed spec here.
-    test.skip(!(await prefsUp(request)), 'prefs stack not running (pnpm run dev:api)')
+    test.skip(!(await prefsUp(request)), 'prefs stack not running (playwright.config.ts starts it)')
     await setupRoutes(page)
   })
 
