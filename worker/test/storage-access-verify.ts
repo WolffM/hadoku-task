@@ -13,6 +13,7 @@
  * Run via: pnpm run test:worker  (or `... storage-access-verify`).
  */
 import { join } from 'node:path'
+import { TIER_RANK } from '@wolffm/worker-utils'
 import { createTaskHandler } from '../src/index'
 import { makeSqliteD1, type FakeD1 } from './lib/d1-sqlite'
 
@@ -190,10 +191,15 @@ async function main() {
     )
   }
 
-  section('4. Friend and up need no verified header')
-  for (const tier of ['friend', 'service', 'wife', 'admin']) {
+  section('4. Friend and up need no verified header; a member still does')
+  // Derived from the ladder rather than a hand-typed "friend and up" list, so
+  // a tier added above friend is covered automatically. member is the one
+  // non-public tier that fails this (sections 2-3 already pin why: it needs
+  // the header).
+  for (const tier of Object.keys(TIER_RANK).filter(t => t !== 'public')) {
     const r = await req({ tier, userId: `${tier}-2` }, 'GET', '/task/api/boards')
-    check(`${tier} without X-Hadoku-Verified → 200`, r.status === 200, `status=${r.status}`)
+    const want = TIER_RANK[tier] >= TIER_RANK.friend ? 200 : 403
+    check(`${tier} without X-Hadoku-Verified → ${want}`, r.status === want, `status=${r.status}`)
   }
 
   section('5. Routes that need no identity stay open')

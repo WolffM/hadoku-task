@@ -15,6 +15,7 @@
  *
  * Run: pnpm run test:worker
  */
+import { TIER_RANK } from '@wolffm/worker-utils'
 import { createTaskHandler } from '../src/index'
 
 const EDGE_SECRET = 'test-edge-secret'
@@ -115,9 +116,11 @@ async function main() {
     (await asTier('admin', 'GET', ADMIN_ROUTE)) !== 403,
     `status=${await asTier('admin', 'GET', ADMIN_ROUTE)}`
   )
-  // `wife` belongs in this list precisely because it outranks service: the
-  // reflex is to assume the highest non-admin tier reaches an admin route.
-  for (const tier of ['wife', 'service', 'friend', 'public']) {
+  // Derived from the ladder rather than hand-typed, so a tier added below
+  // admin (as `member` was) is refused here with no edit to this list.
+  // `wife` is included precisely because it outranks service: the reflex is
+  // to assume the highest non-admin tier reaches an admin route.
+  for (const tier of Object.keys(TIER_RANK).filter(t => t !== 'admin')) {
     const status = await asTier(tier, 'GET', ADMIN_ROUTE)
     check(`${tier} is refused by an admin route`, status === 403, `status=${status}`)
   }
@@ -126,8 +129,10 @@ async function main() {
   section('2. Friend-gated route admits friend AND everything above it')
   // ---------------------------------------------------------------------
   // The regression this guards: `service` outranks `friend`, so a service
-  // caller must NOT be turned away from a friend-tier route.
-  for (const tier of ['friend', 'service', 'wife', 'admin']) {
+  // caller must NOT be turned away from a friend-tier route. Derived from the
+  // ladder (rank >= friend) rather than hand-typed, so this excludes member
+  // and public without needing to be told to.
+  for (const tier of Object.keys(TIER_RANK).filter(t => TIER_RANK[t] >= TIER_RANK.friend)) {
     const res = await app.request(
       'http://localhost' + FRIEND_ROUTE,
       {
@@ -146,20 +151,22 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------
-  section('3. Public is not an authenticated caller')
+  section('3. Below friend is not an authenticated caller')
   // ---------------------------------------------------------------------
-  {
+  // Every tier section 2 excluded (rank < friend) must fail here too —
+  // public always did; member, ranked just below friend, is the new case.
+  for (const tier of Object.keys(TIER_RANK).filter(t => TIER_RANK[t] < TIER_RANK.friend)) {
     const res = await app.request(
       'http://localhost' + FRIEND_ROUTE,
       {
         method: 'POST',
-        headers: { 'X-Edge-Auth': EDGE_SECRET, 'X-Hadoku-Tier': 'public' },
+        headers: { 'X-Edge-Auth': EDGE_SECRET, 'X-Hadoku-Tier': tier },
         body: undefined
       },
       envFor()
     )
     const body = (await res.json()) as { valid?: boolean }
-    check('public does not validate', body.valid === false, JSON.stringify(body))
+    check(`${tier} does not validate`, body.valid === false, JSON.stringify(body))
   }
 
   // ---------------------------------------------------------------------

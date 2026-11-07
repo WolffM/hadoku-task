@@ -176,7 +176,7 @@ async function main() {
   )
 
   section('5. Admin only')
-  for (const tier of ['wife', 'service', 'friend']) {
+  for (const tier of ['wife', 'service', 'friend', 'member']) {
     const r = await req(tier, `${tier}-uid`, 'GET', '/task/api/admin/orphans')
     check(`${tier} → 403`, r.status === 403, `status=${r.status}`)
   }
