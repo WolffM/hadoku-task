@@ -169,7 +169,7 @@ async function main() {
     !('syncFromApi' in pub),
     JSON.stringify(Object.keys(pub).sort())
   )
-  for (const tier of ['friend', 'admin', 'wife', 'service'] as const) {
+  for (const tier of ['friend', 'admin', 'wife', 'service', 'member'] as const) {
     const t = createApi(tier, 's') as unknown as Record<string, unknown>
     check(`${tier} gets the syncing client`, 'syncFromApi' in t)
   }

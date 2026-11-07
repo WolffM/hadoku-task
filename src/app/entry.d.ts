@@ -20,12 +20,13 @@ export interface TaskAppProps {
   appName?: string
   basename?: string
   /**
-   * Caller tier, as the host resolved it. `service` and `wife` were both
-   * missing from this union — drift, not a narrower contract: edge-router
-   * stamps either one and the host passes it straight through, so the app was
-   * type-lying about values it already received at runtime.
+   * Caller tier, as the host resolved it. `service`, `wife` and `member` were
+   * all missing from this union at one point or another — drift, not a
+   * narrower contract: edge-router stamps any of them and the host passes it
+   * straight through, so the app was type-lying about values it already
+   * received at runtime.
    */
-  userType?: 'public' | 'friend' | 'service' | 'wife' | 'admin'
+  userType?: 'public' | 'member' | 'friend' | 'service' | 'wife' | 'admin'
   /**
    * The registry userId from whoami (what the edge stamps as X-User-Id).
    * Accepted and deliberately unused: the worker reads identity off the edge.

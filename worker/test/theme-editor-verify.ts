@@ -154,7 +154,7 @@ async function main_() {
   const base = gh.main
   // The full ranked vocabulary, low to high — the gate is "rank ≥ service",
   // so a tier added here is tested on whichever side of it it ranks.
-  const TIERS = ['public', 'friend', 'service', 'wife', 'admin'] as const
+  const TIERS = ['public', 'member', 'friend', 'service', 'wife', 'admin'] as const
   for (const [rank, tier] of TIERS.entries()) {
     const allowed = rank >= TIERS.indexOf('service')
     gh.calls = []
