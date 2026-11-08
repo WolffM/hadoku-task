@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * jsdom implements no Element.prototype.scrollIntoView, and every consumer's
+ * jsdom implements no Element.prototype.scrollIntoView or ResizeObserver, and every consumer's
  * unit test that renders the settings popout runs in jsdom. The tab strip's
  * scroll-into-view must not throw there: it reddened cardtable's CI
  * (header.test.ts) the day the tabs shipped. Same condition, in a real page.
@@ -11,6 +11,8 @@ test('the popout opens where the DOM has no scrollIntoView', async ({ page }) =>
   page.on('pageerror', e => errors.push(e.message))
   await page.addInitScript(() => {
     delete (Element.prototype as Partial<Element>).scrollIntoView
+    // Nor ResizeObserver, which the strip's edge fades watch.
+    delete (window as { ResizeObserver?: unknown }).ResizeObserver
   })
   await page.route('**/session/whoami', route =>
     route.fulfill({

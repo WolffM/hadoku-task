@@ -140,4 +140,30 @@ test.describe('settings tabs', () => {
     const stripBox = await rect(strip)
     expect(last.x + last.width).toBeLessThanOrEqual(stripBox.x + stripBox.width + 1)
   })
+
+  test('the strip shows no scrollbar; an edge hiding a tab fades instead', async ({ page }) => {
+    const strip = (await openSettings(page)).getByRole('tablist')
+    expect(await strip.evaluate(el => getComputedStyle(el).scrollbarWidth)).toBe('none')
+    // At desktop width every tab fits, so neither edge fades.
+    expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect(strip).not.toHaveAttribute('data-fade-start')
+    await expect(strip).not.toHaveAttribute('data-fade-end')
+
+    // Narrowed while open, enough that the task app's four tabs overflow: the
+    // strip's resize is seen, and with it scrolled to the start, only the end
+    // hides a tab.
+    await page.setViewportSize({ width: 240, height: 640 })
+    expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+    await expect(strip).toHaveAttribute('data-fade-end', '')
+    await expect(strip).not.toHaveAttribute('data-fade-start')
+    expect(await strip.evaluate(el => getComputedStyle(el).maskImage)).toContain('gradient')
+
+    // Opening the last tab scrolls it into sight, which moves the fade to the
+    // other edge. App is already open, so step off it first.
+    await selected(page).focus()
+    await page.keyboard.press('Home')
+    await page.keyboard.press('End')
+    await expect(strip).toHaveAttribute('data-fade-start', '')
+    await expect(strip).not.toHaveAttribute('data-fade-end')
+  })
 })

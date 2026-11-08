@@ -125,7 +125,11 @@ const PASSKEY_PULSE_CSS = `
 /** The tab strip and its panels. Injected for the same reason as the pulse:
  *  an app's copy of app-header.css predates the tabs until it rebuilds. The
  *  strip stays pinned while a long tab scrolls, and scrolls sideways itself
- *  when the tabs outgrow a phone-width panel. */
+ *  when the tabs outgrow a phone-width panel. It shows no scrollbar there: the
+ *  edge that hides a tab fades instead (data-fade-start / data-fade-end, set
+ *  by useStripFades), and the open tab is scrolled into sight — with the
+ *  strip's own padding, so the last tab lands clear of the fade. The tab padding
+ *  is sized so six tabs fit the 400px panel without scrolling at all. */
 const TABS_CSS = `
 .settings-popout__top {
   position: sticky;
@@ -145,12 +149,31 @@ const TABS_CSS = `
   margin: 0 -16px -1px;
   padding: 0 16px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scroll-padding-inline: 16px;
+  scrollbar-width: none;
+}
+.settings-popout__tabs::-webkit-scrollbar {
+  display: none;
+}
+.settings-popout__tabs[data-fade-start] {
+  mask-image: linear-gradient(to right, transparent, black 28px);
+}
+.settings-popout__tabs[data-fade-end] {
+  mask-image: linear-gradient(to left, transparent, black 28px);
+}
+.settings-popout__tabs[data-fade-start][data-fade-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 28px,
+    black calc(100% - 28px),
+    transparent
+  );
 }
 .settings-popout__tab {
   position: relative;
   flex: none;
-  padding: 6px 10px;
+  padding: 6px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -190,6 +213,34 @@ function useInjectedStyle(id: string, css: string, active: boolean) {
   }, [id, css, active])
 }
 
+/** Marks which edges of the tab strip hide a tab, for TABS_CSS's fades. Set
+ *  on the element directly, not through state: it changes on every scroll
+ *  frame and nothing React renders depends on it. jsdom has no ResizeObserver,
+ *  so the resize half is optional, like scrollIntoView below. */
+function useStripFades(
+  strip: React.RefObject<HTMLDivElement | null>,
+  active: boolean,
+  tabCount: number
+) {
+  useEffect(() => {
+    const el = strip.current
+    if (!active || !el) return
+    const update = () => {
+      const hidden = el.scrollWidth - el.clientWidth
+      el.toggleAttribute('data-fade-start', el.scrollLeft > 1)
+      el.toggleAttribute('data-fade-end', el.scrollLeft < hidden - 1)
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update)
+    resize?.observe(el)
+    return () => {
+      el.removeEventListener('scroll', update)
+      resize?.disconnect()
+    }
+  }, [strip, active, tabCount])
+}
+
 export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
@@ -201,6 +252,7 @@ export function ConnectedSettings({
   const rootRef = useRef<HTMLDivElement>(null)
   const tabIdBase = useId()
   const tabRefs = useRef(new Map<string, HTMLButtonElement>())
+  const stripRef = useRef<HTMLDivElement>(null)
   const [savedTab, saveTab] = useSettingsTab()
   // This visit's pick; wins over the saved one while it is still offered.
   const [pickedTab, setPickedTab] = useState<string | null>(null)
@@ -302,6 +354,8 @@ export function ConnectedSettings({
     selectTab(next)
     tabRefs.current.get(next)?.focus()
   }
+
+  useStripFades(stripRef, open, tabs.length)
 
   // A remembered tab past the edge of a narrow strip is scrolled into sight.
   // jsdom implements no scrollIntoView, and every consumer's unit test that
@@ -410,6 +464,7 @@ export function ConnectedSettings({
           <div className="settings-popout__top">
             <div className="settings-popout__header">Settings</div>
             <div
+              ref={stripRef}
               className="settings-popout__tabs"
               role="tablist"
               aria-label="Settings sections"
