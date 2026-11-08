@@ -110,7 +110,8 @@ export {
   loadSignInClient,
   passkeyHref,
   passkeysSupported,
-  switchKeyHref
+  switchKeyHref,
+  whoami
 } from './lib/settingsClient'
 export type { ToastProps } from './components/Toast'
 export type { ToasterProps, ToastState } from './components/Toaster'

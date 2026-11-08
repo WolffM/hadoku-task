@@ -218,6 +218,13 @@ function sharedWhoami(): Promise<WhoamiBody | null> {
  * Resolve the signed-in caller's tier + display name from the edge-router.
  * Returns { userType: 'public', name: null } for anonymous / off-origin / any
  * failure — never throws, so ConnectedSettings can render unconditionally.
+ *
+ * Exported so a page that needs the caller itself reads the SAME whoami as
+ * the header rather than sending its own. hadoku.me's command station did
+ * exactly that: its auth hook fetched /session/whoami while ConnectedSettings
+ * fetched it again through sharedWhoami, two identical requests on every load.
+ * Anything on a page that renders this package should call this, never
+ * fetch whoami itself.
  */
 export async function whoami(): Promise<Identity> {
   if (typeof window === 'undefined') return { userType: 'public', name: null }
