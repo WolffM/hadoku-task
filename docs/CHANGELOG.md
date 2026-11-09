@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tracker boards: tap tiles
+
+Each tracker is a tile with its own +1 button (Log, for a weight-style tracker),
+so one tap counts with no selecting first. Tapping anywhere else on the tile
+opens that tracker: its total, a 14-day trend, −1 / set, its history by day
+with undo, rename and delete. Tiles show today's count and a 7-day bar strip.
+An undo bar follows every tap, and the board lists today's entries across all
+trackers. "New tracker" is a button and dialog instead of a form wedged into
+the grid, so tiles no longer stretch to its height.
+
 ### Tracker boards load on demand
 
 The tracker board UI is a separate chunk, fetched the first time a tracker board

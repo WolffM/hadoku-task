@@ -1,6 +1,7 @@
 /**
- * A tracker board: a card per tracker (count or latest value, today / 7-day
- * figures, and the controls to change it) plus the board's history log.
+ * A tracker board: a tile per tracker (one tap on its button logs, a tap
+ * anywhere else opens the tracker), an undo bar after each log, and today's
+ * entries across every tracker. Each tracker's full history is in its detail.
  *
  * Reads and writes go straight to the server. The board re-reads every 30s
  * while visible, and on focus, so a hit from somewhere else (another device,
@@ -9,13 +10,25 @@
 import React from 'react'
 import { Icon } from '@wolffm/themes'
 import { ConfirmModal } from '../modals/ConfirmModal'
-import { TrackerCard } from './TrackerCard'
-import { TrackerHistory } from './TrackerHistory'
-import { AddTrackerForm } from './AddTrackerForm'
+import { TrackerTile } from './TrackerTile'
+import { TrackerDetail } from './TrackerDetail'
+import { ReadingDialog } from './ReadingDialog'
+import { AddTrackerDialog } from './AddTrackerDialog'
 import type { TrackerApi } from '../../api/trackers'
+import {
+  counterTotalSince,
+  describeEntry,
+  formatClock,
+  formatTrackerNumber,
+  startOfLocalDay
+} from '../../domain/trackerStats'
 import type { Tracker, TrackerBoardData, TrackerEntry, TrackerKind } from '../../domain/trackers'
 
 const POLL_MS = 30_000
+/** How long the undo bar stays after a log. */
+const UNDO_MS = 6_000
+/** Today's list shows this many until expanded. */
+const TODAY_SHOWN = 8
 
 export interface TrackerBoardProps {
   /** The board reference: the slug for an own board, the handle for a shared one. */
@@ -36,6 +49,13 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
   const [now, setNow] = React.useState(() => new Date())
   const [confirmDelete, setConfirmDelete] = React.useState<Tracker | null>(null)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const [openId, setOpenId] = React.useState<string | null>(null)
+  const [readingFor, setReadingFor] = React.useState<Tracker | null>(null)
+  const [adding, setAdding] = React.useState(false)
+  const [lastLogged, setLastLogged] = React.useState<TrackerEntry | null>(null)
+  const [allToday, setAllToday] = React.useState(false)
+  const undoTimer = React.useRef<number | undefined>(undefined)
+  React.useEffect(() => () => window.clearTimeout(undoTimer.current), [])
 
   const load = React.useCallback(async () => {
     try {
@@ -81,6 +101,9 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
       const { tracker: t, entry } = await api.logEntry(boardRef, tracker.id, body)
       applyTracker(t, es => [entry, ...es])
       setNow(new Date())
+      setLastLogged(entry)
+      window.clearTimeout(undoTimer.current)
+      undoTimer.current = window.setTimeout(() => setLastLogged(null), UNDO_MS)
     } catch (err) {
       report(err)
     }
@@ -90,6 +113,7 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
     try {
       const t = await api.deleteEntry(boardRef, entry.trackerId, entry.id)
       applyTracker(t, es => es.filter(e => e.id !== entry.id))
+      setLastLogged(last => (last?.id === entry.id ? null : last))
     } catch (err) {
       report(err)
     }
@@ -129,6 +153,7 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
       )
       setConfirmDelete(null)
       setDeleteError(null)
+      setOpenId(null)
     } catch (err) {
       setDeleteError((err as Error).message)
     }
@@ -152,6 +177,14 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
   }
 
   const { canWrite, trackers, entries } = data
+  const byId = new Map(trackers.map(t => [t.id, t]))
+  const opened = openId ? byId.get(openId) : undefined
+  const todayStart = startOfLocalDay(now).getTime()
+  const todays = entries
+    .filter(e => byId.has(e.trackerId) && Date.parse(e.at) >= todayStart)
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+  const lastTracker = lastLogged ? byId.get(lastLogged.trackerId) : undefined
+
   return (
     <div className="tracker-board" data-testid="tracker-board">
       {loadError && (
@@ -159,35 +192,119 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
           Showing the last good copy — refresh failed: {loadError}
         </div>
       )}
-      <div className="tracker-grid">
-        {trackers.map(t => (
-          <TrackerCard
-            key={t.id}
-            tracker={t}
-            entries={entries}
-            now={now}
-            canWrite={canWrite}
-            onLog={body => void logEntry(t, body)}
-            onRename={patch => void renameTracker(t, patch)}
-            onDelete={() => {
-              setDeleteError(null)
-              setConfirmDelete(t)
-            }}
-          />
-        ))}
-        {canWrite && <AddTrackerForm onAdd={addTracker} />}
-        {trackers.length === 0 && !canWrite && (
-          <div className="tracker-board__status">Nothing is tracked on this board yet.</div>
-        )}
-      </div>
 
-      <TrackerHistory
-        trackers={trackers}
-        entries={entries}
-        now={now}
-        canWrite={canWrite}
-        onUndo={e => void undoEntry(e)}
-      />
+      {canWrite && (
+        <div className="tracker-board__bar">
+          <button type="button" className="tracker-btn" onClick={() => setAdding(true)}>
+            <Icon name="plus" /> New tracker
+          </button>
+        </div>
+      )}
+
+      {trackers.length === 0 ? (
+        <div className="tracker-board__status">
+          {canWrite
+            ? 'Nothing tracked yet. Add a tracker to start counting.'
+            : 'Nothing is tracked on this board yet.'}
+        </div>
+      ) : (
+        <div className="tracker-grid">
+          {trackers.map(t => (
+            <TrackerTile
+              key={t.id}
+              tracker={t}
+              entries={entries}
+              now={now}
+              canWrite={canWrite}
+              onIncrement={() => void logEntry(t, { delta: 1 })}
+              onLogReading={() => setReadingFor(t)}
+              onOpen={() => setOpenId(t.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {lastLogged && lastTracker && (
+        <div className="tracker-undo" role="status" data-testid="tracker-undo">
+          <span className="tracker-undo__text">
+            {lastTracker.name} {describeEntry(lastLogged, lastTracker.unit)}
+            {lastTracker.kind === 'counter' &&
+              ` · ${formatTrackerNumber(counterTotalSince(entries, lastTracker.id, startOfLocalDay(now)))} today`}
+          </span>
+          <button
+            type="button"
+            className="tracker-btn tracker-btn--primary"
+            onClick={() => void undoEntry(lastLogged)}
+          >
+            Undo
+          </button>
+        </div>
+      )}
+
+      <section className="tracker-today" aria-label="Today">
+        <h3 className="tracker-today__title">Today</h3>
+        {todays.length === 0 ? (
+          <p className="tracker-today__empty">Nothing logged today.</p>
+        ) : (
+          <ol className="tracker-today__list">
+            {(allToday ? todays : todays.slice(0, TODAY_SHOWN)).map(e => {
+              const t = byId.get(e.trackerId) as Tracker
+              return (
+                <li key={e.id} className="tracker-today__item" data-testid="tracker-today-item">
+                  <time className="tracker-today__time" dateTime={e.at}>
+                    {formatClock(e.at)}
+                  </time>
+                  <button
+                    type="button"
+                    className="tracker-today__name"
+                    onClick={() => setOpenId(t.id)}
+                  >
+                    {t.name}
+                  </button>
+                  <span className="tracker-today__change">{describeEntry(e, t.unit)}</span>
+                  {e.source === 'button' && (
+                    <span className="tracker-today__source" title="From a button">
+                      <Icon name="zap" />
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        )}
+        {todays.length > TODAY_SHOWN && (
+          <button type="button" className="tracker-btn" onClick={() => setAllToday(a => !a)}>
+            {allToday ? 'Show fewer' : `Show all ${todays.length}`}
+          </button>
+        )}
+      </section>
+
+      {opened && (
+        <TrackerDetail
+          tracker={opened}
+          entries={entries}
+          now={now}
+          canWrite={canWrite}
+          onLog={body => void logEntry(opened, body)}
+          onUndo={e => void undoEntry(e)}
+          onRename={patch => void renameTracker(opened, patch)}
+          onDelete={() => {
+            setDeleteError(null)
+            setConfirmDelete(opened)
+          }}
+          onClose={() => setOpenId(null)}
+        />
+      )}
+
+      {readingFor && (
+        <ReadingDialog
+          tracker={readingFor}
+          onLog={value => void logEntry(readingFor, { value })}
+          onClose={() => setReadingFor(null)}
+        />
+      )}
+
+      {adding && <AddTrackerDialog onAdd={addTracker} onClose={() => setAdding(false)} />}
 
       <ConfirmModal
         isOpen={confirmDelete !== null}

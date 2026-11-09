@@ -1,5 +1,6 @@
 /**
- * Tracker boards — cards per tracker, the add form, and the history log.
+ * Tracker boards: tiles (one-tap +1 / Log, tap elsewhere to open), the undo
+ * bar, today's entries, and the tracker detail dialog.
  */
 
 .tracker-board {
@@ -24,87 +25,396 @@
   color: var(--color-on-danger-bg);
 }
 
+.tracker-board__bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .tracker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: var(--hdk-space-md);
 }
 
-/* ---- Card ---------------------------------------------------------------- */
+/* ---- Tile ---------------------------------------------------------------- */
 
-.tracker-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hdk-space-sm);
+.tracker-tile {
+  position: relative;
   min-width: 0;
-  padding: var(--hdk-space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius);
+  border-radius: var(--hdk-radius-lg);
   background: var(--color-bg-card);
   color: var(--color-text);
   box-shadow: var(--hdk-shadow-sm);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.tracker-card--add {
-  border-style: dashed;
-  box-shadow: none;
+.tracker-tile:hover {
+  border-color: var(--color-primary);
 }
 
-.tracker-card__header {
+.tracker-tile--hit {
+  border-color: var(--color-primary);
+  box-shadow: var(--hdk-shadow-focus-sm);
+}
+
+/* The open target: a real button under the content, covering the tile. */
+.tracker-tile__open {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tracker-tile__open:focus-visible {
+  outline: none;
+  box-shadow: var(--hdk-shadow-focus);
+}
+
+.tracker-tile__body {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: center;
-  gap: var(--hdk-space-sm);
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+  box-sizing: border-box;
+  min-height: 168px;
+  padding: var(--hdk-space-md);
+  pointer-events: none;
 }
 
-.tracker-card__name {
-  flex: 1;
-  min-width: 0;
+.tracker-tile__name {
   margin: 0;
   overflow: hidden;
-  font-size: var(--hdk-text-base);
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
   font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tracker-card__tools {
-  display: flex;
-  gap: var(--hdk-space-xs);
-}
-
-.tracker-card__value {
+.tracker-tile__figure,
+.tracker-detail__figure {
   display: flex;
   align-items: baseline;
   gap: var(--hdk-space-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-tile__number {
   font-size: 2.5rem;
   font-weight: var(--font-weight-bold);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1;
 }
 
-.tracker-card__unit {
+.tracker-tile__unit,
+.tracker-detail__unit {
   color: var(--color-text-secondary);
-  font-size: var(--hdk-text-base);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--hdk-text-sm);
 }
 
-.tracker-card__context {
+.tracker-tile__sub {
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-tile__foot {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--hdk-space-sm);
+  margin-top: auto;
+}
+
+.tracker-tile__trend {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+}
+
+.tracker-tile__action-slot {
+  flex-shrink: 0;
+  width: 56px;
+  height: 44px;
+}
+
+/* The one-tap action, above the open layer. */
+.tracker-tile__action {
+  position: absolute;
+  z-index: 2;
+  right: var(--hdk-space-md);
+  bottom: var(--hdk-space-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 56px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hdk-radius);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: var(--hdk-text-base);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.tracker-tile__action:hover {
+  background: var(--color-primary-dark);
+}
+
+.tracker-tile__action:active {
+  transform: scale(0.94);
+}
+
+.tracker-tile__action:focus-visible {
+  outline: none;
+  box-shadow: var(--hdk-shadow-focus);
+}
+
+/* ---- Trend --------------------------------------------------------------- */
+
+.tracker-trend--bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.tracker-trend__bar {
+  flex: 1;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-border);
+}
+
+.tracker-trend__bar--today {
+  background: var(--color-primary);
+}
+
+.tracker-trend--line polyline {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+
+/* ---- Undo bar and today's entries ---------------------------------------- */
+
+.tracker-undo {
+  position: sticky;
+  z-index: 3;
+  bottom: var(--hdk-space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-md);
+  padding: var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius-lg);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+  box-shadow: var(--hdk-shadow-md);
+}
+
+.tracker-undo__text {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-today > .tracker-btn {
+  align-self: flex-start;
+}
+
+.tracker-today,
+.tracker-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-sm);
+}
+
+.tracker-today__title,
+.tracker-log__heading {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tracker-today__empty,
+.tracker-log__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
+}
+
+.tracker-today__list,
+.tracker-log__list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--hdk-radius);
+  background: var(--color-bg-card);
+  list-style: none;
+}
+
+.tracker-today__item,
+.tracker-log__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-md);
+  min-height: 36px;
+  padding: var(--hdk-space-xs) var(--hdk-space-md);
+  color: var(--color-text);
+  font-size: var(--hdk-text-sm);
+}
+
+.tracker-today__item + .tracker-today__item,
+.tracker-log__item + .tracker-log__item {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.tracker-today__time,
+.tracker-log__time {
+  flex-shrink: 0;
+  min-width: 4.5rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-today__name {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.tracker-today__name:hover {
+  text-decoration: underline;
+}
+
+.tracker-today__change,
+.tracker-log__change {
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-log__note {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tracker-today__source,
+.tracker-log__source {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
+.tracker-today__source {
+  margin-left: auto;
+}
+
+.tracker-log__item > .tracker-icon-btn {
+  margin-left: auto;
+}
+
+/* ---- Detail and dialogs -------------------------------------------------- */
+
+.modal-card.tracker-detail {
+  width: min(520px, 94vw);
+}
+
+.tracker-detail__number {
+  font-size: 3rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.tracker-detail__summary {
+  margin-top: var(--hdk-space-xs);
   color: var(--color-text-secondary);
   font-size: var(--hdk-text-sm);
   font-variant-numeric: tabular-nums;
 }
 
-.tracker-card__row,
-.tracker-card__rename {
+.tracker-detail__trend {
+  width: 100%;
+  height: 96px;
+  margin-top: var(--hdk-space-md);
+}
+
+.tracker-detail__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hdk-space-sm);
+  margin: var(--hdk-space-md) 0;
+}
+
+.tracker-detail__set {
+  display: flex;
+  flex: 1 1 200px;
+  gap: var(--hdk-space-sm);
+}
+
+.tracker-detail__rename {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-sm);
+  margin-bottom: var(--hdk-space-md);
+  padding-bottom: var(--hdk-space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tracker-detail__row {
   display: flex;
   gap: var(--hdk-space-sm);
 }
 
-.tracker-card__rename {
+.tracker-detail__actions {
+  flex-wrap: wrap;
+}
+
+.tracker-detail__actions .modal-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hdk-space-xs);
+}
+
+.tracker-detail__spacer {
+  flex: 1;
+}
+
+.tracker-dialog__form {
+  display: flex;
   flex-direction: column;
+  gap: var(--hdk-space-md);
+}
+
+.tracker-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hdk-space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
 }
 
 /* ---- Controls ------------------------------------------------------------ */
@@ -163,12 +473,9 @@
   background: var(--color-primary-dark);
 }
 
-.tracker-btn--grow {
-  flex: 1;
-}
-
 .tracker-btn--step {
-  min-width: 44px;
+  min-width: 56px;
+  min-height: 40px;
 }
 
 .tracker-icon-btn {
@@ -216,80 +523,12 @@
   font-weight: var(--font-weight-semibold);
 }
 
-/* ---- History ------------------------------------------------------------- */
-
-.tracker-history {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hdk-space-sm);
-}
-
-.tracker-history__header {
-  display: flex;
-  align-items: center;
-  gap: var(--hdk-space-md);
-}
-
-.tracker-history__title {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--hdk-text-base);
-  font-weight: var(--font-weight-semibold);
-}
-
-.tracker-history__filter {
-  flex: 0 1 200px;
-}
-
-.tracker-history__empty {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--hdk-text-sm);
-}
-
-.tracker-history__list {
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--hdk-radius);
-  background: var(--color-bg-card);
-  list-style: none;
-}
-
-.tracker-history__item {
-  display: flex;
-  align-items: center;
-  gap: var(--hdk-space-md);
-  padding: var(--hdk-space-sm) var(--hdk-space-md);
-  color: var(--color-text);
-  font-size: var(--hdk-text-sm);
-}
-
-.tracker-history__item + .tracker-history__item {
-  border-top: 1px solid var(--color-border-light);
-}
-
-.tracker-history__name {
-  font-weight: var(--font-weight-semibold);
-}
-
-.tracker-history__change {
-  font-variant-numeric: tabular-nums;
-}
-
-.tracker-history__note {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tracker-history__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--hdk-space-xs);
-  margin-left: auto;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
+/*
+ * Rows are inserted on every tap. The app-wide theme-switch transition
+ * (`.task-app-container :not(.task-app-fade-in)`) would fade each new row's
+ * border in from the text colour — a white flash per entry. Out-specify it.
+ */
+.tracker-board .tracker-today__list > li,
+.tracker-detail .tracker-log__list > li {
+  transition: none;
 }

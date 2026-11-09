@@ -183,7 +183,12 @@ change is a row in `tracker_entries`, which is the history log. Wife tier and up
 the CALLER in every route (`worker/src/routes/trackers.ts`). Unlike tasks there is no
 localStorage mirror: the frontend (`src/components/trackers/`, `src/api/trackers.ts`) calls
 the server and re-reads it, so an entry from another source (`source: 'button'`) shows up.
-Board delete and account erase cascade to both tables — a new table keyed by board must be
+The UI is tiles: each tile's own button logs in one tap (+1 on a counter, Log on a value
+tracker); anywhere else on the tile opens that tracker's detail (its history by day, undo,
+−1/set, rename, delete). The open target is a real `<button>` layered UNDER the content and
+the action button sits above it — two sibling buttons, never nested. Display helpers live in
+`src/domain/trackerStats.ts`, which only the lazy chunk imports; `src/domain/trackers.ts` is on
+the eager path, so keep it to types and the board/tier checks. Board delete and account erase cascade to both tables — a new table keyed by board must be
 added to `trackerDeletes` (d1-storage) and `ERASED_TABLES` too. Proof:
 `worker/test/trackers-verify.ts`, `e2e/tracker-board.spec.ts`.
 
