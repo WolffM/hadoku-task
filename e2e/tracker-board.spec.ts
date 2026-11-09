@@ -183,4 +183,25 @@ test.describe('tracker boards', () => {
     await expect(page.getByPlaceholder('Board name')).toBeVisible()
     await expect(page.getByRole('radio', { name: 'Tracker' })).toHaveCount(0)
   })
+
+  test('a tracker chunk that will not load offers a reload, not a blank board', async ({
+    page
+  }) => {
+    // The tracker UI is a lazy chunk. A tab left open across a deploy runs the
+    // old entry, which names a chunk the deploy deleted; that import fails.
+    await signInAs(page, 'wife', newUser())
+    await page.route('**/components/trackers/TrackerBoard.tsx*', route => route.abort())
+    await page.goto('/')
+
+    await page.getByRole('button', { name: 'Create board' }).click()
+    await page.getByRole('radio', { name: 'Tracker' }).click()
+    await page.getByPlaceholder('Board name').fill('stale')
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+
+    const alert = page.getByTestId('tracker-board').getByRole('alert')
+    await expect(alert).toContainText("Couldn't open stale")
+    await expect(alert.getByRole('button', { name: 'Reload' })).toBeVisible()
+    // The rest of the app is still standing.
+    await expect(page.getByRole('button', { name: 'Create board' })).toBeVisible()
+  })
 })

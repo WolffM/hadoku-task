@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tracker boards load on demand
+
+The tracker board UI is a separate chunk, fetched the first time a tracker board
+opens. Inlined, it pushed the /task bundle over hadoku.me's size budget, and the
+site kept serving the previous version, so tracker boards never reached the page.
+A tab left open across a deploy that can't fetch the chunk shows a Reload prompt
+instead of a blank board.
+
 ### A new board stays in the top bar
 
 A board you create joins your favorites when the top bar has room. Before, it

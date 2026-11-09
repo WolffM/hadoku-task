@@ -44,7 +44,7 @@ import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { countUpcomingScheduled } from '../domain/utils/calendar'
 import { boardTypeConfig } from '../domain/boardType'
 import { canUseTrackers, isTrackerBoard } from '../domain/trackers'
-import { TrackerBoard } from '../components/trackers/TrackerBoard'
+import { LazyTrackerBoard } from '../components/trackers/LazyTrackerBoard'
 import { boardRef } from '../components/modals/shareApi'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
@@ -536,7 +536,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
         )}
 
         {trackerBoard ? (
-          <TrackerBoard
+          <LazyTrackerBoard
             key={trackerBoard.id}
             boardRef={boardRef(trackerBoard)}
             boardName={trackerBoard.name}

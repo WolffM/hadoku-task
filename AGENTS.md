@@ -187,6 +187,15 @@ Board delete and account erase cascade to both tables — a new table keyed by b
 added to `trackerDeletes` (d1-storage) and `ERASED_TABLES` too. Proof:
 `worker/test/trackers-verify.ts`, `e2e/tracker-board.spec.ts`.
 
+The tracker UI is a LAZY chunk (`LazyTrackerBoard.tsx`): inlined, it put /task over
+hadoku_site's `check:bundle-budgets` and the site silently kept the old version (the
+updater's "Only green bumps land" step refuses an over-budget bump; the task worker still
+updates, so the API ships without its UI). Splitting makes `index.js` a facade over
+`entry-<hash>.js`; both the host and the chunk import that same URL, so there is one copy
+of the app. A tab open across a deploy can lose the chunk, so the import sits under an
+`ErrorBoundary` that offers a reload. Check the budget before pushing UI:
+`node ../hadoku_site/scripts/perf/check-bundle-budgets.mjs --mf-dir=<dir holding task/> --child-apps=<task-only copy> --all`.
+
 ## MCP (agent task/calendar management)
 
 - Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).
