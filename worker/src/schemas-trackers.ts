@@ -44,17 +44,6 @@ export const TrackerEntrySchema = z
   })
   .openapi('TrackerEntry')
 
-export const CreateTrackerBoardInputSchema = z
-  .object({
-    id: z.string().trim().min(1).max(100).openapi({ example: 'health' }),
-    name: z.string().trim().min(1).max(100).optional().openapi({ example: 'Health' })
-  })
-  .openapi('CreateTrackerBoardInput')
-
-export const CreateTrackerBoardResponseSchema = z
-  .object({ ok: z.literal(true), board: z.object({ id: z.string(), name: z.string() }) })
-  .openapi('CreateTrackerBoardResponse')
-
 export const ListTrackersQuerySchema = z.object({
   since: z.string().datetime().optional().openapi({
     description:

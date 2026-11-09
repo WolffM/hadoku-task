@@ -24,7 +24,6 @@ export const ROUTE_MANIFEST: ReadonlyArray<
   ['DELETE', '/task/api/boards/:ref/shares/me', 'shares'],
   ['DELETE', '/task/api/boards/:ref/shares/:granteeUserId', 'shares'],
   ['GET', '/task/api/boards/:ref/calendar', 'calendar'],
-  ['POST', '/task/api/trackers/boards', 'trackers'],
   ['GET', '/task/api/boards/:ref/trackers', 'trackers'],
   ['POST', '/task/api/boards/:ref/trackers', 'trackers'],
   ['PATCH', '/task/api/boards/:ref/trackers/:trackerId', 'trackers'],

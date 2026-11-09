@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### A new board stays in the top bar
+
+A board you create joins your favorites when the top bar has room. Before, it
+showed only while selected: switching away dropped it from the bar, and making it
+again was refused as a duplicate. The create dialog now also says why a name is
+refused as you type, instead of silently greying out Create.
+
 ### Tracker boards
 
 A new board type, for wife tier and up: pick **Tracker** in the create-board
@@ -19,13 +26,13 @@ and can be undone entry by entry. The board re-reads on focus and every 30s, so
 entries written elsewhere (the API, later a physical button with
 `source: "button"`) show up without a reload.
 
-- Worker: `POST /trackers/boards`, `GET|POST /boards/{ref}/trackers`,
+- Worker: `POST /boards` takes `mode: "tracker"`; `GET|POST /boards/{ref}/trackers`,
   `PATCH|DELETE /boards/{ref}/trackers/{id}`, `POST /boards/{ref}/trackers/{id}/entries`,
   `DELETE /boards/{ref}/trackers/{id}/entries/{entryId}`. They work on shared
   boards (a read-only grantee reads but cannot log).
 - D1 migration `0008_trackers.sql` (`trackers`, `tracker_entries`). Deleting a
   board and erasing an account cascade to both tables.
-- New error codes: `BOARD_EXISTS`, `BOARD_NOT_TRACKER`, `TRACKER_NOT_FOUND`,
+- New error codes: `BOARD_NOT_TRACKER`, `TRACKER_NOT_FOUND`,
   `ENTRY_NOT_FOUND`.
 
 ### 🎨 The Simple/Advanced theme toggle is gone

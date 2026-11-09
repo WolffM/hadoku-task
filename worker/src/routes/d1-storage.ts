@@ -314,9 +314,20 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
               .prepare(
                 `INSERT INTO boards
                    (user_id, id, handle, name, tags, mode, version, tasks_version, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, 'standard', 1, 1, ?, ?)`
+                 VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`
               )
-              .bind(uid, b.id, newHandle(), b.name, JSON.stringify(b.tags ?? []), ts, ts)
+              // Only 'tracker' can be chosen at creation; automation is
+              // switched on by its own activation route, never by a create.
+              .bind(
+                uid,
+                b.id,
+                newHandle(),
+                b.name,
+                JSON.stringify(b.tags ?? []),
+                b.mode === 'tracker' ? 'tracker' : 'standard',
+                ts,
+                ts
+              )
           )
         }
 

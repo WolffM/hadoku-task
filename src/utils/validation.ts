@@ -18,7 +18,7 @@ export function validateBoardName(name: string, existingBoards: Board[]): string
 
   const existingNames = existingBoards.map(b => b.id.toLowerCase())
   if (existingNames.includes(trimmed.toLowerCase())) {
-    return `Board "${trimmed}" already exists`
+    return `Board "${trimmed}" already exists. Open it from Edit boards (the gear)`
   }
 
   return null // Valid

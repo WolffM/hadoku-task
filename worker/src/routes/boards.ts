@@ -5,7 +5,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { requireFields } from '@wolffm/worker-utils'
+import { requireFields, tierAtLeast } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { StepTimer } from '../server-timing'
 import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
@@ -21,6 +21,7 @@ import {
   DeleteBoardResponseSchema
 } from '../schemas'
 import { ErrorResponseSchema } from '../schemas-common'
+import { ForbiddenErrorSchema } from '../schemas-errors'
 
 export function createBoardRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -155,7 +156,8 @@ export function createBoardRoutes() {
     path: '/boards',
     tags: ['Boards'],
     summary: 'Create a new board',
-    description: 'Creates a new board with the provided id and name',
+    description:
+      'Creates a new board with the provided id and name. `mode: "tracker"` makes a tracker board (wife tier and up).',
     request: {
       body: {
         content: {
@@ -181,6 +183,10 @@ export function createBoardRoutes() {
             schema: ErrorResponseSchema
           }
         }
+      },
+      403: {
+        description: 'A tracker board needs wife tier or above (FORBIDDEN)',
+        content: { 'application/json': { schema: ForbiddenErrorSchema } }
       }
     }
   })
@@ -200,6 +206,12 @@ export function createBoardRoutes() {
     })
 
     const { storage, auth } = getContext(c)
+    if (body.mode === 'tracker' && !tierAtLeast(auth, 'wife')) {
+      return c.json(
+        { error: 'Tracker boards need wife tier or above', code: 'FORBIDDEN' as const },
+        403
+      )
+    }
     const lockKey = boardsKey(auth.sessionId)
     const expectedVersion = parseIfMatch(c)
 

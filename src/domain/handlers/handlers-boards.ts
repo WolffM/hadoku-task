@@ -2,6 +2,7 @@
 import type { Storage } from '../../server/storage.js'
 import type { AuthContext, Task, Board, BoardsFile } from '../types.js'
 import { findBoardOrThrow, withBoardOperation } from './handlers-utils.js'
+import { TOPBAR_BOARD_SLOTS, pinPositionForNewBoard } from '../utils/boardPins.js'
 
 /**
  * Create a new board
@@ -9,7 +10,7 @@ import { findBoardOrThrow, withBoardOperation } from './handlers-utils.js'
 export async function createBoard(
   storage: Storage,
   auth: AuthContext,
-  input: { id: string; name: string },
+  input: { id: string; name: string; mode?: 'standard' | 'tracker' },
   expectedVersion?: number
 ): Promise<{ ok: true; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
   return withBoardOperation(
@@ -21,11 +22,16 @@ export async function createBoard(
         throw new Error(`Board ${input.id} already exists`)
       }
 
-      const newBoard = {
+      // A new board joins the favorites when the bar has room, or it shows only
+      // while selected and seems to vanish (pinPositionForNewBoard).
+      const position = pinPositionForNewBoard(boards.boards, TOPBAR_BOARD_SLOTS)
+      const newBoard: Board = {
         id: input.id,
         name: input.name,
         tasks: [],
-        tags: []
+        tags: [],
+        ...(input.mode === 'tracker' ? { mode: 'tracker' } : {}),
+        ...(position === null ? {} : { pinned: true, position })
       }
 
       const updatedBoards: BoardsFile = {

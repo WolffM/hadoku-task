@@ -16,11 +16,9 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import type { Context } from 'hono'
-import { TaskHandlers, TaskUtils } from '@wolffm/task/api'
+import { TaskUtils } from '@wolffm/task/api'
 import { tierAtLeast } from '@wolffm/worker-utils'
-import { logRequest } from '../logger'
-import { boardsKey } from '../kv-keys'
-import { getBoardContext, getContext, withBoardLock, type BoardCtx } from './route-utils'
+import { getBoardContext, type BoardCtx } from './route-utils'
 import {
   ForbiddenErrorSchema,
   TrackerConflictErrorSchema,
@@ -28,8 +26,6 @@ import {
   boardRefParam
 } from '../schemas-errors'
 import {
-  CreateTrackerBoardInputSchema,
-  CreateTrackerBoardResponseSchema,
   CreateTrackerEntryInputSchema,
   CreateTrackerInputSchema,
   DeleteTrackerEntryResponseSchema,
@@ -58,7 +54,7 @@ const notFound = {
   content: json(TrackerNotFoundErrorSchema)
 }
 const conflict = {
-  description: 'Not a tracker board, or the id is taken',
+  description: 'Not a tracker board (BOARD_NOT_TRACKER)',
   content: json(TrackerConflictErrorSchema)
 }
 
@@ -120,7 +116,7 @@ type Fail =
       status: 404
       body: { error: string; code: 'BOARD_NOT_FOUND' | 'TRACKER_NOT_FOUND' | 'ENTRY_NOT_FOUND' }
     }
-  | { status: 409; body: { error: string; code: 'BOARD_NOT_TRACKER' | 'BOARD_EXISTS' } }
+  | { status: 409; body: { error: string; code: 'BOARD_NOT_TRACKER' } }
 
 const fail = {
   tier: (): Fail => ({ status: 403, body: { error: TIER_ERROR, code: 'FORBIDDEN' } }),
@@ -184,55 +180,6 @@ async function readTracker(db: D1Database, ownerId: string, boardId: string, id:
 
 export function createTrackerRoutes() {
   const app = new OpenAPIHono<AppContext>()
-
-  // ---------------------------------------------------------------- board create
-  app.openapi(
-    createRoute({
-      method: 'post',
-      path: '/trackers/boards',
-      tags: ['Trackers'],
-      summary: 'Create a tracker board',
-      description:
-        "Creates a board whose mode is `tracker`: it holds trackers instead of tasks. The board is the caller's own; `name` defaults to `id`.",
-      request: { body: { content: json(CreateTrackerBoardInputSchema) } },
-      responses: {
-        200: {
-          description: 'Tracker board created',
-          content: json(CreateTrackerBoardResponseSchema)
-        },
-        403: forbidden,
-        409: conflict
-      }
-    }),
-    async c => {
-      const { id, name } = c.req.valid('json')
-      const { storage, auth } = getContext(c)
-      logRequest('POST', '/task/api/trackers/boards', { userType: auth.userType, boardId: id })
-      if (!tierAtLeast(auth, 'wife')) {
-        return c.json({ error: TIER_ERROR, code: 'FORBIDDEN' as const }, 403)
-      }
-
-      const owner = auth.sessionId
-      const db = c.env.DB
-      const result = await withBoardLock(boardsKey(owner), async () => {
-        const taken = await db
-          .prepare('SELECT 1 AS one FROM boards WHERE user_id = ? AND id = ?')
-          .bind(owner, id)
-          .first<number>('one')
-        if (taken) return null
-        await TaskHandlers.createBoard(storage, auth, { id, name: name ?? id })
-        await db
-          .prepare('UPDATE boards SET mode = ?, updated_at = ? WHERE user_id = ? AND id = ?')
-          .bind(TRACKER_MODE, new Date().toISOString(), owner, id)
-          .run()
-        return { id, name: name ?? id }
-      })
-      if (!result) {
-        return c.json({ error: `Board ${id} already exists`, code: 'BOARD_EXISTS' as const }, 409)
-      }
-      return c.json({ ok: true as const, board: result }, 200)
-    }
-  )
 
   // ---------------------------------------------------------------- list
   app.openapi(

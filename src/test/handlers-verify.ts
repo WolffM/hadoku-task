@@ -318,6 +318,52 @@ async function main() {
     )
   }
 
+  // -------------------------------------------------------------------
+  section('6. createBoard pins a new board when the top bar has room')
+  // -------------------------------------------------------------------
+  {
+    const pinnedOf = (st: ReturnType<typeof makeStorage>) =>
+      st
+        .boardsRaw()
+        .boards.filter(b => b.pinned)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map(b => b.id)
+
+    // No explicit favorites: the default set covers it, so nothing is pinned
+    // (pinning just the new board would collapse the bar to that one).
+    const fresh = makeStorage()
+    await H.createBoard(fresh, AUTH, { id: 'a', name: 'A' })
+    check('no favorites yet: the new board is left unpinned', pinnedOf(fresh).length === 0)
+
+    // The reported case: explicit favorites, mostly automation boards, so the
+    // standard slots have room. The new board must join the end.
+    const s = makeStorage()
+    for (const id of ['mine', 'main', 'auto1', 'auto2'])
+      await H.createBoard(s, AUTH, { id, name: id })
+    s.boardsRaw().boards.forEach(b => {
+      if (b.id.startsWith('auto')) b.mode = 'automation'
+    })
+    await H.setPinnedBoards(s, AUTH, ['mine', 'main', 'auto1', 'auto2'])
+    await H.createBoard(s, AUTH, { id: 'trackers', name: 'trackers' })
+    check(
+      'with favorites and room, the new board is pinned at the end',
+      JSON.stringify(pinnedOf(s)) === '["mine","main","auto1","auto2","trackers"]',
+      JSON.stringify(pinnedOf(s))
+    )
+
+    // A bar already holding TOPBAR_BOARD_SLOTS standard favorites stays as arranged.
+    const full = makeStorage()
+    const five = ['b1', 'b2', 'b3', 'b4', 'b5']
+    for (const id of five) await H.createBoard(full, AUTH, { id, name: id })
+    await H.setPinnedBoards(full, AUTH, five)
+    await H.createBoard(full, AUTH, { id: 'b6', name: 'b6' })
+    check(
+      'a full bar is left alone',
+      JSON.stringify(pinnedOf(full)) === JSON.stringify(five),
+      JSON.stringify(pinnedOf(full))
+    )
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
 }

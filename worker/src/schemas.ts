@@ -308,7 +308,11 @@ export const GetBoardsResponseSchema = z
 export const CreateBoardInputSchema = z
   .object({
     id: z.string().min(1).openapi({ example: 'work-board' }),
-    name: z.string().min(1).openapi({ example: 'Work Board' })
+    name: z.string().min(1).openapi({ example: 'Work Board' }),
+    mode: z.enum(['standard', 'tracker']).optional().openapi({
+      description:
+        '`tracker` makes a tracker board (counters/values with a history log, wife tier and up). Defaults to `standard`.'
+    })
   })
   .openapi('CreateBoardInput')
 

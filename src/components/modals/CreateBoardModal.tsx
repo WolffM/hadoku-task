@@ -58,7 +58,11 @@ export function CreateBoardModal({
     await onConfirm(inputValue, chosen)
   }
 
-  const isDisabled = !inputValue.trim() || validateBoardName(inputValue) !== null
+  // Say WHY Create is disabled as you type: a duplicate name used to just grey
+  // the button out, which read as the app refusing for no reason.
+  const liveError = inputValue.trim() ? validateBoardName(inputValue) : null
+  const isDisabled = !inputValue.trim() || liveError !== null
+  const shownError = validationError ?? liveError
 
   return (
     <Modal
@@ -95,7 +99,7 @@ export function CreateBoardModal({
           {pendingTaskOperation.taskIds.length > 1 ? 's' : ''} will be moved to this board
         </p>
       )}
-      {validationError && <p className="modal-error">{validationError}</p>}
+      {shownError && <p className="modal-error">{shownError}</p>}
     </Modal>
   )
 }

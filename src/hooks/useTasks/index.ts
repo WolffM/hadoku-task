@@ -507,14 +507,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
 
   // Board helpers
   async function createBoard(boardId: string, kind: 'standard' | 'tracker' = 'standard') {
-    if (kind === 'tracker') {
-      // Server-first: a tracker board is a server row with mode 'tracker', so it
-      // is created there and then pulled into the local copy like any other.
-      await trackerApi.createBoard(boardId)
-      if ('syncFromApi' in api) await api.syncFromApi()
-    } else {
-      await api.createBoard(boardId)
-    }
+    await api.createBoard(boardId, kind)
     // Switch first: reload slices against the live selection.
     selectBoard(boardId)
     await reload()

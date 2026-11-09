@@ -176,7 +176,9 @@ their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest
 
 ## Tracker boards
 
-A board with `mode = 'tracker'` holds trackers (counters/values) instead of tasks; every
+A board with `mode = 'tracker'` holds trackers (counters/values) instead of tasks. It is
+created by the ordinary `POST /boards` with `mode: 'tracker'` — one create path, no second
+endpoint (a separate `/trackers/boards` was tried and removed as duplication). Every
 change is a row in `tracker_entries`, which is the history log. Wife tier and up, checked on
 the CALLER in every route (`worker/src/routes/trackers.ts`). Unlike tasks there is no
 localStorage mirror: the frontend (`src/components/trackers/`, `src/api/trackers.ts`) calls

@@ -161,24 +161,25 @@ const rowCount = async (sql: string, ...args: unknown[]) =>
 
 async function main() {
   section('1. Tier gate')
-  const friendCreate = await req(FRIEND, 'POST', '/task/api/trackers/boards', { id: 'health' })
+  const friendCreate = await req(FRIEND, 'POST', '/task/api/boards', {
+    id: 'health',
+    name: 'health',
+    mode: 'tracker'
+  })
   check('a friend cannot create a tracker board', friendCreate.status === 403, friendCreate)
   check('…and is told FORBIDDEN', friendCreate.json.code === 'FORBIDDEN', friendCreate.json)
+  const friendPlain = await req(FRIEND, 'POST', '/task/api/boards', { id: 'plain', name: 'plain' })
+  check('…while a plain board is still fine for a friend', friendPlain.status === 200, friendPlain)
 
-  const created = await req(OWNER, 'POST', '/task/api/trackers/boards', {
+  const created = await req(OWNER, 'POST', '/task/api/boards', {
     id: 'health',
-    name: 'Health'
+    name: 'Health',
+    mode: 'tracker'
   })
   check(
-    'wife tier creates a tracker board',
+    'wife tier creates a tracker board through the ordinary create',
     created.status === 200 && created.json.ok === true,
     created
-  )
-  const dup = await req(OWNER, 'POST', '/task/api/trackers/boards', { id: 'health' })
-  check(
-    'a taken id is 409 BOARD_EXISTS',
-    dup.status === 409 && dup.json.code === 'BOARD_EXISTS',
-    dup
   )
 
   const friendList = await req(FRIEND, 'GET', tr('health'))
@@ -363,7 +364,7 @@ async function main() {
   )
 
   // A second board to delete outright.
-  await req(OWNER, 'POST', '/task/api/trackers/boards', { id: 'gym' })
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'gym', name: 'gym', mode: 'tracker' })
   const lift = (await req(OWNER, 'POST', tr('gym'), { name: 'Lifts' })).json.tracker as Tracker
   await req(OWNER, 'POST', tr('gym', `/${lift.id}/entries`), {})
   const delBoard = await req(OWNER, 'DELETE', '/task/api/boards/gym')
@@ -376,7 +377,7 @@ async function main() {
 
   // Erase: a board someone else shares is KEPT (account-erase's rule), so make
   // an unshared one and check that one goes.
-  await req(OWNER, 'POST', '/task/api/trackers/boards', { id: 'solo' })
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'solo', name: 'solo', mode: 'tracker' })
   const s = (await req(OWNER, 'POST', tr('solo'), { name: 'Steps' })).json.tracker as Tracker
   await req(OWNER, 'POST', tr('solo', `/${s.id}/entries`), {})
   const erased = await eraseAccountData(d1 as never, OWNER.id)

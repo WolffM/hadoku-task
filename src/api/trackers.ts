@@ -24,7 +24,6 @@ export class TrackerApiError extends Error {
 }
 
 export interface TrackerApi {
-  createBoard(id: string): Promise<void>
   list(boardRef: string): Promise<TrackerBoardData>
   createTracker(
     boardRef: string,
@@ -71,9 +70,6 @@ export function createTrackerApi(sessionId: string): TrackerApi {
   const seg = encodeURIComponent
 
   return {
-    async createBoard(id) {
-      await call('POST', '/trackers/boards', { id, name: id })
-    },
     async list(ref) {
       return call<TrackerBoardData>('GET', trackers(ref))
     },
