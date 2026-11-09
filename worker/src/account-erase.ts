@@ -65,6 +65,8 @@ import type { AppContext } from './types'
 /** The tables the hook erases from, in the order the batch runs them. */
 export const ERASED_TABLES = [
   'tasks',
+  'tracker_entries',
+  'trackers',
   'task_claims',
   'task_claim_log',
   'task_events',
@@ -93,6 +95,14 @@ export async function eraseAccountData(db: EraseDb, userId: string): Promise<Era
   const u = userId
   const statements: Record<keyof ErasedCounts, [string, unknown[]]> = {
     tasks: [`DELETE FROM tasks WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`, [u, u, u]],
+    tracker_entries: [
+      `DELETE FROM tracker_entries WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
+      [u, u, u]
+    ],
+    trackers: [
+      `DELETE FROM trackers WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
+      [u, u, u]
+    ],
     task_claims: [
       `DELETE FROM task_claims WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
       [u, u, u]

@@ -174,6 +174,17 @@ their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest
 - A group runs as its own app, so it gets root's `authContext` by hand-off (`forwardedAuth`) and
   its own copy of the error mapping. A group must not register middleware (the generator refuses).
 
+## Tracker boards
+
+A board with `mode = 'tracker'` holds trackers (counters/values) instead of tasks; every
+change is a row in `tracker_entries`, which is the history log. Wife tier and up, checked on
+the CALLER in every route (`worker/src/routes/trackers.ts`). Unlike tasks there is no
+localStorage mirror: the frontend (`src/components/trackers/`, `src/api/trackers.ts`) calls
+the server and re-reads it, so an entry from another source (`source: 'button'`) shows up.
+Board delete and account erase cascade to both tables — a new table keyed by board must be
+added to `trackerDeletes` (d1-storage) and `ERASED_TABLES` too. Proof:
+`worker/test/trackers-verify.ts`, `e2e/tracker-board.spec.ts`.
+
 ## MCP (agent task/calendar management)
 
 - Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).

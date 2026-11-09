@@ -242,6 +242,13 @@ async function seed() {
   ins(log, VICTIM.id, 'solo', 's2', VICTIM.id, ts)
   ins(log, VICTIM.id, 'auto', 'a1', RUNNER.id, ts)
   ins(log, FRIEND.id, 'palboard', 'p1', VICTIM.id, ts)
+  // Trackers: one on solo (erased) and one on team (shared, so kept).
+  const tracker = `INSERT INTO trackers (user_id, board_id, id, name, created_at, updated_at) VALUES (?, ?, ?, 'T', ?, ?)`
+  ins(tracker, VICTIM.id, 'solo', 'tk-solo', ts, ts)
+  ins(tracker, VICTIM.id, 'team', 'tk-team', ts, ts)
+  const entry = `INSERT INTO tracker_entries (user_id, board_id, tracker_id, id, delta, value, at) VALUES (?, ?, ?, ?, 1, 1, ?)`
+  ins(entry, VICTIM.id, 'solo', 'tk-solo', 'te-solo', ts)
+  ins(entry, VICTIM.id, 'team', 'tk-team', 'te-team', ts)
   ins(
     `INSERT INTO tasks (user_id, board_id, id, title, state, created_at) VALUES (?, 'gone', 'orphan', 'orphan', 'Active', ?)`,
     VICTIM.id,
@@ -317,6 +324,8 @@ async function main() {
   check('→ 200', first.status === 200, JSON.stringify(first.json))
   const expected: ErasedCounts = {
     tasks: 4, // s1, s2, m1, orphan
+    tracker_entries: 1, // te-solo; te-team rides the shared board
+    trackers: 1, // tk-solo
     task_claims: 1, // s1 on solo
     task_claim_log: 1, // s2 on solo
     task_events: 3, // created s1, s2, m1
@@ -344,6 +353,14 @@ async function main() {
   check(
     'shared boards keep every task',
     count('SELECT count(*) n FROM tasks WHERE user_id = ?', VICTIM.id) === 3 // t1, ft1, a1
+  )
+  check(
+    'the shared board keeps its tracker and history',
+    count('SELECT count(*) n FROM trackers WHERE user_id = ?', VICTIM.id) === 1 &&
+      count(
+        "SELECT count(*) n FROM tracker_entries WHERE user_id = ? AND board_id = 'team'",
+        VICTIM.id
+      ) === 1
   )
   check(
     "the runner's claim and log on the automation board stay",

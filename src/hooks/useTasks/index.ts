@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createApi, type SyncErrorReporter, type TaskUserTier } from '../../api/client'
+import { createTrackerApi } from '../../api/trackers'
 import type { Task, BoardsFile } from '../../domain/types'
 import { parseTaskInput, splitTags, formatError } from '../../domain/utils/tags'
 import { SESSION_ID } from '../../api/session'
@@ -82,6 +83,8 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
       }),
     [userType, sessionId, handleSyncError]
   )
+  // Tracker boards talk to the server directly; there is no local mirror to keep.
+  const trackerApi = useMemo(() => createTrackerApi(sessionId || 'public'), [sessionId])
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
   // `?board=<id>` opens that board: another app (whattocook's "Open in Tasks")
@@ -503,8 +506,15 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   }
 
   // Board helpers
-  async function createBoard(boardId: string) {
-    await api.createBoard(boardId)
+  async function createBoard(boardId: string, kind: 'standard' | 'tracker' = 'standard') {
+    if (kind === 'tracker') {
+      // Server-first: a tracker board is a server row with mode 'tracker', so it
+      // is created there and then pulled into the local copy like any other.
+      await trackerApi.createBoard(boardId)
+      if ('syncFromApi' in api) await api.syncFromApi()
+    } else {
+      await api.createBoard(boardId)
+    }
     // Switch first: reload slices against the live selection.
     selectBoard(boardId)
     await reload()
@@ -693,6 +703,8 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
 
     // Board sharing (§7) — direct server calls, no localStorage mirror.
     shareApi,
+    // Tracker boards — likewise server-only.
+    trackerApi,
 
     // Lifecycle
     initialLoad,

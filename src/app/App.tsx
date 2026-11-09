@@ -43,6 +43,9 @@ import { AppModals } from '../components/AppModals'
 import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { countUpcomingScheduled } from '../domain/utils/calendar'
 import { boardTypeConfig } from '../domain/boardType'
+import { canUseTrackers, isTrackerBoard } from '../domain/trackers'
+import { TrackerBoard } from '../components/trackers/TrackerBoard'
+import { boardRef } from '../components/modals/shareApi'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
 import type { UserPreferences } from '../domain/types'
@@ -213,7 +216,8 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     moveTasksToBoard,
     createTagOnBoard,
     deleteTagOnBoard,
-    shareApi
+    shareApi,
+    trackerApi
   } = useTasks({
     userType,
     sessionId: effectiveSessionId,
@@ -314,6 +318,9 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
 
   // Computed values
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
+  // A tracker board replaces the task UI (input, tag filters, lanes, calendar)
+  // with its own trackers + history view.
+  const trackerBoard = currentBoard && isTrackerBoard(currentBoard) ? currentBoard : null
   const persistedTags: string[] = currentBoard?.tags || []
   // activeTasks, not tasks: a tag whose only remaining tasks are completed has no
   // live work on it and shouldn't keep a lane alive for the next 24h.
@@ -468,7 +475,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           onPendingOperation={modals.setPendingTaskOperation}
         />
 
-        {currentView === 'board' && (
+        {currentView === 'board' && !trackerBoard && (
           <div className="task-app__controls">
             <input
               ref={inputRef}
@@ -488,45 +495,55 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           </div>
         )}
 
-        <TagFiltersSection
-          tags={allTags}
-          selectedFilters={selectedFilters}
-          dragOverFilter={dragAndDrop.dragOverFilter}
-          userType={userType}
-          onToggleFilter={tag => {
-            setSelectedFilters(prev => {
-              const copy = new Set(prev)
-              if (copy.has(tag)) copy.delete(tag)
-              else copy.add(tag)
-              return copy
-            })
-          }}
-          onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
-          onDragOver={dragAndDrop.onFilterDragOver}
-          onDragLeave={dragAndDrop.onFilterDragLeave}
-          onDrop={dragAndDrop.onFilterDrop}
-          onCreateTagClick={() => {
-            modals.setInputValue('')
-            modals.setShowNewTagDialog(true)
-          }}
-          onPendingOperation={modals.setPendingTaskOperation}
-          onRefresh={initialLoad}
-          onShowToast={showToast}
-          onShareBoard={() => modals.setShowShareDialog(true)}
-          canShareBoard={(() => {
-            const b = boards?.boards?.find(x => x.id === currentBoardId)
-            return !!b && (!b.access || b.access === 'owner')
-          })()}
-          currentView={currentView}
-          onToggleCalendar={() => changeView(currentView === 'board' ? 'calendar' : 'board')}
-          upcomingScheduledCount={upcomingScheduledCount}
-          syncState={syncState}
-          automateCount={actionable.count}
-          automateDisabled={actionable.disabled}
-          onAutomate={() => void actionable.automate()}
-        />
+        {!trackerBoard && (
+          <TagFiltersSection
+            tags={allTags}
+            selectedFilters={selectedFilters}
+            dragOverFilter={dragAndDrop.dragOverFilter}
+            userType={userType}
+            onToggleFilter={tag => {
+              setSelectedFilters(prev => {
+                const copy = new Set(prev)
+                if (copy.has(tag)) copy.delete(tag)
+                else copy.add(tag)
+                return copy
+              })
+            }}
+            onTagContextMenu={(tag, x, y) => modals.setTagContextMenu({ tag, x, y })}
+            onDragOver={dragAndDrop.onFilterDragOver}
+            onDragLeave={dragAndDrop.onFilterDragLeave}
+            onDrop={dragAndDrop.onFilterDrop}
+            onCreateTagClick={() => {
+              modals.setInputValue('')
+              modals.setShowNewTagDialog(true)
+            }}
+            onPendingOperation={modals.setPendingTaskOperation}
+            onRefresh={initialLoad}
+            onShowToast={showToast}
+            onShareBoard={() => modals.setShowShareDialog(true)}
+            canShareBoard={(() => {
+              const b = boards?.boards?.find(x => x.id === currentBoardId)
+              return !!b && (!b.access || b.access === 'owner')
+            })()}
+            currentView={currentView}
+            onToggleCalendar={() => changeView(currentView === 'board' ? 'calendar' : 'board')}
+            upcomingScheduledCount={upcomingScheduledCount}
+            syncState={syncState}
+            automateCount={actionable.count}
+            automateDisabled={actionable.disabled}
+            onAutomate={() => void actionable.automate()}
+          />
+        )}
 
-        {currentView === 'board' ? (
+        {trackerBoard ? (
+          <TrackerBoard
+            key={trackerBoard.id}
+            boardRef={boardRef(trackerBoard)}
+            boardName={trackerBoard.name}
+            api={trackerApi}
+            onError={reportOperationError}
+          />
+        ) : currentView === 'board' ? (
           <TaskLayout
             tasks={tasks}
             topTags={topTags}
@@ -578,7 +595,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           />
         )}
 
-        {currentView === 'board' && (
+        {currentView === 'board' && !trackerBoard && (
           <MarqueeOverlay rect={dragAndDrop.marqueeRect} isSelecting={dragAndDrop.isSelecting} />
         )}
 
@@ -607,6 +624,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
             modals.setValidationError(null)
           }}
           onConfirmCreateBoard={handlers.handleCreateBoard}
+          allowTrackerBoards={canUseTrackers(userType)}
           onBoardInputChange={(value: string) => {
             modals.setInputValue(value)
             modals.setValidationError(null)

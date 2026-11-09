@@ -151,6 +151,12 @@ function rowToBoard(r: BoardRow): Board {
 const nowIso = () => new Date().toISOString()
 const newHandle = () => TaskUtils.generateULID()
 
+/** A deleted board takes its trackers and their history with it (tracker boards). */
+const trackerDeletes = (db: D1Like, uid: string, boardId: string) => [
+  db.prepare('DELETE FROM tracker_entries WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
+  db.prepare('DELETE FROM trackers WHERE user_id = ? AND board_id = ?').bind(uid, boardId)
+]
+
 export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
   const db = env.DB as unknown as D1Like
 
@@ -336,6 +342,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
           stmts.push(
             db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(uid, id)
           )
+          stmts.push(...trackerDeletes(db, uid, id))
           stmts.push(db.prepare('DELETE FROM boards WHERE user_id = ? AND id = ?').bind(uid, id))
           // Drop this viewer's pref rows for the removed board (all owners: cheap
           // and correct — a grantee's pin of a since-deleted board is dead too).
@@ -545,6 +552,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // Removed rather than made reachable.
       await db.batch([
         db.prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ?').bind(sessionId, boardId),
+        ...trackerDeletes(db, sessionId, boardId),
         db.prepare('DELETE FROM boards WHERE user_id = ? AND id = ?').bind(sessionId, boardId)
       ])
       // Events live in D1 keyed by the masked credential (unchanged path).

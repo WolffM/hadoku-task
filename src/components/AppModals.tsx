@@ -16,6 +16,7 @@ import {
   TagContextMenu
 } from './modals'
 import type { ShareApi } from './modals/shareApi'
+import type { BoardKind } from './modals/CreateBoardModal'
 import type { PendingTaskOperation } from '../hooks/useModalState'
 import { TOPBAR_BOARD_SLOTS } from '../app/constants'
 
@@ -49,7 +50,9 @@ interface AppModalsProps {
   onConfirmDeleteTag: (tag: string) => Promise<void>
 
   onCloseNewBoardDialog: () => void
-  onConfirmCreateBoard: (boardName: string) => Promise<void>
+  onConfirmCreateBoard: (boardName: string, kind: BoardKind) => Promise<void>
+  /** Offer the tracker board type in the create dialog (wife tier and up). */
+  allowTrackerBoards: boolean
   onBoardInputChange: (value: string) => void
   validateBoardName: (name: string) => string | null
 
@@ -103,6 +106,7 @@ export function AppModals({
   onConfirmDeleteTag,
   onCloseNewBoardDialog,
   onConfirmCreateBoard,
+  allowTrackerBoards,
   onBoardInputChange,
   validateBoardName,
   onCloseEditBoards,
@@ -158,6 +162,7 @@ export function AppModals({
         onConfirm={onConfirmCreateBoard}
         onInputChange={onBoardInputChange}
         validateBoardName={validateBoardName}
+        allowTracker={allowTrackerBoards}
       />
 
       <EditBoardsModal
@@ -166,7 +171,7 @@ export function AppModals({
         currentBoardId={currentBoardId}
         slots={TOPBAR_BOARD_SLOTS}
         onClose={onCloseEditBoards}
-        onCreate={onConfirmCreateBoard}
+        onCreate={name => onConfirmCreateBoard(name, 'standard')}
         onRename={onRenameBoard}
         onDelete={onDeleteBoards}
         onSetPinned={onSetPinnedBoards}

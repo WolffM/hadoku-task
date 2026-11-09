@@ -27,6 +27,8 @@ export const ROUTE_GROUPS = {
   shares: () => import('./routes/shares').then(m => m.createShareRoutes()),
   // A board's calendar (§9) — its dated tasks, as a sub-resource of the board.
   calendar: () => import('./routes/calendar').then(m => m.createCalendarRoutes()),
+  // Tracker boards: named counters/values and their entry log, wife tier and up.
+  trackers: () => import('./routes/trackers').then(m => m.createTrackerRoutes()),
   // Automation activation (§5.4): owner-only activate / deactivate.
   automation: () => import('./routes/automation').then(m => m.createAutomationRoutes()),
   // Agent claim protocol (§4): claim / heartbeat / set-lane / release / history
@@ -52,6 +54,7 @@ export const STORAGE_GROUPS: ReadonlySet<RouteGroup> = new Set<RouteGroup>([
   'boards',
   'shares',
   'calendar',
+  'trackers',
   'automation',
   'agent',
   'tags-batch',

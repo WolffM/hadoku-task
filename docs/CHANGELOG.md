@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tracker boards
+
+A new board type, for wife tier and up: pick **Tracker** in the create-board
+dialog. A tracker board holds named trackers instead of tasks: **counters**
+(−/+1, or set to a number) and **values** (log a reading, like a weight). Every
+change is an entry in a history log, which drives the today and 7-day figures
+and can be undone entry by entry. The board re-reads on focus and every 30s, so
+entries written elsewhere (the API, later a physical button with
+`source: "button"`) show up without a reload.
+
+- Worker: `POST /trackers/boards`, `GET|POST /boards/{ref}/trackers`,
+  `PATCH|DELETE /boards/{ref}/trackers/{id}`, `POST /boards/{ref}/trackers/{id}/entries`,
+  `DELETE /boards/{ref}/trackers/{id}/entries/{entryId}`. They work on shared
+  boards (a read-only grantee reads but cannot log).
+- D1 migration `0008_trackers.sql` (`trackers`, `tracker_entries`). Deleting a
+  board and erasing an account cascade to both tables.
+- New error codes: `BOARD_EXISTS`, `BOARD_NOT_TRACKER`, `TRACKER_NOT_FOUND`,
+  `ENTRY_NOT_FOUND`.
+
 ### 🎨 The Simple/Advanced theme toggle is gone
 
 Advanced visuals are switched off platform-wide. The toggle is removed from the

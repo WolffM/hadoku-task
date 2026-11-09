@@ -53,7 +53,12 @@ export const DOMAIN_ERROR_CODES = [
   'VERSION_CONFLICT', // 409 — If-Match lost (carries `currentVersion`)
   'DUPLICATE_SOURCE', // 409 — a live task already has that source/sourceId (carries both)
   'NOTES_TOO_LARGE', // 413 — notes exceed MAX_NOTES_BYTES
-  'STATUS_INVALID' // 422 — `status` isn't { kind: <closed set>, label, href? }
+  'STATUS_INVALID', // 422 — `status` isn't { kind: <closed set>, label, href? }
+  // Tracker boards
+  'BOARD_EXISTS', // 409 — a board with that id already exists
+  'BOARD_NOT_TRACKER', // 409 — the board is not a tracker board
+  'TRACKER_NOT_FOUND', // 404
+  'ENTRY_NOT_FOUND' // 404
 ] as const
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number]
@@ -240,6 +245,20 @@ export const NoUserIdErrorSchema = narrowError(
 )
 
 /** The `{ref}` path param of every board-scoped route (a board id or a share alias). */
+/** 404 on a tracker route: the board, the tracker, or the entry is missing. */
+export const TrackerNotFoundErrorSchema = narrowError(
+  'TrackerNotFoundError',
+  ['BOARD_NOT_FOUND', 'TRACKER_NOT_FOUND', 'ENTRY_NOT_FOUND'],
+  'The board, the tracker on it, or the entry does not exist (or is not shared with you).'
+)
+
+/** 409 on tracker routes: the board is not a tracker board, or (on create) the id is taken. */
+export const TrackerConflictErrorSchema = narrowError(
+  'TrackerConflictError',
+  ['BOARD_NOT_TRACKER', 'BOARD_EXISTS'],
+  'BOARD_NOT_TRACKER: the board holds tasks, not trackers. BOARD_EXISTS: pick another board id.'
+)
+
 export const boardRefParam = z.object({
   ref: z.string().openapi({ param: { name: 'ref', in: 'path' }, example: 'main' })
 })
