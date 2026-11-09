@@ -10,7 +10,9 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         // The shell's entry: must stay free of React (see titleTooltips.ts).
         'lib/titleTooltips': resolve(__dirname, 'src/lib/titleTooltips.ts'),
-        'lib/selectMenus': resolve(__dirname, 'src/lib/selectMenus.ts')
+        'lib/selectMenus': resolve(__dirname, 'src/lib/selectMenus.ts'),
+        // Free of React too: a room chrome with no gear starts the relay itself.
+        'lib/identityRelay': resolve(__dirname, 'src/lib/identityRelay.ts')
       },
       formats: ['es']
     },

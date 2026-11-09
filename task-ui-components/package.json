@@ -41,6 +41,10 @@
       "types": "./dist/lib/selectMenus.d.ts",
       "import": "./dist/lib/selectMenus.js"
     },
+    "./identity-relay": {
+      "types": "./dist/lib/identityRelay.d.ts",
+      "import": "./dist/lib/identityRelay.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

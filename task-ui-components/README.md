@@ -56,6 +56,7 @@ other hadoku tab of the browser and re-fires them there as the same window
 event — so a room open in another tab hears a change made on a page with no
 room. It is one relay per window, even across duplicate bundled copies of this
 package; a page with no gear (a room chrome) may call `relayIdentityChanges()`
+(also on the React-free subpath `@wolffm/task-ui-components/identity-relay`)
 itself and joins the same one. Never write a second relay.
 
 ### ThemePicker (Overview)
