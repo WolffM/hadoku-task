@@ -39,6 +39,7 @@ import {
   type Tier
 } from '../lib/settingsClient'
 import { PASSKEY_PULSE_CLASS, reportErr } from './settingsShared'
+import { relayIdentityChanges } from '../lib/identityRelay'
 
 // The Profile, Content and Account tab bodies are most of this component, and
 // opened now and then, but this module is on every page of every app through
@@ -417,6 +418,11 @@ export function ConnectedSettings({
     // arrive through the sync effects above, and a key swap reloads the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Every rename and avatar change made here reaches the browser's other
+  // hadoku tabs, and theirs reach this page's listeners — a room open in
+  // another tab updates even though this page has none (lib/identityRelay).
+  useEffect(() => relayIdentityChanges(), [])
 
   // Escape closes — unless the avatar dialog is open: that Escape is the dialog's.
   useEffect(() => {

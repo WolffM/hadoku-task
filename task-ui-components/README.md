@@ -49,6 +49,15 @@ only that page creates sessions). "Connected": it self-wires to the
 hadoku.me edge-router via same-origin fetches, so it needs zero props. Injected
 automatically by `AppHeader`; can also be used standalone.
 
+A rename or avatar change fires `NAME_EVENT` (`hadoku:name`) / `AVATAR_EVENT`
+(`hadoku:avatar`) on `window`. The gear also starts `relayIdentityChanges()`,
+which carries those events over `BroadcastChannel('hadoku:identity')` to every
+other hadoku tab of the browser and re-fires them there as the same window
+event — so a room open in another tab hears a change made on a page with no
+room. It is one relay per window, even across duplicate bundled copies of this
+package; a page with no gear (a room chrome) may call `relayIdentityChanges()`
+itself and joins the same one. Never write a second relay.
+
 ### ThemePicker (Overview)
 
 A gorgeous theme picker with light/dark pill design. Fully customizable to work with any theme system.

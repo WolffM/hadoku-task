@@ -22,6 +22,12 @@ export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
 export { AVATAR_EVENT } from './lib/avatarEvent'
 export { NAME_EVENT, type NameEventDetail } from './lib/nameEvent'
+export {
+  relayIdentityChanges,
+  IDENTITY_CHANNEL,
+  type IdentityChannel,
+  type IdentityRelayMessage
+} from './lib/identityRelay'
 // Re-exported from @wolffm/themes, which now owns the context AND the provider
 // that fills it. These are RE-EXPORTS, not re-declarations: every consumer gets
 // the one context object from themes, which is what makes a duplicated copy of
