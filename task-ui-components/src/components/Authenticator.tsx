@@ -163,7 +163,7 @@ export function Authenticator() {
               }).catch(console.error)
             }}
           >
-            Make link
+            Create Code
           </button>
         </span>
       )}

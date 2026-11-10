@@ -39,6 +39,6 @@ export const ACCOUNT_STYLES = {
   line: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   grow: { flex: 1, minWidth: 0 },
   mono: { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', wordBreak: 'break-all' },
-  code: { width: '7ch', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.1em' },
+  code: { width: '12ch', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.1em' },
   qr: { width: 168, height: 168 }
 } satisfies Record<string, React.CSSProperties>

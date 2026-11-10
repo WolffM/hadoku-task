@@ -618,7 +618,7 @@ export function SettingsSiteTabs({
               the avatar dialog. Mounted with the Account tab: the read can refresh
               a linked picture, which opening the gear on another tab must not cost. */}
           {!resolving && userType !== 'public' && (
-            <section className="settings-popout__row settings-popout__row--stack">
+            <section className="settings-popout__row settings-popout__row--stack settings-popout__row--divided">
               <span className="settings-popout__label">Linked accounts</span>
               <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
                 <LinkedAccounts />

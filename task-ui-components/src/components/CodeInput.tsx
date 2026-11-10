@@ -15,7 +15,7 @@ export function CodeInput({
       onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
       inputMode="numeric"
       autoComplete="one-time-code"
-      placeholder="123456"
+      placeholder="Enter TOTP"
       aria-label="Authenticator code"
       className="settings-popout__input"
       style={S.code}
