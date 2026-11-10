@@ -209,8 +209,11 @@ export function createTrackerRoutes() {
             ORDER BY position, created_at`
         ).bind(ownerId, boardId),
         c.env.DB.prepare(
+          // rowid, not id, breaks a same-millisecond tie: an id's tail is
+          // random (generateULID), so two entries written in one millisecond
+          // sorted by chance. rowid is insertion order.
           `SELECT ${ENTRY_COLS} FROM tracker_entries WHERE user_id = ? AND board_id = ? AND at >= ?
-            ORDER BY at DESC, id DESC LIMIT ${MAX_ENTRIES}`
+            ORDER BY at DESC, rowid DESC LIMIT ${MAX_ENTRIES}`
         ).bind(ownerId, boardId, from)
       ])
       return c.json(
@@ -463,7 +466,7 @@ export function createTrackerRoutes() {
             .prepare(
               `UPDATE trackers SET updated_at = ?, value = COALESCE(
                  (SELECT value FROM tracker_entries WHERE user_id = ? AND tracker_id = ?
-                   ORDER BY at DESC, id DESC LIMIT 1), 0)
+                   ORDER BY at DESC, rowid DESC LIMIT 1), 0)
                WHERE user_id = ? AND id = ?`
             )
             .bind(at, ownerId, trackerId, ownerId, trackerId)
