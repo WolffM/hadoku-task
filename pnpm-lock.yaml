@@ -18,8 +18,8 @@ importers:
         specifier: ^1.4.3
         version: 1.4.3
       '@wolffm/prefs-client':
-        specifier: ^1.1.23
-        version: 1.1.23(react@19.2.7)(zod@4.1.12)
+        specifier: ^1.1.24
+        version: 1.1.24(react@19.2.7)(zod@4.1.12)
       '@wolffm/task-ui-components':
         specifier: workspace:*
         version: link:task-ui-components
@@ -27,8 +27,8 @@ importers:
         specifier: workspace:*
         version: link:themes
       '@wolffm/worker-utils':
-        specifier: ^1.7.18
-        version: 1.7.18(hono@4.12.23)(zod@4.1.12)
+        specifier: ^1.7.19
+        version: 1.7.19(hono@4.12.23)(zod@4.1.12)
       hono:
         specifier: ^4.12.23
         version: 4.12.23
@@ -70,8 +70,8 @@ importers:
         specifier: ^1.0.13
         version: 1.0.13
       '@wolffm/e2e-harness':
-        specifier: ^0.2.37
-        version: 0.2.37(@playwright/test@1.60.0)
+        specifier: ^0.2.38
+        version: 0.2.38(@playwright/test@1.60.0)
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
@@ -125,8 +125,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(vite@7.2.4(yaml@2.8.2))
       '@wolffm/prefs-client':
-        specifier: ^1.1.23
-        version: 1.1.23(react@19.2.8)(zod@4.6.7)
+        specifier: ^1.1.24
+        version: 1.1.24(react@19.2.8)(zod@4.6.7)
       '@wolffm/themes':
         specifier: workspace:*
         version: link:../themes
@@ -143,8 +143,8 @@ importers:
   themes:
     dependencies:
       '@wolffm/prefs-client':
-        specifier: ^1.1.23
-        version: 1.1.23(react@19.2.7)(zod@4.1.12)
+        specifier: ^1.1.24
+        version: 1.1.24(react@19.2.7)(zod@4.1.12)
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.7
@@ -955,8 +955,8 @@ packages:
     resolution: {integrity: sha512-Gn3opkqmke2K1i+MkErtqTtBDsOMFvcYIVOQwPnkA01hzdDhjC/ubqHyGhUgDVBNUmfHXotvPsuKryDZa65ESQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.13/c4a5c017c5c27094bcffeba7a94af2a96f4ea354}
     engines: {node: '>=18'}
 
-  '@wolffm/e2e-harness@0.2.37':
-    resolution: {integrity: sha512-8J74g7e+p/lReMSoNNU4UZcmG7RAP2aaoWyV8572fjHyCbGeO5gqtulmduE48sGv0ZwxgDdvhYsNcZK0CZSADA==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.37/a2d944d42067deada2a8d9cb8900a086a9388821}
+  '@wolffm/e2e-harness@0.2.38':
+    resolution: {integrity: sha512-qEhsIodcqeAiGAWckt1RyA7GG/7Ik7vzoFD5fT/LnUg46WXu9RwcXRbw4xBn76Hh38tieE081sbBQuNAPb/ptA==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.38/370643617990e35904a2d430ddac376e027d62b0}
     engines: {node: '>=18'}
     peerDependencies:
       '@playwright/test': '>=1.50.0'
@@ -965,15 +965,15 @@ packages:
     resolution: {integrity: sha512-Slc+zFMo1PODZ0+YuhmbdISNl/UPnB7//M+VMTN8ZbR1YMMDKnkFMR2I8gvt7invaYMno5N0iOW3iJkeCC5lUw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.3/b567775fac1a91f83fe006c9be7fa778fe76e073}
     engines: {node: '>=18'}
 
-  '@wolffm/prefs-client@1.1.23':
-    resolution: {integrity: sha512-Ag/MfhzYD+NLXNMmIl85EcmD/t3jlL4iyCUbS51Fov3NgvAFeL+dqVlrH5zOtEwNlg5bI8JpCr5f2u03uaQ6xQ==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.23/cd126e7d5ef9ba1538a8b6cd015aaa4add5dc860}
+  '@wolffm/prefs-client@1.1.24':
+    resolution: {integrity: sha512-l3u2dUK3aR3jXfOC8CSvmWKLOMjwKe7Q8xEM+pMV4u1Ugex/zmWKRz1U/OLT798yT7JhwYscwQq3zm7DeW3SKg==, tarball: https://npm.pkg.github.com/download/@wolffm/prefs-client/1.1.24/435cd0b198065c3fd37538c0986c0dc3ec47b28c}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       zod: ^4.0.0
 
-  '@wolffm/worker-utils@1.7.18':
-    resolution: {integrity: sha512-IrnPI5+QtCXrqQf69cD47xNXsu674AYewVv7Qnbo87TliZYqZZeOOZbWXHwfCy/+MJJTUzYVk1wTagH9FuPE0w==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.7.18/c453aa0127ed265849527cbe24bebb82f5f80e47}
+  '@wolffm/worker-utils@1.7.19':
+    resolution: {integrity: sha512-lOGSpKOskJeAKGNt3xep+mYUaMs+suQCoS07Y2KL/tfacgF8ieQp4G3XplADqK5GFEfXNOkXzIp2Ta4LCr7sbg==, tarball: https://npm.pkg.github.com/download/@wolffm/worker-utils/1.7.19/04e05597b9e1cb51edf18e1a81e49cce8eadcbbd}
     peerDependencies:
       hono: ^4.11.4
 
@@ -3161,23 +3161,23 @@ snapshots:
 
   '@wolffm/catalogue@1.0.13': {}
 
-  '@wolffm/e2e-harness@0.2.37(@playwright/test@1.60.0)':
+  '@wolffm/e2e-harness@0.2.38(@playwright/test@1.60.0)':
     dependencies:
       '@playwright/test': 1.60.0
 
   '@wolffm/logger@1.4.3': {}
 
-  '@wolffm/prefs-client@1.1.23(react@19.2.7)(zod@4.1.12)':
+  '@wolffm/prefs-client@1.1.24(react@19.2.7)(zod@4.1.12)':
     dependencies:
       react: 19.2.7
       zod: 4.1.12
 
-  '@wolffm/prefs-client@1.1.23(react@19.2.8)(zod@4.6.7)':
+  '@wolffm/prefs-client@1.1.24(react@19.2.8)(zod@4.6.7)':
     dependencies:
       react: 19.2.8
       zod: 4.6.7
 
-  '@wolffm/worker-utils@1.7.18(hono@4.12.23)(zod@4.1.12)':
+  '@wolffm/worker-utils@1.7.19(hono@4.12.23)(zod@4.1.12)':
     dependencies:
       '@hono/zod-openapi': 1.4.0(hono@4.12.23)(zod@4.1.12)
       '@wolffm/logger': 1.4.3
