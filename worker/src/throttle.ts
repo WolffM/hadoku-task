@@ -5,6 +5,7 @@
  * Tracks violations and enables blacklisting of abusive sessions.
  */
 
+import { tierAtLeast } from '@wolffm/worker-utils'
 import { throttleKey, incidentsKey, blacklistKey } from './kv-keys'
 
 export interface ThrottleConfig {
@@ -36,6 +37,33 @@ export interface ThrottleLimits {
  * missing config and hand back `undefined` limits.
  */
 export type ThrottledTier = 'public' | 'service'
+
+const THROTTLED_TIERS: ReadonlySet<string> = new Set<ThrottledTier>(['public', 'service'])
+
+function isThrottledTier(tier: string): tier is ThrottledTier {
+  return THROTTLED_TIERS.has(tier)
+}
+
+/**
+ * The ceiling a request is throttled under, or null for an exempt human.
+ *
+ * A policy, not an access gate, and not monotonic in rank: `service` outranks
+ * `friend` yet is throttled (a runaway bot is bounded at its own generous
+ * ceiling), while humans the operator knows are exempt. A member below friend
+ * is a human only once the operator has verified them (`X-Hadoku-Verified`,
+ * the same test storage-access.ts uses); an unverified member is a stranger
+ * with a passkey and gets the anonymous ceiling. Until 2026-11-10 the edge
+ * sent an unverified member here as `public`; it now sends every member as
+ * `member`, and this keeps them throttled.
+ */
+export function throttleTierOf(auth: {
+  userType: string
+  verified?: boolean
+}): ThrottledTier | null {
+  if (isThrottledTier(auth.userType)) return auth.userType
+  if (!tierAtLeast(auth, 'friend') && auth.verified !== true) return 'public'
+  return null
+}
 
 export interface IncidentRecord {
   timestamp: string

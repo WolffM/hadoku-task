@@ -26,9 +26,9 @@ import {
   checkThrottle,
   recordIncident,
   blacklistSession,
+  throttleTierOf,
   THROTTLE_THRESHOLDS,
-  type IncidentRecord,
-  type ThrottledTier
+  type IncidentRecord
 } from './throttle'
 import { DEFAULT_SESSION_ID } from './constants'
 import { storageRefusal } from './storage-access'
@@ -44,21 +44,6 @@ export { checkIntegrity, type OrphanReport } from './integrity'
 // NOTHING imported above may build a zod schema at module scope. Root is
 // evaluated on every cold isolate, before any request is routed; each route
 // group (and its schemas) loads on first use instead — see route-groups.ts.
-
-/**
- * Tiers subject to rate limiting. See the throttle middleware below for why
- * this is a set rather than a minimum tier — it is not monotonic in rank.
- */
-const THROTTLED_TIERS: ReadonlySet<string> = new Set<ThrottledTier>(['public', 'service'])
-
-/**
- * Type guard, so the throttle branch narrows `userType` to what `checkThrottle`
- * accepts. Called inline in the early-return condition below — assigning it to
- * a boolean first would not narrow.
- */
-function isThrottledTier(tier: string): tier is ThrottledTier {
-  return THROTTLED_TIERS.has(tier)
-}
 
 type AuthContext = AppContext['Variables']['authContext']
 
@@ -246,27 +231,20 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
 
     // Skip throttling for:
     // - Health check endpoint (monitoring)
-    // - Trusted HUMAN tiers (admin/friend) — no rate limiting
     // - Validate-key endpoint - needed for initial connection, users don't have session yet
-    // This significantly reduces KV operations and prevents unnecessary usage
-    //
-    // `service` (automated agents like TenHands) IS throttled, but at its own
-    // generous 600/min ceiling (throttle.ts) — high enough that normal operation
-    // can't approach it, so a runaway bot is still bounded without capping a human.
-    //
-    // THROTTLED_TIERS is deliberately a SET, not a rank check: it is a policy
-    // ("throttle anonymous and machine callers, exempt humans"), not an access
-    // gate. It is not monotonic in tier — `service` outranks `friend` yet is the
-    // throttled one — so tierAtLeast would be the wrong tool here.
+    // - Humans the operator knows: friend and up, and a verified member
+    // Which ceiling everyone else gets is throttleTierOf's (throttle.ts):
+    // anonymous callers and unverified members the public one, `service` its own.
     const skipThrottlePaths = ['/task/api/health', '/task/api/validate-key']
-    if (skipThrottlePaths.includes(c.req.path) || !isThrottledTier(userType)) {
+    const ceiling = throttleTierOf(auth)
+    if (skipThrottlePaths.includes(c.req.path) || ceiling === null) {
       return next()
     }
 
     // Check throttle (public + service tiers)
     // Wrap in try-catch to handle KV rate limit errors gracefully
     try {
-      const throttleResult = await checkThrottle(c.env.TASKS_KV, sessionId, userType)
+      const throttleResult = await checkThrottle(c.env.TASKS_KV, sessionId, ceiling)
 
       if (!throttleResult.allowed) {
         // Record violation incident (also wrapped to prevent cascading KV errors)
