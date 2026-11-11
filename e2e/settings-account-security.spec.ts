@@ -185,7 +185,7 @@ test.describe('settings authenticator and sign-in link', () => {
     await boot(page, 0, { userType: 'member' })
     const posts = edge(page)
     await openAccount(page, 'member')
-    await expect(auth(page).getByRole('button', { name: 'Make link' })).toHaveCount(0)
+    await expect(auth(page).getByRole('button', { name: 'Create Code' })).toHaveCount(0)
 
     await setUp(page)
     expect(posts.slice(0, 2)).toEqual([
@@ -196,7 +196,7 @@ test.describe('settings authenticator and sign-in link', () => {
     expect(await taps(page)).toEqual(['/session/authenticator/challenge'])
 
     await auth(page).getByLabel('Authenticator code').fill('654321')
-    await auth(page).getByRole('button', { name: 'Make link' }).click()
+    await auth(page).getByRole('button', { name: 'Create Code' }).click()
     await expect(auth(page).getByText('https://hadoku.me/auth?key=K7QM-3XRA-9P2D')).toBeVisible()
     await expect(auth(page).getByRole('img', { name: 'Sign-in link QR code' })).toBeVisible()
     await expect(auth(page).getByText('15 min, works once')).toBeVisible()
@@ -215,7 +215,7 @@ test.describe('settings authenticator and sign-in link', () => {
     await setUp(page)
     const make = async () => {
       await auth(page).getByLabel('Authenticator code').fill('000000')
-      await auth(page).getByRole('button', { name: 'Make link' }).click()
+      await auth(page).getByRole('button', { name: 'Create Code' }).click()
     }
     await make()
     await expect(auth(page).getByRole('alert')).toHaveText('That code is not right')
