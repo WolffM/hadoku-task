@@ -15,8 +15,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0(hono@4.12.23)(zod@4.1.12)
       '@wolffm/logger':
-        specifier: ^1.4.3
-        version: 1.4.3
+        specifier: ^1.4.4
+        version: 1.4.4
       '@wolffm/prefs-client':
         specifier: ^1.1.25
         version: 1.1.25(react@19.2.7)(zod@4.1.12)
@@ -961,8 +961,8 @@ packages:
     peerDependencies:
       '@playwright/test': '>=1.50.0'
 
-  '@wolffm/logger@1.4.3':
-    resolution: {integrity: sha512-Slc+zFMo1PODZ0+YuhmbdISNl/UPnB7//M+VMTN8ZbR1YMMDKnkFMR2I8gvt7invaYMno5N0iOW3iJkeCC5lUw==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.3/b567775fac1a91f83fe006c9be7fa778fe76e073}
+  '@wolffm/logger@1.4.4':
+    resolution: {integrity: sha512-mHtb1uTXY9U/xTvO3wh6ofy0MnZOxLVkWld0EP4hWZqxbl/crQQ/Bj5Z2PzI/Yjo9Dc+/u3x+J4YH6uJrQyrDQ==, tarball: https://npm.pkg.github.com/download/@wolffm/logger/1.4.4/6fe2bd34648eec3e0b9a817fc56cd907687363a8}
     engines: {node: '>=18'}
 
   '@wolffm/prefs-client@1.1.25':
@@ -3165,7 +3165,7 @@ snapshots:
     dependencies:
       '@playwright/test': 1.60.0
 
-  '@wolffm/logger@1.4.3': {}
+  '@wolffm/logger@1.4.4': {}
 
   '@wolffm/prefs-client@1.1.25(react@19.2.7)(zod@4.1.12)':
     dependencies:
@@ -3180,7 +3180,7 @@ snapshots:
   '@wolffm/worker-utils@1.7.19(hono@4.12.23)(zod@4.1.12)':
     dependencies:
       '@hono/zod-openapi': 1.4.0(hono@4.12.23)(zod@4.1.12)
-      '@wolffm/logger': 1.4.3
+      '@wolffm/logger': 1.4.4
       hono: 4.12.23
     transitivePeerDependencies:
       - zod
