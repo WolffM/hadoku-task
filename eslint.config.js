@@ -233,6 +233,34 @@ export default [
     }
   },
 
+  // The pre-paint theme script @wolffm/themes publishes. It is a classic script
+  // (no module scope: it runs inline in <head>), written in hadoku_site's style,
+  // which every consumer inlines byte for byte — so it is ES5 on purpose and
+  // .prettierignore leaves its formatting alone. `var` stays; a `catch (e)` it
+  // never reads is how it swallows blocked storage, each with a comment saying so.
+  {
+    files: ['themes/src/theme-bootstrap.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { crypto: 'readonly' }
+    },
+    rules: {
+      'no-var': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none' }]
+    }
+  },
+
+  // themes/test — node:test suites run by `pnpm --filter @wolffm/themes test`.
+  {
+    files: ['themes/test/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        setTimeout: 'readonly'
+      }
+    }
+  },
+
   // The app tree may not reach into worker/.
   //
   // `tsconfig.json` includes only `src`, but an import is not bounded by

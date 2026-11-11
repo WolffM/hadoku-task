@@ -1,6 +1,6 @@
 {
   "name": "@wolffm/themes",
-  "version": "5.13.17",
+  "version": "5.14.0",
   "description": "16 themes with a symmetric, WCAG-verified token set and a complete Tailwind v4 color mapping - Light, Dark, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya",
   "type": "module",
   "repository": {
@@ -19,6 +19,7 @@
     "src/tailwind-colors.css",
     "src/icons.css",
     "src/icons",
+    "src/theme-bootstrap.js",
     "scripts",
     "README.md",
     "THEME_USAGE_GUIDE.md",
@@ -30,6 +31,7 @@
     "./tailwind-integration.css": "./src/tailwind-integration.css",
     "./tailwind-colors.css": "./src/tailwind-colors.css",
     "./icons.css": "./src/icons.css",
+    "./theme-bootstrap.js": "./src/theme-bootstrap.js",
     "./THEME_USAGE_GUIDE.md": "./THEME_USAGE_GUIDE.md",
     "./check-usage": "./scripts/check-usage.mjs",
     "./contract": {
@@ -56,11 +58,16 @@
       "types": "./dist/platform/usePlatform.d.ts",
       "default": "./dist/platform/usePlatform.js"
     },
+    "./theme-bootstrap": {
+      "types": "./dist/theme-bootstrap.d.ts",
+      "default": "./dist/theme-bootstrap.js"
+    },
     "./check-icons": "./scripts/check-icons.mjs"
   },
   "scripts": {
-    "build": "tsc && node ../scripts/fix-imports.cjs dist",
+    "build": "tsc && node ../scripts/fix-imports.cjs dist && node scripts/build-theme-bootstrap.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "node --test 'test/*.test.mjs'",
     "prepublishOnly": "pnpm run build",
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
@@ -70,7 +77,7 @@
     "generate:tailwind": "node scripts/generate-tailwind-colors.mjs",
     "generate:preview": "node scripts/generate-preview.mjs",
     "normalize:tokens": "node scripts/normalize-tokens.mjs",
-    "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:icons && pnpm run check:usage",
+    "validate": "pnpm run check:contrast && pnpm run check:tailwind && pnpm run check:docs && pnpm run check:icons && pnpm run check:usage && pnpm run test",
     "generate:icons": "node scripts/generate-icons.mjs",
     "check:icons": "node scripts/generate-icons.mjs --check && node scripts/check-icons.mjs .."
   },

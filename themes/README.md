@@ -60,6 +60,39 @@ console.log(THEMES) // ['light', 'dark', 'coffee-light', ...]
 </html>
 ```
 
+### Paint in the visitor's theme before the first frame
+
+A page that sets `data-theme` from a bundle paints once untinted and then
+swaps. `@wolffm/themes` publishes the one pre-paint script every hadoku page
+inlines at the top of `<head>`: it reads the stored choice (or deals a sticky
+random dark theme to someone who never picked one), sets `data-theme` before
+anything paints, and publishes the decision as `window.__hadokuTheme`. The
+header of `src/theme-bootstrap.js` documents what it resolves and exposes.
+
+It must be **inline** text. A `<script src>`, a module, or a bundled script all
+run after first paint, which defeats the point. Take it one of two ways:
+
+```js
+// As a string, for a build tool. Astro:
+import { THEME_BOOTSTRAP } from '@wolffm/themes/theme-bootstrap'
+// <script is:inline set:html={THEME_BOOTSTRAP} />
+```
+
+```js
+// As the file's text, for a sync script that writes it between markers:
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+const path = createRequire(import.meta.url).resolve('@wolffm/themes/theme-bootstrap.js')
+const source = readFileSync(path, 'utf8')
+```
+
+The text holds no closing script tag and no `<!--`, so it can go inside a
+`<script>` element unescaped (`test/theme-bootstrap.test.mjs` enforces it). It
+calls `/session/whoami` and `/prefs/api/v1/portfolio` by relative URL, so its
+cross-device half (`remember()`, `adopt()`) only works on hadoku.me's origin.
+**Never copy it into a repo**: import it, so a new theme reaches every page
+with a version bump.
+
 ## CSS Variables
 
 Each theme defines 47 variables (41 color + 6 shadow). Color variables use the

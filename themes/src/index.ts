@@ -32,7 +32,8 @@ export type Theme = (typeof THEMES)[number]
  * matches no CSS and the page renders untinted. The bare family token is here
  * too, because some surfaces store only the family.
  *
- * hadoku_site's spec/theme-bootstrap.js keeps a copy for the pre-paint script.
+ * src/theme-bootstrap.js keeps a copy for the pre-paint script, which runs
+ * before any module can load; test/theme-bootstrap.test.mjs keeps the two equal.
  */
 export const RETIRED_THEMES: Readonly<Record<string, string>> = {
   strawberry: 'pink',
