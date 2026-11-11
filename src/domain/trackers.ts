@@ -3,6 +3,8 @@
  * instead of tasks, and every change is a logged entry. The server is the only
  * store (worker/src/routes/trackers.ts); there is no localStorage mirror.
  */
+import { tierAtLeast } from '@wolffm/worker-utils/auth'
+
 export const TRACKER_MODE = 'tracker'
 
 export type TrackerKind = 'counter' | 'value'
@@ -38,9 +40,13 @@ export interface TrackerBoardData {
   entries: TrackerEntry[]
 }
 
-/** Tracker boards are a wife-tier-and-up feature; the worker enforces the same line. */
+/**
+ * Tracker boards are a wife-tier-and-up feature. This is the worker's own
+ * predicate (`tierAtLeast(auth, 'wife')` in worker/src/routes/trackers.ts), so
+ * the two read one ladder and a tier added above wife is not silently shut out.
+ */
 export function canUseTrackers(userType: string | undefined): boolean {
-  return userType === 'wife' || userType === 'admin'
+  return tierAtLeast({ userType }, 'wife')
 }
 
 export function isTrackerBoard(board: { mode?: string | null } | null | undefined): boolean {
