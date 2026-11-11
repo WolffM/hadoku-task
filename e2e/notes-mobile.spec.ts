@@ -67,15 +67,23 @@ async function createAutomationBoard(request: APIRequestContext, id: string) {
     lanes: preset.lanes
   }
 
-  const preview = await (
-    await request.post(`${API}/boards/${id}/activate-automation`, {
-      data: { ...input, dryRun: true }
+  // The file runs fullyParallel and every test seeds the same board for the same
+  // user, so two workers can both find it missing and both take a digest; the
+  // one that applies second gets 409 DIGEST_MISMATCH. Re-applying the same
+  // lanes to an automated board is allowed, so a fresh digest settles it.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const preview = await (
+      await request.post(`${API}/boards/${id}/activate-automation`, {
+        data: { ...input, dryRun: true }
+      })
+    ).json()
+    const applied = await request.post(`${API}/boards/${id}/activate-automation`, {
+      data: { ...input, digest: preview.preview.digest }
     })
-  ).json()
-  const applied = await request.post(`${API}/boards/${id}/activate-automation`, {
-    data: { ...input, digest: preview.preview.digest }
-  })
-  expect(applied.ok()).toBe(true)
+    if (applied.ok()) return
+    expect(applied.status(), await applied.text()).toBe(409)
+  }
+  throw new Error(`activate-automation on ${id} kept losing the digest race`)
 }
 
 async function boxOf(locator: ReturnType<Page['locator']>) {
