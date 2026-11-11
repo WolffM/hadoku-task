@@ -157,7 +157,7 @@ You have two approaches for deriving the 22 alt colors (+ 6 shadows):
 - Pick complementary colors from the input palette
 - Add subtle hue shifts to create mood
 - Use palette harmony (analogous, triadic, etc.)
-- Example: Strawberry theme has pink hue shifts in backgrounds
+- Example: Pink theme has pink hue shifts in backgrounds
 
 ---
 

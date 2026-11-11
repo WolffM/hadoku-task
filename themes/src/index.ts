@@ -1,7 +1,7 @@
 /**
  * Hadoku Theme System - Utilities
  * Framework-agnostic theme management for Hadoku themes
- * 18 beautiful themes across 9 theme families with light/dark variants
+ * 16 themes across 8 theme families with light/dark variants
  * Now with React integration support!
  */
 
@@ -14,8 +14,6 @@ export const THEMES = [
   'nature-dark',
   'lavender-light',
   'lavender-dark',
-  'strawberry-light',
-  'strawberry-dark',
   'ocean-light',
   'ocean-dark',
   'cyberpunk-light',
@@ -27,6 +25,25 @@ export const THEMES = [
 ] as const
 
 export type Theme = (typeof THEMES)[number]
+
+/**
+ * Themes that no longer ship, each mapped to the one that replaced it. A device
+ * can still hold a retired name in storage or in its prefs row; applied as-is it
+ * matches no CSS and the page renders untinted. The bare family token is here
+ * too, because some surfaces store only the family.
+ *
+ * hadoku_site's spec/theme-bootstrap.js keeps a copy for the pre-paint script.
+ */
+export const RETIRED_THEMES: Readonly<Record<string, string>> = {
+  strawberry: 'pink',
+  'strawberry-light': 'pink-light',
+  'strawberry-dark': 'pink-dark'
+}
+
+/** A stored theme name, with a retired one swapped for its replacement. */
+export function replaceRetiredTheme(name: string): string {
+  return RETIRED_THEMES[name] ?? name
+}
 
 // Single definition, in theme-types alongside ThemeFamily — it used to be
 // declared both here and in task-ui-components' types.
@@ -97,7 +114,8 @@ export function loadTheme(): Theme {
   // sessionStorage first — within a tab it is the freshest value (the FOUC
   // script and same-tab writes both go there). localStorage is the fallback
   // that carries a theme across a browser restart.
-  const saved = (readStored('sessionStorage') ?? readStored('localStorage')) as Theme
+  const stored = readStored('sessionStorage') ?? readStored('localStorage')
+  const saved = (stored ? replaceRetiredTheme(stored) : null) as Theme | null
   if (saved && THEMES.includes(saved)) {
     setTheme(saved)
     return saved
@@ -168,7 +186,6 @@ export type { HadokuThemeValue, HadokuThemeProviderProps } from './themeContext'
 export {
   SunIcon,
   MoonIcon,
-  StrawberryIcon,
   WaveIcon,
   ZapIcon,
   CoffeeIcon,

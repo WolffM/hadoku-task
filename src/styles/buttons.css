@@ -193,7 +193,7 @@
 
 /* Active reads as the full-strength text colour against the resting
  * secondary, rather than the accent — `primary` as a bare glyph misses the
- * 3:1 non-text floor in 6 of 18 themes. */
+ * 3:1 non-text floor in 5 of 16 themes. */
 .task-app__sort-btn--active {
   color: var(--color-text);
 }

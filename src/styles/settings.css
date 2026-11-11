@@ -115,7 +115,7 @@
 }
 
 /* The accent moves to the rule on the left; the message itself stays legible
- * text. `danger` as bare text misses AA on a card in 11 of 18 themes. */
+ * text. `danger` as bare text misses AA on a card in 8 of 16 themes. */
 .settings-error {
   color: var(--color-text);
   font-size: var(--hdk-text-sm);

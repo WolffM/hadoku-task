@@ -86,7 +86,7 @@ Toast notification system with success, error, and info variants.
 ### Native-control replacements
 
 Themed stand-ins for the browser's default chrome. Each ships its own stylesheet; import them
-**unlayered**, next to `@wolffm/themes/style.css`. Live samples across all 18 themes:
+**unlayered**, next to `@wolffm/themes/style.css`. Live samples across every theme:
 `pnpm run gallery:controls`.
 
 ```tsx
@@ -376,7 +376,6 @@ Available themed icons for specific aesthetics:
 
 - `SunIcon` - Sun/light mode icon
 - `MoonIcon` - Moon/dark mode icon
-- `StrawberryIcon` - Strawberry fruit icon
 - `WaveIcon` - Ocean wave icon
 - `ZapIcon` - Lightning bolt icon (cyberpunk)
 - `CoffeeIcon` - Coffee cup icon
@@ -501,7 +500,7 @@ logger.component('mount', 'ThemePicker', { props })
 logger.component('update', 'TaskList', { taskCount: 42 })
 
 // Theme changes
-logger.theme('strawberry-dark', { source: 'user-preference' })
+logger.theme('pink-dark', { source: 'user-preference' })
 logger.theme('ocean-light', { source: 'system' })
 ```
 

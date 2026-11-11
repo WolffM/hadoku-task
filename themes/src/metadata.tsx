@@ -8,7 +8,6 @@ import type { ThemeFamily } from './theme-types'
 import {
   SunIcon,
   MoonIcon,
-  StrawberryIcon,
   WaveIcon,
   ZapIcon,
   CoffeeIcon,
@@ -19,7 +18,7 @@ import {
 } from './ThemeIcons'
 
 /**
- * Theme families configuration for all 9 theme pairs
+ * Theme families configuration for all 8 theme pairs
  * Each family has a light and dark variant with corresponding icons
  */
 export const THEME_FAMILIES: ThemeFamily[] = [
@@ -30,14 +29,6 @@ export const THEME_FAMILIES: ThemeFamily[] = [
     darkLabel: 'Night',
     lightIcon: <SunIcon />,
     darkIcon: <MoonIcon />
-  },
-  {
-    lightTheme: 'strawberry-light',
-    darkTheme: 'strawberry-dark',
-    lightLabel: 'Vine Light',
-    darkLabel: 'Vine Dark',
-    lightIcon: <StrawberryIcon />,
-    darkIcon: <StrawberryIcon />
   },
   {
     lightTheme: 'ocean-light',
@@ -104,8 +95,6 @@ export const THEME_FAMILIES: ThemeFamily[] = [
 export const THEME_ICON_MAP = {
   light: SunIcon,
   dark: MoonIcon,
-  'strawberry-light': StrawberryIcon,
-  'strawberry-dark': StrawberryIcon,
   'ocean-light': WaveIcon,
   'ocean-dark': WaveIcon,
   'cyberpunk-light': ZapIcon,

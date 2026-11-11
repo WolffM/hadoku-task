@@ -15,8 +15,6 @@
 export const THEMES = [
   'light',
   'dark',
-  'strawberry-light',
-  'strawberry-dark',
   'ocean-light',
   'ocean-dark',
   'cyberpunk-light',

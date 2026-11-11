@@ -35,7 +35,7 @@ export type IconFamily = (typeof ICON_FAMILIES)[number]
  * - `tint`   — glyph in a `--color-<f>-bg` tile with `--color-on-<f>-bg` ink.
  * - `filled` — glyph in a `--color-<f>` tile with `--color-on-<f>` ink.
  *
- * `tint` and `filled` clear 3:1 in all 18 themes for all five families.
+ * `tint` and `filled` clear 3:1 in every theme for all five families.
  */
 export type IconVariant = 'bare' | 'accent' | 'tint' | 'filled'
 

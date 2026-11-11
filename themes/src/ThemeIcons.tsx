@@ -51,27 +51,6 @@ export const MoonIcon = () => (
   </svg>
 )
 
-export const StrawberryIcon = () => (
-  <svg {...iconProps}>
-    {/* Heart-shaped body with sharp bottom tip */}
-    <path
-      d="M12 21 C12 21 6.5 15 6.5 11 C6.5 8.5 8 7 10 7 C11 7 12 7.5 12 7.5 C12 7.5 13 7 14 7 C16 7 17.5 8.5 17.5 11 C17.5 15 12 21 12 21 Z"
-      fill="currentColor"
-    />
-    {/* Leaves on top */}
-    <path d="M9.5 7.5 L9 5 L11 5.5 Z" fill="currentColor" />
-    <path d="M14.5 7.5 L15 5 L13 5.5 Z" fill="currentColor" />
-    <path d="M12 7.5 L12 4 L12 5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-    {/* Seed slits */}
-    <line x1="10" y1="10" x2="10" y2="11" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-    <line x1="14" y1="10" x2="14" y2="11" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-    <line x1="9" y1="13" x2="9" y2="14" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-    <line x1="15" y1="13" x2="15" y2="14" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-    <line x1="11" y1="16" x2="11" y2="17" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-    <line x1="13" y1="16" x2="13" y2="17" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-  </svg>
-)
-
 export const WaveIcon = () => (
   <svg {...iconProps}>
     <path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />

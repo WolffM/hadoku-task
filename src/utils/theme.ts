@@ -8,7 +8,7 @@
  * expanded to a variant using the system color-scheme preference.
  */
 
-import { THEME_FAMILIES } from '@wolffm/themes'
+import { THEME_FAMILIES, replaceRetiredTheme } from '@wolffm/themes'
 import type { ThemeName } from '../app/types'
 
 /** sessionStorage key shared with the hadoku.me host page + FOUC head script. */
@@ -36,8 +36,9 @@ function normalizeThemeName(
   value: string | null | undefined,
   prefersDark: boolean
 ): ThemeName | null {
-  const raw = value?.trim()
-  if (!raw) return null
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  const raw = replaceRetiredTheme(trimmed)
   if (VALID_THEMES.has(raw)) return raw as ThemeName
   const variants = FAMILY_VARIANTS.get(raw)
   if (variants) return (prefersDark ? variants.dark : variants.light) as ThemeName

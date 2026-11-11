@@ -24,7 +24,7 @@ console.log(`Themes: ${THEMES.length}   Distinct --color-* tokens: ${names.lengt
 
 console.log(`## Per-theme drift (token defined in some themes but not others)`)
 if (!missing.length) {
-  console.log('None — every token is defined in all 18 themes.\n')
+  console.log('None — every token is defined in every theme.\n')
 } else {
   for (const { name, absent } of missing) {
     console.log(`- ${name} — missing in ${absent.length}: ${absent.join(', ')}`)
@@ -42,7 +42,7 @@ for (const name of names) {
 }
 const sortedSuffixes = [...suffixes].sort()
 
-console.log(`## Family symmetry (✓ = defined in all 18 themes)`)
+console.log(`## Family symmetry (✓ = defined in every theme)`)
 console.log(`| family | ${sortedSuffixes.map(s => `\`${s || 'base'}\``).join(' | ')} | on-<f> |`)
 console.log(`|---|${sortedSuffixes.map(() => ':-:').join('|')}|:-:|`)
 for (const f of FAMILIES) {

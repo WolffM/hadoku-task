@@ -15,8 +15,6 @@ export type ThemeName =
   | 'nature-dark'
   | 'lavender-light'
   | 'lavender-dark'
-  | 'strawberry-light'
-  | 'strawberry-dark'
   | 'ocean-light'
   | 'ocean-dark'
   | 'cyberpunk-light'

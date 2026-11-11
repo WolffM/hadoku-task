@@ -14,14 +14,14 @@ import {
  * Runtime verification of the icon module, in a real browser.
  *
  * Building and typechecking prove nothing about whether a glyph actually PAINTS or
- * whether its colour survives 18 themes, so everything here is measured off live
+ * whether its colour survives every theme, so everything here is measured off live
  * layout and computed style:
  *
  *   1. every icon in the registry draws real geometry (non-zero painted bbox)
  *   2. a bare icon inherits currentColor, so it is exactly as legible as its text
- *   3. tint and filled tiles resolve to the intended token pair in all 18 themes
- *   4. the tile treatments clear WCAG 1.4.11's 3:1 non-text minimum in all 18
- *      themes for all 5 families — computed from what the browser actually painted,
+ *   3. tint and filled tiles resolve to the intended token pair in every theme
+ *   4. the tile treatments clear WCAG 1.4.11's 3:1 non-text minimum in every
+ *      theme for all 5 families — computed from what the browser actually painted,
  *      not from parsing the stylesheet
  */
 
@@ -200,7 +200,7 @@ test.describe('consumer-controlled colouring', () => {
   })
 })
 
-test.describe('accent tiles across all 18 themes', () => {
+test.describe('accent tiles across every theme', () => {
   const variants = ['tint', 'filled'] as const
 
   test('tile treatments clear 3:1 non-text contrast in every theme and family', async ({

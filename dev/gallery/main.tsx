@@ -123,10 +123,10 @@ function Gallery() {
           <section className="gallery__card">
             <h2 className="gallery__h2">Why the accent lives on the tile</h2>
             <p className="gallery__note">
-              Switch through all 18 themes with the picker above. The bare accent glyph on the left
-              is the treatment the plan originally called for — it misses WCAG 1.4.11&rsquo;s 3:1
+              Switch through every theme with the picker above. The bare accent glyph on the left is
+              the treatment the plan originally called for — it misses WCAG 1.4.11&rsquo;s 3:1
               non-text minimum in 8 of 36 theme/surface combinations (light 2.15, ocean-light 1.92,
-              pink-light 1.67). The two tiles on the right pass 3:1 in all 18 themes, for all five
+              pink-light 1.67). The two tiles on the right pass 3:1 in every theme, for all five
               families.
             </p>
             <div className="gallery__compare">
@@ -145,12 +145,12 @@ function Gallery() {
               <div className="gallery__compare-cell">
                 <Icon name="warning" size={40} variant="tint" family={family} />
                 <code>tint tile</code>
-                <span className="gallery__verdict gallery__verdict--ok">18/18 pass</span>
+                <span className="gallery__verdict gallery__verdict--ok">every theme passes</span>
               </div>
               <div className="gallery__compare-cell">
                 <Icon name="warning" size={40} variant="filled" family={family} />
                 <code>filled tile</code>
-                <span className="gallery__verdict gallery__verdict--ok">18/18 pass</span>
+                <span className="gallery__verdict gallery__verdict--ok">every theme passes</span>
               </div>
             </div>
           </section>

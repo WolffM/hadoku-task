@@ -33,7 +33,7 @@
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import type { Scope } from '@wolffm/prefs-client'
 import { usePrefs } from '@wolffm/prefs-client/react'
-import { setTheme as applyTheme, saveTheme, setThemeMode } from './index'
+import { setTheme as applyTheme, saveTheme, setThemeMode, replaceRetiredTheme } from './index'
 import type { Theme } from './index'
 import { THEME_FAMILIES } from './metadata'
 import { themePrefs } from './themePrefs'
@@ -77,8 +77,9 @@ function prefersDark(): boolean {
  * value that just happens to be in storage.
  */
 function normalizeThemeName(value: string | null | undefined): string | null {
-  const raw = value?.trim()
-  if (!raw) return null
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  const raw = replaceRetiredTheme(trimmed)
   if (THEME_FAMILIES.some(f => f.lightTheme === raw || f.darkTheme === raw)) return raw
   const variants = FAMILY_VARIANTS.get(raw)
   if (variants) return prefersDark() ? variants.dark : variants.light

@@ -9,7 +9,7 @@ contracts, see [`docs/THEME_SYSTEM_RULES.md`](../docs/THEME_SYSTEM_RULES.md).
 **A token names a semantic role, not a hue. Light/dark is automatic — never
 branch on theme mode.**
 
-There are 18 themes. `--color-success` is sky blue in one and gold in another.
+There are 16 themes. `--color-success` is sky blue in one and gold in another.
 Pick the token that matches what the element _means_; the theme decides the color.
 
 ---
@@ -59,12 +59,12 @@ text-<f>  with no background   →  lands on bg / bg-card   ← unvalidated, usu
 ```
 
 Measured against `--color-bg`: `--color-primary` clears the 3:1 large-text floor
-in only 12 of 18 themes (izakaya-light 1.92, nature-light 2.15, ocean-light 2.28,
-lavender-light 2.53, pink-light 2.56, strawberry-light 2.61). `--color-danger`
-misses AA on a card in 11 of 18. This shipped in `.app-header__title` and reached
+in only 11 of 16 themes (izakaya-light 1.92, nature-light 2.15, ocean-light 2.28,
+lavender-light 2.53, pink-light 2.56). `--color-danger`
+misses AA on a card in 8 of 16. This shipped in `.app-header__title` and reached
 every consuming app at once.
 
-Text on a surface is `text-text` (8.87–17.58 across all 18) or
+Text on a surface is `text-text` (8.12–17.58 across all 16) or
 `text-text-secondary`. To carry an accent, either pair `bg-<f>-bg` with
 `text-on-<f>-bg`, or move the accent off the glyph entirely — a border, rule, or
 underline is unconstrained by text contrast. `check-usage` gates this, in CSS
@@ -74,7 +74,7 @@ and as Tailwind classes in markup (`text-danger` with no `bg-danger` fill).
 
 ## Complete token list
 
-Every token below is defined in **all 18 themes**. Nothing else exists — if a
+Every token below is defined in **every theme**. Nothing else exists — if a
 name isn't here, it isn't a token.
 
 ### Semantic families
@@ -94,8 +94,8 @@ tokens, so the symmetric guess is always the right one.
 
 | role            | token                    | AA-safe for text?     |
 | --------------- | ------------------------ | --------------------- |
-| body text       | `--color-text`           | ✅ all 18 themes      |
-| secondary text  | `--color-text-secondary` | ✅ all 18 themes      |
+| body text       | `--color-text`           | ✅ every theme        |
+| secondary text  | `--color-text-secondary` | ✅ every theme        |
 | tertiary text   | `--color-text-tertiary`  | ⚠️ fails in 5 themes  |
 | muted text      | `--color-text-muted`     | ⚠️ fails in 14 themes |
 | border          | `--color-border`         | —                     |
@@ -107,8 +107,8 @@ tokens, so the symmetric guess is always the right one.
 | modal scrim     | `--color-bg-overlay`     | —                     |
 
 > **`-tertiary` and `-muted` are decorative-only.** Measured against
-> `bg`/`bg-card`/`bg-alt` in all 18 themes, `-tertiary` drops below 4.5:1 in 5
-> and `-muted` in 14. Use them for de-emphasised ornament (placeholder glyphs,
+> `bg`/`bg-card`/`bg-alt` in all 16 themes, `-tertiary` drops below 4.5:1 in 8
+> and `-muted` in 12. Use them for de-emphasised ornament (placeholder glyphs,
 > disabled states — WCAG exempts inactive controls). **Any text a user must
 > read gets `--color-text` or `--color-text-secondary`**, both of which clear
 > AA on every surface in every theme. `check-contrast.mjs` gates those two and
@@ -182,7 +182,7 @@ A bare icon inherits `currentColor`, so it is exactly as legible as the text bes
 and carries no contrast obligation of its own. **That is the default, and usually the
 right answer.**
 
-Do **not** paint the glyph with an accent token. Measured across all 18 themes on both
+Do **not** paint the glyph with an accent token. Measured across every theme on both
 `--color-bg-card` and `--color-bg`, a bare `--color-warning` glyph misses the WCAG
 1.4.11 non-text minimum of 3:1 in 8 of 36 combinations (light 2.15, ocean-light 1.92,
 pink-light 1.67); every other family fails somewhere too, and `--color-<f>-dark` does
@@ -190,15 +190,15 @@ not rescue it. This is the same accent-as-text anti-pattern listed above, and
 `check:contrast` does **not** cover it — it validates `on-<f>` over `<f>`, never an
 accent over a surface.
 
-When you want the accent, put it on the tile. Both treatments pass 3:1 in 18/18 themes
+When you want the accent, put it on the tile. Both treatments pass 3:1 in every theme
 for all five families, because they reuse pairings the system already guarantees:
 
 | Variant  | Background       | Glyph               | Contrast                      |
 | -------- | ---------------- | ------------------- | ----------------------------- |
 | `bare`   | — (inherits)     | `currentColor`      | matches its text, always safe |
 | `accent` | — (inherits)     | `--color-<f>`       | **yours to own** — see below  |
-| `tint`   | `--color-<f>-bg` | `--color-on-<f>-bg` | 3:1 in 18/18 themes           |
-| `filled` | `--color-<f>`    | `--color-on-<f>`    | 3:1 in 18/18 themes           |
+| `tint`   | `--color-<f>-bg` | `--color-on-<f>-bg` | 3:1 in every theme            |
+| `filled` | `--color-<f>`    | `--color-on-<f>`    | 3:1 in every theme            |
 
 **How you colour an icon is your call; where the colour comes from is not.** Every
 variant resolves through family tokens, and no raw colour can travel through this
@@ -250,7 +250,7 @@ getIconSvg('plus') // inherits
 
 `pnpm run gallery` (in hadoku-task) serves a live page at
 `http://localhost:5200/dev/gallery/index.html`: every icon, the real
-`<HadokuThemePicker>` to sweep all 18 themes, variant/family/size controls, the
+`<HadokuThemePicker>` to sweep every theme, variant/family/size controls, the
 React-vs-string comparison, and the icons sitting in real app chrome. It is the
 fastest way to check a new icon before committing it.
 

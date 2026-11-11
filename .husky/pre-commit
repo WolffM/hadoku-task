@@ -104,7 +104,7 @@ echo "✅ Linting and formatting complete!"
 # CSS + theme-token gate. Always runs over the full file set, not just staged
 # files, because var refs depend on defs in other (possibly unstaged) files.
 #   stylelint          — unknown custom properties in .css
-#   check-contrast     — token symmetry + every WCAG pair in all 18 themes
+#   check-contrast     — token symmetry + every WCAG pair in every theme
 #   check-tailwind     — tailwind-colors.css still matches style.css
 #   check-docs         — THEME_USAGE_GUIDE.md still lists exactly the real tokens
 #   check-usage        — unknown tokens, unmapped Tailwind classes in .tsx,

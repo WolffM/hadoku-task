@@ -16,6 +16,8 @@ import { mockShellApi } from './helpers/mock-api'
  * 3. A StorageEvent push-down after load is adopted (with the same
  *    normalization)
  * 4. Only an explicit in-app theme change writes sessionStorage['hadoku-theme']
+ * 5. A retired theme still held in storage lands on its replacement instead of
+ *    a data-theme no CSS matches (RETIRED_THEMES in @wolffm/themes)
  */
 
 const THEME_KEY = 'hadoku-theme'
@@ -80,15 +82,37 @@ test.describe('Theme inheritance from host page', () => {
     await loadApp(page)
 
     await page.evaluate(key => {
-      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'strawberry-dark' }))
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'cyberpunk-dark' }))
     }, THEME_KEY)
-    await expect.poll(() => getAppliedTheme(page)).toBe('strawberry-dark')
+    await expect.poll(() => getAppliedTheme(page)).toBe('cyberpunk-dark')
 
     // Push-down also normalizes bare family tokens (light scheme by default).
     await page.evaluate(key => {
       window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'lavender' }))
     }, THEME_KEY)
     await expect.poll(() => getAppliedTheme(page)).toBe('lavender-light')
+  })
+
+  test('a retired theme lands on its replacement, on load and pushed down', async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme: 'dark' })
+    const page = await context.newPage()
+    await mockShellApi(page)
+    await seedHostTheme(page, 'strawberry-dark')
+    await loadApp(page)
+    await expect.poll(() => getAppliedTheme(page)).toBe('pink-dark')
+
+    await page.evaluate(key => {
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'strawberry-light' }))
+    }, THEME_KEY)
+    await expect.poll(() => getAppliedTheme(page)).toBe('pink-light')
+
+    // The bare family token too, expanded per the (dark) color scheme.
+    await page.evaluate(key => {
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'strawberry' }))
+    }, THEME_KEY)
+    await expect.poll(() => getAppliedTheme(page)).toBe('pink-dark')
+
+    await context.close()
   })
 
   test('explicit in-app theme change writes the shared sessionStorage key', async ({ page }) => {

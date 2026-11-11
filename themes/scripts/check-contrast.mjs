@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Gate: the token set must be structurally symmetric and every WCAG pair in
- * docs/THEME_SYSTEM_RULES.md must hold, in all 18 themes — plus the OKLCH
+ * docs/THEME_SYSTEM_RULES.md must hold, in every theme — plus the OKLCH
  * floors WCAG has no word for: surface separation and status-family hue.
  *
  * audit-tokens.mjs reports; this one fails the build. The rules themselves live

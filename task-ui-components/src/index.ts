@@ -86,7 +86,6 @@ export {
 export {
   SunIcon,
   MoonIcon,
-  StrawberryIcon,
   WaveIcon,
   ZapIcon,
   CoffeeIcon,

@@ -463,7 +463,7 @@ src/styles/
 
 ### Theme System
 
-**9 theme families (18 themes with light/dark), 41 tokens each — the set is symmetric and gated by `pnpm run lint:css`:**
+**8 theme families (16 themes with light/dark), 41 tokens each — the set is symmetric and gated by `pnpm run lint:css`:**
 
 ```css
 :root {
@@ -472,10 +472,10 @@ src/styles/
 [data-theme='dark'] {
   /* Dark theme */
 }
-[data-theme='strawberry-light'] {
-  /* Strawberry light — each family has light + dark */
+[data-theme='ocean-light'] {
+  /* Ocean light — each family has light + dark */
 }
-/* ... 7 more families × 2 variants */
+/* ... 6 more families × 2 variants */
 ```
 
 **Theme variables structure:**

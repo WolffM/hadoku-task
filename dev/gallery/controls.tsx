@@ -12,7 +12,7 @@
  *
  *   pnpm run gallery:controls  ->  http://localhost:5200/dev/gallery/controls.html
  *
- * `[` and `]` step through all 18 themes.
+ * `[` and `]` step through every theme.
  */
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -247,8 +247,8 @@ function ButtonsSection() {
       <p className="gallery__note">
         Five treatments × five families. Every pairing is a sanctioned one —{' '}
         <code>on-&lt;f&gt;</code> over <code>&lt;f&gt;</code>, <code>on-&lt;f&gt;-bg</code> over{' '}
-        <code>&lt;f&gt;-bg</code> — so contrast holds in all 18 themes. <em>Gradient</em> is the
-        task app&rsquo;s own active-pill look.
+        <code>&lt;f&gt;-bg</code> — so contrast holds in every theme. <em>Gradient</em> is the task
+        app&rsquo;s own active-pill look.
       </p>
 
       <div className="controls__matrix">
@@ -447,7 +447,7 @@ function DropdownsSection() {
         <Select
           aria-label="Theme, in a clipped box"
           value={null}
-          placeholder="18 themes — scrolls"
+          placeholder="16 themes — scrolls"
           onChange={() => {}}
           options={THEME_OPTIONS}
         />

@@ -115,7 +115,7 @@ const familyCss = FAMILIES.map(
 .badge--${f} { background: var(--color-${f}-bg); color: var(--color-on-${f}-bg); }`
 ).join('\n')
 
-const html = `<title>Hadoku Theme System &mdash; 18 themes, 41 tokens</title>
+const html = `<title>Hadoku Theme System &mdash; ${THEMES.length} themes, 41 tokens</title>
 <style>
 ${styleCss}
 

@@ -11,7 +11,7 @@
  * WHY THE GLYPH IS NOT TINTED WITH AN ACCENT BY DEFAULT
  *
  * The obvious design — paint the glyph `--color-warning` — is unshippable, and the
- * numbers are unambiguous. Measured across all 18 themes on both `--color-bg-card`
+ * numbers are unambiguous. Measured across every theme on both `--color-bg-card`
  * and `--color-bg`, a bare accent glyph misses the WCAG 1.4.11 non-text minimum of
  * 3:1 in 8 of 36 combinations for `warning` alone (light 2.15, ocean-light 1.92,
  * pink-light 1.67), and every other family fails somewhere too. `--color-<f>-dark`
@@ -22,7 +22,7 @@
  * `on-<f>` over `<f>` and never looks at an accent over a surface.
  *
  * So the accent moves to the icon's CHROME, exactly as the planning doc's own escape
- * hatch anticipated. Both tile treatments below pass 3:1 in 18/18 themes for all five
+ * hatch anticipated. Both tile treatments below pass 3:1 in every theme for all five
  * families, because they reuse the token pairings the design system already
  * guarantees: tint tile = `--color-<f>-bg` + `--color-on-<f>-bg`; filled tile =
  * `--color-<f>` + `--color-on-<f>`.

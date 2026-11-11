@@ -4,10 +4,9 @@ Beautiful color themes using CSS custom properties. Framework-agnostic and ready
 
 ## Themes
 
-9 theme families (18 themes), each with light and dark variants:
+8 theme families (16 themes), each with light and dark variants:
 
 - **Light** (default) / **Dark** - Clean blue and white / Sophisticated midnight with purple accents
-- **Strawberry** Light/Dark - Sweet pink tones
 - **Ocean** Light/Dark - Deep sea blues and tropical coral
 - **Cyberpunk** Light/Dark - Neon dystopia with electric colors
 - **Coffee** Light/Dark - Rich espresso and cream tones
@@ -46,7 +45,7 @@ saveTheme('lavender-light')
 const theme = loadTheme()
 
 // Get all available themes
-console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
+console.log(THEMES) // ['light', 'dark', 'coffee-light', ...]
 ```
 
 ### Apply to HTML
@@ -55,7 +54,7 @@ console.log(THEMES) // ['light', 'dark', 'strawberry-light', ...]
 <!-- Set globally on html element -->
 <html data-theme="dark">
   <!-- Or on a specific container -->
-  <div data-theme="strawberry-light">
+  <div data-theme="ocean-light">
     <!-- Your content -->
   </div>
 </html>
@@ -90,7 +89,7 @@ symmetric guess is always correct.
 - `--color-border` (+ `-light`)
 - `--color-bg` (+ `-card`, `-alt`, `-hover`, `-overlay`)
 
-Every `on-*` pair is verified ≥4.5:1 against its surface in all 18 themes by
+Every `on-*` pair is verified ≥4.5:1 against its surface in every theme by
 `scripts/check-contrast.mjs`.
 
 ### Typography
@@ -345,7 +344,7 @@ const { theme, setTheme } = useTheme()
 
 #### `THEME_FAMILIES: ThemeFamily[]`
 
-Pre-configured array of all 9 theme families with icons and labels. Use with `ThemePicker` or `ConnectedThemePicker` components from `@wolffm/task-ui-components`.
+Pre-configured array of all 8 theme families with icons and labels. Use with `ThemePicker` or `ConnectedThemePicker` components from `@wolffm/task-ui-components`.
 
 ```tsx
 import { THEME_FAMILIES } from '@wolffm/themes'
@@ -393,8 +392,6 @@ Remove saved theme and reset to 'light'.
 type Theme =
   | 'light'
   | 'dark'
-  | 'strawberry-light'
-  | 'strawberry-dark'
   | 'ocean-light'
   | 'ocean-dark'
   | 'cyberpunk-light'

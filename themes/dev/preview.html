@@ -1,14 +1,13 @@
-<title>Hadoku Theme System &mdash; 18 themes, 41 tokens</title>
+<title>Hadoku Theme System &mdash; 16 themes, 41 tokens</title>
 <style>
-  /**
+/**
  * Hadoku Theme System
  * Beautiful color themes using CSS custom properties
  *
  * Usage: Set data-theme attribute on html element or container
  * Example: <html data-theme="dark">
  *
- * Themes: light (default), dark, strawberry-light, strawberry-dark,
- *         ocean-light, ocean-dark, cyberpunk-light, cyberpunk-dark,
+ * Themes: light (default), dark, ocean-light, ocean-dark, cyberpunk-light, cyberpunk-dark,
  *         coffee-light, coffee-dark, lavender-light, lavender-dark,
  *         nature-light, nature-dark, pink-light, pink-dark,
  *         izakaya-light, izakaya-dark
@@ -57,18 +56,18 @@
  * For Tailwind integration, see tailwind-integration.css or docs.
  */
 
-  /* --advanced-gradient is registered as non-inheriting so a parent matching
+/* --advanced-gradient is registered as non-inheriting so a parent matching
    [data-theme='light'] (e.g. <html> set by the page-load init script) can't
    bleed its gradient into a descendant on a different theme. Without this,
    a container nested inside <html data-theme='light'> with its own
    data-theme='coffee-light' inherits the light gradient via CSS variable
    inheritance — which is what bit us in production. */
-  @property --advanced-gradient {
-    syntax: '*';
-    inherits: false;
-  }
+@property --advanced-gradient {
+  syntax: '*';
+  inherits: false;
+}
 
-  /* Every theme block below declares `color-scheme`, so a consumer never has to
+/* Every theme block below declares `color-scheme`, so a consumer never has to
    know which theme names are light and which are dark. Six child apps used to
    each carry a hand-written list of theme names for exactly this, and every
    one of them had gone stale — all six were missing izakaya, hadoku-task was
@@ -77,1985 +76,1460 @@
    dark themes is the Dark Reader hint: it says the surface is already dark,
    do not re-invert it. */
 
-  /* ===== LIGHT THEME (Default) ===== */
-  :root,
-  [data-theme='light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #2563eb;
-    --color-primary-dark: #1d4ed8;
-    --color-primary-bg: #eff6ff;
-    --color-primary-hover: rgba(37, 99, 235, 0.06);
-    --color-on-primary: white;
-    --color-on-primary-bg: #2563eb;
+/* ===== LIGHT THEME (Default) ===== */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-bg: #eff6ff;
+  --color-primary-hover: rgba(37, 99, 235, 0.06);
+  --color-on-primary: white;
+  --color-on-primary-bg: #2563eb;
 
-    /* Success */
-    --color-success: #0ea5e9;
-    --color-success-dark: #0284c7;
-    --color-success-bg: rgba(14, 165, 233, 0.1);
-    --color-success-hover: rgba(14, 165, 233, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #0067a7;
+  /* Success */
+  --color-success: #0ea5e9;
+  --color-success-dark: #0284c7;
+  --color-success-bg: rgba(14, 165, 233, 0.1);
+  --color-success-hover: rgba(14, 165, 233, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #0067a7;
 
-    /* Warning */
-    --color-warning: #f59e0b;
-    --color-warning-dark: #ce7a00;
-    --color-warning-bg: rgba(245, 158, 11, 0.1);
-    --color-warning-hover: rgba(245, 158, 11, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #9e4d00;
+  /* Warning */
+  --color-warning: #f59e0b;
+  --color-warning-dark: #ce7a00;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-hover: rgba(245, 158, 11, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #9e4d00;
 
-    /* Danger */
-    --color-danger: #ef4444;
-    --color-danger-dark: #df3236;
-    --color-danger-bg: #fee2e2;
-    --color-danger-hover: rgba(239, 68, 68, 0.06);
-    --color-on-danger: black;
-    --color-on-danger-bg: #cb1625;
+  /* Danger */
+  --color-danger: #ef4444;
+  --color-danger-dark: #df3236;
+  --color-danger-bg: #fee2e2;
+  --color-danger-hover: rgba(239, 68, 68, 0.06);
+  --color-on-danger: black;
+  --color-on-danger-bg: #cb1625;
 
-    /* Neutral */
-    --color-neutral: #637389;
-    --color-neutral-dark: #435267;
-    --color-neutral-bg: #e2e8f0;
-    --color-neutral-hover: rgba(100, 116, 139, 0.06);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #58677d;
+  /* Neutral */
+  --color-neutral: #637389;
+  --color-neutral-dark: #435267;
+  --color-neutral-bg: #e2e8f0;
+  --color-neutral-hover: rgba(100, 116, 139, 0.06);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #58677d;
 
-    /* Text */
-    --color-text: #0f172a;
-    --color-text-secondary: #475569;
-    --color-text-tertiary: #64748b;
-    --color-text-muted: #94a3b8;
+  /* Text */
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
 
-    /* Borders */
-    --color-border: #cdd4db;
-    --color-border-light: #dfe5ed;
+  /* Borders */
+  --color-border: #cdd4db;
+  --color-border-light: #dfe5ed;
 
-    /* Backgrounds */
-    --color-bg: #e7eef5;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #e7eef5;
-    --color-bg-hover: #e2e9f0;
-    --color-bg-overlay: rgba(15, 23, 42, 0.5);
+  /* Backgrounds */
+  --color-bg: #e7eef5;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #e7eef5;
+  --color-bg-hover: #e2e9f0;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
 
-    /* Spacing (namespaced to avoid Tailwind v4 collision with max-w-*, etc.) */
-    --hdk-space-xs: 2px;
-    --hdk-space-sm: 4px;
-    --hdk-space-md: 8px;
-    --hdk-space-lg: 12px;
-    --hdk-space-xl: 16px;
-    --hdk-space-2xl: 20px;
-    --hdk-space-3xl: 24px;
-    --hdk-space-4xl: 40px;
-    --hdk-space-5xl: 60px;
+  /* Spacing (namespaced to avoid Tailwind v4 collision with max-w-*, etc.) */
+  --hdk-space-xs: 2px;
+  --hdk-space-sm: 4px;
+  --hdk-space-md: 8px;
+  --hdk-space-lg: 12px;
+  --hdk-space-xl: 16px;
+  --hdk-space-2xl: 20px;
+  --hdk-space-3xl: 24px;
+  --hdk-space-4xl: 40px;
+  --hdk-space-5xl: 60px;
 
-    /* Typography (namespaced for Tailwind v4 compatibility) */
-    --font-family:
-      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --hdk-text-xs: 12px;
-    --hdk-text-sm: 14px;
-    --hdk-text-md: 15px;
-    --hdk-text-base: 16px;
-    --hdk-text-lg: 24px;
+  /* Typography (namespaced for Tailwind v4 compatibility) */
+  --font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --hdk-text-xs: 12px;
+  --hdk-text-sm: 14px;
+  --hdk-text-md: 15px;
+  --hdk-text-base: 16px;
+  --hdk-text-lg: 24px;
 
-    --font-weight-normal: 400;
-    --font-weight-semibold: 500;
-    --font-weight-bold: 600;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
 
-    --line-height-normal: 1.4;
-    --line-height-relaxed: 1.5;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.5;
 
-    /* Layout (namespaced for Tailwind v4 compatibility) */
-    --hdk-radius-sm: 4px;
-    --hdk-radius: 6px;
-    --hdk-radius-lg: 8px;
+  /* Layout (namespaced for Tailwind v4 compatibility) */
+  --hdk-radius-sm: 4px;
+  --hdk-radius: 6px;
+  --hdk-radius-lg: 8px;
 
-    /* Shadows (namespaced for Tailwind v4 compatibility) */
-    --hdk-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-    --hdk-shadow-md: 0 2px 4px rgba(15, 23, 42, 0.08);
-    --hdk-shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.15);
-    --hdk-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.2);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(37, 99, 235, 0.2);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  /* Shadows (namespaced for Tailwind v4 compatibility) */
+  --hdk-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --hdk-shadow-md: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --hdk-shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(37, 99, 235, 0.1);
 
-    /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-smooth: 0.2s ease;
-  }
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-smooth: 0.2s ease;
+}
 
-  /* ===== LIGHT THEME — advanced visual contract =====
+/* ===== LIGHT THEME — advanced visual contract =====
    Scoped to [data-theme='light'] only (NOT :root) so the gradient
    doesn't leak into other themes that don't override it. Renders
    only when data-theme-mode='advanced' (via @wolffm/themes/advanced.css). */
-  [data-theme='light'] {
-    --advanced-stop-1-l: 0.82;
-    --advanced-stop-1-c: 0.18;
-    --advanced-stop-1-h: 55;
-    --advanced-stop-2-l: 0.78;
-    --advanced-stop-2-c: 0.2;
-    --advanced-stop-2-h: 40;
-    --advanced-stop-3-l: 0.72;
-    --advanced-stop-3-c: 0.22;
-    --advanced-stop-3-h: 25;
-    --advanced-stop-4-l: 0.7;
-    --advanced-stop-4-c: 0.18;
-    --advanced-stop-4-h: 10;
-    --advanced-stop-5-l: 0.72;
-    --advanced-stop-5-c: 0.16;
-    --advanced-stop-5-h: 355;
-    --advanced-stop-6-l: 0.68;
-    --advanced-stop-6-c: 0.14;
-    --advanced-stop-6-h: 190;
-    --advanced-stop-7-l: 0.6;
-    --advanced-stop-7-c: 0.16;
-    --advanced-stop-7-h: 200;
-    --advanced-stop-8-l: 0.5;
-    --advanced-stop-8-c: 0.18;
-    --advanced-stop-8-h: 210;
-    --advanced-gradient: linear-gradient(
-      135deg,
-      oklch(var(--advanced-stop-1-l) var(--advanced-stop-1-c) var(--advanced-stop-1-h)) 0%,
-      oklch(var(--advanced-stop-2-l) var(--advanced-stop-2-c) var(--advanced-stop-2-h)) 15%,
-      oklch(var(--advanced-stop-3-l) var(--advanced-stop-3-c) var(--advanced-stop-3-h)) 30%,
-      oklch(var(--advanced-stop-4-l) var(--advanced-stop-4-c) var(--advanced-stop-4-h)) 45%,
-      oklch(var(--advanced-stop-5-l) var(--advanced-stop-5-c) var(--advanced-stop-5-h)) 55%,
-      oklch(var(--advanced-stop-6-l) var(--advanced-stop-6-c) var(--advanced-stop-6-h)) 70%,
-      oklch(var(--advanced-stop-7-l) var(--advanced-stop-7-c) var(--advanced-stop-7-h)) 85%,
-      oklch(var(--advanced-stop-8-l) var(--advanced-stop-8-c) var(--advanced-stop-8-h)) 100%
-    );
-  }
-
-  /* ===== DARK THEME ===== */
-  [data-theme='dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #b793ff;
-    --color-primary-dark: #a17de7;
-    --color-primary-bg: rgba(183, 147, 255, 0.16);
-    --color-primary-hover: rgba(183, 147, 255, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #b793ff;
-
-    /* Success */
-    --color-success: #4ade80;
-    --color-success-dark: #00b85d;
-    --color-success-bg: rgba(74, 222, 128, 0.15);
-    --color-success-hover: rgba(74, 222, 128, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #4ade80;
-
-    /* Warning */
-    --color-warning: #ffb848;
-    --color-warning-dark: #e7a22b;
-    --color-warning-bg: rgba(255, 184, 72, 0.15);
-    --color-warning-hover: rgba(255, 184, 72, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #ffb848;
-
-    /* Danger */
-    --color-danger: #f46a82;
-    --color-danger-dark: #db536d;
-    --color-danger-bg: rgba(244, 106, 130, 0.15);
-    --color-danger-hover: rgba(244, 106, 130, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #fb7088;
-
-    /* Neutral */
-    --color-neutral: #9d9ea6;
-    --color-neutral-dark: #888991;
-    --color-neutral-bg: #2f3038;
-    --color-neutral-hover: rgba(157, 158, 166, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #9d9ea6;
-
-    /* Text */
-    --color-text: #f4f2f9;
-    --color-text-secondary: #dcd9e3;
-    --color-text-tertiary: #c0bbcb;
-    --color-text-muted: #948f9e;
-
-    /* Borders */
-    --color-border: #3c3d40;
-    --color-border-light: #525256;
-
-    /* Backgrounds */
-    --color-bg: #151618;
-    --color-bg-card: #222325;
-    --color-bg-alt: #101013;
-    --color-bg-hover: #2c2c30;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(183, 147, 255, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(183, 147, 255, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(183, 147, 255, 0.2);
-  }
-
-  /* ===== STRAWBERRY LIGHT THEME ===== */
-  [data-theme='strawberry-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #ff6b9d;
-    --color-primary-dark: #ff477a;
-    --color-primary-bg: #fff5f8;
-    --color-primary-hover: rgba(255, 107, 157, 0.1);
-    --color-on-primary: black;
-    --color-on-primary-bg: #c6356d;
-
-    /* Success */
-    --color-success: #22c55e;
-    --color-success-dark: #16a34a;
-    --color-success-bg: rgba(34, 197, 94, 0.1);
-    --color-success-hover: rgba(34, 197, 94, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #006d00;
-
-    /* Warning */
-    --color-warning: #f59e0b;
-    --color-warning-dark: #ce7a00;
-    --color-warning-bg: rgba(245, 158, 11, 0.1);
-    --color-warning-hover: rgba(245, 158, 11, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #984700;
-
-    /* Danger */
-    --color-danger: #ec4899;
-    --color-danger-dark: #db2777;
-    --color-danger-bg: #ffe4e9;
-    --color-danger-hover: rgba(236, 72, 153, 0.06);
-    --color-on-danger: black;
-    --color-on-danger-bg: #c51a78;
-
-    /* Neutral */
-    --color-neutral: #94a3b8;
-    --color-neutral-dark: #728094;
-    --color-neutral-bg: #fdd5e0;
-    --color-neutral-hover: rgba(148, 163, 184, 0.06);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #546275;
-
-    /* Text */
-    --color-text: #1f1c1e;
-    --color-text-secondary: #6b5a5e;
-    --color-text-tertiary: #a78b92;
-    --color-text-muted: #c4a4ab;
-
-    /* Borders */
-    --color-border: #f3becf;
-    --color-border-light: #f6d7e0;
-
-    /* Backgrounds */
-    --color-bg: #f0e6e9;
-    --color-bg-card: #fff9fc;
-    --color-bg-alt: #ecdde1;
-    --color-bg-hover: #eccdd6;
-    --color-bg-overlay: rgba(255, 107, 157, 0.3);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(255, 107, 157, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(255, 107, 157, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(255, 107, 157, 0.2);
-    --hdk-shadow-focus: 0 0 0 3px rgba(255, 107, 157, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 107, 157, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 107, 157, 0.15);
-  }
-
-  /* ===== STRAWBERRY DARK THEME ===== */
-  [data-theme='strawberry-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #f6526f;
-    --color-primary-dark: #dd395b;
-    --color-primary-bg: rgba(246, 82, 111, 0.16);
-    --color-primary-hover: rgba(246, 82, 111, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #ff6781;
-
-    /* Success */
-    --color-success: #6fda75;
-    --color-success-dark: #57c35f;
-    --color-success-bg: rgba(111, 218, 117, 0.15);
-    --color-success-hover: rgba(111, 218, 117, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #6fda75;
-
-    /* Warning */
-    --color-warning: #fdbe45;
-    --color-warning-dark: #e5a725;
-    --color-warning-bg: rgba(253, 190, 69, 0.15);
-    --color-warning-hover: rgba(253, 190, 69, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #fdbe45;
-
-    /* Danger */
-    --color-danger: #f97770;
-    --color-danger-dark: #d0534e;
-    --color-danger-bg: rgba(249, 119, 112, 0.15);
-    --color-danger-hover: rgba(249, 119, 112, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #f97770;
-
-    /* Neutral */
-    --color-neutral: #889e94;
-    --color-neutral-dark: #73897f;
-    --color-neutral-bg: #20362c;
-    --color-neutral-hover: rgba(136, 158, 148, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #8ba197;
-
-    /* Text */
-    --color-text: #ffefef;
-    --color-text-secondary: #edd4d6;
-    --color-text-tertiary: #dbb2b7;
-    --color-text-muted: #ab888c;
-
-    /* Borders */
-    --color-border: #2f5838;
-    --color-border-light: #3f704a;
-
-    /* Backgrounds */
-    --color-bg: #0a1a13;
-    --color-bg-card: #16271f;
-    --color-bg-alt: #05140e;
-    --color-bg-hover: #1e3129;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(246, 82, 111, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(246, 82, 111, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(246, 82, 111, 0.2);
-  }
-
-  /* ===== OCEAN LIGHT THEME ===== */
-  [data-theme='ocean-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #06b6d4;
-    --color-primary-dark: #0891b2;
-    --color-primary-bg: #ecfeff;
-    --color-primary-hover: rgba(6, 182, 212, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #007b97;
-
-    /* Success */
-    --color-success: #10b981;
-    --color-success-dark: #00955f;
-    --color-success-bg: rgba(16, 185, 129, 0.1);
-    --color-success-hover: rgba(16, 185, 129, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #006e3c;
-
-    /* Warning */
-    --color-warning: #eab308;
-    --color-warning-dark: #c48e00;
-    --color-warning-bg: rgba(234, 179, 8, 0.1);
-    --color-warning-hover: rgba(234, 179, 8, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #8a5600;
-
-    /* Danger */
-    --color-danger: #ec4899;
-    --color-danger-dark: #db2777;
-    --color-danger-bg: #fce7f3;
-    --color-danger-hover: rgba(236, 72, 153, 0.06);
-    --color-on-danger: black;
-    --color-on-danger-bg: #c51a78;
-
-    /* Neutral */
-    --color-neutral: #637389;
-    --color-neutral-dark: #435267;
-    --color-neutral-bg: #e0f2fe;
-    --color-neutral-hover: rgba(100, 116, 139, 0.06);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #5b6a80;
-
-    /* Text */
-    --color-text: #0c4a6e;
-    --color-text-secondary: #075985;
-    --color-text-tertiary: #0ea5e9;
-    --color-text-muted: #38bdf8;
-
-    /* Borders */
-    --color-border: #95e2eb;
-    --color-border-light: #c4eef2;
-
-    /* Backgrounds */
-    --color-bg: #e6eff5;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #d6e8f4;
-    --color-bg-hover: #c5f0f4;
-    --color-bg-overlay: rgba(8, 47, 73, 0.3);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(6, 182, 212, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(6, 182, 212, 0.2);
-    --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
-  }
-
-  /* ===== OCEAN DARK THEME ===== */
-  [data-theme='ocean-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #06b6d4;
-    --color-primary-dark: #0891b2;
-    --color-primary-bg: #0c4a6e;
-    --color-primary-hover: rgba(6, 182, 212, 0.15);
-    --color-on-primary: black;
-    --color-on-primary-bg: #30c6e5;
-
-    /* Success */
-    --color-success: #34d399;
-    --color-success-dark: #00ae76;
-    --color-success-bg: rgba(52, 211, 153, 0.15);
-    --color-success-hover: rgba(52, 211, 153, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #58eeb2;
-
-    /* Warning */
-    --color-warning: #fbbf24;
-    --color-warning-dark: #d59a00;
-    --color-warning-bg: rgba(251, 191, 36, 0.15);
-    --color-warning-hover: rgba(251, 191, 36, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #ffc935;
-
-    /* Danger */
-    --color-danger: #ec4899;
-    --color-danger-dark: #db2777;
-    --color-danger-bg: #500724;
-    --color-danger-hover: rgba(236, 72, 153, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #f34f9f;
-
-    /* Neutral */
-    --color-neutral: #637389;
-    --color-neutral-dark: #435267;
-    --color-neutral-bg: #1e3a52;
-    --color-neutral-hover: rgba(100, 116, 139, 0.1);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #95a6be;
-
-    /* Text */
-    --color-text: #e0f2fe;
-    --color-text-secondary: #bae6fd;
-    --color-text-tertiary: #7dd3fc;
-    --color-text-muted: #0ea5e9;
-
-    /* Borders */
-    --color-border: #34697f;
-    --color-border-light: #0e7490;
-
-    /* Backgrounds */
-    --color-bg: #082f49;
-    --color-bg-card: #0c4a6e;
-    --color-bg-alt: #164e63;
-    --color-bg-hover: #0e7490;
-    --color-bg-overlay: rgba(0, 0, 0, 0.7);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
-  }
-
-  /* ===== CYBERPUNK LIGHT THEME ===== */
-  [data-theme='cyberpunk-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #ff006e;
-    --color-primary-dark: #ea005e;
-    --color-primary-bg: #fff0f7;
-    --color-primary-hover: rgba(255, 0, 110, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #d90052;
-
-    /* Success */
-    --color-success: #00f5d4;
-    --color-success-dark: #00d9c0;
-    --color-success-bg: rgba(0, 245, 212, 0.1);
-    --color-success-hover: rgba(0, 245, 212, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #007158;
-
-    /* Warning */
-    --color-warning: #ff9f1c;
-    --color-warning-dark: #d77b00;
-    --color-warning-bg: rgba(255, 159, 28, 0.1);
-    --color-warning-hover: rgba(255, 159, 28, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #a04800;
-
-    /* Danger */
-    --color-danger: #fd4c5c;
-    --color-danger-dark: #e02c45;
-    --color-danger-bg: #ffe6e5;
-    --color-danger-hover: rgba(253, 76, 92, 0.06);
-    --color-on-danger: black;
-    --color-on-danger-bg: #cd0e36;
-
-    /* Neutral */
-    --color-neutral: #9849d8;
-    --color-neutral-dark: #761eb1;
-    --color-neutral-bg: #e9d5ff;
-    --color-neutral-hover: rgba(157, 78, 221, 0.06);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #8634c4;
-
-    /* Text */
-    --color-text: #1a1a2e;
-    --color-text-secondary: #3d3d5c;
-    --color-text-tertiary: #6b6b8a;
-    --color-text-muted: #9999b3;
-
-    /* Borders */
-    --color-border: #dacaf8;
-    --color-border-light: #eadff9;
-
-    /* Backgrounds */
-    --color-bg: #ececf5;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #e8e6f2;
-    --color-bg-hover: #e3d8f2;
-    --color-bg-overlay: rgba(26, 26, 46, 0.4);
-
-    --hdk-shadow-sm: 0 1px 3px rgba(255, 0, 110, 0.12);
-    --hdk-shadow-md: 0 2px 6px rgba(255, 0, 110, 0.18);
-    --hdk-shadow-lg: 0 8px 24px rgba(255, 0, 110, 0.25);
-    --hdk-shadow-focus: 0 0 0 3px rgba(255, 0, 110, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 0, 110, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 0, 110, 0.2);
-  }
-
-  /* ===== CYBERPUNK DARK THEME ===== */
-  [data-theme='cyberpunk-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #22d3ee;
-    --color-primary-dark: #06b6d4;
-    --color-primary-bg: #0a1929;
-    --color-primary-hover: rgba(34, 211, 238, 0.15);
-    --color-on-primary: black;
-    --color-on-primary-bg: #22d3ee;
-
-    /* Success */
-    --color-success: #39ff14;
-    --color-success-dark: #00ff00;
-    --color-success-bg: rgba(57, 255, 20, 0.15);
-    --color-success-hover: rgba(57, 255, 20, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #39ff14;
-
-    /* Warning */
-    --color-warning: #ffbe0b;
-    --color-warning-dark: #d89900;
-    --color-warning-bg: rgba(255, 190, 11, 0.15);
-    --color-warning-hover: rgba(255, 190, 11, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #ffbe0b;
-
-    /* Danger */
-    --color-danger: #ff10f0;
-    --color-danger-dark: #ff00ff;
-    --color-danger-bg: #800080;
-    --color-danger-hover: rgba(255, 16, 240, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #ff89ff;
-
-    /* Neutral */
-    --color-neutral: #637389;
-    --color-neutral-dark: #435267;
-    --color-neutral-bg: #1e293b;
-    --color-neutral-hover: rgba(100, 116, 139, 0.1);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #8394ab;
-
-    /* Text */
-    --color-text: #e0f2fe;
-    --color-text-secondary: #67e8f9;
-    --color-text-tertiary: #22d3ee;
-    --color-text-muted: #0891b2;
-
-    /* Borders */
-    --color-border: #164e63;
-    --color-border-light: #0e7490;
-
-    /* Backgrounds */
-    --color-bg: #020617;
-    --color-bg-card: #0c1929;
-    --color-bg-alt: #1e293b;
-    --color-bg-hover: #0f172a;
-    --color-bg-overlay: rgba(0, 0, 0, 0.8);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
-    --hdk-shadow-md: 0 2px 4px rgba(34, 211, 238, 0.3);
-    --hdk-shadow-lg: 0 8px 24px rgba(34, 211, 238, 0.4);
-    --hdk-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
-
-    /* Advanced contract: neon-grid 8-stop gradient (cyan → magenta → violet).
+[data-theme='light'] {
+  --advanced-stop-1-l: 0.82;
+  --advanced-stop-1-c: 0.18;
+  --advanced-stop-1-h: 55;
+  --advanced-stop-2-l: 0.78;
+  --advanced-stop-2-c: 0.2;
+  --advanced-stop-2-h: 40;
+  --advanced-stop-3-l: 0.72;
+  --advanced-stop-3-c: 0.22;
+  --advanced-stop-3-h: 25;
+  --advanced-stop-4-l: 0.7;
+  --advanced-stop-4-c: 0.18;
+  --advanced-stop-4-h: 10;
+  --advanced-stop-5-l: 0.72;
+  --advanced-stop-5-c: 0.16;
+  --advanced-stop-5-h: 355;
+  --advanced-stop-6-l: 0.68;
+  --advanced-stop-6-c: 0.14;
+  --advanced-stop-6-h: 190;
+  --advanced-stop-7-l: 0.6;
+  --advanced-stop-7-c: 0.16;
+  --advanced-stop-7-h: 200;
+  --advanced-stop-8-l: 0.5;
+  --advanced-stop-8-c: 0.18;
+  --advanced-stop-8-h: 210;
+  --advanced-gradient: linear-gradient(
+    135deg,
+    oklch(var(--advanced-stop-1-l) var(--advanced-stop-1-c) var(--advanced-stop-1-h)) 0%,
+    oklch(var(--advanced-stop-2-l) var(--advanced-stop-2-c) var(--advanced-stop-2-h)) 15%,
+    oklch(var(--advanced-stop-3-l) var(--advanced-stop-3-c) var(--advanced-stop-3-h)) 30%,
+    oklch(var(--advanced-stop-4-l) var(--advanced-stop-4-c) var(--advanced-stop-4-h)) 45%,
+    oklch(var(--advanced-stop-5-l) var(--advanced-stop-5-c) var(--advanced-stop-5-h)) 55%,
+    oklch(var(--advanced-stop-6-l) var(--advanced-stop-6-c) var(--advanced-stop-6-h)) 70%,
+    oklch(var(--advanced-stop-7-l) var(--advanced-stop-7-c) var(--advanced-stop-7-h)) 85%,
+    oklch(var(--advanced-stop-8-l) var(--advanced-stop-8-c) var(--advanced-stop-8-h)) 100%
+  );
+}
+
+/* ===== DARK THEME ===== */
+[data-theme='dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #b793ff;
+  --color-primary-dark: #a17de7;
+  --color-primary-bg: rgba(183, 147, 255, 0.16);
+  --color-primary-hover: rgba(183, 147, 255, 0.12);
+  --color-on-primary: black;
+  --color-on-primary-bg: #b793ff;
+
+  /* Success */
+  --color-success: #4ade80;
+  --color-success-dark: #00b85d;
+  --color-success-bg: rgba(74, 222, 128, 0.15);
+  --color-success-hover: rgba(74, 222, 128, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #4ade80;
+
+  /* Warning */
+  --color-warning: #ffb848;
+  --color-warning-dark: #e7a22b;
+  --color-warning-bg: rgba(255, 184, 72, 0.15);
+  --color-warning-hover: rgba(255, 184, 72, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #ffb848;
+
+  /* Danger */
+  --color-danger: #f46a82;
+  --color-danger-dark: #db536d;
+  --color-danger-bg: rgba(244, 106, 130, 0.15);
+  --color-danger-hover: rgba(244, 106, 130, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #fb7088;
+
+  /* Neutral */
+  --color-neutral: #9d9ea6;
+  --color-neutral-dark: #888991;
+  --color-neutral-bg: #2f3038;
+  --color-neutral-hover: rgba(157, 158, 166, 0.1);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #9d9ea6;
+
+  /* Text */
+  --color-text: #f4f2f9;
+  --color-text-secondary: #dcd9e3;
+  --color-text-tertiary: #c0bbcb;
+  --color-text-muted: #948f9e;
+
+  /* Borders */
+  --color-border: #3c3d40;
+  --color-border-light: #525256;
+
+  /* Backgrounds */
+  --color-bg: #151618;
+  --color-bg-card: #222325;
+  --color-bg-alt: #101013;
+  --color-bg-hover: #2c2c30;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(183, 147, 255, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(183, 147, 255, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(183, 147, 255, 0.2);
+}
+
+/* ===== OCEAN LIGHT THEME ===== */
+[data-theme='ocean-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #06b6d4;
+  --color-primary-dark: #0891b2;
+  --color-primary-bg: #ecfeff;
+  --color-primary-hover: rgba(6, 182, 212, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #007b97;
+
+  /* Success */
+  --color-success: #10b981;
+  --color-success-dark: #00955f;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-success-hover: rgba(16, 185, 129, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #006e3c;
+
+  /* Warning */
+  --color-warning: #eab308;
+  --color-warning-dark: #c48e00;
+  --color-warning-bg: rgba(234, 179, 8, 0.1);
+  --color-warning-hover: rgba(234, 179, 8, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #8a5600;
+
+  /* Danger */
+  --color-danger: #ec4899;
+  --color-danger-dark: #db2777;
+  --color-danger-bg: #fce7f3;
+  --color-danger-hover: rgba(236, 72, 153, 0.06);
+  --color-on-danger: black;
+  --color-on-danger-bg: #c51a78;
+
+  /* Neutral */
+  --color-neutral: #637389;
+  --color-neutral-dark: #435267;
+  --color-neutral-bg: #e0f2fe;
+  --color-neutral-hover: rgba(100, 116, 139, 0.06);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #5b6a80;
+
+  /* Text */
+  --color-text: #0c4a6e;
+  --color-text-secondary: #075985;
+  --color-text-tertiary: #0ea5e9;
+  --color-text-muted: #38bdf8;
+
+  /* Borders */
+  --color-border: #95e2eb;
+  --color-border-light: #c4eef2;
+
+  /* Backgrounds */
+  --color-bg: #e6eff5;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #d6e8f4;
+  --color-bg-hover: #c5f0f4;
+  --color-bg-overlay: rgba(8, 47, 73, 0.3);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(6, 182, 212, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(6, 182, 212, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(6, 182, 212, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.15);
+}
+
+/* ===== OCEAN DARK THEME ===== */
+[data-theme='ocean-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #06b6d4;
+  --color-primary-dark: #0891b2;
+  --color-primary-bg: #0c4a6e;
+  --color-primary-hover: rgba(6, 182, 212, 0.15);
+  --color-on-primary: black;
+  --color-on-primary-bg: #30c6e5;
+
+  /* Success */
+  --color-success: #34d399;
+  --color-success-dark: #00ae76;
+  --color-success-bg: rgba(52, 211, 153, 0.15);
+  --color-success-hover: rgba(52, 211, 153, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #58eeb2;
+
+  /* Warning */
+  --color-warning: #fbbf24;
+  --color-warning-dark: #d59a00;
+  --color-warning-bg: rgba(251, 191, 36, 0.15);
+  --color-warning-hover: rgba(251, 191, 36, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #ffc935;
+
+  /* Danger */
+  --color-danger: #ec4899;
+  --color-danger-dark: #db2777;
+  --color-danger-bg: #500724;
+  --color-danger-hover: rgba(236, 72, 153, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #f34f9f;
+
+  /* Neutral */
+  --color-neutral: #637389;
+  --color-neutral-dark: #435267;
+  --color-neutral-bg: #1e3a52;
+  --color-neutral-hover: rgba(100, 116, 139, 0.1);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #95a6be;
+
+  /* Text */
+  --color-text: #e0f2fe;
+  --color-text-secondary: #bae6fd;
+  --color-text-tertiary: #7dd3fc;
+  --color-text-muted: #0ea5e9;
+
+  /* Borders */
+  --color-border: #34697f;
+  --color-border-light: #0e7490;
+
+  /* Backgrounds */
+  --color-bg: #082f49;
+  --color-bg-card: #0c4a6e;
+  --color-bg-alt: #164e63;
+  --color-bg-hover: #0e7490;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(6, 182, 212, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(6, 182, 212, 0.2);
+}
+
+/* ===== CYBERPUNK LIGHT THEME ===== */
+[data-theme='cyberpunk-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #ff006e;
+  --color-primary-dark: #ea005e;
+  --color-primary-bg: #fff0f7;
+  --color-primary-hover: rgba(255, 0, 110, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #d90052;
+
+  /* Success */
+  --color-success: #00f5d4;
+  --color-success-dark: #00d9c0;
+  --color-success-bg: rgba(0, 245, 212, 0.1);
+  --color-success-hover: rgba(0, 245, 212, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #007158;
+
+  /* Warning */
+  --color-warning: #ff9f1c;
+  --color-warning-dark: #d77b00;
+  --color-warning-bg: rgba(255, 159, 28, 0.1);
+  --color-warning-hover: rgba(255, 159, 28, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #a04800;
+
+  /* Danger */
+  --color-danger: #fd4c5c;
+  --color-danger-dark: #e02c45;
+  --color-danger-bg: #ffe6e5;
+  --color-danger-hover: rgba(253, 76, 92, 0.06);
+  --color-on-danger: black;
+  --color-on-danger-bg: #cd0e36;
+
+  /* Neutral */
+  --color-neutral: #9849d8;
+  --color-neutral-dark: #761eb1;
+  --color-neutral-bg: #e9d5ff;
+  --color-neutral-hover: rgba(157, 78, 221, 0.06);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #8634c4;
+
+  /* Text */
+  --color-text: #1a1a2e;
+  --color-text-secondary: #3d3d5c;
+  --color-text-tertiary: #6b6b8a;
+  --color-text-muted: #9999b3;
+
+  /* Borders */
+  --color-border: #dacaf8;
+  --color-border-light: #eadff9;
+
+  /* Backgrounds */
+  --color-bg: #ececf5;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #e8e6f2;
+  --color-bg-hover: #e3d8f2;
+  --color-bg-overlay: rgba(26, 26, 46, 0.4);
+
+  --hdk-shadow-sm: 0 1px 3px rgba(255, 0, 110, 0.12);
+  --hdk-shadow-md: 0 2px 6px rgba(255, 0, 110, 0.18);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 0, 110, 0.25);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 0, 110, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 0, 110, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 0, 110, 0.2);
+}
+
+/* ===== CYBERPUNK DARK THEME ===== */
+[data-theme='cyberpunk-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #22d3ee;
+  --color-primary-dark: #06b6d4;
+  --color-primary-bg: #0a1929;
+  --color-primary-hover: rgba(34, 211, 238, 0.15);
+  --color-on-primary: black;
+  --color-on-primary-bg: #22d3ee;
+
+  /* Success */
+  --color-success: #39ff14;
+  --color-success-dark: #00ff00;
+  --color-success-bg: rgba(57, 255, 20, 0.15);
+  --color-success-hover: rgba(57, 255, 20, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #39ff14;
+
+  /* Warning */
+  --color-warning: #ffbe0b;
+  --color-warning-dark: #d89900;
+  --color-warning-bg: rgba(255, 190, 11, 0.15);
+  --color-warning-hover: rgba(255, 190, 11, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #ffbe0b;
+
+  /* Danger */
+  --color-danger: #ff10f0;
+  --color-danger-dark: #ff00ff;
+  --color-danger-bg: #800080;
+  --color-danger-hover: rgba(255, 16, 240, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #ff89ff;
+
+  /* Neutral */
+  --color-neutral: #637389;
+  --color-neutral-dark: #435267;
+  --color-neutral-bg: #1e293b;
+  --color-neutral-hover: rgba(100, 116, 139, 0.1);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #8394ab;
+
+  /* Text */
+  --color-text: #e0f2fe;
+  --color-text-secondary: #67e8f9;
+  --color-text-tertiary: #22d3ee;
+  --color-text-muted: #0891b2;
+
+  /* Borders */
+  --color-border: #164e63;
+  --color-border-light: #0e7490;
+
+  /* Backgrounds */
+  --color-bg: #020617;
+  --color-bg-card: #0c1929;
+  --color-bg-alt: #1e293b;
+  --color-bg-hover: #0f172a;
+  --color-bg-overlay: rgba(0, 0, 0, 0.8);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(34, 211, 238, 0.2);
+  --hdk-shadow-md: 0 2px 4px rgba(34, 211, 238, 0.3);
+  --hdk-shadow-lg: 0 8px 24px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(34, 211, 238, 0.4);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(34, 211, 238, 0.3);
+
+  /* Advanced contract: neon-grid 8-stop gradient (cyan → magenta → violet).
      Renders only when data-theme-mode='advanced' (via @wolffm/themes/advanced.css). */
-    --advanced-stop-1-l: 0.32;
-    --advanced-stop-1-c: 0.12;
-    --advanced-stop-1-h: 220;
-    --advanced-stop-2-l: 0.42;
-    --advanced-stop-2-c: 0.18;
-    --advanced-stop-2-h: 200;
-    --advanced-stop-3-l: 0.5;
-    --advanced-stop-3-c: 0.2;
-    --advanced-stop-3-h: 195;
-    --advanced-stop-4-l: 0.45;
-    --advanced-stop-4-c: 0.22;
-    --advanced-stop-4-h: 280;
-    --advanced-stop-5-l: 0.4;
-    --advanced-stop-5-c: 0.26;
-    --advanced-stop-5-h: 320;
-    --advanced-stop-6-l: 0.46;
-    --advanced-stop-6-c: 0.28;
-    --advanced-stop-6-h: 340;
-    --advanced-stop-7-l: 0.38;
-    --advanced-stop-7-c: 0.22;
-    --advanced-stop-7-h: 290;
-    --advanced-stop-8-l: 0.28;
-    --advanced-stop-8-c: 0.16;
-    --advanced-stop-8-h: 250;
-    --advanced-gradient: linear-gradient(
-      135deg,
-      oklch(var(--advanced-stop-1-l) var(--advanced-stop-1-c) var(--advanced-stop-1-h)) 0%,
-      oklch(var(--advanced-stop-2-l) var(--advanced-stop-2-c) var(--advanced-stop-2-h)) 15%,
-      oklch(var(--advanced-stop-3-l) var(--advanced-stop-3-c) var(--advanced-stop-3-h)) 30%,
-      oklch(var(--advanced-stop-4-l) var(--advanced-stop-4-c) var(--advanced-stop-4-h)) 45%,
-      oklch(var(--advanced-stop-5-l) var(--advanced-stop-5-c) var(--advanced-stop-5-h)) 60%,
-      oklch(var(--advanced-stop-6-l) var(--advanced-stop-6-c) var(--advanced-stop-6-h)) 75%,
-      oklch(var(--advanced-stop-7-l) var(--advanced-stop-7-c) var(--advanced-stop-7-h)) 88%,
-      oklch(var(--advanced-stop-8-l) var(--advanced-stop-8-c) var(--advanced-stop-8-h)) 100%
-    );
-  }
-
-  /* ===== COFFEE LIGHT THEME ===== */
-  [data-theme='coffee-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #ea580c;
-    --color-primary-dark: #d54300;
-    --color-primary-bg: #fffbeb;
-    --color-primary-hover: rgba(234, 88, 12, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #cd3c00;
-
-    /* Success */
-    --color-success: #65a30d;
-    --color-success-dark: #498500;
-    --color-success-bg: rgba(101, 163, 13, 0.1);
-    --color-success-hover: rgba(101, 163, 13, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #316c00;
-
-    /* Warning */
-    --color-warning: #ca8a04;
-    --color-warning-dark: #a66800;
-    --color-warning-bg: rgba(202, 138, 4, 0.1);
-    --color-warning-hover: rgba(202, 138, 4, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #8d5100;
-
-    /* Danger */
-    --color-danger: #b91c1c;
-    --color-danger-dark: #910000;
-    --color-danger-bg: #ffe4dd;
-    --color-danger-hover: rgba(185, 28, 28, 0.06);
-    --color-on-danger: white;
-    --color-on-danger-bg: #b91c1c;
-
-    /* Neutral */
-    --color-neutral: #77706b;
-    --color-neutral-dark: #56504b;
-    --color-neutral-bg: #efe5da;
-    --color-neutral-hover: rgba(120, 113, 108, 0.06);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #6b6560;
-
-    /* Text */
-    --color-text: #1c1917;
-    --color-text-secondary: #44403c;
-    --color-text-tertiary: #78716c;
-    --color-text-muted: #a8a29e;
-
-    /* Borders */
-    --color-border: #ead377;
-    --color-border-light: #f0e5ba;
-
-    /* Backgrounds */
-    --color-bg: #f1edde;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #f0e5ba;
-    --color-bg-hover: #f0ca9d;
-    --color-bg-overlay: rgba(28, 25, 23, 0.3);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(234, 88, 12, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(234, 88, 12, 0.2);
-    --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
-  }
-
-  /* ===== COFFEE DARK THEME ===== */
-  [data-theme='coffee-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #ea580c;
-    --color-primary-dark: #d54300;
-    --color-primary-bg: #292524;
-    --color-primary-hover: rgba(234, 88, 12, 0.15);
-    --color-on-primary: black;
-    --color-on-primary-bg: #f15f1a;
-
-    /* Success */
-    --color-success: #84cc16;
-    --color-success-dark: #61a700;
-    --color-success-bg: rgba(132, 204, 22, 0.15);
-    --color-success-hover: rgba(132, 204, 22, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #8ad324;
-
-    /* Warning */
-    --color-warning: #f59e0b;
-    --color-warning-dark: #ce7a00;
-    --color-warning-bg: rgba(245, 158, 11, 0.15);
-    --color-warning-hover: rgba(245, 158, 11, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #ffab29;
-
-    /* Danger */
-    --color-danger: #f87171;
-    --color-danger-dark: #cf4c4f;
-    --color-danger-bg: rgba(248, 113, 113, 0.15);
-    --color-danger-hover: rgba(248, 113, 113, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #ff9b99;
-
-    /* Neutral */
-    --color-neutral: #77706b;
-    --color-neutral-dark: #56504b;
-    --color-neutral-bg: #3e3933;
-    --color-neutral-hover: rgba(120, 113, 108, 0.1);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #aea6a1;
-
-    /* Text */
-    --color-text: #fef3c7;
-    --color-text-secondary: #fde68a;
-    --color-text-tertiary: #fbbf24;
-    --color-text-muted: #d97706;
-
-    /* Borders */
-    --color-border: #44403c;
-    --color-border-light: #57534e;
-
-    /* Backgrounds */
-    --color-bg: #1c1917;
-    --color-bg-card: #292524;
-    --color-bg-alt: #3e3933;
-    --color-bg-hover: #44403c;
-    --color-bg-overlay: rgba(0, 0, 0, 0.75);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
-    --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
-  }
-
-  /* ===== LAVENDER LIGHT THEME ===== */
-  [data-theme='lavender-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #c084fc;
-    --color-primary-dark: #a855f7;
-    --color-primary-bg: #faf5ff;
-    --color-primary-hover: rgba(192, 132, 252, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #8e52c6;
-
-    /* Success */
-    --color-success: #84cc16;
-    --color-success-dark: #65a30d;
-    --color-success-bg: rgba(132, 204, 22, 0.1);
-    --color-success-hover: rgba(132, 204, 22, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #256700;
-
-    /* Warning */
-    --color-warning: #f59e0b;
-    --color-warning-dark: #ce7a00;
-    --color-warning-bg: rgba(245, 158, 11, 0.1);
-    --color-warning-hover: rgba(245, 158, 11, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #914100;
-
-    /* Danger */
-    --color-danger: #5e60ea;
-    --color-danger-dark: #4f46e5;
-    --color-danger-bg: #e0e7ff;
-    --color-danger-hover: rgba(99, 102, 241, 0.06);
-    --color-on-danger: white;
-    --color-on-danger-bg: #5453dc;
-
-    /* Neutral */
-    --color-neutral: #71717a;
-    --color-neutral-dark: #515159;
-    --color-neutral-bg: #e4e4e7;
-    --color-neutral-hover: rgba(113, 113, 122, 0.06);
-    --color-on-neutral: white;
-    --color-on-neutral-bg: #63636b;
-
-    /* Text */
-    --color-text: #1f1f29;
-    --color-text-secondary: #52525b;
-    --color-text-tertiary: #71717a;
-    --color-text-muted: #a1a1aa;
-
-    /* Borders */
-    --color-border: #d8c4ee;
-    --color-border-light: #e6dbf1;
-
-    /* Backgrounds */
-    --color-bg: #eae6ef;
-    --color-bg-card: #fdf8ff;
-    --color-bg-alt: #e1d6ed;
-    --color-bg-hover: #d7c3ed;
-    --color-bg-overlay: rgba(192, 132, 252, 0.25);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
-    --hdk-shadow-md: 0 2px 4px rgba(192, 132, 252, 0.1);
-    --hdk-shadow-lg: 0 8px 24px rgba(192, 132, 252, 0.15);
-    --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
-  }
-
-  /* ===== LAVENDER DARK THEME ===== */
-  [data-theme='lavender-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #cba1fa;
-    --color-primary-dark: #b58be2;
-    --color-primary-bg: rgba(203, 161, 250, 0.16);
-    --color-primary-hover: rgba(203, 161, 250, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #d1a7ff;
-
-    /* Success */
-    --color-success: #b3e14d;
-    --color-success-dark: #9dca30;
-    --color-success-bg: rgba(179, 225, 77, 0.15);
-    --color-success-hover: rgba(179, 225, 77, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #b3e14d;
-
-    /* Warning */
-    --color-warning: #fdbe45;
-    --color-warning-dark: #e5a725;
-    --color-warning-bg: rgba(253, 190, 69, 0.15);
-    --color-warning-hover: rgba(253, 190, 69, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #fdbe45;
-
-    /* Danger */
-    --color-danger: #f06f84;
-    --color-danger-dark: #d7596f;
-    --color-danger-bg: rgba(240, 111, 132, 0.15);
-    --color-danger-hover: rgba(240, 111, 132, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #ff8c9f;
-
-    /* Neutral */
-    --color-neutral: #9098ab;
-    --color-neutral-dark: #7b8395;
-    --color-neutral-bg: #253154;
-    --color-neutral-hover: rgba(144, 152, 171, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #969eb1;
-
-    /* Text */
-    --color-text: #f3f2fd;
-    --color-text-secondary: #dad9e8;
-    --color-text-tertiary: #bdbad4;
-    --color-text-muted: #918fa6;
-
-    /* Borders */
-    --color-border: #333e5b;
-    --color-border-light: #3b496e;
-
-    /* Backgrounds */
-    --color-bg: #0e172f;
-    --color-bg-card: #192341;
-    --color-bg-alt: #27324e;
-    --color-bg-hover: #222d4d;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(203, 161, 250, 0.3);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(203, 161, 250, 0.3);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(203, 161, 250, 0.2);
-  }
-
-  /* ===== PINK LIGHT THEME ===== */
-  [data-theme='pink-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #ff69b4;
-    --color-primary-dark: #ff1493;
-    --color-primary-bg: #fff0f5;
-    --color-primary-hover: rgba(255, 105, 180, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #c32e80;
-
-    /* Success */
-    --color-success: #63e6be;
-    --color-success-dark: #34c09a;
-    --color-success-bg: rgba(99, 230, 190, 0.15);
-    --color-success-hover: rgba(99, 230, 190, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #007150;
-
-    /* Warning */
-    --color-warning: #fbbf24;
-    --color-warning-dark: #d59a00;
-    --color-warning-bg: rgba(251, 191, 36, 0.1);
-    --color-warning-hover: rgba(251, 191, 36, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #8d5500;
-
-    /* Danger */
-    --color-danger: #9856b3;
-    --color-danger-dark: #8e44ad;
-    --color-danger-bg: #e8daef;
-    --color-danger-hover: rgba(155, 89, 182, 0.06);
-    --color-on-danger: white;
-    --color-on-danger-bg: #8644a0;
-
-    /* Neutral */
-    --color-neutral: #d4a5a5;
-    --color-neutral-dark: #af8282;
-    --color-neutral-bg: #ffd9e0;
-    --color-neutral-hover: rgba(212, 165, 165, 0.06);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #825858;
-
-    /* Text */
-    --color-text: #4a2a3a;
-    --color-text-secondary: #88576c;
-    --color-text-tertiary: #c48ca0;
-    --color-text-muted: #e5b3c8;
-
-    /* Borders */
-    --color-border: #ffc0cb;
-    --color-border-light: #ffd9e0;
-
-    /* Backgrounds */
-    --color-bg: #f4eaee;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #f0e2e7;
-    --color-bg-hover: #f0cbd2;
-    --color-bg-overlay: rgba(255, 105, 180, 0.2);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(255, 105, 180, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(255, 105, 180, 0.15);
-    --hdk-shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
-  }
-
-  /* ===== PINK DARK THEME ===== */
-  [data-theme='pink-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #f799be;
-    --color-primary-dark: #df83a8;
-    --color-primary-bg: rgba(247, 153, 190, 0.16);
-    --color-primary-hover: rgba(247, 153, 190, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #f799be;
-
-    /* Success */
-    --color-success: #63e6be;
-    --color-success-dark: #48cfa8;
-    --color-success-bg: rgba(99, 230, 190, 0.15);
-    --color-success-hover: rgba(99, 230, 190, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #63e6be;
-
-    /* Warning */
-    --color-warning: #fdbe45;
-    --color-warning-dark: #e5a725;
-    --color-warning-bg: rgba(253, 190, 69, 0.15);
-    --color-warning-hover: rgba(253, 190, 69, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #fdbe45;
-
-    /* Danger */
-    --color-danger: #ae7ee2;
-    --color-danger-dark: #9869cb;
-    --color-danger-bg: rgba(174, 126, 226, 0.15);
-    --color-danger-hover: rgba(174, 126, 226, 0.1);
-    --color-on-danger: black;
-    --color-on-danger-bg: #b787ec;
-
-    /* Neutral */
-    --color-neutral: #a5929a;
-    --color-neutral-dark: #907d85;
-    --color-neutral-bg: #3b2b32;
-    --color-neutral-hover: rgba(165, 146, 154, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #a8959d;
-
-    /* Text */
-    --color-text: #ffeef5;
-    --color-text-secondary: #ead4dd;
-    --color-text-tertiary: #d7b2c2;
-    --color-text-muted: #a88896;
-
-    /* Borders */
-    --color-border: #4a373f;
-    --color-border-light: #624b55;
-
-    /* Backgrounds */
-    --color-bg: #1d1217;
-    --color-bg-card: #2c1e24;
-    --color-bg-alt: #170d12;
-    --color-bg-hover: #36282e;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(247, 153, 190, 0.4);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(247, 153, 190, 0.4);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(247, 153, 190, 0.3);
-  }
-
-  /* ===== NATURE LIGHT THEME ===== */
-  [data-theme='nature-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #6bbe4e;
-    --color-primary-dark: #5aa942;
-    --color-primary-bg: #f4faf1;
-    --color-primary-hover: rgba(107, 190, 78, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #2c7f00;
-
-    /* Success */
-    --color-success: #a7d88f;
-    --color-success-dark: #8dc473;
-    --color-success-bg: rgba(167, 216, 143, 0.15);
-    --color-success-hover: rgba(167, 216, 143, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #426e29;
-
-    /* Warning */
-    --color-warning: #ca8a04;
-    --color-warning-dark: #a66800;
-    --color-warning-bg: rgba(202, 138, 4, 0.1);
-    --color-warning-hover: rgba(202, 138, 4, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #8d5100;
-
-    /* Danger */
-    --color-danger: #ca6050;
-    --color-danger-dark: #c05747;
-    --color-danger-bg: #fae7e4;
-    --color-danger-hover: rgba(202, 96, 80, 0.06);
-    --color-on-danger: black;
-    --color-on-danger-bg: #af4839;
-
-    /* Neutral */
-    --color-neutral: #cfc6b0;
-    --color-neutral-dark: #aaa28c;
-    --color-neutral-bg: #ebe7dc;
-    --color-neutral-hover: rgba(207, 198, 176, 0.06);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #6d6551;
-
-    /* Text */
-    --color-text: #2c2c2c;
-    --color-text-secondary: #5a5a5a;
-    --color-text-tertiary: #8a8a8a;
-    --color-text-muted: #acacac;
-
-    /* Borders */
-    --color-border: #dad3bf;
-    --color-border-light: #e9e5da;
-
-    /* Backgrounds */
-    --color-bg: #efede4;
-    --color-bg-card: #ffffff;
-    --color-bg-alt: #ebe8de;
-    --color-bg-hover: #e1ddd2;
-    --color-bg-overlay: rgba(44, 44, 44, 0.5);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(107, 190, 78, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(107, 190, 78, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(107, 190, 78, 0.2);
-    --hdk-shadow-focus: 0 0 0 3px rgba(107, 190, 78, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(107, 190, 78, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(107, 190, 78, 0.15);
-  }
-
-  /* ===== NATURE DARK THEME ===== */
-  [data-theme='nature-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #5ac041;
-    --color-primary-dark: #42a926;
-    --color-primary-bg: rgba(90, 192, 65, 0.16);
-    --color-primary-hover: rgba(90, 192, 65, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #5ac041;
-
-    /* Success */
-    --color-success: #52db9c;
-    --color-success-dark: #34c487;
-    --color-success-bg: rgba(82, 219, 156, 0.15);
-    --color-success-hover: rgba(82, 219, 156, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #52db9c;
-
-    /* Warning */
-    --color-warning: #f7c243;
-    --color-warning-dark: #e0ab22;
-    --color-warning-bg: rgba(247, 194, 67, 0.15);
-    --color-warning-hover: rgba(247, 194, 67, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #f7c243;
-
-    /* Danger */
-    --color-danger: #bc4f2b;
-    --color-danger-dark: #a63b14;
-    --color-danger-bg: rgba(190, 81, 45, 0.15);
-    --color-danger-hover: rgba(190, 81, 45, 0.1);
-    --color-on-danger: white;
-    --color-on-danger-bg: #ec7b56;
-
-    /* Neutral */
-    --color-neutral: #8f8476;
-    --color-neutral-dark: #807568;
-    --color-neutral-bg: #3b3229;
-    --color-neutral-hover: rgba(143, 132, 118, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #a89c8e;
-
-    /* Text */
-    --color-text: #f8f4e1;
-    --color-text-secondary: #e2dbc1;
-    --color-text-tertiary: #cabe92;
-    --color-text-muted: #9d926c;
-
-    /* Borders */
-    --color-border: #604734;
-    --color-border-light: #795c45;
-
-    /* Backgrounds */
-    --color-bg: #1e1811;
-    --color-bg-card: #2c251d;
-    --color-bg-alt: #18130c;
-    --color-bg-hover: #372f26;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
-    --hdk-shadow-focus: 0 0 0 3px rgba(90, 192, 65, 0.35);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(90, 192, 65, 0.35);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(90, 192, 65, 0.25);
-  }
-
-  /* Izakaya Theme - Winner of Kitsune Theme Contest */
-  /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C themes */
-
-  [data-theme='izakaya-light'] {
-    color-scheme: light;
-    /* Primary */
-    --color-primary: #41baae;
-    --color-primary-dark: #369c92;
-    --color-primary-bg: rgba(65, 186, 174, 0.05);
-    --color-primary-hover: rgba(65, 186, 174, 0.08);
-    --color-on-primary: black;
-    --color-on-primary-bg: #00534a;
-
-    /* Success */
-    --color-success: #a6d8ad;
-    --color-success-dark: #8ccb94;
-    --color-success-bg: rgba(166, 216, 173, 0.15);
-    --color-success-hover: rgba(166, 216, 173, 0.06);
-    --color-on-success: black;
-    --color-on-success-bg: #275530;
-
-    /* Warning */
-    --color-warning: #d4a574;
-    --color-warning-dark: #af8252;
-    --color-warning-bg: rgba(212, 165, 116, 0.15);
-    --color-warning-hover: rgba(212, 165, 116, 0.06);
-    --color-on-warning: black;
-    --color-on-warning-bg: #673e07;
-
-    /* Danger */
-    --color-danger: #c04448;
-    --color-danger-dark: #991c28;
-    --color-danger-bg: #f97978;
-    --color-danger-hover: rgba(192, 68, 72, 0.06);
-    --color-on-danger: white;
-    --color-on-danger-bg: #720007;
-
-    /* Neutral */
-    --color-neutral: #a8999e;
-    --color-neutral-dark: #85777b;
-    --color-neutral-bg: #d8c8b0;
-    --color-neutral-hover: rgba(168, 153, 158, 0.06);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #5e5055;
-
-    /* Text */
-    --color-text: #2a2a2a;
-    --color-text-secondary: rgba(42, 42, 42, 0.8);
-    --color-text-tertiary: rgba(42, 42, 42, 0.6);
-    --color-text-muted: rgba(42, 42, 42, 0.4);
-
-    /* Borders */
-    --color-border: #bfa1a0;
-    --color-border-light: #ceaecb;
-
-    /* Backgrounds */
-    --color-bg: #f2e6cd;
-    --color-bg-card: #f1c8c8;
-    --color-bg-alt: #d8b888;
-    --color-bg-hover: #d1b1ce;
-    --color-bg-overlay: rgba(42, 42, 42, 0.45);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(65, 186, 174, 0.08);
-    --hdk-shadow-md: 0 2px 4px rgba(65, 186, 174, 0.12);
-    --hdk-shadow-lg: 0 8px 24px rgba(65, 186, 174, 0.2);
-    --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.25);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.25);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
-  }
-
-  /* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C dark themes */
-
-  [data-theme='izakaya-dark'] {
-    color-scheme: dark only;
-    /* Primary */
-    --color-primary: #04c5b5;
-    --color-primary-dark: #00ac9e;
-    --color-primary-bg: rgba(4, 197, 181, 0.16);
-    --color-primary-hover: rgba(4, 197, 181, 0.12);
-    --color-on-primary: black;
-    --color-on-primary-bg: #04c5b5;
-
-    /* Success */
-    --color-success: #61d19a;
-    --color-success-dark: #48ba85;
-    --color-success-bg: rgba(97, 209, 154, 0.15);
-    --color-success-hover: rgba(97, 209, 154, 0.1);
-    --color-on-success: black;
-    --color-on-success-bg: #61d19a;
-
-    /* Warning */
-    --color-warning: #fdbe45;
-    --color-warning-dark: #e5a725;
-    --color-warning-bg: rgba(253, 190, 69, 0.15);
-    --color-warning-hover: rgba(253, 190, 69, 0.1);
-    --color-on-warning: black;
-    --color-on-warning-bg: #fdbe45;
-
-    /* Danger */
-    --color-danger: #c13e2e;
-    --color-danger-dark: #a92517;
-    --color-danger-bg: rgba(193, 62, 46, 0.15);
-    --color-danger-hover: rgba(193, 62, 46, 0.1);
-    --color-on-danger: white;
-    --color-on-danger-bg: #f66f5b;
-
-    /* Neutral */
-    --color-neutral: #7f7f87;
-    --color-neutral-dark: #76767e;
-    --color-neutral-bg: #2d343b;
-    --color-neutral-hover: rgba(127, 127, 135, 0.1);
-    --color-on-neutral: black;
-    --color-on-neutral-bg: #9d9da5;
-
-    /* Text */
-    --color-text: #f5f2f5;
-    --color-text-secondary: #ddd9dd;
-    --color-text-tertiary: #c1bcc1;
-    --color-text-muted: #959095;
-
-    /* Borders */
-    --color-border: #71574b;
-    --color-border-light: #8c6c5e;
-
-    /* Backgrounds */
-    --color-bg: #14191e;
-    --color-bg-card: #20262c;
-    --color-bg-alt: #0f1318;
-    --color-bg-hover: #2a3036;
-    --color-bg-overlay: rgba(0, 0, 0, 0.72);
-
-    --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.55);
-    --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
-    --hdk-shadow-focus: 0 0 0 3px rgba(4, 197, 181, 0.32);
-    --hdk-shadow-focus-sm: 0 0 0 2px rgba(4, 197, 181, 0.32);
-    --hdk-shadow-focus-alt: 0 0 0 2px rgba(4, 197, 181, 0.18);
-  }
-
-  /* ============================================================
+  --advanced-stop-1-l: 0.32;
+  --advanced-stop-1-c: 0.12;
+  --advanced-stop-1-h: 220;
+  --advanced-stop-2-l: 0.42;
+  --advanced-stop-2-c: 0.18;
+  --advanced-stop-2-h: 200;
+  --advanced-stop-3-l: 0.5;
+  --advanced-stop-3-c: 0.2;
+  --advanced-stop-3-h: 195;
+  --advanced-stop-4-l: 0.45;
+  --advanced-stop-4-c: 0.22;
+  --advanced-stop-4-h: 280;
+  --advanced-stop-5-l: 0.4;
+  --advanced-stop-5-c: 0.26;
+  --advanced-stop-5-h: 320;
+  --advanced-stop-6-l: 0.46;
+  --advanced-stop-6-c: 0.28;
+  --advanced-stop-6-h: 340;
+  --advanced-stop-7-l: 0.38;
+  --advanced-stop-7-c: 0.22;
+  --advanced-stop-7-h: 290;
+  --advanced-stop-8-l: 0.28;
+  --advanced-stop-8-c: 0.16;
+  --advanced-stop-8-h: 250;
+  --advanced-gradient: linear-gradient(
+    135deg,
+    oklch(var(--advanced-stop-1-l) var(--advanced-stop-1-c) var(--advanced-stop-1-h)) 0%,
+    oklch(var(--advanced-stop-2-l) var(--advanced-stop-2-c) var(--advanced-stop-2-h)) 15%,
+    oklch(var(--advanced-stop-3-l) var(--advanced-stop-3-c) var(--advanced-stop-3-h)) 30%,
+    oklch(var(--advanced-stop-4-l) var(--advanced-stop-4-c) var(--advanced-stop-4-h)) 45%,
+    oklch(var(--advanced-stop-5-l) var(--advanced-stop-5-c) var(--advanced-stop-5-h)) 60%,
+    oklch(var(--advanced-stop-6-l) var(--advanced-stop-6-c) var(--advanced-stop-6-h)) 75%,
+    oklch(var(--advanced-stop-7-l) var(--advanced-stop-7-c) var(--advanced-stop-7-h)) 88%,
+    oklch(var(--advanced-stop-8-l) var(--advanced-stop-8-c) var(--advanced-stop-8-h)) 100%
+  );
+}
+
+/* ===== COFFEE LIGHT THEME ===== */
+[data-theme='coffee-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #ea580c;
+  --color-primary-dark: #d54300;
+  --color-primary-bg: #fffbeb;
+  --color-primary-hover: rgba(234, 88, 12, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #cd3c00;
+
+  /* Success */
+  --color-success: #65a30d;
+  --color-success-dark: #498500;
+  --color-success-bg: rgba(101, 163, 13, 0.1);
+  --color-success-hover: rgba(101, 163, 13, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #316c00;
+
+  /* Warning */
+  --color-warning: #ca8a04;
+  --color-warning-dark: #a66800;
+  --color-warning-bg: rgba(202, 138, 4, 0.1);
+  --color-warning-hover: rgba(202, 138, 4, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #8d5100;
+
+  /* Danger */
+  --color-danger: #b91c1c;
+  --color-danger-dark: #910000;
+  --color-danger-bg: #ffe4dd;
+  --color-danger-hover: rgba(185, 28, 28, 0.06);
+  --color-on-danger: white;
+  --color-on-danger-bg: #b91c1c;
+
+  /* Neutral */
+  --color-neutral: #77706b;
+  --color-neutral-dark: #56504b;
+  --color-neutral-bg: #efe5da;
+  --color-neutral-hover: rgba(120, 113, 108, 0.06);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #6b6560;
+
+  /* Text */
+  --color-text: #1c1917;
+  --color-text-secondary: #44403c;
+  --color-text-tertiary: #78716c;
+  --color-text-muted: #a8a29e;
+
+  /* Borders */
+  --color-border: #ead377;
+  --color-border-light: #f0e5ba;
+
+  /* Backgrounds */
+  --color-bg: #f1edde;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #f0e5ba;
+  --color-bg-hover: #f0ca9d;
+  --color-bg-overlay: rgba(28, 25, 23, 0.3);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(234, 88, 12, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(234, 88, 12, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(234, 88, 12, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.15);
+}
+
+/* ===== COFFEE DARK THEME ===== */
+[data-theme='coffee-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #ea580c;
+  --color-primary-dark: #d54300;
+  --color-primary-bg: #292524;
+  --color-primary-hover: rgba(234, 88, 12, 0.15);
+  --color-on-primary: black;
+  --color-on-primary-bg: #f15f1a;
+
+  /* Success */
+  --color-success: #84cc16;
+  --color-success-dark: #61a700;
+  --color-success-bg: rgba(132, 204, 22, 0.15);
+  --color-success-hover: rgba(132, 204, 22, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #8ad324;
+
+  /* Warning */
+  --color-warning: #f59e0b;
+  --color-warning-dark: #ce7a00;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-warning-hover: rgba(245, 158, 11, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #ffab29;
+
+  /* Danger */
+  --color-danger: #f87171;
+  --color-danger-dark: #cf4c4f;
+  --color-danger-bg: rgba(248, 113, 113, 0.15);
+  --color-danger-hover: rgba(248, 113, 113, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #ff9b99;
+
+  /* Neutral */
+  --color-neutral: #77706b;
+  --color-neutral-dark: #56504b;
+  --color-neutral-bg: #3e3933;
+  --color-neutral-hover: rgba(120, 113, 108, 0.1);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #aea6a1;
+
+  /* Text */
+  --color-text: #fef3c7;
+  --color-text-secondary: #fde68a;
+  --color-text-tertiary: #fbbf24;
+  --color-text-muted: #d97706;
+
+  /* Borders */
+  --color-border: #44403c;
+  --color-border-light: #57534e;
+
+  /* Backgrounds */
+  --color-bg: #1c1917;
+  --color-bg-card: #292524;
+  --color-bg-alt: #3e3933;
+  --color-bg-hover: #44403c;
+  --color-bg-overlay: rgba(0, 0, 0, 0.75);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
+  --hdk-shadow-focus: 0 0 0 3px rgba(234, 88, 12, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(234, 88, 12, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(234, 88, 12, 0.2);
+}
+
+/* ===== LAVENDER LIGHT THEME ===== */
+[data-theme='lavender-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #c084fc;
+  --color-primary-dark: #a855f7;
+  --color-primary-bg: #faf5ff;
+  --color-primary-hover: rgba(192, 132, 252, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #8e52c6;
+
+  /* Success */
+  --color-success: #84cc16;
+  --color-success-dark: #65a30d;
+  --color-success-bg: rgba(132, 204, 22, 0.1);
+  --color-success-hover: rgba(132, 204, 22, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #256700;
+
+  /* Warning */
+  --color-warning: #f59e0b;
+  --color-warning-dark: #ce7a00;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-hover: rgba(245, 158, 11, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #914100;
+
+  /* Danger */
+  --color-danger: #5e60ea;
+  --color-danger-dark: #4f46e5;
+  --color-danger-bg: #e0e7ff;
+  --color-danger-hover: rgba(99, 102, 241, 0.06);
+  --color-on-danger: white;
+  --color-on-danger-bg: #5453dc;
+
+  /* Neutral */
+  --color-neutral: #71717a;
+  --color-neutral-dark: #515159;
+  --color-neutral-bg: #e4e4e7;
+  --color-neutral-hover: rgba(113, 113, 122, 0.06);
+  --color-on-neutral: white;
+  --color-on-neutral-bg: #63636b;
+
+  /* Text */
+  --color-text: #1f1f29;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #71717a;
+  --color-text-muted: #a1a1aa;
+
+  /* Borders */
+  --color-border: #d8c4ee;
+  --color-border-light: #e6dbf1;
+
+  /* Backgrounds */
+  --color-bg: #eae6ef;
+  --color-bg-card: #fdf8ff;
+  --color-bg-alt: #e1d6ed;
+  --color-bg-hover: #d7c3ed;
+  --color-bg-overlay: rgba(192, 132, 252, 0.25);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(192, 132, 252, 0.06);
+  --hdk-shadow-md: 0 2px 4px rgba(192, 132, 252, 0.1);
+  --hdk-shadow-lg: 0 8px 24px rgba(192, 132, 252, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(192, 132, 252, 0.2);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(192, 132, 252, 0.2);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(192, 132, 252, 0.15);
+}
+
+/* ===== LAVENDER DARK THEME ===== */
+[data-theme='lavender-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #cba1fa;
+  --color-primary-dark: #b58be2;
+  --color-primary-bg: rgba(203, 161, 250, 0.16);
+  --color-primary-hover: rgba(203, 161, 250, 0.12);
+  --color-on-primary: black;
+  --color-on-primary-bg: #d1a7ff;
+
+  /* Success */
+  --color-success: #b3e14d;
+  --color-success-dark: #9dca30;
+  --color-success-bg: rgba(179, 225, 77, 0.15);
+  --color-success-hover: rgba(179, 225, 77, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #b3e14d;
+
+  /* Warning */
+  --color-warning: #fdbe45;
+  --color-warning-dark: #e5a725;
+  --color-warning-bg: rgba(253, 190, 69, 0.15);
+  --color-warning-hover: rgba(253, 190, 69, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #fdbe45;
+
+  /* Danger */
+  --color-danger: #f06f84;
+  --color-danger-dark: #d7596f;
+  --color-danger-bg: rgba(240, 111, 132, 0.15);
+  --color-danger-hover: rgba(240, 111, 132, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #ff8c9f;
+
+  /* Neutral */
+  --color-neutral: #9098ab;
+  --color-neutral-dark: #7b8395;
+  --color-neutral-bg: #253154;
+  --color-neutral-hover: rgba(144, 152, 171, 0.1);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #969eb1;
+
+  /* Text */
+  --color-text: #f3f2fd;
+  --color-text-secondary: #dad9e8;
+  --color-text-tertiary: #bdbad4;
+  --color-text-muted: #918fa6;
+
+  /* Borders */
+  --color-border: #333e5b;
+  --color-border-light: #3b496e;
+
+  /* Backgrounds */
+  --color-bg: #0e172f;
+  --color-bg-card: #192341;
+  --color-bg-alt: #27324e;
+  --color-bg-hover: #222d4d;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(203, 161, 250, 0.3);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(203, 161, 250, 0.3);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(203, 161, 250, 0.2);
+}
+
+/* ===== PINK LIGHT THEME ===== */
+[data-theme='pink-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #ff69b4;
+  --color-primary-dark: #ff1493;
+  --color-primary-bg: #fff0f5;
+  --color-primary-hover: rgba(255, 105, 180, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #c32e80;
+
+  /* Success */
+  --color-success: #63e6be;
+  --color-success-dark: #34c09a;
+  --color-success-bg: rgba(99, 230, 190, 0.15);
+  --color-success-hover: rgba(99, 230, 190, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #007150;
+
+  /* Warning */
+  --color-warning: #fbbf24;
+  --color-warning-dark: #d59a00;
+  --color-warning-bg: rgba(251, 191, 36, 0.1);
+  --color-warning-hover: rgba(251, 191, 36, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #8d5500;
+
+  /* Danger */
+  --color-danger: #9856b3;
+  --color-danger-dark: #8e44ad;
+  --color-danger-bg: #e8daef;
+  --color-danger-hover: rgba(155, 89, 182, 0.06);
+  --color-on-danger: white;
+  --color-on-danger-bg: #8644a0;
+
+  /* Neutral */
+  --color-neutral: #d4a5a5;
+  --color-neutral-dark: #af8282;
+  --color-neutral-bg: #ffd9e0;
+  --color-neutral-hover: rgba(212, 165, 165, 0.06);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #825858;
+
+  /* Text */
+  --color-text: #4a2a3a;
+  --color-text-secondary: #88576c;
+  --color-text-tertiary: #c48ca0;
+  --color-text-muted: #e5b3c8;
+
+  /* Borders */
+  --color-border: #ffc0cb;
+  --color-border-light: #ffd9e0;
+
+  /* Backgrounds */
+  --color-bg: #f4eaee;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #f0e2e7;
+  --color-bg-hover: #f0cbd2;
+  --color-bg-overlay: rgba(255, 105, 180, 0.2);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(255, 105, 180, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(255, 105, 180, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(255, 105, 180, 0.15);
+  --hdk-shadow-focus: 0 0 0 3px rgba(255, 105, 180, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(255, 105, 180, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(255, 105, 180, 0.15);
+}
+
+/* ===== PINK DARK THEME ===== */
+[data-theme='pink-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #f799be;
+  --color-primary-dark: #df83a8;
+  --color-primary-bg: rgba(247, 153, 190, 0.16);
+  --color-primary-hover: rgba(247, 153, 190, 0.12);
+  --color-on-primary: black;
+  --color-on-primary-bg: #f799be;
+
+  /* Success */
+  --color-success: #63e6be;
+  --color-success-dark: #48cfa8;
+  --color-success-bg: rgba(99, 230, 190, 0.15);
+  --color-success-hover: rgba(99, 230, 190, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #63e6be;
+
+  /* Warning */
+  --color-warning: #fdbe45;
+  --color-warning-dark: #e5a725;
+  --color-warning-bg: rgba(253, 190, 69, 0.15);
+  --color-warning-hover: rgba(253, 190, 69, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #fdbe45;
+
+  /* Danger */
+  --color-danger: #ae7ee2;
+  --color-danger-dark: #9869cb;
+  --color-danger-bg: rgba(174, 126, 226, 0.15);
+  --color-danger-hover: rgba(174, 126, 226, 0.1);
+  --color-on-danger: black;
+  --color-on-danger-bg: #b787ec;
+
+  /* Neutral */
+  --color-neutral: #a5929a;
+  --color-neutral-dark: #907d85;
+  --color-neutral-bg: #3b2b32;
+  --color-neutral-hover: rgba(165, 146, 154, 0.1);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #a8959d;
+
+  /* Text */
+  --color-text: #ffeef5;
+  --color-text-secondary: #ead4dd;
+  --color-text-tertiary: #d7b2c2;
+  --color-text-muted: #a88896;
+
+  /* Borders */
+  --color-border: #4a373f;
+  --color-border-light: #624b55;
+
+  /* Backgrounds */
+  --color-bg: #1d1217;
+  --color-bg-card: #2c1e24;
+  --color-bg-alt: #170d12;
+  --color-bg-hover: #36282e;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(247, 153, 190, 0.4);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(247, 153, 190, 0.4);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(247, 153, 190, 0.3);
+}
+
+/* ===== NATURE LIGHT THEME ===== */
+[data-theme='nature-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #6bbe4e;
+  --color-primary-dark: #5aa942;
+  --color-primary-bg: #f4faf1;
+  --color-primary-hover: rgba(107, 190, 78, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #2c7f00;
+
+  /* Success */
+  --color-success: #a7d88f;
+  --color-success-dark: #8dc473;
+  --color-success-bg: rgba(167, 216, 143, 0.15);
+  --color-success-hover: rgba(167, 216, 143, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #426e29;
+
+  /* Warning */
+  --color-warning: #ca8a04;
+  --color-warning-dark: #a66800;
+  --color-warning-bg: rgba(202, 138, 4, 0.1);
+  --color-warning-hover: rgba(202, 138, 4, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #8d5100;
+
+  /* Danger */
+  --color-danger: #ca6050;
+  --color-danger-dark: #c05747;
+  --color-danger-bg: #fae7e4;
+  --color-danger-hover: rgba(202, 96, 80, 0.06);
+  --color-on-danger: black;
+  --color-on-danger-bg: #af4839;
+
+  /* Neutral */
+  --color-neutral: #cfc6b0;
+  --color-neutral-dark: #aaa28c;
+  --color-neutral-bg: #ebe7dc;
+  --color-neutral-hover: rgba(207, 198, 176, 0.06);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #6d6551;
+
+  /* Text */
+  --color-text: #2c2c2c;
+  --color-text-secondary: #5a5a5a;
+  --color-text-tertiary: #8a8a8a;
+  --color-text-muted: #acacac;
+
+  /* Borders */
+  --color-border: #dad3bf;
+  --color-border-light: #e9e5da;
+
+  /* Backgrounds */
+  --color-bg: #efede4;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #ebe8de;
+  --color-bg-hover: #e1ddd2;
+  --color-bg-overlay: rgba(44, 44, 44, 0.5);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(107, 190, 78, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(107, 190, 78, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(107, 190, 78, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(107, 190, 78, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(107, 190, 78, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(107, 190, 78, 0.15);
+}
+
+/* ===== NATURE DARK THEME ===== */
+[data-theme='nature-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #5ac041;
+  --color-primary-dark: #42a926;
+  --color-primary-bg: rgba(90, 192, 65, 0.16);
+  --color-primary-hover: rgba(90, 192, 65, 0.12);
+  --color-on-primary: black;
+  --color-on-primary-bg: #5ac041;
+
+  /* Success */
+  --color-success: #52db9c;
+  --color-success-dark: #34c487;
+  --color-success-bg: rgba(82, 219, 156, 0.15);
+  --color-success-hover: rgba(82, 219, 156, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #52db9c;
+
+  /* Warning */
+  --color-warning: #f7c243;
+  --color-warning-dark: #e0ab22;
+  --color-warning-bg: rgba(247, 194, 67, 0.15);
+  --color-warning-hover: rgba(247, 194, 67, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #f7c243;
+
+  /* Danger */
+  --color-danger: #bc4f2b;
+  --color-danger-dark: #a63b14;
+  --color-danger-bg: rgba(190, 81, 45, 0.15);
+  --color-danger-hover: rgba(190, 81, 45, 0.1);
+  --color-on-danger: white;
+  --color-on-danger-bg: #ec7b56;
+
+  /* Neutral */
+  --color-neutral: #8f8476;
+  --color-neutral-dark: #807568;
+  --color-neutral-bg: #3b3229;
+  --color-neutral-hover: rgba(143, 132, 118, 0.1);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #a89c8e;
+
+  /* Text */
+  --color-text: #f8f4e1;
+  --color-text-secondary: #e2dbc1;
+  --color-text-tertiary: #cabe92;
+  --color-text-muted: #9d926c;
+
+  /* Borders */
+  --color-border: #604734;
+  --color-border-light: #795c45;
+
+  /* Backgrounds */
+  --color-bg: #1e1811;
+  --color-bg-card: #2c251d;
+  --color-bg-alt: #18130c;
+  --color-bg-hover: #372f26;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
+  --hdk-shadow-focus: 0 0 0 3px rgba(90, 192, 65, 0.35);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(90, 192, 65, 0.35);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(90, 192, 65, 0.25);
+}
+
+/* Izakaya Theme - Winner of Kitsune Theme Contest */
+/* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C themes */
+
+[data-theme='izakaya-light'] {
+  color-scheme: light;
+  /* Primary */
+  --color-primary: #41baae;
+  --color-primary-dark: #369c92;
+  --color-primary-bg: rgba(65, 186, 174, 0.05);
+  --color-primary-hover: rgba(65, 186, 174, 0.08);
+  --color-on-primary: black;
+  --color-on-primary-bg: #00534a;
+
+  /* Success */
+  --color-success: #a6d8ad;
+  --color-success-dark: #8ccb94;
+  --color-success-bg: rgba(166, 216, 173, 0.15);
+  --color-success-hover: rgba(166, 216, 173, 0.06);
+  --color-on-success: black;
+  --color-on-success-bg: #275530;
+
+  /* Warning */
+  --color-warning: #d4a574;
+  --color-warning-dark: #af8252;
+  --color-warning-bg: rgba(212, 165, 116, 0.15);
+  --color-warning-hover: rgba(212, 165, 116, 0.06);
+  --color-on-warning: black;
+  --color-on-warning-bg: #673e07;
+
+  /* Danger */
+  --color-danger: #c04448;
+  --color-danger-dark: #991c28;
+  --color-danger-bg: #f97978;
+  --color-danger-hover: rgba(192, 68, 72, 0.06);
+  --color-on-danger: white;
+  --color-on-danger-bg: #720007;
+
+  /* Neutral */
+  --color-neutral: #a8999e;
+  --color-neutral-dark: #85777b;
+  --color-neutral-bg: #d8c8b0;
+  --color-neutral-hover: rgba(168, 153, 158, 0.06);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #5e5055;
+
+  /* Text */
+  --color-text: #2a2a2a;
+  --color-text-secondary: rgba(42, 42, 42, 0.8);
+  --color-text-tertiary: rgba(42, 42, 42, 0.6);
+  --color-text-muted: rgba(42, 42, 42, 0.4);
+
+  /* Borders */
+  --color-border: #bfa1a0;
+  --color-border-light: #ceaecb;
+
+  /* Backgrounds */
+  --color-bg: #f2e6cd;
+  --color-bg-card: #f1c8c8;
+  --color-bg-alt: #d8b888;
+  --color-bg-hover: #d1b1ce;
+  --color-bg-overlay: rgba(42, 42, 42, 0.45);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(65, 186, 174, 0.08);
+  --hdk-shadow-md: 0 2px 4px rgba(65, 186, 174, 0.12);
+  --hdk-shadow-lg: 0 8px 24px rgba(65, 186, 174, 0.2);
+  --hdk-shadow-focus: 0 0 0 3px rgba(65, 186, 174, 0.25);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(65, 186, 174, 0.25);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(65, 186, 174, 0.15);
+}
+
+/* See THEME_GRAVEYARD.md for the eliminated Kitsune Springs A/B/C dark themes */
+
+[data-theme='izakaya-dark'] {
+  color-scheme: dark only;
+  /* Primary */
+  --color-primary: #04c5b5;
+  --color-primary-dark: #00ac9e;
+  --color-primary-bg: rgba(4, 197, 181, 0.16);
+  --color-primary-hover: rgba(4, 197, 181, 0.12);
+  --color-on-primary: black;
+  --color-on-primary-bg: #04c5b5;
+
+  /* Success */
+  --color-success: #61d19a;
+  --color-success-dark: #48ba85;
+  --color-success-bg: rgba(97, 209, 154, 0.15);
+  --color-success-hover: rgba(97, 209, 154, 0.1);
+  --color-on-success: black;
+  --color-on-success-bg: #61d19a;
+
+  /* Warning */
+  --color-warning: #fdbe45;
+  --color-warning-dark: #e5a725;
+  --color-warning-bg: rgba(253, 190, 69, 0.15);
+  --color-warning-hover: rgba(253, 190, 69, 0.1);
+  --color-on-warning: black;
+  --color-on-warning-bg: #fdbe45;
+
+  /* Danger */
+  --color-danger: #c13e2e;
+  --color-danger-dark: #a92517;
+  --color-danger-bg: rgba(193, 62, 46, 0.15);
+  --color-danger-hover: rgba(193, 62, 46, 0.1);
+  --color-on-danger: white;
+  --color-on-danger-bg: #f66f5b;
+
+  /* Neutral */
+  --color-neutral: #7f7f87;
+  --color-neutral-dark: #76767e;
+  --color-neutral-bg: #2d343b;
+  --color-neutral-hover: rgba(127, 127, 135, 0.1);
+  --color-on-neutral: black;
+  --color-on-neutral-bg: #9d9da5;
+
+  /* Text */
+  --color-text: #f5f2f5;
+  --color-text-secondary: #ddd9dd;
+  --color-text-tertiary: #c1bcc1;
+  --color-text-muted: #959095;
+
+  /* Borders */
+  --color-border: #71574b;
+  --color-border-light: #8c6c5e;
+
+  /* Backgrounds */
+  --color-bg: #14191e;
+  --color-bg-card: #20262c;
+  --color-bg-alt: #0f1318;
+  --color-bg-hover: #2a3036;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+
+  --hdk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --hdk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.55);
+  --hdk-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --hdk-shadow-focus: 0 0 0 3px rgba(4, 197, 181, 0.32);
+  --hdk-shadow-focus-sm: 0 0 0 2px rgba(4, 197, 181, 0.32);
+  --hdk-shadow-focus-alt: 0 0 0 2px rgba(4, 197, 181, 0.18);
+}
+
+
+/* ============================================================
    Preview chrome. Deliberately built from the tokens it shows:
    change the theme and this page restyles itself, which is the
    proof that the set is complete.
    ============================================================ */
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-  body {
-    margin: 0;
-  }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
 
-  .stage {
-    min-height: 100vh;
-    background: var(--color-bg);
-    color: var(--color-text);
-    font-family: var(--font-family);
-    line-height: 1.55;
-    transition:
-      background 0.25s ease,
-      color 0.25s ease;
-  }
+.stage {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  line-height: 1.55;
+  transition: background 0.25s ease, color 0.25s ease;
+}
 
-  .wrap {
-    display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
-    gap: 0;
-    max-width: 1280px;
-    margin: 0 auto;
-  }
-  @media (max-width: 860px) {
-    .wrap {
-      grid-template-columns: 1fr;
-    }
-  }
+.wrap { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 0; max-width: 1280px; margin: 0 auto; }
+@media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
 
-  /* ---- theme rail ---- */
-  .rail {
-    position: sticky;
-    top: 0;
-    align-self: start;
-    max-height: 100vh;
-    overflow-y: auto;
-    padding: 28px 18px 40px;
-    border-right: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  @media (max-width: 860px) {
-    .rail {
-      position: static;
-      max-height: none;
-      border-right: 0;
-      border-bottom: 1px solid var(--color-border);
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-  }
-  .rail__eyebrow {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.11em;
-    font-weight: 700;
-    color: var(--color-text-secondary);
-    margin-bottom: 12px;
-    width: 100%;
-  }
-  .chip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 7px 9px;
-    border: 1px solid transparent;
-    border-radius: var(--hdk-radius);
-    background: transparent;
-    color: var(--color-text-secondary);
-    font: inherit;
-    font-size: 12.5px;
-    text-align: left;
-    cursor: pointer;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
-  }
-  .chip:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-text);
-  }
-  .chip[aria-pressed='true'] {
-    background: var(--color-primary-bg);
-    color: var(--color-on-primary-bg);
-    border-color: var(--color-primary);
-    font-weight: 600;
-  }
-  .chip:focus-visible {
-    outline: none;
-    box-shadow: var(--hdk-shadow-focus-sm);
-  }
-  .chip__swatches {
-    display: flex;
-    flex-shrink: 0;
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .chip__swatches i {
-    display: block;
-    width: 9px;
-    height: 18px;
-  }
-  .chip__name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+/* ---- theme rail ---- */
+.rail {
+  position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px; border-right: 1px solid var(--color-border);
+  display: flex; flex-direction: column; gap: 3px;
+}
+@media (max-width: 860px) {
+  .rail { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--color-border);
+          flex-direction: row; flex-wrap: wrap; gap: 6px; }
+}
+.rail__eyebrow {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.11em; font-weight: 700;
+  color: var(--color-text-secondary); margin-bottom: 12px; width: 100%;
+}
+.chip {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 9px; border: 1px solid transparent; border-radius: var(--hdk-radius);
+  background: transparent; color: var(--color-text-secondary);
+  font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.chip:hover { background: var(--color-bg-hover); color: var(--color-text); }
+.chip[aria-pressed='true'] { background: var(--color-primary-bg); color: var(--color-on-primary-bg); border-color: var(--color-primary); font-weight: 600; }
+.chip:focus-visible { outline: none; box-shadow: var(--hdk-shadow-focus-sm); }
+.chip__swatches { display: flex; flex-shrink: 0; border-radius: 3px; overflow: hidden; }
+.chip__swatches i { display: block; width: 9px; height: 18px; }
+.chip__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ---- main ---- */
-  main {
-    padding: 32px 34px 80px;
-    min-width: 0;
-  }
-  @media (max-width: 640px) {
-    main {
-      padding: 24px 18px 60px;
-    }
-  }
+/* ---- main ---- */
+main { padding: 32px 34px 80px; min-width: 0; }
+@media (max-width: 640px) { main { padding: 24px 18px 60px; } }
 
-  .head {
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 22px;
-    margin-bottom: 26px;
-  }
-  h1 {
-    font-size: 26px;
-    line-height: 1.2;
-    margin: 0 0 6px;
-    font-weight: 700;
-    text-wrap: balance;
-  }
-  .head p {
-    margin: 0;
-    color: var(--color-text-secondary);
-    max-width: 62ch;
-    font-size: 14px;
-  }
+.head { border-bottom: 1px solid var(--color-border); padding-bottom: 22px; margin-bottom: 26px; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; font-weight: 700; text-wrap: balance; }
+.head p { margin: 0; color: var(--color-text-secondary); max-width: 62ch; font-size: 14px; }
 
-  .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 20px;
-  }
-  .stat {
-    flex: 1 1 130px;
-    padding: 12px 14px;
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--hdk-radius);
-    background: var(--color-bg-card);
-  }
-  .stat__n {
-    font-size: 21px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-  }
-  .stat__l {
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-text-secondary);
-    margin-top: 3px;
-  }
-  .stat--ok .stat__n {
-    color: var(--color-success);
-  }
+.stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.stat {
+  flex: 1 1 130px; padding: 12px 14px; border: 1px solid var(--color-border-light);
+  border-radius: var(--hdk-radius); background: var(--color-bg-card);
+}
+.stat__n { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat__l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-secondary); margin-top: 3px; }
+.stat--ok .stat__n { color: var(--color-success); }
 
-  section {
-    margin-top: 40px;
-  }
-  h2 {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.11em;
-    font-weight: 700;
-    color: var(--color-text-secondary);
-    margin: 0 0 4px;
-  }
-  .sub {
-    margin: 0 0 16px;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    max-width: 62ch;
-  }
+section { margin-top: 40px; }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.11em; font-weight: 700;
+     color: var(--color-text-secondary); margin: 0 0 4px; }
+.sub { margin: 0 0 16px; font-size: 13px; color: var(--color-text-secondary); max-width: 62ch; }
 
-  .panel {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--hdk-radius-lg);
-    padding: 20px;
-  }
+.panel { background: var(--color-bg-card); border: 1px solid var(--color-border-light);
+         border-radius: var(--hdk-radius-lg); padding: 20px; }
 
-  /* ---- components ---- */
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 9px;
-    align-items: center;
-  }
-  .row + .row {
-    margin-top: 16px;
-  }
-  .btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: var(--hdk-radius);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-transform: capitalize;
-    box-shadow: var(--hdk-shadow-sm);
-  }
-  .badge {
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-  .btn--primary {
-    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-    color: var(--color-on-primary);
-  }
-  .btn--primary:hover {
-    background: var(--color-primary-dark);
-  }
-  .badge--primary {
-    background: var(--color-primary-bg);
-    color: var(--color-on-primary-bg);
-  }
-  .btn--success {
-    background: linear-gradient(180deg, var(--color-success) 0%, var(--color-success-dark) 100%);
-    color: var(--color-on-success);
-  }
-  .btn--success:hover {
-    background: var(--color-success-dark);
-  }
-  .badge--success {
-    background: var(--color-success-bg);
-    color: var(--color-on-success-bg);
-  }
-  .btn--warning {
-    background: linear-gradient(180deg, var(--color-warning) 0%, var(--color-warning-dark) 100%);
-    color: var(--color-on-warning);
-  }
-  .btn--warning:hover {
-    background: var(--color-warning-dark);
-  }
-  .badge--warning {
-    background: var(--color-warning-bg);
-    color: var(--color-on-warning-bg);
-  }
-  .btn--danger {
-    background: linear-gradient(180deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
-    color: var(--color-on-danger);
-  }
-  .btn--danger:hover {
-    background: var(--color-danger-dark);
-  }
-  .badge--danger {
-    background: var(--color-danger-bg);
-    color: var(--color-on-danger-bg);
-  }
-  .btn--neutral {
-    background: linear-gradient(180deg, var(--color-neutral) 0%, var(--color-neutral-dark) 100%);
-    color: var(--color-on-neutral);
-  }
-  .btn--neutral:hover {
-    background: var(--color-neutral-dark);
-  }
-  .badge--neutral {
-    background: var(--color-neutral-bg);
-    color: var(--color-on-neutral-bg);
-  }
-  .field {
-    padding: 8px 11px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--hdk-radius);
-    background: var(--color-bg);
-    color: var(--color-text);
-    font: inherit;
-    font-size: 13px;
-    min-width: 190px;
-  }
-  .field:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: var(--hdk-shadow-focus-sm);
-  }
-  .inset {
-    background: var(--color-bg-alt);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--hdk-radius);
-    padding: 13px 15px;
-    margin-top: 16px;
-  }
-  .type-scale > * {
-    margin: 0 0 5px;
-  }
-  .t2 {
-    color: var(--color-text-secondary);
-    font-size: 13.5px;
-  }
-  .t3 {
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-  }
-  .t4 {
-    color: var(--color-text-muted);
-    font-size: 12.5px;
-  }
+/* ---- components ---- */
+.row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.row + .row { margin-top: 16px; }
+.btn { padding: 8px 15px; border: none; border-radius: var(--hdk-radius); font: inherit; font-size: 13px;
+       font-weight: 600; cursor: pointer; text-transform: capitalize; box-shadow: var(--hdk-shadow-sm); }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; text-transform: capitalize; }
+.btn--primary { background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%); color: var(--color-on-primary); }
+.btn--primary:hover { background: var(--color-primary-dark); }
+.badge--primary { background: var(--color-primary-bg); color: var(--color-on-primary-bg); }
+.btn--success { background: linear-gradient(180deg, var(--color-success) 0%, var(--color-success-dark) 100%); color: var(--color-on-success); }
+.btn--success:hover { background: var(--color-success-dark); }
+.badge--success { background: var(--color-success-bg); color: var(--color-on-success-bg); }
+.btn--warning { background: linear-gradient(180deg, var(--color-warning) 0%, var(--color-warning-dark) 100%); color: var(--color-on-warning); }
+.btn--warning:hover { background: var(--color-warning-dark); }
+.badge--warning { background: var(--color-warning-bg); color: var(--color-on-warning-bg); }
+.btn--danger { background: linear-gradient(180deg, var(--color-danger) 0%, var(--color-danger-dark) 100%); color: var(--color-on-danger); }
+.btn--danger:hover { background: var(--color-danger-dark); }
+.badge--danger { background: var(--color-danger-bg); color: var(--color-on-danger-bg); }
+.btn--neutral { background: linear-gradient(180deg, var(--color-neutral) 0%, var(--color-neutral-dark) 100%); color: var(--color-on-neutral); }
+.btn--neutral:hover { background: var(--color-neutral-dark); }
+.badge--neutral { background: var(--color-neutral-bg); color: var(--color-on-neutral-bg); }
+.field { padding: 8px 11px; border: 1px solid var(--color-border); border-radius: var(--hdk-radius);
+         background: var(--color-bg); color: var(--color-text); font: inherit; font-size: 13px; min-width: 190px; }
+.field:focus { outline: none; border-color: var(--color-primary); box-shadow: var(--hdk-shadow-focus-sm); }
+.inset { background: var(--color-bg-alt); border: 1px solid var(--color-border-light);
+         border-radius: var(--hdk-radius); padding: 13px 15px; margin-top: 16px; }
+.type-scale > * { margin: 0 0 5px; }
+.t2 { color: var(--color-text-secondary); font-size: 13.5px; }
+.t3 { color: var(--color-text-tertiary); font-size: 13px; }
+.t4 { color: var(--color-text-muted); font-size: 12.5px; }
 
-  /* ---- the rectangle ---- */
-  .rect {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    overflow-x: auto;
-  }
-  .rect__head,
-  .rect__row {
-    display: grid;
-    grid-template-columns: 68px repeat(6, minmax(104px, 1fr));
-    gap: 7px;
-    align-items: start;
-  }
-  .rect__head > div {
-    font-size: 9.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--color-text-secondary);
-    font-weight: 700;
-    padding-bottom: 2px;
-  }
-  .rect__label {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: capitalize;
-    padding-top: 9px;
-  }
-  .rect__cell {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .rect__chip {
-    height: 34px;
-    border-radius: 5px;
-    border: 1px solid var(--color-border-light);
-  }
-  .rect__chip--text {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-  }
-  .rect__cell code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9.5px;
-    color: var(--color-text-secondary);
-    overflow-wrap: anywhere;
-    line-height: 1.35;
-  }
-  .rect__role {
-    font-size: 9px;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
+/* ---- the rectangle ---- */
+.rect { display: flex; flex-direction: column; gap: 7px; overflow-x: auto; }
+.rect__head, .rect__row { display: grid; grid-template-columns: 68px repeat(6, minmax(104px, 1fr)); gap: 7px; align-items: start; }
+.rect__head > div { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.07em;
+                    color: var(--color-text-secondary); font-weight: 700; padding-bottom: 2px; }
+.rect__label { font-size: 12px; font-weight: 700; text-transform: capitalize; padding-top: 9px; }
+.rect__cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rect__chip { height: 34px; border-radius: 5px; border: 1px solid var(--color-border-light); }
+.rect__chip--text { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.rect__cell code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+                   color: var(--color-text-secondary); overflow-wrap: anywhere; line-height: 1.35; }
+.rect__role { font-size: 9px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 
-  /* ---- structural ---- */
-  .struct {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .struct__label {
-    font-size: 9.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-text-secondary);
-    font-weight: 700;
-    margin-bottom: 7px;
-  }
-  .struct__items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .struct__item {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    width: 132px;
-  }
-  .struct__chip {
-    height: 30px;
-    border-radius: 5px;
-    border: 1px solid var(--color-border);
-  }
-  .struct__item code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9.5px;
-    color: var(--color-text-secondary);
-    overflow-wrap: anywhere;
-  }
+/* ---- structural ---- */
+.struct { display: flex; flex-direction: column; gap: 16px; }
+.struct__label { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em;
+                 color: var(--color-text-secondary); font-weight: 700; margin-bottom: 7px; }
+.struct__items { display: flex; flex-wrap: wrap; gap: 8px; }
+.struct__item { display: flex; flex-direction: column; gap: 3px; width: 132px; }
+.struct__chip { height: 30px; border-radius: 5px; border: 1px solid var(--color-border); }
+.struct__item code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+                     color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
-  /* ---- contrast matrix ---- */
-  /* color: inherit is load-bearing. In quirks mode (a host that serves this
+/* ---- contrast matrix ---- */
+/* color: inherit is load-bearing. In quirks mode (a host that serves this
    fragment without a doctype) tables do not inherit colour from their
    ancestors, so the text falls back to black and vanishes on dark themes. */
-  .matrix {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12.5px;
-    color: inherit;
-  }
-  .matrix th,
-  .matrix td {
-    text-align: left;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--color-border-light);
-    color: inherit;
-  }
-  .matrix th {
-    font-size: 9.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--color-text-secondary);
-    font-weight: 700;
-  }
-  .matrix td:first-child {
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-  .matrix tr:last-child td {
-    border-bottom: none;
-  }
-  .ratio {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-variant-numeric: tabular-nums;
-  }
-  .ratio::after {
-    content: ' \2713';
-    color: var(--color-success);
-    font-weight: 700;
-  }
-  .ratio--fail {
-    color: var(--color-danger);
-    font-weight: 700;
-  }
-  .ratio--fail::after {
-    content: ' \2715';
-    color: var(--color-danger);
-  }
+.matrix { width: 100%; border-collapse: collapse; font-size: 12.5px; color: inherit; }
+.matrix th, .matrix td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border-light); color: inherit; }
+.matrix th { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-secondary); font-weight: 700; }
+.matrix td:first-child { font-weight: 600; text-transform: capitalize; }
+.matrix tr:last-child td { border-bottom: none; }
+.ratio { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.ratio::after { content: ' \2713'; color: var(--color-success); font-weight: 700; }
+.ratio--fail { color: var(--color-danger); font-weight: 700; }
+.ratio--fail::after { content: ' \2715'; color: var(--color-danger); }
 
-  .note {
-    margin-top: 12px;
-    font-size: 12px;
-    color: var(--color-text-secondary);
-  }
-  .note code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-  }
+.note { margin-top: 12px; font-size: 12px; color: var(--color-text-secondary); }
+.note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      transition: none !important;
-    }
-  }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
 <div class="stage" id="stage" data-theme="light">
   <div class="wrap">
     <nav class="rail" aria-label="Theme">
-      <div class="rail__eyebrow">18 Themes</div>
+      <div class="rail__eyebrow">16 Themes</div>
       <button class="chip" data-pick="light" type="button" aria-pressed="true">
         <span class="chip__swatches" data-theme="light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Light</span>
       </button>
       <button class="chip" data-pick="dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Dark</span>
       </button>
-      <button class="chip" data-pick="strawberry-light" type="button" aria-pressed="false">
-        <span class="chip__swatches" data-theme="strawberry-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
-        </span>
-        <span class="chip__name">Strawberry Light</span>
-      </button>
-      <button class="chip" data-pick="strawberry-dark" type="button" aria-pressed="false">
-        <span class="chip__swatches" data-theme="strawberry-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
-        </span>
-        <span class="chip__name">Strawberry Dark</span>
-      </button>
       <button class="chip" data-pick="ocean-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="ocean-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Ocean Light</span>
       </button>
       <button class="chip" data-pick="ocean-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="ocean-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Ocean Dark</span>
       </button>
       <button class="chip" data-pick="cyberpunk-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="cyberpunk-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Cyberpunk Light</span>
       </button>
       <button class="chip" data-pick="cyberpunk-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="cyberpunk-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Cyberpunk Dark</span>
       </button>
       <button class="chip" data-pick="coffee-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="coffee-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Coffee Light</span>
       </button>
       <button class="chip" data-pick="coffee-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="coffee-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Coffee Dark</span>
       </button>
       <button class="chip" data-pick="lavender-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="lavender-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Lavender Light</span>
       </button>
       <button class="chip" data-pick="lavender-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="lavender-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Lavender Dark</span>
       </button>
       <button class="chip" data-pick="pink-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="pink-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Pink Light</span>
       </button>
       <button class="chip" data-pick="pink-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="pink-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Pink Dark</span>
       </button>
       <button class="chip" data-pick="nature-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="nature-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Nature Light</span>
       </button>
       <button class="chip" data-pick="nature-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="nature-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Nature Dark</span>
       </button>
       <button class="chip" data-pick="izakaya-light" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="izakaya-light" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Izakaya Light</span>
       </button>
       <button class="chip" data-pick="izakaya-dark" type="button" aria-pressed="false">
         <span class="chip__swatches" data-theme="izakaya-dark" aria-hidden="true">
-          <i style="background: var(--color-primary)"></i
-          ><i style="background: var(--color-success)"></i
-          ><i style="background: var(--color-danger)"></i>
+          <i style="background: var(--color-primary)"></i><i style="background: var(--color-success)"></i><i style="background: var(--color-danger)"></i>
         </span>
         <span class="chip__name">Izakaya Dark</span>
       </button>
@@ -2064,56 +1538,36 @@
     <main>
       <header class="head">
         <h1>Hadoku Theme System</h1>
-        <p>
-          Every semantic family carries an identical set of six tokens. This page is built from
-          those tokens &mdash; switching theme restyles the page itself, so what you see is the
-          system proving it is complete.
-        </p>
+        <p>Every semantic family carries an identical set of six tokens. This page is built from
+           those tokens &mdash; switching theme restyles the page itself, so what you see is the system
+           proving it is complete.</p>
         <div class="stats">
-          <div class="stat">
-            <div class="stat__n">18</div>
-            <div class="stat__l">Themes</div>
-          </div>
-          <div class="stat">
-            <div class="stat__n">41</div>
-            <div class="stat__l">Color tokens</div>
-          </div>
-          <div class="stat">
-            <div class="stat__n">5 &times; 6</div>
-            <div class="stat__l">Family rectangle</div>
-          </div>
-          <div class="stat stat--ok">
-            <div class="stat__n" id="stat-pairs">270</div>
-            <div class="stat__l">WCAG pairs pass</div>
-          </div>
-          <div class="stat stat--ok">
-            <div class="stat__n">4.57:1</div>
-            <div class="stat__l">Worst pair</div>
-          </div>
+          <div class="stat"><div class="stat__n">16</div><div class="stat__l">Themes</div></div>
+          <div class="stat"><div class="stat__n">41</div><div class="stat__l">Color tokens</div></div>
+          <div class="stat"><div class="stat__n">5 &times; 6</div><div class="stat__l">Family rectangle</div></div>
+          <div class="stat stat--ok"><div class="stat__n" id="stat-pairs">240</div><div class="stat__l">WCAG pairs pass</div></div>
+          <div class="stat stat--ok"><div class="stat__n">4.57:1</div><div class="stat__l">Worst pair</div></div>
         </div>
       </header>
 
       <section>
         <h2>Components</h2>
-        <p class="sub">
-          Rendered live in <strong id="theme-name">Light</strong>. Buttons use the
-          fill&rarr;gradient ramp with <code>on-&lt;f&gt;</code>; badges use the tint with
-          <code>on-&lt;f&gt;-bg</code>.
-        </p>
+        <p class="sub">Rendered live in <strong id="theme-name">Light</strong>. Buttons use the fill&rarr;gradient ramp with
+           <code>on-&lt;f&gt;</code>; badges use the tint with <code>on-&lt;f&gt;-bg</code>.</p>
         <div class="panel">
           <div class="row">
-            <button class="btn btn--primary" type="button">primary</button>
-            <button class="btn btn--success" type="button">success</button>
-            <button class="btn btn--warning" type="button">warning</button>
-            <button class="btn btn--danger" type="button">danger</button>
-            <button class="btn btn--neutral" type="button">neutral</button>
+          <button class="btn btn--primary" type="button">primary</button>
+          <button class="btn btn--success" type="button">success</button>
+          <button class="btn btn--warning" type="button">warning</button>
+          <button class="btn btn--danger" type="button">danger</button>
+          <button class="btn btn--neutral" type="button">neutral</button>
           </div>
           <div class="row">
-            <span class="badge badge--primary">primary</span>
-            <span class="badge badge--success">success</span>
-            <span class="badge badge--warning">warning</span>
-            <span class="badge badge--danger">danger</span>
-            <span class="badge badge--neutral">neutral</span>
+          <span class="badge badge--primary">primary</span>
+          <span class="badge badge--success">success</span>
+          <span class="badge badge--warning">warning</span>
+          <span class="badge badge--danger">danger</span>
+          <span class="badge badge--neutral">neutral</span>
           </div>
           <div class="row">
             <input class="field" value="Input field" aria-label="Sample input" />
@@ -2131,205 +1585,147 @@
 
       <section>
         <h2>The family rectangle</h2>
-        <p class="sub">
-          Five families down, six tokens across, no gaps. The symmetry is the point &mdash; it means
-          the obvious guess is always a real token.
-        </p>
+        <p class="sub">Five families down, six tokens across, no gaps. The symmetry is the point &mdash; it means the
+           obvious guess is always a real token.</p>
         <div class="panel rect">
           <div class="rect__head">
-            <div></div>
-            <div>Fill</div>
-            <div>Gradient</div>
-            <div>Tint</div>
-            <div>Hover</div>
-            <div>On fill</div>
-            <div>On tint</div>
+            <div></div><div>Fill</div><div>Gradient</div><div>Tint</div><div>Hover</div><div>On fill</div><div>On tint</div>
           </div>
-          <div class="rect__row">
-            <div class="rect__label">primary</div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-primary)"></div>
-              <code>--color-primary</code><span class="rect__role">fill</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-primary-dark)"></div>
-              <code>--color-primary-dark</code><span class="rect__role">gradient</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-primary-bg)"></div>
-              <code>--color-primary-bg</code><span class="rect__role">tint</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-primary-hover)"></div>
-              <code>--color-primary-hover</code><span class="rect__role">hover</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-primary); color: var(--color-on-primary)"
-              >
-                Aa
-              </div>
-              <code>--color-on-primary</code><span class="rect__role">on fill</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-primary-bg); color: var(--color-on-primary-bg)"
-              >
-                Aa
-              </div>
-              <code>--color-on-primary-bg</code><span class="rect__role">on tint</span>
-            </div>
+        <div class="rect__row">
+          <div class="rect__label">primary</div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-primary)"></div>
+            <code>--color-primary</code><span class="rect__role">fill</span>
           </div>
-          <div class="rect__row">
-            <div class="rect__label">success</div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-success)"></div>
-              <code>--color-success</code><span class="rect__role">fill</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-success-dark)"></div>
-              <code>--color-success-dark</code><span class="rect__role">gradient</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-success-bg)"></div>
-              <code>--color-success-bg</code><span class="rect__role">tint</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-success-hover)"></div>
-              <code>--color-success-hover</code><span class="rect__role">hover</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-success); color: var(--color-on-success)"
-              >
-                Aa
-              </div>
-              <code>--color-on-success</code><span class="rect__role">on fill</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-success-bg); color: var(--color-on-success-bg)"
-              >
-                Aa
-              </div>
-              <code>--color-on-success-bg</code><span class="rect__role">on tint</span>
-            </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-primary-dark)"></div>
+            <code>--color-primary-dark</code><span class="rect__role">gradient</span>
           </div>
-          <div class="rect__row">
-            <div class="rect__label">warning</div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-warning)"></div>
-              <code>--color-warning</code><span class="rect__role">fill</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-warning-dark)"></div>
-              <code>--color-warning-dark</code><span class="rect__role">gradient</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-warning-bg)"></div>
-              <code>--color-warning-bg</code><span class="rect__role">tint</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-warning-hover)"></div>
-              <code>--color-warning-hover</code><span class="rect__role">hover</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-warning); color: var(--color-on-warning)"
-              >
-                Aa
-              </div>
-              <code>--color-on-warning</code><span class="rect__role">on fill</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-warning-bg); color: var(--color-on-warning-bg)"
-              >
-                Aa
-              </div>
-              <code>--color-on-warning-bg</code><span class="rect__role">on tint</span>
-            </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-primary-bg)"></div>
+            <code>--color-primary-bg</code><span class="rect__role">tint</span>
           </div>
-          <div class="rect__row">
-            <div class="rect__label">danger</div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-danger)"></div>
-              <code>--color-danger</code><span class="rect__role">fill</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-danger-dark)"></div>
-              <code>--color-danger-dark</code><span class="rect__role">gradient</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-danger-bg)"></div>
-              <code>--color-danger-bg</code><span class="rect__role">tint</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-danger-hover)"></div>
-              <code>--color-danger-hover</code><span class="rect__role">hover</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-danger); color: var(--color-on-danger)"
-              >
-                Aa
-              </div>
-              <code>--color-on-danger</code><span class="rect__role">on fill</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-danger-bg); color: var(--color-on-danger-bg)"
-              >
-                Aa
-              </div>
-              <code>--color-on-danger-bg</code><span class="rect__role">on tint</span>
-            </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-primary-hover)"></div>
+            <code>--color-primary-hover</code><span class="rect__role">hover</span>
           </div>
-          <div class="rect__row">
-            <div class="rect__label">neutral</div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-neutral)"></div>
-              <code>--color-neutral</code><span class="rect__role">fill</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-neutral-dark)"></div>
-              <code>--color-neutral-dark</code><span class="rect__role">gradient</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-neutral-bg)"></div>
-              <code>--color-neutral-bg</code><span class="rect__role">tint</span>
-            </div>
-            <div class="rect__cell">
-              <div class="rect__chip" style="background: var(--color-neutral-hover)"></div>
-              <code>--color-neutral-hover</code><span class="rect__role">hover</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-neutral); color: var(--color-on-neutral)"
-              >
-                Aa
-              </div>
-              <code>--color-on-neutral</code><span class="rect__role">on fill</span>
-            </div>
-            <div class="rect__cell">
-              <div
-                class="rect__chip rect__chip--text"
-                style="background: var(--color-neutral-bg); color: var(--color-on-neutral-bg)"
-              >
-                Aa
-              </div>
-              <code>--color-on-neutral-bg</code><span class="rect__role">on tint</span>
-            </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-primary); color: var(--color-on-primary)">Aa</div>
+            <code>--color-on-primary</code><span class="rect__role">on fill</span>
           </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-primary-bg); color: var(--color-on-primary-bg)">Aa</div>
+            <code>--color-on-primary-bg</code><span class="rect__role">on tint</span>
+          </div>
+        </div>
+        <div class="rect__row">
+          <div class="rect__label">success</div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-success)"></div>
+            <code>--color-success</code><span class="rect__role">fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-success-dark)"></div>
+            <code>--color-success-dark</code><span class="rect__role">gradient</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-success-bg)"></div>
+            <code>--color-success-bg</code><span class="rect__role">tint</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-success-hover)"></div>
+            <code>--color-success-hover</code><span class="rect__role">hover</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-success); color: var(--color-on-success)">Aa</div>
+            <code>--color-on-success</code><span class="rect__role">on fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-success-bg); color: var(--color-on-success-bg)">Aa</div>
+            <code>--color-on-success-bg</code><span class="rect__role">on tint</span>
+          </div>
+        </div>
+        <div class="rect__row">
+          <div class="rect__label">warning</div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-warning)"></div>
+            <code>--color-warning</code><span class="rect__role">fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-warning-dark)"></div>
+            <code>--color-warning-dark</code><span class="rect__role">gradient</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-warning-bg)"></div>
+            <code>--color-warning-bg</code><span class="rect__role">tint</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-warning-hover)"></div>
+            <code>--color-warning-hover</code><span class="rect__role">hover</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-warning); color: var(--color-on-warning)">Aa</div>
+            <code>--color-on-warning</code><span class="rect__role">on fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-warning-bg); color: var(--color-on-warning-bg)">Aa</div>
+            <code>--color-on-warning-bg</code><span class="rect__role">on tint</span>
+          </div>
+        </div>
+        <div class="rect__row">
+          <div class="rect__label">danger</div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-danger)"></div>
+            <code>--color-danger</code><span class="rect__role">fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-danger-dark)"></div>
+            <code>--color-danger-dark</code><span class="rect__role">gradient</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-danger-bg)"></div>
+            <code>--color-danger-bg</code><span class="rect__role">tint</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-danger-hover)"></div>
+            <code>--color-danger-hover</code><span class="rect__role">hover</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-danger); color: var(--color-on-danger)">Aa</div>
+            <code>--color-on-danger</code><span class="rect__role">on fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-danger-bg); color: var(--color-on-danger-bg)">Aa</div>
+            <code>--color-on-danger-bg</code><span class="rect__role">on tint</span>
+          </div>
+        </div>
+        <div class="rect__row">
+          <div class="rect__label">neutral</div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-neutral)"></div>
+            <code>--color-neutral</code><span class="rect__role">fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-neutral-dark)"></div>
+            <code>--color-neutral-dark</code><span class="rect__role">gradient</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-neutral-bg)"></div>
+            <code>--color-neutral-bg</code><span class="rect__role">tint</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip" style="background: var(--color-neutral-hover)"></div>
+            <code>--color-neutral-hover</code><span class="rect__role">hover</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-neutral); color: var(--color-on-neutral)">Aa</div>
+            <code>--color-on-neutral</code><span class="rect__role">on fill</span>
+          </div>
+          <div class="rect__cell">
+            <div class="rect__chip rect__chip--text" style="background: var(--color-neutral-bg); color: var(--color-on-neutral-bg)">Aa</div>
+            <code>--color-on-neutral-bg</code><span class="rect__role">on tint</span>
+          </div>
+        </div>
         </div>
       </section>
 
@@ -2337,91 +1733,79 @@
         <h2>Structural tokens</h2>
         <p class="sub">Text hierarchy, borders and surfaces &mdash; shared across all families.</p>
         <div class="panel struct">
-          <div class="struct__group">
-            <div class="struct__label">Text</div>
-            <div class="struct__items">
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-text)"></div>
-                <code>--color-text</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-text-secondary)"></div>
-                <code>--color-text-secondary</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-text-tertiary)"></div>
-                <code>--color-text-tertiary</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-text-muted)"></div>
-                <code>--color-text-muted</code>
-              </div>
+        <div class="struct__group">
+          <div class="struct__label">Text</div>
+          <div class="struct__items">
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-text)"></div>
+              <code>--color-text</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-text-secondary)"></div>
+              <code>--color-text-secondary</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-text-tertiary)"></div>
+              <code>--color-text-tertiary</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-text-muted)"></div>
+              <code>--color-text-muted</code>
             </div>
           </div>
-          <div class="struct__group">
-            <div class="struct__label">Borders</div>
-            <div class="struct__items">
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-border)"></div>
-                <code>--color-border</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-border-light)"></div>
-                <code>--color-border-light</code>
-              </div>
+        </div>
+        <div class="struct__group">
+          <div class="struct__label">Borders</div>
+          <div class="struct__items">
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-border)"></div>
+              <code>--color-border</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-border-light)"></div>
+              <code>--color-border-light</code>
             </div>
           </div>
-          <div class="struct__group">
-            <div class="struct__label">Surfaces</div>
-            <div class="struct__items">
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-bg)"></div>
-                <code>--color-bg</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-bg-card)"></div>
-                <code>--color-bg-card</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-bg-alt)"></div>
-                <code>--color-bg-alt</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-bg-hover)"></div>
-                <code>--color-bg-hover</code>
-              </div>
-              <div class="struct__item">
-                <div class="struct__chip" style="background: var(--color-bg-overlay)"></div>
-                <code>--color-bg-overlay</code>
-              </div>
+        </div>
+        <div class="struct__group">
+          <div class="struct__label">Surfaces</div>
+          <div class="struct__items">
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-bg)"></div>
+              <code>--color-bg</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-bg-card)"></div>
+              <code>--color-bg-card</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-bg-alt)"></div>
+              <code>--color-bg-alt</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-bg-hover)"></div>
+              <code>--color-bg-hover</code>
+            </div>
+            <div class="struct__item">
+              <div class="struct__chip" style="background: var(--color-bg-overlay)"></div>
+              <code>--color-bg-overlay</code>
             </div>
           </div>
+        </div>
         </div>
       </section>
 
       <section>
         <h2>Contrast &mdash; measured, not asserted</h2>
-        <p class="sub">
-          Every pair must clear WCAG AA 4.5:1. Translucent tints are composited over
-          <code>--color-bg-card</code> before measuring, so these are the ratios that actually
-          render.
-        </p>
+        <p class="sub">Every pair must clear WCAG AA 4.5:1. Translucent tints are composited over
+           <code>--color-bg-card</code> before measuring, so these are the ratios that actually render.</p>
         <div class="panel">
           <table class="matrix">
-            <thead>
-              <tr>
-                <th>Family</th>
-                <th>on-&lt;f&gt; on fill</th>
-                <th>on-&lt;f&gt; on gradient</th>
-                <th>on-&lt;f&gt;-bg on tint</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Family</th><th>on-&lt;f&gt; on fill</th><th>on-&lt;f&gt; on gradient</th><th>on-&lt;f&gt;-bg on tint</th></tr></thead>
             <tbody id="matrix-body"></tbody>
           </table>
-          <p class="note">
-            Before this release the tint column used <code>--color-&lt;f&gt;</code> as its text
-            colour and failed in 62 of 90 theme&times;family combinations.
-          </p>
+          <p class="note">Before this release the tint column used <code>--color-&lt;f&gt;</code> as its text
+             colour and failed in 62 of 90 theme&times;family combinations.</p>
         </div>
       </section>
     </main>
@@ -2429,172 +1813,32 @@
 </div>
 
 <script>
-  const CONTRAST = {
-    light: [
-      { family: 'primary', fill: 5.17, gradient: 6.7, tint: 4.75 },
-      { family: 'success', fill: 7.58, gradient: 5.13, tint: 5.43 },
-      { family: 'warning', fill: 9.78, gradient: 6.41, tint: 5.54 },
-      { family: 'danger', fill: 5.58, gradient: 4.65, tint: 4.67 },
-      { family: 'neutral', fill: 4.83, gradient: 7.95, tint: 4.67 }
-    ],
-    dark: [
-      { family: 'primary', fill: 8.63, gradient: 6.6, tint: 4.85 },
-      { family: 'success', fill: 12.05, gradient: 8.01, tint: 6.52 },
-      { family: 'warning', fill: 12.2, gradient: 9.6, tint: 6.54 },
-      { family: 'danger', fill: 7.23, gradient: 5.47, tint: 4.68 },
-      { family: 'neutral', fill: 7.87, gradient: 6.03, tint: 4.92 }
-    ],
-    'strawberry-light': [
-      { family: 'primary', fill: 7.84, gradient: 6.43, tint: 4.76 },
-      { family: 'success', fill: 9.22, gradient: 6.37, tint: 5.83 },
-      { family: 'warning', fill: 9.78, gradient: 6.41, tint: 5.8 },
-      { family: 'danger', fill: 5.95, gradient: 4.57, tint: 4.62 },
-      { family: 'neutral', fill: 8.19, gradient: 5.23, tint: 4.66 }
-    ],
-    'strawberry-dark': [
-      { family: 'primary', fill: 6.36, gradient: 4.81, tint: 4.68 },
-      { family: 'success', fill: 11.96, gradient: 9.38, tint: 6.35 },
-      { family: 'warning', fill: 12.63, gradient: 9.89, tint: 6.72 },
-      { family: 'danger', fill: 7.9, gradient: 5.03, tint: 4.71 },
-      { family: 'neutral', fill: 7.37, gradient: 5.61, tint: 4.7 }
-    ],
-    'ocean-light': [
-      { family: 'primary', fill: 8.65, gradient: 5.7, tint: 4.72 },
-      { family: 'success', fill: 8.28, gradient: 5.46, tint: 5.8 },
-      { family: 'warning', fill: 10.95, gradient: 7.22, tint: 5.77 },
-      { family: 'danger', fill: 5.95, gradient: 4.57, tint: 4.71 },
-      { family: 'neutral', fill: 4.83, gradient: 7.95, tint: 4.79 }
-    ],
-    'ocean-dark': [
-      { family: 'primary', fill: 8.65, gradient: 5.7, tint: 4.65 },
-      { family: 'success', fill: 10.92, gradient: 7.32, tint: 4.93 },
-      { family: 'warning', fill: 12.58, gradient: 8.45, tint: 4.84 },
-      { family: 'danger', fill: 5.95, gradient: 4.57, tint: 4.6 },
-      { family: 'neutral', fill: 4.83, gradient: 7.95, tint: 4.76 }
-    ],
-    'cyberpunk-light': [
-      { family: 'primary', fill: 5.48, gradient: 4.66, tint: 4.68 },
-      { family: 'success', fill: 15.01, gradient: 11.69, tint: 5.68 },
-      { family: 'warning', fill: 10.23, gradient: 6.72, tint: 5.71 },
-      { family: 'danger', fill: 6.36, gradient: 4.62, tint: 4.77 },
-      { family: 'neutral', fill: 4.91, gradient: 8.11, tint: 4.67 }
-    ],
-    'cyberpunk-dark': [
-      { family: 'primary', fill: 11.62, gradient: 8.65, tint: 9.81 },
-      { family: 'success', fill: 15.49, gradient: 15.3, tint: 9.16 },
-      { family: 'warning', fill: 12.62, gradient: 8.48, tint: 7.86 },
-      { family: 'danger', fill: 6.58, gradient: 6.7, tint: 4.61 },
-      { family: 'neutral', fill: 4.83, gradient: 7.95, tint: 4.73 }
-    ],
-    'coffee-light': [
-      { family: 'primary', fill: 5.9, gradient: 4.63, tint: 4.77 },
-      { family: 'success', fill: 6.8, gradient: 4.64, tint: 5.8 },
-      { family: 'warning', fill: 7.15, gradient: 4.6, tint: 5.76 },
-      { family: 'danger', fill: 6.47, gradient: 9.53, tint: 5.36 },
-      { family: 'neutral', fill: 4.87, gradient: 7.94, tint: 4.62 }
-    ],
-    'coffee-dark': [
-      { family: 'primary', fill: 5.9, gradient: 4.63, tint: 4.62 },
-      { family: 'success', fill: 10.63, gradient: 7.04, tint: 6.1 },
-      { family: 'warning', fill: 9.78, gradient: 6.41, tint: 6.03 },
-      { family: 'danger', fill: 7.59, gradient: 4.8, tint: 5.95 },
-      { family: 'neutral', fill: 4.87, gradient: 7.94, tint: 4.77 }
-    ],
-    'lavender-light': [
-      { family: 'primary', fill: 7.95, gradient: 5.31, tint: 4.69 },
-      { family: 'success', fill: 10.63, gradient: 6.8, tint: 6.22 },
-      { family: 'warning', fill: 9.78, gradient: 6.41, tint: 6.3 },
-      { family: 'danger', fill: 4.84, gradient: 6.29, tint: 4.67 },
-      { family: 'neutral', fill: 4.83, gradient: 7.86, tint: 4.69 }
-    ],
-    'lavender-dark': [
-      { family: 'primary', fill: 10.02, gradient: 7.76, tint: 5.72 },
-      { family: 'success', fill: 13.79, gradient: 10.92, tint: 7.15 },
-      { family: 'warning', fill: 12.63, gradient: 9.89, tint: 6.73 },
-      { family: 'danger', fill: 7.31, gradient: 5.55, tint: 5.68 },
-      { family: 'neutral', fill: 7.27, gradient: 5.52, tint: 4.75 }
-    ],
-    'pink-light': [
-      { family: 'primary', fill: 7.93, gradient: 5.77, tint: 4.73 },
-      { family: 'success', fill: 13.59, gradient: 9.15, tint: 5.63 },
-      { family: 'warning', fill: 12.58, gradient: 8.45, tint: 5.8 },
-      { family: 'danger', fill: 4.86, gradient: 5.87, tint: 4.69 },
-      { family: 'neutral', fill: 9.72, gradient: 6.34, tint: 4.66 }
-    ],
-    'pink-dark': [
-      { family: 'primary', fill: 10.25, gradient: 7.95, tint: 5.61 },
-      { family: 'success', fill: 13.59, gradient: 10.77, tint: 7.32 },
-      { family: 'warning', fill: 12.63, gradient: 9.89, tint: 6.78 },
-      { family: 'danger', fill: 6.88, gradient: 5.22, tint: 4.64 },
-      { family: 'neutral', fill: 7.18, gradient: 5.46, tint: 4.72 }
-    ],
-    'nature-light': [
-      { family: 'primary', fill: 9.1, gradient: 7.19, tint: 4.78 },
-      { family: 'success', fill: 12.86, gradient: 10.28, tint: 5.6 },
-      { family: 'warning', fill: 7.15, gradient: 4.6, tint: 5.76 },
-      { family: 'danger', fill: 5.3, gradient: 4.7, tint: 4.62 },
-      { family: 'neutral', fill: 12.36, gradient: 8.26, tint: 4.68 }
-    ],
-    'nature-dark': [
-      { family: 'primary', fill: 9.05, gradient: 6.93, tint: 4.89 },
-      { family: 'success', fill: 11.97, gradient: 9.39, tint: 6.24 },
-      { family: 'warning', fill: 12.75, gradient: 10.02, tint: 6.45 },
-      { family: 'danger', fill: 4.89, gradient: 6.45, tint: 4.69 },
-      { family: 'neutral', fill: 5.73, gradient: 4.66, tint: 4.67 }
-    ],
-    'izakaya-light': [
-      { family: 'primary', fill: 8.86, gradient: 6.33, tint: 5.76 },
-      { family: 'success', fill: 13.05, gradient: 11.09, tint: 5.62 },
-      { family: 'warning', fill: 9.43, gradient: 6.14, tint: 5.77 },
-      { family: 'danger', fill: 5.05, gradient: 8.23, tint: 4.67 },
-      { family: 'neutral', fill: 7.72, gradient: 4.92, tint: 4.65 }
-    ],
-    'izakaya-dark': [
-      { family: 'primary', fill: 9.66, gradient: 7.39, tint: 5.23 },
-      { family: 'success', fill: 11.1, gradient: 8.64, tint: 5.87 },
-      { family: 'warning', fill: 12.63, gradient: 9.89, tint: 6.54 },
-      { family: 'danger', fill: 5.26, gradient: 7.09, tint: 4.8 },
-      { family: 'neutral', fill: 5.29, gradient: 4.66, tint: 4.68 }
-    ]
-  }
-  const DARK = [
-    'dark',
-    'strawberry-dark',
-    'ocean-dark',
-    'cyberpunk-dark',
-    'coffee-dark',
-    'lavender-dark',
-    'pink-dark',
-    'nature-dark',
-    'izakaya-dark'
-  ]
-  const stage = document.getElementById('stage')
-  const body = document.getElementById('matrix-body')
-  const label = t => t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const CONTRAST = {"light":[{"family":"primary","fill":5.17,"gradient":6.7,"tint":4.75},{"family":"success","fill":7.58,"gradient":5.13,"tint":5.43},{"family":"warning","fill":9.78,"gradient":6.41,"tint":5.54},{"family":"danger","fill":5.58,"gradient":4.65,"tint":4.67},{"family":"neutral","fill":4.83,"gradient":7.95,"tint":4.67}],"dark":[{"family":"primary","fill":8.63,"gradient":6.6,"tint":4.85},{"family":"success","fill":12.05,"gradient":8.01,"tint":6.52},{"family":"warning","fill":12.2,"gradient":9.6,"tint":6.54},{"family":"danger","fill":7.23,"gradient":5.47,"tint":4.68},{"family":"neutral","fill":7.87,"gradient":6.03,"tint":4.92}],"ocean-light":[{"family":"primary","fill":8.65,"gradient":5.7,"tint":4.72},{"family":"success","fill":8.28,"gradient":5.46,"tint":5.8},{"family":"warning","fill":10.95,"gradient":7.22,"tint":5.77},{"family":"danger","fill":5.95,"gradient":4.57,"tint":4.71},{"family":"neutral","fill":4.83,"gradient":7.95,"tint":4.79}],"ocean-dark":[{"family":"primary","fill":8.65,"gradient":5.7,"tint":4.65},{"family":"success","fill":10.92,"gradient":7.32,"tint":4.93},{"family":"warning","fill":12.58,"gradient":8.45,"tint":4.84},{"family":"danger","fill":5.95,"gradient":4.57,"tint":4.6},{"family":"neutral","fill":4.83,"gradient":7.95,"tint":4.76}],"cyberpunk-light":[{"family":"primary","fill":5.48,"gradient":4.66,"tint":4.68},{"family":"success","fill":15.01,"gradient":11.69,"tint":5.68},{"family":"warning","fill":10.23,"gradient":6.72,"tint":5.71},{"family":"danger","fill":6.36,"gradient":4.62,"tint":4.77},{"family":"neutral","fill":4.91,"gradient":8.11,"tint":4.67}],"cyberpunk-dark":[{"family":"primary","fill":11.62,"gradient":8.65,"tint":9.81},{"family":"success","fill":15.49,"gradient":15.3,"tint":9.16},{"family":"warning","fill":12.62,"gradient":8.48,"tint":7.86},{"family":"danger","fill":6.58,"gradient":6.7,"tint":4.61},{"family":"neutral","fill":4.83,"gradient":7.95,"tint":4.73}],"coffee-light":[{"family":"primary","fill":5.9,"gradient":4.63,"tint":4.77},{"family":"success","fill":6.8,"gradient":4.64,"tint":5.8},{"family":"warning","fill":7.15,"gradient":4.6,"tint":5.76},{"family":"danger","fill":6.47,"gradient":9.53,"tint":5.36},{"family":"neutral","fill":4.87,"gradient":7.94,"tint":4.62}],"coffee-dark":[{"family":"primary","fill":5.9,"gradient":4.63,"tint":4.62},{"family":"success","fill":10.63,"gradient":7.04,"tint":6.1},{"family":"warning","fill":9.78,"gradient":6.41,"tint":6.03},{"family":"danger","fill":7.59,"gradient":4.8,"tint":5.95},{"family":"neutral","fill":4.87,"gradient":7.94,"tint":4.77}],"lavender-light":[{"family":"primary","fill":7.95,"gradient":5.31,"tint":4.69},{"family":"success","fill":10.63,"gradient":6.8,"tint":6.22},{"family":"warning","fill":9.78,"gradient":6.41,"tint":6.3},{"family":"danger","fill":4.84,"gradient":6.29,"tint":4.67},{"family":"neutral","fill":4.83,"gradient":7.86,"tint":4.69}],"lavender-dark":[{"family":"primary","fill":10.02,"gradient":7.76,"tint":5.72},{"family":"success","fill":13.79,"gradient":10.92,"tint":7.15},{"family":"warning","fill":12.63,"gradient":9.89,"tint":6.73},{"family":"danger","fill":7.31,"gradient":5.55,"tint":5.68},{"family":"neutral","fill":7.27,"gradient":5.52,"tint":4.75}],"pink-light":[{"family":"primary","fill":7.93,"gradient":5.77,"tint":4.73},{"family":"success","fill":13.59,"gradient":9.15,"tint":5.63},{"family":"warning","fill":12.58,"gradient":8.45,"tint":5.8},{"family":"danger","fill":4.86,"gradient":5.87,"tint":4.69},{"family":"neutral","fill":9.72,"gradient":6.34,"tint":4.66}],"pink-dark":[{"family":"primary","fill":10.25,"gradient":7.95,"tint":5.61},{"family":"success","fill":13.59,"gradient":10.77,"tint":7.32},{"family":"warning","fill":12.63,"gradient":9.89,"tint":6.78},{"family":"danger","fill":6.88,"gradient":5.22,"tint":4.64},{"family":"neutral","fill":7.18,"gradient":5.46,"tint":4.72}],"nature-light":[{"family":"primary","fill":9.1,"gradient":7.19,"tint":4.78},{"family":"success","fill":12.86,"gradient":10.28,"tint":5.6},{"family":"warning","fill":7.15,"gradient":4.6,"tint":5.76},{"family":"danger","fill":5.3,"gradient":4.7,"tint":4.62},{"family":"neutral","fill":12.36,"gradient":8.26,"tint":4.68}],"nature-dark":[{"family":"primary","fill":9.05,"gradient":6.93,"tint":4.89},{"family":"success","fill":11.97,"gradient":9.39,"tint":6.24},{"family":"warning","fill":12.75,"gradient":10.02,"tint":6.45},{"family":"danger","fill":4.89,"gradient":6.45,"tint":4.69},{"family":"neutral","fill":5.73,"gradient":4.66,"tint":4.67}],"izakaya-light":[{"family":"primary","fill":8.86,"gradient":6.33,"tint":5.76},{"family":"success","fill":13.05,"gradient":11.09,"tint":5.62},{"family":"warning","fill":9.43,"gradient":6.14,"tint":5.77},{"family":"danger","fill":5.05,"gradient":8.23,"tint":4.67},{"family":"neutral","fill":7.72,"gradient":4.92,"tint":4.65}],"izakaya-dark":[{"family":"primary","fill":9.66,"gradient":7.39,"tint":5.23},{"family":"success","fill":11.1,"gradient":8.64,"tint":5.87},{"family":"warning","fill":12.63,"gradient":9.89,"tint":6.54},{"family":"danger","fill":5.26,"gradient":7.09,"tint":4.8},{"family":"neutral","fill":5.29,"gradient":4.66,"tint":4.68}]};
+  const DARK = ["dark","ocean-dark","cyberpunk-dark","coffee-dark","lavender-dark","pink-dark","nature-dark","izakaya-dark"];
+  const stage = document.getElementById('stage');
+  const body = document.getElementById('matrix-body');
+  const label = (t) => t.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   function cell(v) {
-    const cls = v >= 4.5 ? 'ratio' : 'ratio ratio--fail'
-    return '<td><span class="' + cls + '">' + v.toFixed(2) + ':1</span></td>'
+    const cls = v >= 4.5 ? 'ratio' : 'ratio ratio--fail';
+    return '<td><span class="' + cls + '">' + v.toFixed(2) + ':1</span></td>';
   }
 
   function apply(theme) {
-    stage.dataset.theme = theme
-    document.getElementById('theme-name').textContent = label(theme)
-    document.querySelectorAll('[data-pick]').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.pick === theme))
-    })
+    stage.dataset.theme = theme;
+    document.getElementById('theme-name').textContent = label(theme);
+    document.querySelectorAll('[data-pick]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.pick === theme));
+    });
     body.innerHTML = CONTRAST[theme]
-      .map(
-        r =>
-          '<tr><td>' + r.family + '</td>' + cell(r.fill) + cell(r.gradient) + cell(r.tint) + '</tr>'
-      )
-      .join('')
+      .map((r) => '<tr><td>' + r.family + '</td>' + cell(r.fill) + cell(r.gradient) + cell(r.tint) + '</tr>')
+      .join('');
   }
 
-  document.querySelectorAll('[data-pick]').forEach(b => {
-    b.addEventListener('click', () => apply(b.dataset.pick))
-  })
+  document.querySelectorAll('[data-pick]').forEach((b) => {
+    b.addEventListener('click', () => apply(b.dataset.pick));
+  });
 
   // Open on a theme that matches the viewer's own light/dark preference.
-  apply(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  apply(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 </script>

@@ -41,7 +41,9 @@ test.describe('Theme Picker', () => {
   // with no checkbox to gate them.
   test('offers every theme family, with no experimental opt-in', async ({ page }) => {
     await page.locator('.theme-toggle-btn').click()
-    await expect(page.locator('.theme-pill')).toHaveCount(9)
+    await expect(page.locator('.theme-pill')).toHaveCount(8)
+    // Strawberry ("Vine") was retired 2026-11-10.
+    await expect(page.getByRole('button', { name: /vine/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /neon/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /pink/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /izakaya/i }).first()).toBeVisible()

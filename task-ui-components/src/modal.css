@@ -5,7 +5,7 @@
  * alongside the other component CSS:
  *   import '@wolffm/task-ui-components/modal.css'
  *
- * Tokens only, so it themes with everything else across all 18 themes.
+ * Tokens only, so it themes with everything else across every theme.
  */
 
 .modal-overlay {
@@ -112,7 +112,7 @@
 }
 
 /* The destructive button carries its accent on the border, not the label.
- * `--color-danger` as bare text on the card misses AA in 11 of 18 themes —
+ * `--color-danger` as bare text on the card misses AA in 8 of 16 themes —
  * the same unvalidated accent-over-surface pair that check-usage now gates. */
 .modal-button--danger {
   border-color: var(--color-danger);
