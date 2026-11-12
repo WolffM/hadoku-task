@@ -176,6 +176,10 @@ async function main() {
   )
 
   section('5. Admin only')
+  // tier-fleet-disable-next-line vocabulary: Inverse list: section '5. Admin only' asserts each of
+  // ('wife','service','friend','member') gets 403 from GET /task/api/admin/orphans, and omits `admin`
+  // because admin is the one tier admitted (sections 1-4 run as admin). Completing it would invert
+  // the assertion. Must still be reviewed on every new tier.
   for (const tier of ['wife', 'service', 'friend', 'member']) {
     const r = await req(tier, `${tier}-uid`, 'GET', '/task/api/admin/orphans')
     check(`${tier} → 403`, r.status === 403, `status=${r.status}`)

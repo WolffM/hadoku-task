@@ -28,6 +28,10 @@
 -- AUTOINCREMENT id all match the original exactly — only the CHECK changes.
 CREATE TABLE IF NOT EXISTS task_events_new (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- identity-model-disable-next-line G2: The hadoku-task-side copy of the same task_events.user_key
+  -- masked-telemetry column already exempted at workers/task-api/migrations/. This migration only
+  -- rebuilds the table to widen a CHECK constraint — it did not introduce the column. Named out of
+  -- scope in IDENTITY_MODEL.md §6.
   user_key TEXT NOT NULL,
   board_id TEXT NOT NULL,
   task_id TEXT NOT NULL,
