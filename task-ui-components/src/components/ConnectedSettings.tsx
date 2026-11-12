@@ -256,21 +256,36 @@ const OFFER_CARD: React.CSSProperties = {
   color: 'var(--color-text)'
 }
 
-/** Hover lifts the offer's buttons rather than darkening them, so it reads as
- *  pressable at a glance. Injected, as the pulse is. */
+/** Hover lifts a settings button rather than darkening it, so it reads as
+ *  pressable at a glance: an accent border and ring, and a filled button
+ *  brightens. The same rules as app-header.css, injected so an app whose
+ *  compiled copy of that file predates them (it darkened on hover) gets them
+ *  now; the doubled class outranks that copy wherever the button is, the
+ *  avatar dialog's portal included. */
+const BUTTONS_CSS = `
+.settings-popout__btn.settings-popout__btn {
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.settings-popout__btn.settings-popout__btn:hover:not(:disabled) {
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+.settings-popout__btn--primary.settings-popout__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary);
+  filter: brightness(1.15);
+}
+`
+
+/** The offer's buttons are a size up from the panel's. */
 const OFFER_CSS = `
 .settings-passkey-offer .settings-popout__btn {
   font-size: 0.85rem;
   padding: 6px 12px;
-  transition: filter 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.settings-passkey-offer .settings-popout__btn:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
-}
-.settings-passkey-offer .settings-popout__btn--primary:hover:not(:disabled) {
-  background: var(--color-primary);
-  filter: brightness(1.15);
 }
 `
 
@@ -450,6 +465,7 @@ export function ConnectedSettings({
   useInjectedStyle('settings-passkey-pulse', PASSKEY_PULSE_CSS, needsPasskey)
   useInjectedStyle('settings-tabs', TABS_CSS, open)
   const showOffer = offerPending && needsPasskey && !open
+  useInjectedStyle('settings-buttons', BUTTONS_CSS, true)
   useInjectedStyle('settings-passkey-offer', OFFER_CSS, showOffer)
 
   // Someone who already has a passkey, or cannot make one here, is never

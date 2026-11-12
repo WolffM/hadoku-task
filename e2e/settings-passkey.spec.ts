@@ -119,6 +119,27 @@ test.describe('settings popout: asks someone with no passkey to save one', () =>
     await expect(page.getByRole('button', { name: 'User settings', exact: true })).toBeVisible()
   })
 
+  test('hover lifts a button, never darkens it', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await mockWhoami(page, { userType: 'friend', name: 'alice', passkeys: 0 })
+    await load(page)
+    const panel = await openSettings(page)
+    const style = (el: Locator) =>
+      el.evaluate(n => {
+        const c = getComputedStyle(n)
+        return { filter: c.filter, shadow: c.boxShadow, bg: c.backgroundColor }
+      })
+    const save = panel.getByRole('button', { name: 'Save passkey' })
+    const rest = await style(save)
+    await save.hover()
+    await expect.poll(async () => (await style(save)).filter).toBe('brightness(1.15)')
+    expect((await style(save)).bg).toBe(rest.bg)
+
+    const plain = panel.getByRole('button', { name: 'Switch key' })
+    await plain.hover()
+    await expect.poll(async () => (await style(plain)).shadow).not.toBe('none')
+  })
+
   test('no pulse for someone who asked for reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await mockWhoami(page, { userType: 'friend', name: 'alice', passkeys: 0 })

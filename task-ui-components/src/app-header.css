@@ -237,11 +237,18 @@
   white-space: nowrap;
   text-decoration: none;
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
+/* Hover lifts, never darkens: an accent border and ring, and a filled button
+ * brightens. ConnectedSettings injects the same rules (BUTTONS_CSS) for apps
+ * whose compiled copy of this file is older; change both together. */
 .settings-popout__btn:hover:not(:disabled) {
-  background: var(--color-bg-alt);
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 .settings-popout__btn--primary {
   background: var(--color-primary);
@@ -249,7 +256,8 @@
   color: var(--color-on-primary);
 }
 .settings-popout__btn--primary:hover:not(:disabled) {
-  background: var(--color-primary-dark);
+  background: var(--color-primary);
+  filter: brightness(1.15);
 }
 .settings-popout__btn:disabled {
   opacity: 0.6;
