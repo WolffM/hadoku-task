@@ -150,6 +150,97 @@ test.describe('settings popout: asks someone with no passkey to save one', () =>
   }
 })
 
+test.describe('a new member is asked beside the gear, once', () => {
+  const OFFER = 'hadoku:offer-passkey'
+  const offer = (page: Page) => page.getByRole('dialog', { name: 'Save a passkey?' })
+  const flag = (page: Page) => page.evaluate(k => localStorage.getItem(k), OFFER)
+  /** What the sign-in page leaves after a sign-up, `ageMs` ago. */
+  const signedUp = (page: Page, ageMs = 0) =>
+    page.addInitScript(
+      ([k, at]) => {
+        if (!sessionStorage.getItem('offer-seeded')) {
+          localStorage.setItem(k, String(at))
+          sessionStorage.setItem('offer-seeded', '1')
+        }
+      },
+      [OFFER, Date.now() - ageMs] as const
+    )
+
+  test('saves from the offer: the offer, the dot and the flag are gone', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 0 })
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await signedUp(page)
+    await load(page)
+    await expect(offer(page)).toBeVisible()
+    await offer(page).getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
+    await settle(page, 'ok')
+    await expect(offer(page)).toHaveCount(0)
+    await expect(page.locator('.settings-toggle-btn__dot')).toHaveCount(0)
+    expect(await flag(page)).toBeNull()
+  })
+
+  test('a refused save says why and stays; Not now ends it for good', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 0 })
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await signedUp(page)
+    await load(page)
+    await offer(page).getByRole('button', { name: 'Save passkey' }).click()
+    await promptOpen(page)
+    await settle(page, 'Passkey not saved. Try another browser.')
+    await expect(offer(page).getByRole('alert')).toHaveText(
+      'Passkey not saved. Try another browser.'
+    )
+    await expect(offer(page).getByRole('button', { name: 'Save passkey' })).toBeEnabled()
+    await offer(page).getByRole('button', { name: 'Not now' }).click()
+    await expect(offer(page)).toHaveCount(0)
+    expect(await flag(page)).toBeNull()
+    // The dot still asks; a reload does not bring the offer back.
+    await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
+    await page.reload()
+    await page.waitForSelector(APP_HEADER)
+    await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
+    await expect(offer(page)).toHaveCount(0)
+  })
+
+  test('steps aside while the panel is open, and comes back when it closes', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 0 })
+    await signInModule(page, HELD('addPasskey', '{ saved: true, passkeys: 1 }'))
+    await signedUp(page)
+    await load(page)
+    await expect(offer(page)).toBeVisible()
+    await openSettings(page)
+    await expect(offer(page)).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await expect(offer(page)).toBeVisible()
+  })
+
+  test('never for someone who already has one, and the flag is spent', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 1 })
+    await signedUp(page)
+    await load(page)
+    await expect(page.getByRole('button', { name: 'User settings', exact: true })).toBeVisible()
+    await expect(offer(page)).toHaveCount(0)
+    await expect.poll(() => flag(page)).toBeNull()
+  })
+
+  test('not from a sign-up more than a day old', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 0 })
+    await signedUp(page, 25 * 60 * 60 * 1000)
+    await load(page)
+    await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
+    await expect(offer(page)).toHaveCount(0)
+    expect(await flag(page)).toBeNull()
+  })
+
+  test('nobody is asked without a sign-up', async ({ page }) => {
+    await mockWhoami(page, { userType: 'member', name: 'newbie', passkeys: 0 })
+    await load(page)
+    await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
+    await expect(offer(page)).toHaveCount(0)
+  })
+})
+
 test.describe('settings popout: save a passkey', () => {
   test.beforeEach(async ({ page }) => {
     await mockWhoami(page, { userType: 'friend', name: 'alice' })

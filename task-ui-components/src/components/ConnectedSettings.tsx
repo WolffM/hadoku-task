@@ -33,6 +33,8 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
 import {
+  loadSignInClient,
+  passkeyHref,
   prefetchSettings,
   passkeysSupported,
   type ContentLevelState,
@@ -204,6 +206,146 @@ const TABS_CSS = `
 }
 `
 
+/** Set by the site's sign-in page when someone signs up (hadoku_site
+ *  workers/shared/authPage.ts OFFER_PASSKEY_KEY), to the sign-up's epoch ms:
+ *  sign-up asks for no passkey, so the first page they land on does, once. */
+const OFFER_PASSKEY_KEY = 'hadoku:offer-passkey'
+/** An offer nobody answered within a day is dropped; the gear's dot still asks. */
+const OFFER_PASSKEY_MS = 24 * 60 * 60 * 1000
+
+function passkeyOfferPending(): boolean {
+  try {
+    const at = Number(window.localStorage.getItem(OFFER_PASSKEY_KEY))
+    if (!at) return false
+    if (Date.now() - at <= OFFER_PASSKEY_MS) return true
+    window.localStorage.removeItem(OFFER_PASSKEY_KEY)
+    return false
+  } catch (err) {
+    // Storage refused (a private window): no offer, and the dot still asks.
+    reportErr(err)
+    return false
+  }
+}
+
+function retirePasskeyOffer() {
+  try {
+    window.localStorage.removeItem(OFFER_PASSKEY_KEY)
+  } catch (err) {
+    reportErr(err)
+  }
+}
+
+/** The offer card, placed where the panel opens: under the gear, at its right
+ *  edge. Inline for the same reason as PASSKEY_DOT. */
+const OFFER_CARD: React.CSSProperties = {
+  position: 'absolute',
+  top: 'calc(100% + 8px)',
+  right: 0,
+  zIndex: 100,
+  boxSizing: 'border-box',
+  width: 260,
+  maxWidth: 'calc(100vw - 32px)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  padding: 16,
+  borderRadius: 12,
+  background: 'var(--color-bg-card)',
+  border: '1px solid var(--color-border)',
+  boxShadow: '0 8px 28px rgba(0, 0, 0, 0.18)',
+  color: 'var(--color-text)'
+}
+
+/** Hover lifts the offer's buttons rather than darkening them, so it reads as
+ *  pressable at a glance. Injected, as the pulse is. */
+const OFFER_CSS = `
+.settings-passkey-offer .settings-popout__btn {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.settings-passkey-offer .settings-popout__btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+.settings-passkey-offer .settings-popout__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary);
+  filter: brightness(1.15);
+}
+`
+
+/** "Save a passkey?" beside the gear, for someone who just signed up. Saving
+ *  runs the site client's own ceremony, as the Account tab's button does. */
+function PasskeyOffer({ onSaved, onDone }: { onSaved: () => void; onDone: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const ctl = useRef<AbortController | null>(null)
+  useEffect(() => () => ctl.current?.abort(), [])
+
+  const save = async () => {
+    const c = new AbortController()
+    ctl.current = c
+    setBusy(true)
+    setError(null)
+    try {
+      const client = await loadSignInClient()
+      if (!client?.addPasskey) {
+        retirePasskeyOffer()
+        window.location.assign(passkeyHref('add'))
+        return
+      }
+      await client.addPasskey({ signal: c.signal })
+      onSaved()
+      onDone()
+    } catch (err) {
+      if (!c.signal.aborted) setError((err as Error)?.message || 'Passkey not saved')
+    } finally {
+      if (ctl.current === c) ctl.current = null
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className="settings-passkey-offer"
+      style={OFFER_CARD}
+      role="dialog"
+      aria-labelledby="settings-passkey-offer-title"
+    >
+      <strong id="settings-passkey-offer-title" style={{ fontSize: '0.95rem' }}>
+        Save a passkey?
+      </strong>
+      {error && (
+        <span className="settings-popout__error" role="alert">
+          {error}
+        </span>
+      )}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          className="settings-popout__btn"
+          data-testid="passkey-offer-dismiss"
+          onClick={() => {
+            ctl.current?.abort()
+            onDone()
+          }}
+        >
+          Not now
+        </button>
+        <button
+          type="button"
+          className="settings-popout__btn settings-popout__btn--primary"
+          data-testid="passkey-offer-save"
+          disabled={busy}
+          onClick={() => void save()}
+        >
+          Save passkey
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function useInjectedStyle(id: string, css: string, active: boolean) {
   useEffect(() => {
     if (!active || document.getElementById(id)) return
@@ -267,6 +409,8 @@ export function ConnectedSettings({
   // in the popout sets passkeySaved, which retires the gear's dot.
   const [passkeyCount, setPasskeyCount] = useState<number | null>(null)
   const [passkeySaved, setPasskeySaved] = useState(false)
+  // Just signed up (OFFER_PASSKEY_KEY): ask beside the gear, once.
+  const [offerPending, setOfferPending] = useState(passkeyOfferPending)
 
   // The Switch key form stays open across a close of the popout.
   const [keyFormOpen, setKeyFormOpen] = useState(false)
@@ -305,6 +449,24 @@ export function ConnectedSettings({
     passkeysSupported()
   useInjectedStyle('settings-passkey-pulse', PASSKEY_PULSE_CSS, needsPasskey)
   useInjectedStyle('settings-tabs', TABS_CSS, open)
+  const showOffer = offerPending && needsPasskey && !open
+  useInjectedStyle('settings-passkey-offer', OFFER_CSS, showOffer)
+
+  // Someone who already has a passkey, or cannot make one here, is never
+  // asked: the offer is spent. An unknown count (an edge that does not say)
+  // leaves it for a page that knows.
+  useEffect(() => {
+    if (!offerPending || resolving) return
+    if (passkeyCount === null) return
+    if (!needsPasskey) {
+      retirePasskeyOffer()
+      setOfferPending(false)
+    }
+  }, [offerPending, resolving, passkeyCount, needsPasskey])
+  const endOffer = useCallback(() => {
+    retirePasskeyOffer()
+    setOfferPending(false)
+  }, [])
 
   // The site's own groups first, then the app's. App ids are namespaced so an
   // app tab called "account" can never collide with the site's.
@@ -457,6 +619,8 @@ export function ConnectedSettings({
           <span className="settings-toggle-btn__dot" style={PASSKEY_DOT} aria-hidden="true" />
         )}
       </button>
+
+      {showOffer && <PasskeyOffer onSaved={() => setPasskeySaved(true)} onDone={endOffer} />}
 
       {open && <div className="settings-popout__overlay" onClick={() => setOpen(false)} />}
 
