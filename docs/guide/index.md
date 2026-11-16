@@ -68,4 +68,4 @@ editor.
 
 The Kate plugin went from an embedding spike to a live Tasks tab to a live
 Calendar tab, and the task API grew its MCP server for agents, all in one
-afternoon ([history](history.md#one-afternoon-the-kate-plugin-and-mcp)).
+afternoon ([history](history.md#one-afternoon-the-kate-plugin-and-mcp-2026-06-06)).
