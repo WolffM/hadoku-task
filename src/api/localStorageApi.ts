@@ -66,14 +66,13 @@ export function createLocalStorageApi(userType: string = 'public', sessionId: st
       return populated
     },
 
-    async createBoard(boardId: string, mode?: 'standard' | 'tracker'): Promise<Board> {
+    async createBoard(boardId: string): Promise<Board> {
       logger.info('[localStorageApi] createBoard (using handler)', { userType, sessionId, boardId })
 
       // Use handler
       const result = await TaskHandlers.createBoard(storage, authContext, {
         id: boardId,
-        name: boardId,
-        mode
+        name: boardId
       })
 
       // Initialize empty tasks/stats for new board

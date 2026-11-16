@@ -55,7 +55,6 @@ export const DOMAIN_ERROR_CODES = [
   'NOTES_TOO_LARGE', // 413 — notes exceed MAX_NOTES_BYTES
   'STATUS_INVALID', // 422 — `status` isn't { kind: <closed set>, label, href? }
   // Tracker boards
-  'BOARD_NOT_TRACKER', // 409 — the board is not a tracker board
   'TRACKER_NOT_FOUND', // 404
   'ENTRY_NOT_FOUND' // 404
 ] as const
@@ -249,13 +248,6 @@ export const TrackerNotFoundErrorSchema = narrowError(
   'TrackerNotFoundError',
   ['BOARD_NOT_FOUND', 'TRACKER_NOT_FOUND', 'ENTRY_NOT_FOUND'],
   'The board, the tracker on it, or the entry does not exist (or is not shared with you).'
-)
-
-/** 409 on tracker routes: the board is not a tracker board. */
-export const TrackerConflictErrorSchema = narrowError(
-  'TrackerConflictError',
-  ['BOARD_NOT_TRACKER'],
-  'The board holds tasks, not trackers.'
 )
 
 export const boardRefParam = z.object({

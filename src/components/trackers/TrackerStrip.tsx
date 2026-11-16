@@ -1,11 +1,14 @@
 /**
- * A tracker board: a tile per tracker (one tap on its button logs, a tap
- * anywhere else opens the tracker), an undo bar after each log, and today's
- * entries across every tracker. Each tracker's full history is in its detail.
+ * A board's tracker widgets: a strip of tiles above the lanes (one tap on a
+ * tile's button logs, a tap anywhere else opens the tracker), and an undo bar
+ * after each log. Each tracker's full history is in its detail.
  *
- * Reads and writes go straight to the server. The board re-reads every 30s
+ * Reads and writes go straight to the server. The strip re-reads every 30s
  * while visible, and on focus, so a hit from somewhere else (another device,
  * later a physical button) shows up without a reload.
+ *
+ * With no trackers it renders nothing but the "Add a widget" dialog when asked
+ * for it, and reports its count so the board can stop mounting it.
  */
 import React from 'react'
 import { Icon } from '@wolffm/themes'
@@ -18,7 +21,6 @@ import type { TrackerApi } from '../../api/trackers'
 import {
   counterTotalSince,
   describeEntry,
-  formatClock,
   formatTrackerNumber,
   startOfLocalDay
 } from '../../domain/trackerStats'
@@ -27,15 +29,18 @@ import type { Tracker, TrackerBoardData, TrackerEntry, TrackerKind } from '../..
 const POLL_MS = 30_000
 /** How long the undo bar stays after a log. */
 const UNDO_MS = 6_000
-/** Today's list shows this many until expanded. */
-const TODAY_SHOWN = 8
 
-export interface TrackerBoardProps {
+export interface TrackerStripProps {
   /** The board reference: the slug for an own board, the handle for a shared one. */
   boardRef: string
-  boardName: string
   api: TrackerApi
   onError: (message: string) => void
+  /** Show the "Add a widget" dialog. */
+  adding: boolean
+  /** The dialog closed (added or cancelled). */
+  onAddingDone: () => void
+  /** How many trackers the board holds, each time that is known. */
+  onCount: (count: number) => void
 }
 
 /** Keep whichever copy of a tracker the server touched last — out-of-order replies can't roll it back. */
@@ -43,7 +48,14 @@ function newer(a: Tracker, b: Tracker): Tracker {
   return Date.parse(b.updatedAt) >= Date.parse(a.updatedAt) ? b : a
 }
 
-export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoardProps) {
+export function TrackerStrip({
+  boardRef,
+  api,
+  onError,
+  adding,
+  onAddingDone,
+  onCount
+}: TrackerStripProps) {
   const [data, setData] = React.useState<TrackerBoardData | null>(null)
   const [loadError, setLoadError] = React.useState<string | null>(null)
   const [now, setNow] = React.useState(() => new Date())
@@ -51,11 +63,14 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
   const [openId, setOpenId] = React.useState<string | null>(null)
   const [readingFor, setReadingFor] = React.useState<Tracker | null>(null)
-  const [adding, setAdding] = React.useState(false)
   const [lastLogged, setLastLogged] = React.useState<TrackerEntry | null>(null)
-  const [allToday, setAllToday] = React.useState(false)
   const undoTimer = React.useRef<number | undefined>(undefined)
   React.useEffect(() => () => window.clearTimeout(undoTimer.current), [])
+
+  const count = data?.trackers.length
+  React.useEffect(() => {
+    if (count !== undefined) onCount(count)
+  }, [count, onCount])
 
   const load = React.useCallback(async () => {
     try {
@@ -123,6 +138,10 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
     try {
       const t = await api.createTracker(boardRef, input)
       setData(d => d && { ...d, trackers: [...d.trackers, t] })
+      // Now, not from the count effect: the dialog's close lands in this same
+      // render, and a board that showed the strip only for the add would unmount
+      // it before the effect could say there is a tracker to show.
+      onCount((data?.trackers.length ?? 0) + 1)
       return true
     } catch (err) {
       report(err)
@@ -159,70 +178,55 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
     }
   }
 
+  const addDialog = adding && <AddTrackerDialog onAdd={addTracker} onClose={onAddingDone} />
+
   if (!data) {
     return (
-      <div className="tracker-board" data-testid="tracker-board">
+      <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
         {loadError ? (
-          <div className="tracker-board__status tracker-board__status--error" role="alert">
-            Couldn't load {boardName}: {loadError}
+          <div className="tracker-strip__status tracker-strip__status--error" role="alert">
+            Couldn't load trackers: {loadError}
             <button type="button" className="tracker-btn" onClick={() => void load()}>
               <Icon name="refresh" /> Retry
             </button>
           </div>
         ) : (
-          <div className="tracker-board__status">Loading trackers…</div>
+          <div className="tracker-strip__status">Loading trackers…</div>
         )}
-      </div>
+      </section>
     )
   }
 
   const { canWrite, trackers, entries } = data
+  if (trackers.length === 0) return addDialog || null
+
   const byId = new Map(trackers.map(t => [t.id, t]))
   const opened = openId ? byId.get(openId) : undefined
-  const todayStart = startOfLocalDay(now).getTime()
-  const todays = entries
-    .filter(e => byId.has(e.trackerId) && Date.parse(e.at) >= todayStart)
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
   const lastTracker = lastLogged ? byId.get(lastLogged.trackerId) : undefined
 
   return (
-    <div className="tracker-board" data-testid="tracker-board">
+    <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
+      <h2 className="tracker-strip__title">Trackers</h2>
       {loadError && (
-        <div className="tracker-board__status tracker-board__status--error" role="alert">
+        <div className="tracker-strip__status tracker-strip__status--error" role="alert">
           Showing the last good copy — refresh failed: {loadError}
         </div>
       )}
 
-      {canWrite && (
-        <div className="tracker-board__bar">
-          <button type="button" className="tracker-btn" onClick={() => setAdding(true)}>
-            <Icon name="plus" /> New tracker
-          </button>
-        </div>
-      )}
-
-      {trackers.length === 0 ? (
-        <div className="tracker-board__status">
-          {canWrite
-            ? 'Nothing tracked yet. Add a tracker to start counting.'
-            : 'Nothing is tracked on this board yet.'}
-        </div>
-      ) : (
-        <div className="tracker-grid">
-          {trackers.map(t => (
-            <TrackerTile
-              key={t.id}
-              tracker={t}
-              entries={entries}
-              now={now}
-              canWrite={canWrite}
-              onIncrement={() => void logEntry(t, { delta: 1 })}
-              onLogReading={() => setReadingFor(t)}
-              onOpen={() => setOpenId(t.id)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="tracker-strip__row">
+        {trackers.map(t => (
+          <TrackerTile
+            key={t.id}
+            tracker={t}
+            entries={entries}
+            now={now}
+            canWrite={canWrite}
+            onIncrement={() => void logEntry(t, { delta: 1 })}
+            onLogReading={() => setReadingFor(t)}
+            onOpen={() => setOpenId(t.id)}
+          />
+        ))}
+      </div>
 
       {lastLogged && lastTracker && (
         <div className="tracker-undo" role="status" data-testid="tracker-undo">
@@ -240,44 +244,6 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
           </button>
         </div>
       )}
-
-      <section className="tracker-today" aria-label="Today">
-        <h3 className="tracker-today__title">Today</h3>
-        {todays.length === 0 ? (
-          <p className="tracker-today__empty">Nothing logged today.</p>
-        ) : (
-          <ol className="tracker-today__list">
-            {(allToday ? todays : todays.slice(0, TODAY_SHOWN)).map(e => {
-              const t = byId.get(e.trackerId) as Tracker
-              return (
-                <li key={e.id} className="tracker-today__item" data-testid="tracker-today-item">
-                  <time className="tracker-today__time" dateTime={e.at}>
-                    {formatClock(e.at)}
-                  </time>
-                  <button
-                    type="button"
-                    className="tracker-today__name"
-                    onClick={() => setOpenId(t.id)}
-                  >
-                    {t.name}
-                  </button>
-                  <span className="tracker-today__change">{describeEntry(e, t.unit)}</span>
-                  {e.source === 'button' && (
-                    <span className="tracker-today__source" title="From a button">
-                      <Icon name="zap" />
-                    </span>
-                  )}
-                </li>
-              )
-            })}
-          </ol>
-        )}
-        {todays.length > TODAY_SHOWN && (
-          <button type="button" className="tracker-btn" onClick={() => setAllToday(a => !a)}>
-            {allToday ? 'Show fewer' : `Show all ${todays.length}`}
-          </button>
-        )}
-      </section>
 
       {opened && (
         <TrackerDetail
@@ -304,7 +270,7 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
         />
       )}
 
-      {adding && <AddTrackerDialog onAdd={addTracker} onClose={() => setAdding(false)} />}
+      {addDialog}
 
       <ConfirmModal
         isOpen={confirmDelete !== null}
@@ -319,6 +285,6 @@ export function TrackerBoard({ boardRef, boardName, api, onError }: TrackerBoard
         onCancel={() => setConfirmDelete(null)}
         onConfirm={deleteTracker}
       />
-    </div>
+    </section>
   )
 }

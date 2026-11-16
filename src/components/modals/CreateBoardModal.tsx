@@ -13,19 +13,10 @@ export interface CreateBoardModalProps {
   validationError: string | null
   pendingTaskOperation: PendingTaskOperation | null
   onClose: () => void
-  onConfirm: (boardName: string, kind: BoardKind) => Promise<void>
+  onConfirm: (boardName: string) => Promise<void>
   onInputChange: (value: string) => void
   validateBoardName: (name: string) => string | null
-  /** Offer the tracker board type (wife tier and up). */
-  allowTracker?: boolean
 }
-
-export type BoardKind = 'standard' | 'tracker'
-
-const KINDS: ReadonlyArray<readonly [BoardKind, string, string]> = [
-  ['standard', 'Tasks', 'A board of tasks'],
-  ['tracker', 'Tracker', 'Counters and readings, with a history log']
-]
 
 export function CreateBoardModal({
   isOpen,
@@ -35,19 +26,10 @@ export function CreateBoardModal({
   onClose,
   onConfirm,
   onInputChange,
-  validateBoardName,
-  allowTracker = false
+  validateBoardName
 }: CreateBoardModalProps) {
-  const [kind, setKind] = React.useState<BoardKind>('standard')
-  // Moving tasks onto a new board only makes sense for a task board.
   const movingTasks =
     pendingTaskOperation?.type === 'move-to-board' && pendingTaskOperation.taskIds.length > 0
-  const offerKinds = allowTracker && !movingTasks
-  const chosen: BoardKind = offerKinds ? kind : 'standard'
-
-  React.useEffect(() => {
-    if (isOpen) setKind('standard')
-  }, [isOpen])
 
   const handleConfirm = async () => {
     if (!inputValue.trim()) return
@@ -55,7 +37,7 @@ export function CreateBoardModal({
     const error = validateBoardName(inputValue)
     if (error) return // Validation error will be shown
 
-    await onConfirm(inputValue, chosen)
+    await onConfirm(inputValue)
   }
 
   // Say WHY Create is disabled as you type: a duplicate name used to just grey
@@ -67,7 +49,7 @@ export function CreateBoardModal({
   return (
     <Modal
       isOpen={isOpen}
-      title={chosen === 'tracker' ? 'Create Tracker Board' : 'Create New Board'}
+      title="Create New Board"
       onClose={onClose}
       onConfirm={handleConfirm}
       inputValue={inputValue}
@@ -76,23 +58,6 @@ export function CreateBoardModal({
       confirmLabel="Create"
       confirmDisabled={isDisabled}
     >
-      {offerKinds && (
-        <div className="tracker-kind" role="radiogroup" aria-label="Board type">
-          {KINDS.map(([k, label, hint]) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={kind === k}
-              title={hint}
-              className={`tracker-kind__option${kind === k ? ' tracker-kind__option--active' : ''}`}
-              onClick={() => setKind(k)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
       {movingTasks && (
         <p className="modal-hint">
           {pendingTaskOperation.taskIds.length} task

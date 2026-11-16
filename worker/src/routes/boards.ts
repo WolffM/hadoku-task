@@ -5,7 +5,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { TaskHandlers } from '@wolffm/task/api'
-import { requireFields, tierAtLeast } from '@wolffm/worker-utils'
+import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { StepTimer } from '../server-timing'
 import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
@@ -156,8 +156,7 @@ export function createBoardRoutes() {
     path: '/boards',
     tags: ['Boards'],
     summary: 'Create a new board',
-    description:
-      'Creates a new board with the provided id and name. `mode: "tracker"` makes a tracker board (wife tier and up).',
+    description: 'Creates a new board with the provided id and name.',
     request: {
       body: {
         content: {
@@ -206,12 +205,6 @@ export function createBoardRoutes() {
     })
 
     const { storage, auth } = getContext(c)
-    if (body.mode === 'tracker' && !tierAtLeast(auth, 'wife')) {
-      return c.json(
-        { error: 'Tracker boards need wife tier or above', code: 'FORBIDDEN' as const },
-        403
-      )
-    }
     const lockKey = boardsKey(auth.sessionId)
     const expectedVersion = parseIfMatch(c)
 

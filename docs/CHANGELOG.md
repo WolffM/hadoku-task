@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Trackers are a widget on any board
+
+There is no tracker board type any more. Any board can hold trackers: the
+board toolbar's **Widget** button (wife tier and up, on a board you can write
+to) adds one, and the board's trackers show as a strip of compact tiles above
+its lanes, with the board's tasks unchanged below. A tile's +1 / Log still logs
+in one tap, and tapping elsewhere opens the tracker's detail and history. On a
+phone the strip scrolls sideways. A board with no trackers shows no strip and
+never loads the tracker code: GET /boards now reports each board's
+`trackerCount`. Board creation no longer offers a type, and `mode: "tracker"` is
+gone from POST /boards. Migration 0009 turns existing tracker boards into
+ordinary boards; their trackers and history are kept.
+
 ### Tracker boards: tap tiles
 
 Each tracker is a tile with its own +1 button (Log, for a weight-style tracker),

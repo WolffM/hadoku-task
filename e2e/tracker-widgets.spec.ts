@@ -2,12 +2,13 @@ import { test, expect, type Page } from '@playwright/test'
 import { API } from './helpers/stack'
 
 /**
- * Tracker boards, end to end against the REAL worker and its sqlite D1.
+ * Tracker widgets, end to end against the REAL worker and its sqlite D1.
  *
- * Nothing is mocked. The only request rewrite is the dev shim's identity
- * headers: `X-Dev-Tier` stamps the tier the edge would stamp in production
- * (tracker boards are wife tier and up) and `X-Dev-As` gives each test its own
- * user, so boards and trackers from one test can never leak into another.
+ * Trackers are a widget on any board: a strip of tiles above the lanes, added
+ * from the board toolbar's "Widget" button. Nothing is mocked. The only request
+ * rewrite is the dev shim's identity headers: `X-Dev-Tier` stamps the tier the
+ * edge would stamp in production (trackers are wife tier and up) and `X-Dev-As`
+ * gives each test its own user, so boards and trackers never leak between tests.
  */
 
 let seq = 0
@@ -24,7 +25,10 @@ async function signInAs(page: Page, tier: string, userId: string) {
     },
     [tier]
   )
-  await page.route('**/task/api/**', route =>
+  // `**/task/api**`, not `**/task/api/**`: a task create posts to `/task/api`
+  // itself, which the slash form misses — it then goes out unstamped, as the
+  // shim's default user, and the task is never seen again on this user's board.
+  await page.route('**/task/api**', route =>
     route.continue({
       headers: { ...route.request().headers(), 'x-dev-tier': tier, 'x-dev-as': userId }
     })
@@ -46,18 +50,31 @@ const card = (page: Page, name: string) =>
 const valueOf = (page: Page, name: string) => card(page, name).getByTestId('tracker-value')
 const todayOf = (page: Page, name: string) => card(page, name).getByTestId('tracker-today')
 const detail = (page: Page, name: string) => page.getByRole('dialog', { name })
+const strip = (page: Page) => page.getByTestId('tracker-strip')
+const taskCard = (page: Page, title: string) =>
+  page.locator('.task-app__item').filter({ hasText: title })
 
-async function createTrackerBoard(page: Page, name: string) {
+async function addTask(page: Page, title: string) {
+  const field = page.locator('.task-app__input')
+  await field.fill(title)
+  await field.press('Enter')
+  await expect(taskCard(page, title)).toBeVisible()
+}
+
+async function openBoard(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true }).click()
+}
+
+async function createBoard(page: Page, name: string) {
   await page.getByRole('button', { name: 'Create board' }).click()
-  await page.getByRole('radio', { name: 'Tracker' }).click()
   await page.getByPlaceholder('Board name').fill(name)
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await expect(page.getByTestId('tracker-board')).toBeVisible()
+  await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 }
 
 async function addTracker(page: Page, name: string, kind: 'Count' | 'Value', unit = '') {
-  await page.getByRole('button', { name: 'New tracker' }).click()
-  const dialog = page.getByRole('dialog', { name: 'New tracker' })
+  await page.getByRole('button', { name: 'Widget' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Add a widget' })
   await dialog.getByLabel('New tracker name').fill(name)
   await dialog.getByRole('radio', { name: kind }).click()
   if (unit) await dialog.getByLabel('New tracker unit').fill(unit)
@@ -66,19 +83,24 @@ async function addTracker(page: Page, name: string, kind: 'Count' | 'Value', uni
   await expect(card(page, name)).toBeVisible()
 }
 
-test.describe('tracker boards', () => {
-  test('one tap counts, the tile opens its history, a value logs, all survive a reload', async ({
+test.describe('tracker widgets', () => {
+  test('a tracker sits above the lanes of a task board; taps, history and a value survive a reload', async ({
     page
   }) => {
     const raised = dialogFuse(page)
     await signInAs(page, 'wife', newUser())
     await page.goto('/')
+    await createBoard(page, 'health')
 
-    await createTrackerBoard(page, 'health')
-    // The task UI is gone: no capture input on a tracker board.
-    await expect(page.locator('.task-app__input')).toHaveCount(0)
+    // An ordinary board: tasks first, no strip until a tracker is added.
+    await addTask(page, 'Book a physio')
+    await expect(strip(page)).toHaveCount(0)
 
     await addTracker(page, 'Pushups', 'Count', 'reps')
+    await expect(strip(page)).toBeVisible()
+    // The task UI stays: the tracker is a widget beside the tasks.
+    await expect(page.locator('.task-app__input')).toBeVisible()
+    await expect(taskCard(page, 'Book a physio')).toBeVisible()
     await expect(todayOf(page, 'Pushups')).toHaveText('0today')
     await expect(valueOf(page, 'Pushups')).toHaveText('0 reps total')
 
@@ -137,16 +159,18 @@ test.describe('tracker boards', () => {
     await expect(valueOf(page, 'Weight')).toHaveText('81.9kg')
     await expect(card(page, 'Weight')).toContainText('−0.6 kg this week')
 
-    // Today's list holds every tracker's entries.
-    await expect(page.getByTestId('tracker-today-item')).toHaveCount(5)
+    // The widgets belong to their board: another board has none.
+    await openBoard(page, 'main')
+    await expect(page.locator('.task-app__input')).toBeVisible()
+    await expect(strip(page)).toHaveCount(0)
 
-    // The server is the store: a reload shows the same numbers and entries.
-    // (A reload opens `main`, as it does for every board.)
+    // The server is the store: after a reload the board's list says it has
+    // trackers, so the strip comes back with the same numbers, beside the task.
     await page.reload()
-    await page.getByRole('button', { name: 'health', exact: true }).click()
+    await openBoard(page, 'health')
     await expect(valueOf(page, 'Pushups')).toHaveText('1 reps total')
     await expect(valueOf(page, 'Weight')).toHaveText('81.9kg')
-    await expect(page.getByTestId('tracker-today-item')).toHaveCount(5)
+    await expect(taskCard(page, 'Book a physio')).toBeVisible()
 
     expect(raised).toEqual([])
   })
@@ -158,7 +182,7 @@ test.describe('tracker boards', () => {
     const user = newUser()
     await signInAs(page, 'wife', user)
     await page.goto('/')
-    await createTrackerBoard(page, 'water')
+    await createBoard(page, 'water')
     await addTracker(page, 'Glasses', 'Count')
 
     const headers = { 'X-Dev-Tier': 'wife', 'X-Dev-As': user }
@@ -173,15 +197,21 @@ test.describe('tracker boards', () => {
     })
     expect(hit.ok()).toBe(true)
 
-    // The board re-reads on focus (and every 30s while visible).
+    // The strip re-reads on focus (and every 30s while visible).
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     await expect(valueOf(page, 'Glasses')).toHaveText('1 total')
+    await card(page, 'Glasses').getByRole('button', { name: 'Open Glasses' }).click()
     await expect(
-      page.getByTestId('tracker-today-item').first().getByTitle('From a button')
+      detail(page, 'Glasses')
+        .getByTestId('tracker-history-item')
+        .first()
+        .getByTitle('From a button')
     ).toBeVisible()
   })
 
-  test('rename and delete go through the app, not native dialogs', async ({ page }) => {
+  test('rename and delete go through the app; deleting the last tracker removes the strip', async ({
+    page
+  }) => {
     await page.addInitScript(() => {
       window.confirm = () => false
       window.prompt = () => null
@@ -190,7 +220,8 @@ test.describe('tracker boards', () => {
     const raised = dialogFuse(page)
     await signInAs(page, 'admin', newUser())
     await page.goto('/')
-    await createTrackerBoard(page, 'misc')
+    await createBoard(page, 'misc')
+    await addTask(page, 'Descale the machine')
     await addTracker(page, 'Coffee', 'Count', 'cups')
 
     await card(page, 'Coffee').getByRole('button', { name: 'Open Coffee' }).click()
@@ -205,36 +236,59 @@ test.describe('tracker boards', () => {
     await expect(confirm.getByText('and its whole history will be deleted')).toBeVisible()
     await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
     await expect(card(page, 'Espresso')).toHaveCount(0)
+    await expect(strip(page)).toHaveCount(0)
     await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(taskCard(page, 'Descale the machine')).toBeVisible()
     expect(raised).toEqual([])
   })
 
-  test('below wife tier the tracker type is not offered', async ({ page }) => {
-    await signInAs(page, 'friend', newUser())
+  test('a board with no trackers never loads them', async ({ page }) => {
+    await signInAs(page, 'wife', newUser())
+    const trackerCalls: string[] = []
+    page.on('request', r => {
+      if (/\/task\/api\/.*\/trackers/.test(r.url())) trackerCalls.push(r.url())
+    })
     await page.goto('/')
-    await page.getByRole('button', { name: 'Create board' }).click()
-    await expect(page.getByPlaceholder('Board name')).toBeVisible()
-    await expect(page.getByRole('radio', { name: 'Tracker' })).toHaveCount(0)
+    await createBoard(page, 'plain')
+    await addTask(page, 'Water the plants')
+    await openBoard(page, 'main')
+    await expect(page.getByRole('button', { name: 'Widget' })).toBeVisible()
+    expect(trackerCalls).toEqual([])
+    // Opening "Add a widget" and cancelling leaves no strip behind.
+    await page.getByRole('button', { name: 'Widget' }).click()
+    await page
+      .getByRole('dialog', { name: 'Add a widget' })
+      .getByRole('button', { name: 'Cancel' })
+      .click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(strip(page)).toHaveCount(0)
   })
 
-  test('a tracker chunk that will not load offers a reload, not a blank board', async ({
+  test('below wife tier there is no Widget button and no board type to pick', async ({ page }) => {
+    await signInAs(page, 'friend', newUser())
+    await page.goto('/')
+    await expect(page.locator('.task-app__input')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Widget' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Create board' }).click()
+    await expect(page.getByPlaceholder('Board name')).toBeVisible()
+    await expect(page.getByRole('radio')).toHaveCount(0)
+  })
+
+  test('a tracker chunk that will not load offers a reload, not a blank strip', async ({
     page
   }) => {
     // The tracker UI is a lazy chunk. A tab left open across a deploy runs the
     // old entry, which names a chunk the deploy deleted; that import fails.
     await signInAs(page, 'wife', newUser())
-    await page.route('**/components/trackers/TrackerBoard.tsx*', route => route.abort())
+    await page.route('**/components/trackers/TrackerStrip.tsx*', route => route.abort())
     await page.goto('/')
+    await addTask(page, 'Still here')
 
-    await page.getByRole('button', { name: 'Create board' }).click()
-    await page.getByRole('radio', { name: 'Tracker' }).click()
-    await page.getByPlaceholder('Board name').fill('stale')
-    await page.getByRole('button', { name: 'Create', exact: true }).click()
-
-    const alert = page.getByTestId('tracker-board').getByRole('alert')
-    await expect(alert).toContainText("Couldn't open stale")
+    await page.getByRole('button', { name: 'Widget' }).click()
+    const alert = strip(page).getByRole('alert')
+    await expect(alert).toContainText("Couldn't load the trackers")
     await expect(alert.getByRole('button', { name: 'Reload' })).toBeVisible()
-    // The rest of the app is still standing.
-    await expect(page.getByRole('button', { name: 'Create board' })).toBeVisible()
+    // The board itself is still standing.
+    await expect(taskCard(page, 'Still here')).toBeVisible()
   })
 })

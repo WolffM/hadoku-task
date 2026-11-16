@@ -102,6 +102,8 @@ interface BoardRow {
   // From the board_prefs LEFT JOIN (COALESCEd, so always present on read).
   pinned: number
   position: number
+  // Trackers on the board (a correlated count; GET /boards only).
+  tracker_count?: number
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -144,7 +146,9 @@ function rowToBoard(r: BoardRow): Board {
     lanes: r.lanes ? (JSON.parse(r.lanes) as Board['lanes']) : null,
     repo: r.repo ?? null,
     schemaId: r.schema_id ?? null,
-    schemaVersion: r.schema_version ?? null
+    schemaVersion: r.schema_version ?? null,
+    // Lets the client load the tracker widgets only on a board that has some.
+    ...(r.tracker_count ? { trackerCount: r.tracker_count } : {})
   }
 }
 
@@ -213,7 +217,9 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                   b.version, b.tasks_version, b.handle,
                   b.user_id AS owner_user_id, 'owner' AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
-                  COALESCE(p.position, 0) AS position
+                  COALESCE(p.position, 0) AS position,
+                  (SELECT COUNT(*) FROM trackers t
+                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count
              FROM boards b
              LEFT JOIN board_prefs p
                ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
@@ -223,7 +229,9 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                   b.version, b.tasks_version, b.handle,
                   b.user_id AS owner_user_id, s.level AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
-                  COALESCE(p.position, 0) AS position
+                  COALESCE(p.position, 0) AS position,
+                  (SELECT COUNT(*) FROM trackers t
+                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count
              FROM board_shares s
              JOIN boards b ON b.user_id = s.owner_user_id AND b.id = s.board_id
              LEFT JOIN board_prefs p
@@ -316,15 +324,15 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                    (user_id, id, handle, name, tags, mode, version, tasks_version, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`
               )
-              // Only 'tracker' can be chosen at creation; automation is
-              // switched on by its own activation route, never by a create.
+              // Every board starts standard; automation is switched on by its
+              // own activation route, never by a create.
               .bind(
                 uid,
                 b.id,
                 newHandle(),
                 b.name,
                 JSON.stringify(b.tags ?? []),
-                b.mode === 'tracker' ? 'tracker' : 'standard',
+                'standard',
                 ts,
                 ts
               )

@@ -83,7 +83,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
       }),
     [userType, sessionId, handleSyncError]
   )
-  // Tracker boards talk to the server directly; there is no local mirror to keep.
+  // Trackers talk to the server directly; there is no local mirror to keep.
   const trackerApi = useMemo(() => createTrackerApi(sessionId || 'public'), [sessionId])
   const [boards, setBoards] = useState<BoardsFile | null>(null)
   const [currentBoardId, setCurrentBoardId] = useState<string>('main')
@@ -506,8 +506,8 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   }
 
   // Board helpers
-  async function createBoard(boardId: string, kind: 'standard' | 'tracker' = 'standard') {
-    await api.createBoard(boardId, kind)
+  async function createBoard(boardId: string) {
+    await api.createBoard(boardId)
     // Switch first: reload slices against the live selection.
     selectBoard(boardId)
     await reload()
@@ -696,7 +696,7 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
 
     // Board sharing (§7) — direct server calls, no localStorage mirror.
     shareApi,
-    // Tracker boards — likewise server-only.
+    // Trackers — likewise server-only.
     trackerApi,
 
     // Lifecycle

@@ -133,7 +133,12 @@ export const BoardSchema = z
     tasks: z.array(TaskSchema),
     tags: z.array(z.string()).openapi({ example: ['work', 'personal', 'urgent'] }),
     stats: StatsSchema.optional(),
-    calendar: BoardCalendarSchema.optional()
+    calendar: BoardCalendarSchema.optional(),
+    trackerCount: z.number().int().optional().openapi({
+      example: 2,
+      description:
+        'How many trackers (widgets) the board holds — see /boards/{ref}/trackers. On GET /boards.'
+    })
   })
   .openapi('Board')
 
@@ -308,11 +313,7 @@ export const GetBoardsResponseSchema = z
 export const CreateBoardInputSchema = z
   .object({
     id: z.string().min(1).openapi({ example: 'work-board' }),
-    name: z.string().min(1).openapi({ example: 'Work Board' }),
-    mode: z.enum(['standard', 'tracker']).optional().openapi({
-      description:
-        '`tracker` makes a tracker board (counters/values with a history log, wife tier and up). Defaults to `standard`.'
-    })
+    name: z.string().min(1).openapi({ example: 'Work Board' })
   })
   .openapi('CreateBoardInput')
 

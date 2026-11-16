@@ -1,14 +1,14 @@
 /**
- * Tracker boards.
+ * Trackers: a widget any board can hold.
  *
- * A tracker board is a `boards` row with mode = 'tracker'. It holds trackers —
- * named counters (pushups, glasses of water) or values (weight) — instead of
- * tasks, and every change to one is an entry in `tracker_entries`, which is the
- * board's history and the source of its per-day totals.
+ * A tracker is a named counter (pushups, glasses of water) or value (weight)
+ * on a board, beside its tasks. Every change to one is an entry in
+ * `tracker_entries`, which is its history and the source of its per-day totals.
+ * There is no tracker board type: any board takes trackers.
  *
  * Wife tier and up only, on every route: the caller's tier is checked, not the
- * owner's. Board access resolves exactly as tasks do (route-utils), so a tracker
- * board can be shared and a read-only grantee can look but not log.
+ * owner's. Board access resolves exactly as tasks do (route-utils), so a shared
+ * board's trackers are shared with it and a read-only grantee can look but not log.
  *
  * Unlike tasks there is no localStorage mirror: these routes ARE the store, and
  * the client reads them back after every write. That is what lets a later
@@ -19,12 +19,7 @@ import type { Context } from 'hono'
 import { TaskUtils } from '@wolffm/task/api'
 import { tierAtLeast } from '@wolffm/worker-utils'
 import { getBoardContext, type BoardCtx } from './route-utils'
-import {
-  ForbiddenErrorSchema,
-  TrackerConflictErrorSchema,
-  TrackerNotFoundErrorSchema,
-  boardRefParam
-} from '../schemas-errors'
+import { ForbiddenErrorSchema, TrackerNotFoundErrorSchema, boardRefParam } from '../schemas-errors'
 import {
   CreateTrackerEntryInputSchema,
   CreateTrackerInputSchema,
@@ -38,11 +33,10 @@ import {
 } from '../schemas-trackers'
 import type { AppContext } from '../types'
 
-export const TRACKER_MODE = 'tracker'
 /** Default history window: 8 days covers a "last 7 days" total in any timezone. */
 const DEFAULT_WINDOW_MS = 8 * 24 * 60 * 60 * 1000
 const MAX_ENTRIES = 500
-const TIER_ERROR = 'Tracker boards need wife tier or above'
+const TIER_ERROR = 'Trackers need wife tier or above'
 
 const json = <S extends z.ZodTypeAny>(schema: S) => ({ 'application/json': { schema } })
 const forbidden = {
@@ -52,10 +46,6 @@ const forbidden = {
 const notFound = {
   description: 'Board, tracker or entry not found',
   content: json(TrackerNotFoundErrorSchema)
-}
-const conflict = {
-  description: 'Not a tracker board (BOARD_NOT_TRACKER)',
-  content: json(TrackerConflictErrorSchema)
 }
 
 const trackerParams = boardRefParam.extend({
@@ -116,7 +106,6 @@ type Fail =
       status: 404
       body: { error: string; code: 'BOARD_NOT_FOUND' | 'TRACKER_NOT_FOUND' | 'ENTRY_NOT_FOUND' }
     }
-  | { status: 409; body: { error: string; code: 'BOARD_NOT_TRACKER' } }
 
 const fail = {
   tier: (): Fail => ({ status: 403, body: { error: TIER_ERROR, code: 'FORBIDDEN' } }),
@@ -127,10 +116,6 @@ const fail = {
   board: (ref: string): Fail => ({
     status: 404,
     body: { error: `Board ${ref} not found`, code: 'BOARD_NOT_FOUND' }
-  }),
-  notTracker: (ref: string): Fail => ({
-    status: 409,
-    body: { error: `Board ${ref} is not a tracker board`, code: 'BOARD_NOT_TRACKER' }
   }),
   tracker: (id: string): Fail => ({
     status: 404,
@@ -149,16 +134,14 @@ function reply(c: Context<AppContext>, f: Fail) {
       return c.json(f.body, 403)
     case 404:
       return c.json(f.body, 404)
-    case 409:
-      return c.json(f.body, 409)
   }
 }
 
 /**
- * Resolve a tracker board for the caller: tier, existence, mode and (for a
- * write) access. Returns the board context or the failure to answer with.
+ * Resolve the board whose trackers the caller wants: tier, existence and (for
+ * a write) access. Returns the board context or the failure to answer with.
  */
-async function trackerBoard(
+async function boardFor(
   c: Context<AppContext>,
   ref: string,
   write: boolean
@@ -166,7 +149,6 @@ async function trackerBoard(
   if (!tierAtLeast(c.get('authContext'), 'wife')) return { fail: fail.tier() }
   const ctx = await getBoardContext(c, ref)
   if (!ctx || !ctx.exists) return { fail: fail.board(ref) }
-  if (ctx.mode !== TRACKER_MODE) return { fail: fail.notTracker(ref) }
   if (write && ctx.access === 'readonly') return { fail: fail.readonly() }
   return { ctx }
 }
@@ -187,19 +169,18 @@ export function createTrackerRoutes() {
       method: 'get',
       path: '/boards/{ref}/trackers',
       tags: ['Trackers'],
-      summary: "A tracker board's trackers and recent entries",
+      summary: "A board's trackers and recent entries",
       request: { params: boardRefParam, query: ListTrackersQuerySchema },
       responses: {
         200: { description: 'Trackers and entries', content: json(ListTrackersResponseSchema) },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref } = c.req.valid('param')
       const { since } = c.req.valid('query')
-      const r = await trackerBoard(c, ref, false)
+      const r = await boardFor(c, ref, false)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId, access } = r.ctx
       const from = since ?? new Date(Date.now() - DEFAULT_WINDOW_MS).toISOString()
@@ -234,19 +215,18 @@ export function createTrackerRoutes() {
       method: 'post',
       path: '/boards/{ref}/trackers',
       tags: ['Trackers'],
-      summary: 'Add a tracker to a tracker board',
+      summary: 'Add a tracker to a board',
       request: { params: boardRefParam, body: { content: json(CreateTrackerInputSchema) } },
       responses: {
         200: { description: 'Tracker created', content: json(TrackerResponseSchema) },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref } = c.req.valid('param')
       const { name, kind, unit } = c.req.valid('json')
-      const r = await trackerBoard(c, ref, true)
+      const r = await boardFor(c, ref, true)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId } = r.ctx
       const id = TaskUtils.generateULID()
@@ -277,14 +257,13 @@ export function createTrackerRoutes() {
       responses: {
         200: { description: 'Tracker updated', content: json(TrackerResponseSchema) },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref, trackerId } = c.req.valid('param')
       const patch = c.req.valid('json')
-      const r = await trackerBoard(c, ref, true)
+      const r = await boardFor(c, ref, true)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId } = r.ctx
       const row = await readTracker(c.env.DB, ownerId, boardId, trackerId)
@@ -318,13 +297,12 @@ export function createTrackerRoutes() {
       responses: {
         200: { description: 'Tracker deleted', content: json(DeleteTrackerResponseSchema) },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref, trackerId } = c.req.valid('param')
-      const r = await trackerBoard(c, ref, true)
+      const r = await boardFor(c, ref, true)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId } = r.ctx
       const db = c.env.DB
@@ -360,14 +338,13 @@ export function createTrackerRoutes() {
           content: json(z.object({ error: z.string() }))
         },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref, trackerId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const r = await trackerBoard(c, ref, true)
+      const r = await boardFor(c, ref, true)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId, callerId } = r.ctx
       const db = c.env.DB
@@ -435,13 +412,12 @@ export function createTrackerRoutes() {
       responses: {
         200: { description: 'Entry deleted', content: json(DeleteTrackerEntryResponseSchema) },
         403: forbidden,
-        404: notFound,
-        409: conflict
+        404: notFound
       }
     }),
     async c => {
       const { ref, trackerId, entryId } = c.req.valid('param')
-      const r = await trackerBoard(c, ref, true)
+      const r = await boardFor(c, ref, true)
       if ('fail' in r) return reply(c, r.fail)
       const { ownerId, boardId } = r.ctx
       const db = c.env.DB

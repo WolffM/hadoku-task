@@ -1,6 +1,7 @@
 /**
- * The "new tracker" dialog: a name, whether it counts or records a value, and
- * an optional unit. Stays open with what was typed when the create fails.
+ * "Add a widget": for now the only widget is a tracker, so this is the new
+ * tracker form — a name, whether it counts or records a value, and an optional
+ * unit. Stays open with what was typed when the create fails.
  */
 import React from 'react'
 import { Modal } from '@wolffm/task-ui-components'
@@ -28,7 +29,7 @@ export function AddTrackerDialog({ onAdd, onClose }: AddTrackerDialogProps) {
   return (
     <Modal
       isOpen
-      title="New tracker"
+      title="Add a widget"
       onClose={onClose}
       onConfirm={submit}
       confirmLabel="Add tracker"
@@ -43,6 +44,10 @@ export function AddTrackerDialog({ onAdd, onClose }: AddTrackerDialogProps) {
           void submit()
         }}
       >
+        <p className="tracker-dialog__kind">
+          <strong>Tracker</strong> · count something, or log a reading. It sits above the board's
+          lanes.
+        </p>
         <label className="tracker-field">
           <span>Name</span>
           <input

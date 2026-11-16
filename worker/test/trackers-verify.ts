@@ -4,10 +4,11 @@
  * Boots the REAL worker against a REAL SQLite DB built from worker/migrations
  * and drives it as users at different tiers. Proves:
  *
- *   1. Only wife tier and up can create or use a tracker board; a friend gets
- *      403 FORBIDDEN on every route.
- *   2. A tracker board is a board row with mode 'tracker' (GET /boards says so),
- *      and the tracker routes refuse a standard board with BOARD_NOT_TRACKER.
+ *   1. Only wife tier and up can use trackers; a friend gets 403 FORBIDDEN on
+ *      every route, even on their own board.
+ *   2. Trackers are a widget on ANY board: a board with tasks takes them, boards
+ *      are always created standard (a `mode` in the create is ignored), and
+ *      GET /boards reports `trackerCount` only on a board that has some.
  *   3. Counter entries add, subtract and reset; every change is a history row
  *      whose `value` is the tracker's value after it. Deleting an entry undoes it.
  *   4. A value tracker records each value, refuses a bare delta, and falls back
@@ -19,6 +20,7 @@
  *
  * Run via: pnpm run test:worker trackers-verify
  */
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createTaskHandler } from '../src/index'
 import { eraseAccountData } from '../src/account-erase'
@@ -109,7 +111,8 @@ interface Body {
   trackers?: Tracker[]
   entry?: Entry
   entries?: Entry[]
-  boards?: Array<{ id: string; mode?: string | null; handle?: string }>
+  boards?: Array<{ id: string; mode?: string | null; handle?: string; trackerCount?: number }>
+  tasks?: unknown[]
 }
 
 async function req(user: User, method: string, path: string, body?: unknown) {
@@ -161,39 +164,54 @@ const rowCount = async (sql: string, ...args: unknown[]) =>
 
 async function main() {
   section('1. Tier gate')
-  const friendCreate = await req(FRIEND, 'POST', '/task/api/boards', {
-    id: 'health',
-    name: 'health',
-    mode: 'tracker'
-  })
-  check('a friend cannot create a tracker board', friendCreate.status === 403, friendCreate)
-  check('…and is told FORBIDDEN', friendCreate.json.code === 'FORBIDDEN', friendCreate.json)
   const friendPlain = await req(FRIEND, 'POST', '/task/api/boards', { id: 'plain', name: 'plain' })
-  check('…while a plain board is still fine for a friend', friendPlain.status === 200, friendPlain)
+  check('a friend can make a board', friendPlain.status === 200, friendPlain)
+  const friendAdd = await req(FRIEND, 'POST', tr('plain'), { name: 'Steps' })
+  check('…but cannot add a tracker to it', friendAdd.status === 403, friendAdd)
+  check('…and is told FORBIDDEN', friendAdd.json.code === 'FORBIDDEN', friendAdd.json)
 
-  const created = await req(OWNER, 'POST', '/task/api/boards', {
-    id: 'health',
-    name: 'Health',
-    mode: 'tracker'
-  })
-  check(
-    'wife tier creates a tracker board through the ordinary create',
-    created.status === 200 && created.json.ok === true,
-    created
-  )
+  const created = await req(OWNER, 'POST', '/task/api/boards', { id: 'health', name: 'Health' })
+  check('wife tier makes an ordinary board', created.status === 200, created)
 
   const friendList = await req(FRIEND, 'GET', tr('health'))
   check('a friend cannot read trackers either', friendList.status === 403, friendList)
 
-  section('2. Board mode')
-  const boards = (await req(OWNER, 'GET', '/task/api/boards')).json.boards ?? []
-  const health = boards.find(b => b.id === 'health')
-  check('GET /boards reports mode "tracker"', health?.mode === 'tracker', boards)
-  const onMain = await req(OWNER, 'GET', tr('main'))
+  section('2. Any board takes trackers')
+  // A `mode` left over from the old tracker-board create (an open tab) is not
+  // part of the schema any more: the board is made standard.
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'chores', name: 'chores', mode: 'tracker' })
+  const task = await req(OWNER, 'POST', '/task/api', {
+    id: 'task-1',
+    title: 'Vacuum',
+    board: 'chores'
+  })
+  check('the board holds a task', task.status === 200, task)
+  const onChores = await req(OWNER, 'POST', tr('chores'), { name: 'Water' })
+  check('…and takes a tracker beside it', onChores.status === 200, onChores)
+  const listed = (await req(OWNER, 'GET', '/task/api/boards')).json.boards ?? []
+  const chores = listed.find(b => b.id === 'chores')
   check(
-    'a standard board is refused with BOARD_NOT_TRACKER',
-    onMain.status === 409 && onMain.json.code === 'BOARD_NOT_TRACKER',
-    onMain
+    'GET /boards: the board is standard and counts its tracker',
+    chores?.mode === 'standard' && chores.trackerCount === 1,
+    chores
+  )
+  check(
+    '…and a board with none carries no trackerCount',
+    listed.find(b => b.id === 'health')?.trackerCount === undefined,
+    listed
+  )
+  const choresTasks = await req(OWNER, 'GET', '/task/api/tasks?board=chores')
+  check(
+    "…and the tracker leaves the board's tasks alone",
+    choresTasks.json.tasks?.length === 1,
+    choresTasks.json
+  )
+  await req(OWNER, 'DELETE', tr('chores', `/${(onChores.json.tracker as Tracker).id}`))
+  const after = (await req(OWNER, 'GET', '/task/api/boards')).json.boards ?? []
+  check(
+    'deleting the last tracker drops the count',
+    after.find(b => b.id === 'chores')?.trackerCount === undefined,
+    after
   )
   const missing = await req(OWNER, 'GET', tr('nope'))
   check('an unknown board is 404', missing.status === 404, missing)
@@ -313,6 +331,9 @@ async function main() {
   )
 
   section('7. Sharing')
+  const ownBoards = (await req(OWNER, 'GET', '/task/api/boards')).json.boards ?? []
+  const health = ownBoards.find(b => b.id === 'health')
+  check('GET /boards counts the three trackers', health?.trackerCount === 3, health)
   const handle = health?.handle as string
   const g1 = await req(OWNER, 'POST', `/task/api/boards/health/shares`, {
     name: 'Viewer',
@@ -346,7 +367,21 @@ async function main() {
     adminHit.json.entry
   )
 
-  section('8. Delete tracker / board / account')
+  section('8. Migration 0009: an old tracker board becomes a standard board')
+  await (d1 as unknown as D1Database)
+    .prepare("UPDATE boards SET mode = 'tracker' WHERE user_id = ? AND id = 'health'")
+    .bind(OWNER.id)
+    .run()
+  await d1.exec(readFileSync(join(MIGRATION, '0009_trackers_on_any_board.sql'), 'utf8'))
+  const migrated = (await req(OWNER, 'GET', '/task/api/boards')).json.boards ?? []
+  const mHealth = migrated.find(b => b.id === 'health')
+  check(
+    'the board reads standard and keeps its trackers',
+    mHealth?.mode === 'standard' && mHealth.trackerCount === 3,
+    mHealth
+  )
+
+  section('9. Delete tracker / board / account')
   const delT = await req(OWNER, 'DELETE', tr('health', `/${pushups.id}`))
   check('deleting a tracker succeeds', delT.status === 200, delT)
   check(
@@ -364,11 +399,11 @@ async function main() {
   )
 
   // A second board to delete outright.
-  await req(OWNER, 'POST', '/task/api/boards', { id: 'gym', name: 'gym', mode: 'tracker' })
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'gym', name: 'gym' })
   const lift = (await req(OWNER, 'POST', tr('gym'), { name: 'Lifts' })).json.tracker as Tracker
   await req(OWNER, 'POST', tr('gym', `/${lift.id}/entries`), {})
   const delBoard = await req(OWNER, 'DELETE', '/task/api/boards/gym')
-  check('deleting a tracker board succeeds', delBoard.status === 200, delBoard)
+  check('deleting a board with trackers succeeds', delBoard.status === 200, delBoard)
   check(
     '…and removes its trackers and entries',
     (await rowCount("SELECT COUNT(*) AS n FROM trackers WHERE board_id = 'gym'")) === 0 &&
@@ -377,7 +412,7 @@ async function main() {
 
   // Erase: a board someone else shares is KEPT (account-erase's rule), so make
   // an unshared one and check that one goes.
-  await req(OWNER, 'POST', '/task/api/boards', { id: 'solo', name: 'solo', mode: 'tracker' })
+  await req(OWNER, 'POST', '/task/api/boards', { id: 'solo', name: 'solo' })
   const s = (await req(OWNER, 'POST', tr('solo'), { name: 'Steps' })).json.tracker as Tracker
   await req(OWNER, 'POST', tr('solo', `/${s.id}/entries`), {})
   const erased = await eraseAccountData(d1 as never, OWNER.id)

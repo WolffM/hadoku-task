@@ -17,7 +17,7 @@ interface UseTaskHandlersProps {
   updateTaskTags: (taskId: string, updates: { tag: string }) => Promise<void>
   bulkUpdateTaskTags: (updates: Array<{ taskId: string; tag: string }>) => Promise<void>
   createTagOnBoard: (tag: string) => Promise<void>
-  createBoard: (name: string, kind?: 'standard' | 'tracker') => Promise<void>
+  createBoard: (name: string) => Promise<void>
   moveTasksToBoard: (boardId: string, taskIds: string[]) => Promise<boolean>
   clearSelection: () => void
   setEditTagModal: (modal: { taskId: string; currentTag: string | null } | null) => void
@@ -145,10 +145,7 @@ export function useTaskHandlers({
     return validateBoardNameUtil(name, boards?.boards || [])
   }
 
-  const handleCreateBoard = async (
-    boardName: string,
-    kind: 'standard' | 'tracker' = 'standard'
-  ) => {
+  const handleCreateBoard = async (boardName: string) => {
     const name = boardName.trim()
     const error = validateBoardName(name)
     if (error) {
@@ -157,7 +154,7 @@ export function useTaskHandlers({
     }
 
     try {
-      await createBoard(name, kind)
+      await createBoard(name)
 
       // Check if we have pending task IDs to move
       if (

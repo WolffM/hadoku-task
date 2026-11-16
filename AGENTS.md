@@ -174,32 +174,42 @@ their CPU (#101). So root (`worker/src/index.ts`) mounts no group: each manifest
 - A group runs as its own app, so it gets root's `authContext` by hand-off (`forwardedAuth`) and
   its own copy of the error mapping. A group must not register middleware (the generator refuses).
 
-## Tracker boards
+## Trackers (a widget on any board)
 
-A board with `mode = 'tracker'` holds trackers (counters/values) instead of tasks. It is
-created by the ordinary `POST /boards` with `mode: 'tracker'` — one create path, no second
-endpoint (a separate `/trackers/boards` was tried and removed as duplication). Every
-change is a row in `tracker_entries`, which is the history log. Wife tier and up, checked on
-the CALLER in every route (`worker/src/routes/trackers.ts`). Unlike tasks there is no
-localStorage mirror: the frontend (`src/components/trackers/`, `src/api/trackers.ts`) calls
-the server and re-reads it, so an entry from another source (`source: 'button'`) shows up.
-The UI is tiles: each tile's own button logs in one tap (+1 on a counter, Log on a value
-tracker); anywhere else on the tile opens that tracker's detail (its history by day, undo,
-−1/set, rename, delete). The open target is a real `<button>` layered UNDER the content and
-the action button sits above it — two sibling buttons, never nested. Display helpers live in
-`src/domain/trackerStats.ts`, which only the lazy chunk imports; `src/domain/trackers.ts` is on
-the eager path, so keep it to types and the board/tier checks. Board delete and account erase cascade to both tables — a new table keyed by board must be
-added to `trackerDeletes` (d1-storage) and `ERASED_TABLES` too. Proof:
-`worker/test/trackers-verify.ts`, `e2e/tracker-board.spec.ts`.
+Trackers (counters/values) are a widget any board can hold, beside its tasks;
+there is no tracker board type (`mode = 'tracker'` was tried and removed by migration 0009 —
+don't bring a board type back for a widget). Rows are keyed by board (`trackers`,
+`tracker_entries`); every change is a row in `tracker_entries`, which is the history log.
+Wife tier and up, checked on the CALLER in every route (`worker/src/routes/trackers.ts`);
+board access resolves as for tasks, so a shared board shares its trackers. Unlike tasks there
+is no localStorage mirror: the frontend (`src/components/trackers/`, `src/api/trackers.ts`)
+calls the server and re-reads it, so an entry from another source (`source: 'button'`) shows up.
 
-The tracker UI is a LAZY chunk (`LazyTrackerBoard.tsx`): inlined, it put /task over
-hadoku_site's `check:bundle-budgets` and the site silently kept the old version (the
-updater's "Only green bumps land" step refuses an over-budget bump; the task worker still
-updates, so the API ships without its UI). Splitting makes `index.js` a facade over
-`entry-<hash>.js`; both the host and the chunk import that same URL, so there is one copy
-of the app. A tab open across a deploy can lose the chunk, so the import sits under an
-`ErrorBoundary` that offers a reload. Check the budget before pushing UI:
+The UI is a strip of compact tiles above the lanes (`TrackerStrip`), added from the toolbar's
+**Widget** button ("Add a widget" — the tracker form, since a tracker is the only widget).
+Each tile's own button logs in one tap (+1 on a counter, Log on a value tracker); anywhere
+else on the tile opens that tracker's detail (its history by day, undo, −1/set, rename,
+delete). The open target is a real `<button>` layered UNDER the content and the action button
+sits above it — two sibling buttons, never nested. Display helpers live in
+`src/domain/trackerStats.ts`, which only the lazy chunk imports; `src/domain/trackers.ts` is
+on the eager path, so keep it to types and the tier check. Board delete and account erase
+cascade to both tables — a new table keyed by board must be added to `trackerDeletes`
+(d1-storage) and `ERASED_TABLES` too. Proof: `worker/test/trackers-verify.ts`,
+`e2e/tracker-widgets.spec.ts`.
+
+The strip is a LAZY chunk (`LazyTrackerStrip.tsx`), and App mounts it only when GET /boards'
+`trackerCount` (or the strip's own reported count) says the board has trackers, or while one
+is being added — a board without trackers fetches neither the chunk nor `/trackers`. Inlined,
+the tracker UI put /task over hadoku_site's `check:bundle-budgets` and the site silently kept
+the old version (the updater's "Only green bumps land" step refuses an over-budget bump; the
+task worker still updates, so the API ships without its UI). Splitting makes `index.js` a
+facade over `entry-<hash>.js`; both the host and the chunk import that same URL, so there is
+one copy of the app. A tab open across a deploy can lose the chunk, so the import sits under
+an `ErrorBoundary` that offers a reload. Check the budget before pushing UI:
 `node ../hadoku_site/scripts/perf/check-bundle-budgets.mjs --mf-dir=<dir holding task/> --child-apps=<task-only copy> --all`.
+
+A physical button (later) binds to ONE tracker; the tracker detail is where its "Button"
+section goes.
 
 ## MCP (agent task/calendar management)
 

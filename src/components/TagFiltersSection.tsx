@@ -58,6 +58,8 @@ export interface TagFiltersSectionProps {
   automateDisabled?: boolean
   /** Turn those items into ordinary Inbox tasks. */
   onAutomate?: () => void
+  /** Open "Add a widget" (a tracker) for this board. Absent ⇒ no button. */
+  onAddWidget?: () => void
 }
 
 export function TagFiltersSection({
@@ -76,6 +78,7 @@ export function TagFiltersSection({
   onShowToast,
   onShareBoard,
   canShareBoard,
+  onAddWidget,
   currentView,
   onToggleCalendar,
   upcomingScheduledCount = 0,
@@ -188,6 +191,14 @@ export function TagFiltersSection({
             disabled={isSyncing}
           >
             <Icon name="warning" /> Not synced
+          </button>
+        </Tooltip>
+      )}
+
+      {currentView === 'board' && onAddWidget && (
+        <Tooltip content="Add a widget to this board, like a tracker">
+          <button className="pill-btn task-app__filter-widget" onClick={onAddWidget}>
+            <Icon name="plus" /> Widget
           </button>
         </Tooltip>
       )}

@@ -74,6 +74,20 @@
   margin-left: 0;
 }
 
+/* "Widget": opens Add a widget (a tracker, wife tier and up). It leads the
+   right-hand control cluster, so it takes the right-alignment like the stale
+   pill does. */
+.task-app__filter-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hdk-space-xs);
+  margin-left: auto;
+}
+.task-app__filter-stale + .task-app__filter-widget,
+.task-app__filter-widget + .task-app__filter-calendar {
+  margin-left: 0;
+}
+
 /* "Automate open items" (§5.6). A filled primary pill, not another outline one:
    it is an ACTION that creates rows, sitting in a row of filters that only
    change what you see, and it appears exactly when there is something new to

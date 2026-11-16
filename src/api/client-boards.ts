@@ -7,29 +7,15 @@ export function boardMethods(ctx: ApiCtx) {
   const { localStorage, onSyncError, sessionId } = ctx
   return {
     // Board operations
-    async createBoard(boardId: string, mode: 'standard' | 'tracker' = 'standard') {
-      logger.info('[api] createBoard: Starting', { boardId, mode })
+    async createBoard(boardId: string) {
+      logger.info('[api] createBoard: Starting', { boardId })
       const request = {
         method: 'POST',
         headers: adminHeaders(sessionId),
-        body: JSON.stringify({ id: boardId, name: boardId, mode })
+        body: JSON.stringify({ id: boardId, name: boardId })
       }
 
-      // A tracker board's data lives only on the server, so it must exist there
-      // before the board opens and asks for its trackers: await the create
-      // instead of letting it sync in the background.
-      if (mode === 'tracker') {
-        const res = await fetch('/task/api/boards', request)
-        if (!res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { error?: unknown }
-          throw new Error(
-            typeof data.error === 'string' ? data.error : `Could not create board (${res.status})`
-          )
-        }
-        return localStorage.createBoard(boardId, mode)
-      }
-
-      const result = await localStorage.createBoard(boardId, mode)
+      const result = await localStorage.createBoard(boardId)
       logger.info('[api] createBoard: Created locally', { boardId })
       backgroundSync('/task/api/boards', request, 'createBoard', { boardId }, onSyncError)
       return result

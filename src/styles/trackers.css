@@ -1,16 +1,49 @@
 /**
- * Tracker boards: tiles (one-tap +1 / Log, tap elsewhere to open), the undo
- * bar, today's entries, and the tracker detail dialog.
+ * Tracker widgets: a strip of compact tiles above a board's lanes (one-tap +1 /
+ * Log, tap elsewhere to open), the undo bar, and the tracker detail dialog.
  */
 
-.tracker-board {
+.tracker-strip {
   display: flex;
   flex-direction: column;
-  gap: var(--hdk-space-lg);
-  padding-top: var(--hdk-space-md);
+  gap: var(--hdk-space-sm);
+  padding: 0 var(--hdk-space-md) var(--hdk-space-md);
 }
 
-.tracker-board__status {
+.tracker-strip__title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Wraps on a wide screen; on a phone the row scrolls sideways instead. */
+.tracker-strip__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hdk-space-sm);
+}
+
+@media (max-width: 640px) {
+  .tracker-strip__row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: var(--hdk-space-xs);
+  }
+
+  .tracker-strip__row > .tracker-tile {
+    scroll-snap-align: start;
+  }
+
+  .tracker-tile__trend {
+    display: none;
+  }
+}
+
+.tracker-strip__status {
   display: flex;
   align-items: center;
   gap: var(--hdk-space-md);
@@ -18,28 +51,18 @@
   font-size: var(--hdk-text-sm);
 }
 
-.tracker-board__status--error {
+.tracker-strip__status--error {
   padding: var(--hdk-space-sm) var(--hdk-space-md);
   border-radius: var(--hdk-radius-sm);
   background: var(--color-danger-bg);
   color: var(--color-on-danger-bg);
 }
 
-.tracker-board__bar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.tracker-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--hdk-space-md);
-}
-
 /* ---- Tile ---------------------------------------------------------------- */
 
 .tracker-tile {
   position: relative;
+  flex: 0 0 auto;
   min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--hdk-radius-lg);
@@ -82,19 +105,25 @@
   position: relative;
   z-index: 1;
   display: flex;
-  flex-direction: column;
-  gap: var(--hdk-space-xs);
+  align-items: center;
+  gap: var(--hdk-space-md);
   box-sizing: border-box;
-  min-height: 168px;
-  padding: var(--hdk-space-md);
+  padding: var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-md);
   pointer-events: none;
+}
+
+.tracker-tile__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 11rem;
 }
 
 .tracker-tile__name {
   margin: 0;
   overflow: hidden;
   color: var(--color-text-secondary);
-  font-size: var(--hdk-text-sm);
+  font-size: var(--hdk-text-xs);
   font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -109,9 +138,9 @@
 }
 
 .tracker-tile__number {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: var(--font-weight-bold);
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .tracker-tile__unit,
@@ -120,28 +149,29 @@
   font-size: var(--hdk-text-sm);
 }
 
+.tracker-tile__unit {
+  font-size: var(--hdk-text-xs);
+  white-space: nowrap;
+}
+
 .tracker-tile__sub {
+  overflow: hidden;
   color: var(--color-text-secondary);
   font-size: var(--hdk-text-xs);
   font-variant-numeric: tabular-nums;
-}
-
-.tracker-tile__foot {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--hdk-space-sm);
-  margin-top: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tracker-tile__trend {
-  flex: 1;
-  min-width: 0;
-  height: 32px;
+  flex-shrink: 0;
+  width: 56px;
+  height: 28px;
 }
 
 .tracker-tile__action-slot {
   flex-shrink: 0;
-  width: 56px;
+  width: 48px;
   height: 44px;
 }
 
@@ -149,13 +179,12 @@
 .tracker-tile__action {
   position: absolute;
   z-index: 2;
-  right: var(--hdk-space-md);
-  bottom: var(--hdk-space-md);
+  top: 50%;
+  right: var(--hdk-space-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 56px;
+  width: 48px;
   height: 44px;
   padding: 0;
   border: none;
@@ -166,6 +195,7 @@
   font-size: var(--hdk-text-base);
   font-weight: var(--font-weight-bold);
   cursor: pointer;
+  transform: translateY(-50%);
   transition:
     background-color var(--transition-fast),
     transform var(--transition-fast);
@@ -176,7 +206,7 @@
 }
 
 .tracker-tile__action:active {
-  transform: scale(0.94);
+  transform: translateY(-50%) scale(0.94);
 }
 
 .tracker-tile__action:focus-visible {
@@ -208,16 +238,13 @@
   stroke-width: 2;
 }
 
-/* ---- Undo bar and today's entries ---------------------------------------- */
+/* ---- Undo bar and the detail's history ------------------------------------ */
 
 .tracker-undo {
-  position: sticky;
-  z-index: 3;
-  bottom: var(--hdk-space-md);
   display: flex;
   align-items: center;
   gap: var(--hdk-space-md);
-  padding: var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-sm) var(--hdk-space-md);
+  padding: var(--hdk-space-xs) var(--hdk-space-xs) var(--hdk-space-xs) var(--hdk-space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--hdk-radius-lg);
   background: var(--color-bg-card);
@@ -232,18 +259,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-.tracker-today > .tracker-btn {
-  align-self: flex-start;
-}
-
-.tracker-today,
 .tracker-log {
   display: flex;
   flex-direction: column;
   gap: var(--hdk-space-sm);
 }
 
-.tracker-today__title,
 .tracker-log__heading {
   margin: 0;
   color: var(--color-text-secondary);
@@ -253,14 +274,12 @@
   text-transform: uppercase;
 }
 
-.tracker-today__empty,
 .tracker-log__empty {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--hdk-text-sm);
 }
 
-.tracker-today__list,
 .tracker-log__list {
   margin: 0;
   padding: 0;
@@ -270,7 +289,6 @@
   list-style: none;
 }
 
-.tracker-today__item,
 .tracker-log__item {
   display: flex;
   align-items: center;
@@ -281,12 +299,10 @@
   font-size: var(--hdk-text-sm);
 }
 
-.tracker-today__item + .tracker-today__item,
 .tracker-log__item + .tracker-log__item {
   border-top: 1px solid var(--color-border-light);
 }
 
-.tracker-today__time,
 .tracker-log__time {
   flex-shrink: 0;
   min-width: 4.5rem;
@@ -295,21 +311,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.tracker-today__name {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-}
-
-.tracker-today__name:hover {
-  text-decoration: underline;
-}
-
-.tracker-today__change,
 .tracker-log__change {
   font-variant-numeric: tabular-nums;
 }
@@ -323,14 +324,9 @@
   white-space: nowrap;
 }
 
-.tracker-today__source,
 .tracker-log__source {
   display: inline-flex;
   color: var(--color-text-secondary);
-}
-
-.tracker-today__source {
-  margin-left: auto;
 }
 
 .tracker-log__item > .tracker-icon-btn {
@@ -407,6 +403,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--hdk-space-md);
+}
+
+.tracker-dialog__kind {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--hdk-text-sm);
+}
+
+.tracker-dialog__kind strong {
+  color: var(--color-text);
 }
 
 .tracker-field {
@@ -528,7 +534,6 @@
  * (`.task-app-container :not(.task-app-fade-in)`) would fade each new row's
  * border in from the text colour — a white flash per entry. Out-specify it.
  */
-.tracker-board .tracker-today__list > li,
 .tracker-detail .tracker-log__list > li {
   transition: none;
 }

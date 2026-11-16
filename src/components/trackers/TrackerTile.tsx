@@ -1,5 +1,5 @@
 /**
- * One tracker as a tile. The tile's own button does the frequent thing in one
+ * One tracker as a compact tile in a board's tracker strip. The tile's own button does the frequent thing in one
  * tap — +1 on a counter, "log a reading" on a value tracker — so a tracker
  * never has to be selected first. Tapping anywhere else on the tile opens that
  * tracker's detail: its history and the rarer actions.
@@ -66,38 +66,38 @@ export function TrackerTile({
         onClick={onOpen}
       />
       <div className="tracker-tile__body">
-        <h3 className="tracker-tile__name">{tracker.name}</h3>
-        {isCounter ? (
-          <>
-            <div className="tracker-tile__figure" data-testid="tracker-today">
-              <span className="tracker-tile__number">{formatTrackerNumber(today)}</span>
-              <span className="tracker-tile__unit">today</span>
-            </div>
-            <div className="tracker-tile__sub" data-testid="tracker-value">
-              {formatTrackerNumber(tracker.value)}
-              {tracker.unit ? ` ${tracker.unit}` : ''} total
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="tracker-tile__figure" data-testid="tracker-value">
-              <span className="tracker-tile__number">{formatTrackerNumber(tracker.value)}</span>
-              {tracker.unit && <span className="tracker-tile__unit">{tracker.unit}</span>}
-            </div>
-            <div className="tracker-tile__sub">{valueSummary(tracker, entries, now)}</div>
-          </>
-        )}
-        <div className="tracker-tile__foot">
-          <TrackerTrend
-            tracker={tracker}
-            entries={entries}
-            now={now}
-            days={7}
-            className="tracker-tile__trend"
-          />
-          {/* Room for the action button, which sits above the open layer. */}
-          {canWrite && <span className="tracker-tile__action-slot" />}
+        <div className="tracker-tile__text">
+          <h3 className="tracker-tile__name">{tracker.name}</h3>
+          {isCounter ? (
+            <>
+              <div className="tracker-tile__figure" data-testid="tracker-today">
+                <span className="tracker-tile__number">{formatTrackerNumber(today)}</span>
+                <span className="tracker-tile__unit">today</span>
+              </div>
+              <div className="tracker-tile__sub" data-testid="tracker-value">
+                {formatTrackerNumber(tracker.value)}
+                {tracker.unit ? ` ${tracker.unit}` : ''} total
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="tracker-tile__figure" data-testid="tracker-value">
+                <span className="tracker-tile__number">{formatTrackerNumber(tracker.value)}</span>
+                {tracker.unit && <span className="tracker-tile__unit">{tracker.unit}</span>}
+              </div>
+              <div className="tracker-tile__sub">{valueSummary(tracker, entries, now)}</div>
+            </>
+          )}
         </div>
+        <TrackerTrend
+          tracker={tracker}
+          entries={entries}
+          now={now}
+          days={7}
+          className="tracker-tile__trend"
+        />
+        {/* Room for the action button, which sits above the open layer. */}
+        {canWrite && <span className="tracker-tile__action-slot" />}
       </div>
       {canWrite && (
         <button

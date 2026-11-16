@@ -1,11 +1,9 @@
 /**
- * Tracker boards: a board whose mode is 'tracker' holds named counters/values
- * instead of tasks, and every change is a logged entry. The server is the only
+ * Trackers: a widget any board can hold — named counters/values beside the
+ * board's tasks, where every change is a logged entry. The server is the only
  * store (worker/src/routes/trackers.ts); there is no localStorage mirror.
  */
 import { tierAtLeast } from '@wolffm/worker-utils/auth'
-
-export const TRACKER_MODE = 'tracker'
 
 export type TrackerKind = 'counter' | 'value'
 export type TrackerEntrySource = 'web' | 'api' | 'button'
@@ -41,14 +39,10 @@ export interface TrackerBoardData {
 }
 
 /**
- * Tracker boards are a wife-tier-and-up feature. This is the worker's own
+ * Trackers are a wife-tier-and-up feature. This is the worker's own
  * predicate (`tierAtLeast(auth, 'wife')` in worker/src/routes/trackers.ts), so
  * the two read one ladder and a tier added above wife is not silently shut out.
  */
 export function canUseTrackers(userType: string | undefined): boolean {
   return tierAtLeast({ userType }, 'wife')
-}
-
-export function isTrackerBoard(board: { mode?: string | null } | null | undefined): boolean {
-  return board?.mode === TRACKER_MODE
 }

@@ -10,7 +10,7 @@ import { TOPBAR_BOARD_SLOTS, pinPositionForNewBoard } from '../utils/boardPins.j
 export async function createBoard(
   storage: Storage,
   auth: AuthContext,
-  input: { id: string; name: string; mode?: 'standard' | 'tracker' },
+  input: { id: string; name: string },
   expectedVersion?: number
 ): Promise<{ ok: true; board: { id: string; name: string; tasks: Task[]; tags: string[] } }> {
   return withBoardOperation(
@@ -30,7 +30,6 @@ export async function createBoard(
         name: input.name,
         tasks: [],
         tags: [],
-        ...(input.mode === 'tracker' ? { mode: 'tracker' } : {}),
         ...(position === null ? {} : { pinned: true, position })
       }
 

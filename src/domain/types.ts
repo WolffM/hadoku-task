@@ -247,6 +247,9 @@ export interface Board {
   // grantees), so the share UI renders the list immediately instead of fetching
   // per board when a panel opens. Absent ⇒ not hydrated (the panel then fetches).
   shares?: BoardShare[]
+  // How many trackers (widgets) the board holds. Set by GET /boards when > 0, so
+  // the client loads the tracker widgets only on a board that has some.
+  trackerCount?: number
 }
 
 /** A grantee on a board, as surfaced to the share UI. */
