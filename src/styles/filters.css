@@ -12,17 +12,23 @@
   align-items: center;
 }
 
-/* Calendar + refresh + share cluster, pushed to the far right of the filters bar.
-   Only the FIRST (calendar) carries the auto-margin — all three reuse .sync-btn
-   (which sets margin-left:auto), so the others must reset it, else multiple
-   auto-margins split the free space and strand buttons in the middle. */
-.task-app__filter-calendar {
-  position: relative;
+/* The right-hand cluster (stale pill, widget, calendar, refresh, share) is ONE
+   flex item pushed to the far right, so a full row wraps it to the next line
+   whole instead of stranding its last button alone. Its buttons reuse
+   .sync-btn, which sets margin-left:auto; inside the group that is reset, or
+   several auto-margins would split the space between them. */
+.task-app__filter-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--hdk-space-md);
   margin-left: auto;
 }
-.task-app__filter-sync,
-.task-app__filter-share {
+.task-app__filter-tools > .sync-btn,
+.task-app__filter-tools > .pill-btn {
   margin-left: 0;
+}
+.task-app__filter-calendar {
+  position: relative;
 }
 .task-app__filter-calendar.is-active {
   background: var(--color-primary-bg);
@@ -62,30 +68,27 @@
   border: 0;
 }
 
-/* Failed-refresh pill. Takes over the calendar button's right-alignment so the
-   whole control cluster stays flush right when it appears. */
+/* Failed-refresh pill, first in the right-hand cluster. */
 .task-app__filter-stale {
-  margin-left: auto;
   background: var(--color-warning-bg);
   color: var(--color-on-warning-bg);
   border-color: var(--color-warning);
 }
-.task-app__filter-stale + .task-app__filter-calendar {
-  margin-left: 0;
-}
 
-/* "Widget": opens Add a widget (a tracker, wife tier and up). It leads the
-   right-hand control cluster, so it takes the right-alignment like the stale
-   pill does. */
+/* "Widget": opens Add a widget (a tracker, wife tier and up). */
 .task-app__filter-widget {
   display: inline-flex;
   align-items: center;
   gap: var(--hdk-space-xs);
-  margin-left: auto;
 }
-.task-app__filter-stale + .task-app__filter-widget,
-.task-app__filter-widget + .task-app__filter-calendar {
-  margin-left: 0;
+/* On a phone the label goes, to keep the cluster narrow. */
+@media (max-width: 640px) {
+  .task-app__filter-widget-label {
+    display: none;
+  }
+  .task-app__filter-widget {
+    padding: var(--hdk-space-sm);
+  }
 }
 
 /* "Automate open items" (§5.6). A filled primary pill, not another outline one:

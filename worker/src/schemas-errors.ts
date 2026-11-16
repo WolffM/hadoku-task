@@ -54,7 +54,7 @@ export const DOMAIN_ERROR_CODES = [
   'DUPLICATE_SOURCE', // 409 — a live task already has that source/sourceId (carries both)
   'NOTES_TOO_LARGE', // 413 — notes exceed MAX_NOTES_BYTES
   'STATUS_INVALID', // 422 — `status` isn't { kind: <closed set>, label, href? }
-  // Tracker boards
+  // Trackers
   'TRACKER_NOT_FOUND', // 404
   'ENTRY_NOT_FOUND' // 404
 ] as const

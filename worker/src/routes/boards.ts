@@ -21,7 +21,6 @@ import {
   DeleteBoardResponseSchema
 } from '../schemas'
 import { ErrorResponseSchema } from '../schemas-common'
-import { ForbiddenErrorSchema } from '../schemas-errors'
 
 export function createBoardRoutes() {
   const app = new OpenAPIHono<AppContext>()
@@ -182,10 +181,6 @@ export function createBoardRoutes() {
             schema: ErrorResponseSchema
           }
         }
-      },
-      403: {
-        description: 'A tracker board needs wife tier or above (FORBIDDEN)',
-        content: { 'application/json': { schema: ForbiddenErrorSchema } }
       }
     }
   })

@@ -38,7 +38,8 @@
     scroll-snap-align: start;
   }
 
-  .tracker-tile__trend {
+  /* Out-specifies .tracker-trend--bars, which sets display itself. */
+  .tracker-strip .tracker-tile__trend {
     display: none;
   }
 }

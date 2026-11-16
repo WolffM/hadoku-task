@@ -155,7 +155,7 @@ function rowToBoard(r: BoardRow): Board {
 const nowIso = () => new Date().toISOString()
 const newHandle = () => TaskUtils.generateULID()
 
-/** A deleted board takes its trackers and their history with it (tracker boards). */
+/** A deleted board takes its trackers and their history with it. */
 const trackerDeletes = (db: D1Like, uid: string, boardId: string) => [
   db.prepare('DELETE FROM tracker_entries WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
   db.prepare('DELETE FROM trackers WHERE user_id = ? AND board_id = ?').bind(uid, boardId)

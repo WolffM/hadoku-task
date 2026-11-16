@@ -179,86 +179,57 @@ export function TagFiltersSection({
         </>
       )}
 
-      {/* Stale pill: the ONLY on-screen sign that a background refresh failed.
+      {/* The right-hand controls, as one group: when the row is too full they
+          move to the next line together, never one button stranded alone. */}
+      <div className="task-app__filter-tools">
+        {/* Stale pill: the ONLY on-screen sign that a background refresh failed.
           Doubles as the retry — the thing a person wants the moment they see it. */}
-      {syncState === 'stale' && (
-        // Not "offline": a 500 reached the server just fine. All we can honestly
-        // claim is that the refresh didn't land.
-        <Tooltip content="The last refresh didn't land, so this may be out of date. Click to retry.">
-          <button
-            className="pill-btn task-app__filter-stale"
-            onClick={handleSyncClick}
-            disabled={isSyncing}
-          >
-            <Icon name="warning" /> Not synced
-          </button>
-        </Tooltip>
-      )}
+        {syncState === 'stale' && (
+          // Not "offline": a 500 reached the server just fine. All we can honestly
+          // claim is that the refresh didn't land.
+          <Tooltip content="The last refresh didn't land, so this may be out of date. Click to retry.">
+            <button
+              className="pill-btn task-app__filter-stale"
+              onClick={handleSyncClick}
+              disabled={isSyncing}
+            >
+              <Icon name="warning" /> Not synced
+            </button>
+          </Tooltip>
+        )}
 
-      {currentView === 'board' && onAddWidget && (
-        <Tooltip content="Add a widget to this board, like a tracker">
-          <button className="pill-btn task-app__filter-widget" onClick={onAddWidget}>
-            <Icon name="plus" /> Widget
-          </button>
-        </Tooltip>
-      )}
+        {currentView === 'board' && onAddWidget && (
+          <Tooltip content="Add a widget to this board, like a tracker">
+            <button
+              className="pill-btn task-app__filter-widget"
+              onClick={onAddWidget}
+              aria-label="Add a widget"
+            >
+              <Icon name="activity" />
+              <span className="task-app__filter-widget-label">Widget</span>
+            </button>
+          </Tooltip>
+        )}
 
-      <Tooltip
-        content={
-          currentView === 'calendar'
-            ? 'Back to board'
-            : upcomingScheduledCount > 0
-              ? `Calendar view — ${upcomingScheduledCount} scheduled`
-              : 'Calendar view'
-        }
-      >
-        <button
-          className={`sync-btn task-app__filter-calendar ${currentView === 'calendar' ? 'is-active' : ''}`}
-          onClick={onToggleCalendar}
-          // The accessible NAME stays fixed. The count rides in a description
-          // instead (announced after the name, and referenced from outside the
-          // button) so it doesn't rename the control every time a task is
-          // scheduled — the name is what tests and assistive tech address it by.
-          aria-label={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
-          aria-describedby={showScheduledCount ? SCHEDULED_COUNT_ID : undefined}
-          aria-pressed={currentView === 'calendar'}
+        <Tooltip
+          content={
+            currentView === 'calendar'
+              ? 'Back to board'
+              : upcomingScheduledCount > 0
+                ? `Calendar view — ${upcomingScheduledCount} scheduled`
+                : 'Calendar view'
+          }
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          {showScheduledCount && (
-            <span className="task-app__filter-calendar-badge" aria-hidden="true">
-              {upcomingScheduledCount > 9 ? '9+' : upcomingScheduledCount}
-            </span>
-          )}
-        </button>
-      </Tooltip>
-      {showScheduledCount && (
-        <span id={SCHEDULED_COUNT_ID} className="task-app__sr-only">
-          {upcomingScheduledCount} scheduled
-        </span>
-      )}
-
-      {userType !== 'public' && (
-        <Tooltip content="Sync from server">
           <button
-            className={`sync-btn task-app__filter-sync ${isSyncing ? 'spinning' : ''}`}
-            onClick={handleSyncClick}
-            disabled={isSyncing}
-            aria-label="Sync from server"
+            className={`sync-btn task-app__filter-calendar ${currentView === 'calendar' ? 'is-active' : ''}`}
+            onClick={onToggleCalendar}
+            // The accessible NAME stays fixed. The count rides in a description
+            // instead (announced after the name, and referenced from outside the
+            // button) so it doesn't rename the control every time a task is
+            // scheduled — the name is what tests and assistive tech address it by.
+            aria-label={currentView === 'calendar' ? 'Back to board' : 'Calendar view'}
+            aria-describedby={showScheduledCount ? SCHEDULED_COUNT_ID : undefined}
+            aria-pressed={currentView === 'calendar'}
           >
             <svg
               width="16"
@@ -269,26 +240,64 @@ export function TagFiltersSection({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <polyline points="1 20 1 14 7 14"></polyline>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
+            {showScheduledCount && (
+              <span className="task-app__filter-calendar-badge" aria-hidden="true">
+                {upcomingScheduledCount > 9 ? '9+' : upcomingScheduledCount}
+              </span>
+            )}
           </button>
         </Tooltip>
-      )}
+        {showScheduledCount && (
+          <span id={SCHEDULED_COUNT_ID} className="task-app__sr-only">
+            {upcomingScheduledCount} scheduled
+          </span>
+        )}
 
-      {userType !== 'public' && canShareBoard && onShareBoard && (
-        <Tooltip content="Share this board">
-          <button
-            className="sync-btn task-app__filter-share"
-            onClick={onShareBoard}
-            aria-label="Share this board"
-          >
-            <ShareIcon />
-          </button>
-        </Tooltip>
-      )}
+        {userType !== 'public' && (
+          <Tooltip content="Sync from server">
+            <button
+              className={`sync-btn task-app__filter-sync ${isSyncing ? 'spinning' : ''}`}
+              onClick={handleSyncClick}
+              disabled={isSyncing}
+              aria-label="Sync from server"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+          </Tooltip>
+        )}
+
+        {userType !== 'public' && canShareBoard && onShareBoard && (
+          <Tooltip content="Share this board">
+            <button
+              className="sync-btn task-app__filter-share"
+              onClick={onShareBoard}
+              aria-label="Share this board"
+            >
+              <ShareIcon />
+            </button>
+          </Tooltip>
+        )}
+      </div>
     </div>
   )
 }
