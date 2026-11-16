@@ -27,13 +27,12 @@ locally, tests inject them instead (see "Dev Server" in `AGENTS.md`).
 
 ## Architecture
 
-```
-browser ──► hadoku.me/task/* ──► edge (sign-in, tier, X-Hadoku-Tier) ──► Cloudflare Worker (this repo)
-Kate editor ──► same hosted API                                            │
-agent (MCP) ──► same hosted API, X-User-Key                                │
-                                                                     worker/src/routes/*.ts
-                                                                     one route group per concern,
-                                                                     lazily imported on first use
+```mermaid
+flowchart LR
+    browser["Browser (hadoku.me/task/*)"] --> edge["Edge: sign-in, tier, X-Hadoku-Tier"]
+    kate["Kate editor"] --> worker
+    agent["Agent (MCP, X-User-Key)"] --> worker
+    edge --> worker["Cloudflare Worker<br/>(this repo)"]
 ```
 
 - **The Universal Adapter Pattern** keeps business logic framework-free:
@@ -108,8 +107,8 @@ installing it is always a local `cmake --install` on the user's own machine.
 
 ## Trivia
 
-A worktree made with a bare `git worktree add` checks out no pre-commit hook
-at all — `core.hooksPath` points at a directory husky generates and
-self-ignores — so every gate silently skipped until the hooks moved into a
+A worktree made with a bare `git worktree add` checks out no pre-commit
+hook at all: `core.hooksPath` points at a directory husky generates and
+self-ignores. Every gate silently skipped, until the hooks moved into a
 tracked directory (`755a535`) and `scripts/new-worktree.mjs` started
 bootstrapping and verifying them itself (`af0bd52`).

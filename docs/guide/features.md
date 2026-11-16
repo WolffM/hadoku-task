@@ -61,11 +61,11 @@ _Friend tier and up_ (`worker/src/routes/automation-reads.ts`,
 
 **What it does.** Linking a board to a GitHub repo replaces its freeform tags
 with a fixed, ordered set of lanes that mirror that repo's open issues and
-pull requests: a lane is a stage of work, and a task moving between lanes is
-reported back as the repo's state changing. The board can also pull presets —
-a ready-made lane set — from another automation tool on the platform
-([TenHands](https://github.com/WolffM/hadoku-tenhands)) instead of a hand-built
-one.
+pull requests. A lane is a stage of work, and a task moving between lanes
+is reported back as the repo's state changing. The board can also pull
+presets — a ready-made lane set — from another automation tool on the
+platform ([TenHands](https://github.com/WolffM/hadoku-tenhands)) instead
+of a hand-built one.
 
 **How to use it.** In **Edit Boards**, open a board's automation panel, paste
 the repo's URL (or pick a preset) and click **Activate**. This replaces the

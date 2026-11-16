@@ -17,9 +17,9 @@ Each fact names the commit it comes from.
   that reshape what a board can be — landed 21 minutes apart on the same day,
   2026-07-24 (`b43534d`, `8331213`).
 - **A hook that silently did nothing.** `core.hooksPath` points at a
-  directory husky generates and self-ignores, so a plain `git worktree add`
-  checked out no hook at all: every gate was skipped and said nothing about
-  it, until the hooks moved into a tracked directory (`755a535`).
+  directory husky generates and self-ignores. A plain `git worktree add`
+  checked out no hook at all: every gate was skipped and said nothing
+  about it, until the hooks moved into a tracked directory (`755a535`).
 - **A board type that unbecame one.** Trackers shipped as their own kind of
   board (`19a5e9f`) and were turned into a widget any board could add just
   six days later (`9fcb121`).

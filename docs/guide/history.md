@@ -4,11 +4,11 @@
 
 The first commit was a React task list with no server (`835e0bd`, 2025-09-30).
 Six days later a big refactor (`4788cb0`, 2025-10-06) added an Express server
-and a filesystem storage mode, and nine days after that the Express server
+and a filesystem storage mode. Nine days after that the Express server
 was pulled back out: "all modes use same methods now" (`614aefe`,
 2025-10-15) — the start of the framework-agnostic adapter pattern that still
-shapes the repo: pure handlers that a Worker, a filesystem or a test can all
-call the same way ([`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)).
+shapes the repo. The result is pure handlers that a Worker, a filesystem or
+a test can all call the same way ([`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)).
 
 ## Becoming a Cloudflare Worker (October 2025 – March 2026)
 
@@ -22,11 +22,11 @@ repo's history — 164 files, nearly 56,000 lines (`082d5a4`).
 
 In a single afternoon the task API gained a third interface. It started as
 an embedding spike for the [Kate](https://kate-editor.org/) text editor
-(`68ab0cf`, 12:32), became a live Tasks tab with real create/read/update
-against the API barely an hour later (`52d0b22`, 13:46), grew a Calendar tab
-two hours after that (`b039c16`, 15:49), and that evening the task API
-itself grew a remote [MCP](https://modelcontextprotocol.io) server so an
-agent could do the same things over JSON-RPC (`9c4979b`, 20:48). The plugin
+(`68ab0cf`, 12:32), then became a live Tasks tab with real create/read/update
+against the API barely an hour later (`52d0b22`, 13:46), then grew a
+Calendar tab two hours after that (`b039c16`, 15:49). That evening the task
+API itself grew a remote [MCP](https://modelcontextprotocol.io) server so
+an agent could do the same things over JSON-RPC (`9c4979b`, 20:48). The plugin
 kept moving for months afterward — drag-and-drop, notes, filtering, a
 dedicated CI job — but all of it builds on what landed that one day.
 

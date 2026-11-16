@@ -2,11 +2,8 @@
 title: Task
 summary: >-
   A multi-user task and calendar manager at
-  [hadoku.me/task](https://hadoku.me/task/): quick entry, `#tags`, drag-and-drop
-  across boards, counters with a history, a GitHub-linked automation workflow,
-  and a remote endpoint agents can drive directly. A public board lives in the
-  browser alone; signing in adds server sync, sharing, automation and the
-  calendar. Also ships as an Android app and a Kate text-editor plugin.
+  [hadoku.me/task](https://hadoku.me/task/), usable from the browser alone
+  or, once signed in, synced and shared across devices.
 features:
   - name: Tasks and boards
     summary: 'Quick entry, #tags, drag-and-drop, and more than one board.'
@@ -50,10 +47,13 @@ in any other app. Type a title and press Enter; organize with `#tags`; drag a
 task to reorder it or move it to another board. Anyone can use a board from
 the browser alone — it lives in `localStorage` and never reaches a server.
 
+![Task's calendar day view: five scheduled tasks on a timeline, with the current time marked in red](images/calendar.webp)
+
 Signing in with a hadoku.me account turns a board into a synced one: it is
-kept on the server, can be shared with another person, can be scheduled on a
-calendar, and — for the tiers each one needs — can run counters, link to a
-GitHub repo, or be driven by an agent over MCP.
+kept on the server, and it can be shared with another person or scheduled
+on a calendar. Higher tiers unlock more: wife tier and up can run counters,
+friend tier and up can link a board to a GitHub repo, and an agent can
+drive a board over MCP with no extra tier needed.
 
 It also ships two ways to reach the same tasks without the web page: an
 Android app, and a plugin for the [Kate](https://kate-editor.org/) text
