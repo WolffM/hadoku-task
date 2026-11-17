@@ -54,81 +54,77 @@ export function createBoardRoutes() {
     // the request row (`request_logs.server_timing`) — so the split of this
     // route's latency is readable from the log, not guessed (#110).
     const timing = new StepTimer()
+
+    // Flag the tasks an agent is holding right now (§5.5), and attach each OWNED
+    // board's grantees (§7.3) so the Edit Boards / Share UI has them up front.
+    // Each is one read for the whole board list, and neither needs the list to
+    // RUN — only to be applied — so both start now, beside the boards read,
+    // instead of costing a round trip after it. Both are non-fatal: a board that
+    // can't report claims or grantees still renders (the share panel falls back
+    // to its own fetch).
+    //
+    // Claims are TRANSIENT by design: attached here, never stored on the task
+    // row, so a cached copy is exactly as old as the read it came with — "was
+    // claimed when we last looked" — and the next board sync corrects it.
+    const claimsRead = auth.sessionId
+      ? timing
+          .step('claims', () => liveClaimedTaskIdsForUser(c.env.DB, auth.sessionId as string))
+          .catch(err => {
+            logError('GET', '/task/api/boards', `claim hydration failed: ${String(err)}`)
+            return null
+          })
+      : Promise.resolve(null)
+    const sharesRead = auth.sessionId
+      ? timing
+          .step('shares', () => annotatedSharesByBoard(c.env, auth.sessionId as string))
+          .catch(err => {
+            logError('GET', '/task/api/boards', `share hydration failed: ${String(err)}`)
+            return null
+          })
+      : Promise.resolve(null)
+
     const boardsData = await timing.step('boards', () => TaskHandlers.getBoards(storage, auth))
 
-    // The three hydrations below touch disjoint boards or fields and don't read
-    // each other's results, so they run together rather than one after another.
-    await Promise.all([
-      // The handler hydrates every board's tasks/stats in the CALLER's own scope
-      // (`auth.sessionId`). That's correct for owned boards but wrong for boards
-      // SHARED with this viewer — their task rows live under the OWNER's id, so
-      // the handler's viewer-scoped read comes back empty. Re-hydrate those from
-      // the owner's scope here at the route edge (where sharing is resolved, §7.1),
-      // all of them in one round trip. A shared board's `id` is its
-      // globally-unique handle, and it carries its `ownerUserId`.
-      timing.step('shared', async () => {
-        const shared = boardsData.boards.filter(
-          b => b.access && b.access !== 'owner' && b.ownerUserId
-        )
-        const contents = await readSharedBoards(
-          c.env,
-          shared.map(b => ({ handle: b.id, ownerUserId: b.ownerUserId as string }))
-        )
-        for (const board of shared) {
-          const got = contents.get(board.id)
-          if (!got) continue
-          board.tasks = got.tasks.map(t => (got.claimed.has(t.id) ? { ...t, claimed: true } : t))
-          board.stats = got.stats
-          // The calendar descriptor counts the board's dated tasks, so it has to be
-          // recomputed against the tasks we just swapped in — the handler built it
-          // from the viewer-scoped (empty) read.
-          board.calendar = TaskHandlers.boardCalendar(board)
-        }
-      }),
-
-      // Flag the tasks an agent is holding right now (§5.5). One query for every
-      // owned board rather than one per board, and only where claims can exist at
-      // all — `task_claims` is written solely by the claim protocol, so a user who
-      // has never run an agent gets an empty set for the cost of one indexed read.
-      //
-      // TRANSIENT by design: it is attached here, never stored on the task row, so
-      // a cached copy is exactly as old as the read it came with. That is what it
-      // claims to be — "was claimed when we last looked" — and the next board sync
-      // corrects it.
-      auth.sessionId &&
-        timing.step('claims', async () => {
-          try {
-            const claimed = await liveClaimedTaskIdsForUser(c.env.DB, auth.sessionId)
-            if (claimed.size === 0) return
-            for (const board of boardsData.boards) {
-              if (board.access && board.access !== 'owner') continue
-              board.tasks = board.tasks.map(t => (claimed.has(t.id) ? { ...t, claimed: true } : t))
-            }
-          } catch (err) {
-            // Non-fatal: a board that can't report claim state still renders.
-            logError('GET', '/task/api/boards', `claim hydration failed: ${String(err)}`)
-          }
-        }),
-
-      // Attach each OWNED board's grantees (§7.3) so the Edit Boards / Share UI
-      // has them up front instead of fetching per board when a panel opens. One
-      // query + one (isolate-cached) registry scan for the whole set. Only the
-      // owner may see who a board is shared with, so grantees are never attached
-      // to a board this viewer merely has access to.
-      auth.sessionId &&
-        timing.step('shares', async () => {
-          try {
-            const shares = await annotatedSharesByBoard(c.env, auth.sessionId)
-            for (const board of boardsData.boards) {
-              if (board.access && board.access !== 'owner') continue
-              board.shares = shares.get(board.id) ?? []
-            }
-          } catch (err) {
-            // Non-fatal: boards still render, the panel falls back to its own fetch.
-            logError('GET', '/task/api/boards', `share hydration failed: ${String(err)}`)
-          }
-        })
+    // The handler hydrates every board's tasks/stats in the CALLER's own scope
+    // (`auth.sessionId`). That's correct for owned boards but wrong for boards
+    // SHARED with this viewer — their task rows live under the OWNER's id, so the
+    // handler's viewer-scoped read comes back empty. Re-hydrate those from the
+    // owner's scope here at the route edge (where sharing is resolved, §7.1), all
+    // of them in one round trip. A shared board's `id` is its globally-unique
+    // handle, and it carries its `ownerUserId`.
+    const shared = boardsData.boards.filter(b => b.access && b.access !== 'owner' && b.ownerUserId)
+    const [contents, claimed, shares] = await Promise.all([
+      shared.length
+        ? timing.step('shared', () =>
+            readSharedBoards(
+              c.env,
+              shared.map(b => ({ handle: b.id, ownerUserId: b.ownerUserId as string }))
+            )
+          )
+        : null,
+      claimsRead,
+      sharesRead
     ])
+
+    for (const board of shared) {
+      const got = contents?.get(board.id)
+      if (!got) continue
+      board.tasks = got.tasks.map(t => (got.claimed.has(t.id) ? { ...t, claimed: true } : t))
+      board.stats = got.stats
+      // The calendar descriptor counts the board's dated tasks, so it has to be
+      // recomputed against the tasks we just swapped in — the handler built it
+      // from the viewer-scoped (empty) read.
+      board.calendar = TaskHandlers.boardCalendar(board)
+    }
+    // Claims and grantees are the OWNED boards' own; only the owner may see who
+    // a board is shared with.
+    for (const board of boardsData.boards) {
+      if (board.access && board.access !== 'owner') continue
+      if (claimed?.size) {
+        board.tasks = board.tasks.map(t => (claimed.has(t.id) ? { ...t, claimed: true } : t))
+      }
+      if (shares) board.shares = shares.get(board.id) ?? []
+    }
 
     c.header('Server-Timing', timing.header())
     // Expose the collection version as an ETag so clients can present it as
