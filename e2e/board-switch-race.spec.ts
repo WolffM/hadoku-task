@@ -4,8 +4,10 @@ import { test, expect, type Page } from '@playwright/test'
  * Regression test for the board-switch load race.
  *
  * Repro (reported in prod): a returning user lands on /task/. Boards paint
- * immediately from the localStorage cache, but `initialLoad()` is still
- * fetching the server view in the background. The user clicks a non-default
+ * from the localStorage cache while the server view is still being fetched.
+ * (The shell now holds the skeleton for that fetch, so the window only opens
+ * when the sync outlasts useTasks' REVEAL_CAP_MS — a slow network, which is
+ * where the race lives anyway.) The user clicks a non-default
  * board during that window. When the fetch lands, the UI is left showing the
  * *default* board's tasks while the clicked board stays selected.
  *
@@ -19,8 +21,11 @@ const USER_TYPE = 'friend'
 const MAIN_TASK = 'MAIN-BOARD-ONLY-TASK'
 const WORK_TASK = 'WORK-BOARD-ONLY-TASK'
 
-/** How long the background /boards sync is held open, in ms. */
-const SYNC_DELAY_MS = 2500
+/**
+ * How long the /boards sync is held open, in ms: past useTasks' 4000ms reveal
+ * cap, so the shell reveals from cache with the sync still in flight.
+ */
+const SYNC_DELAY_MS = 7000
 
 function boardsPayload() {
   const now = new Date().toISOString()

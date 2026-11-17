@@ -68,8 +68,7 @@ export function useSessionInitialization({
 
       // Prefs are settled; unblock the theme/prefs half of the reveal gate.
       // Board content is gated separately by useTasks' `boardsLoaded`, which
-      // flips after its fast cache paint — so the shell still reveals with
-      // content, without this hook waiting on the network.
+      // owns the board sync — this hook never waits on it.
       setIsLoaded(true)
     }
 

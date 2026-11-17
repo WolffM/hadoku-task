@@ -37,6 +37,13 @@ interface UseTasksProps {
  */
 export type SyncState = 'pending' | 'synced' | 'stale'
 
+/**
+ * Longest a synced user waits on the skeleton for the server's boards before the
+ * shell reveals with the cached paint instead. A typical sync lands well under a
+ * second; this only bounds a slow or hung network.
+ */
+const REVEAL_CAP_MS = 4000
+
 export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
@@ -109,8 +116,8 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   // Monotonic counter so a slow reload can't clobber the results of a newer one.
   const reloadSeqRef = useRef(0)
 
-  // True once the first board paint (from cache) has landed, so the shell can
-  // reveal with content instead of gating on the slower network round-trip.
+  // True once the boards are ready to show: the server sync has settled for a
+  // synced user (capped at REVEAL_CAP_MS), the cache paint for a public one.
   const [boardsLoaded, setBoardsLoaded] = useState(false)
 
   // Whether what's on screen is server truth. Everything painted before the first
@@ -141,8 +148,8 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   const BACKGROUND_REFRESH_FRESH_MS = 2 * 60 * 1000
 
   // Force a fresh network sync, then repaint. Used by the refresh button and
-  // pull-to-refresh. The mount effect below uses a cache-first variant so the
-  // first paint doesn't wait on the network.
+  // pull-to-refresh. The mount effect below runs its own variant, which also
+  // decides when the shell reveals.
   async function initialLoad() {
     logger.info('[useTasks] initialLoad called')
     if ('syncFromApi' in api) {
@@ -230,15 +237,17 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
   reloadRef.current = reload
 
   // Single owner of the board-load lifecycle. On a user-context change: clear the
-  // previous user's data, paint from the (now faithful) cache immediately so the
-  // shell reveals with content, THEN revalidate from the network and repaint.
+  // previous user's data, paint from the cache, revalidate from the network and
+  // repaint — all in one place, so no second path can race the clear.
   //
-  // This used to be split across two hooks — this effect painted the cache while
-  // useSessionInitialization separately kicked its own syncFromApi + reload. The
-  // two raced through reloadSeqRef and, worse, this effect's setBoards(null)
-  // clear could land AFTER the other path had already painted, blanking the
-  // board. Owning the whole clear→paint→revalidate sequence in one place removes
-  // that race (the "shaky" load) and keeps the network off the reveal path.
+  // WHEN the shell reveals (`boardsLoaded`): a synced user's skeleton stays up
+  // until the server's boards have landed (or the sync has failed). Revealing on
+  // the cache paint showed boards that weren't loaded yet — on a cold cache the
+  // read synthesizes an empty default "main", so the user saw an empty board that
+  // filled in a beat later. The wait is capped at REVEAL_CAP_MS: a slow network
+  // falls back to the cached paint (with the stale pill) rather than trapping the
+  // user on the skeleton. Public users have no server copy — local IS the truth —
+  // so they reveal on the cache paint.
   useEffect(() => {
     logger.info('[useTasks] User context changed: reset + load', { userType, sessionId })
     setBoardsLoaded(false)
@@ -247,32 +256,47 @@ export function useTasks({ userType, sessionId, onSyncError, onError }: UseTasks
     setBoards(null)
     setSyncState('syncFromApi' in api ? 'pending' : 'synced')
     selectBoard(linkedBoardRef.current || 'main')
+
+    let revealTimer: ReturnType<typeof setTimeout> | undefined
+    const reveal = () => {
+      clearTimeout(revealTimer)
+      setBoardsLoaded(true)
+    }
+
     void (async () => {
-      // Fast cache paint (localStorage for authed users). Reveal the shell even
-      // if this throws — a corrupt cache must never trap the user on the
-      // skeleton forever; the network revalidate below still runs.
+      // Cache paint. A corrupt cache must never trap the user on the skeleton:
+      // the network revalidate below still runs, and the cap still fires.
       try {
         await reload()
       } catch (err) {
         logger.warn('[useTasks] initial cache paint failed', { error: String(err) })
-      } finally {
-        setBoardsLoaded(true) // content on screen → App may reveal the shell
       }
-      if ('syncFromApi' in api) {
-        try {
-          const ok = await api.syncFromApi() // network → refreshes the faithful cache
-          // Start the freshness window here, so switching boards in the first
-          // couple of minutes after a cold load costs nothing: this one call
-          // already fetched every board.
-          if (ok) lastSyncAtRef.current = Date.now()
-          setSyncState(ok ? 'synced' : 'stale')
-          await reload() // seamless repaint with server truth
-        } catch (err) {
-          logger.warn('[useTasks] background board sync failed', { error: String(err) })
-          setSyncState('stale')
-        }
+      if (!('syncFromApi' in api)) {
+        reveal()
+        return
+      }
+      revealTimer = setTimeout(() => {
+        logger.warn('[useTasks] board sync slower than reveal cap; showing cached boards', {
+          capMs: REVEAL_CAP_MS
+        })
+        setBoardsLoaded(true)
+      }, REVEAL_CAP_MS)
+      try {
+        const ok = await api.syncFromApi() // network → refreshes the faithful cache
+        // Start the freshness window here, so switching boards in the first
+        // couple of minutes after a cold load costs nothing: this one call
+        // already fetched every board.
+        if (ok) lastSyncAtRef.current = Date.now()
+        setSyncState(ok ? 'synced' : 'stale')
+        await reload() // repaint with server truth
+      } catch (err) {
+        logger.warn('[useTasks] board sync failed', { error: String(err) })
+        setSyncState('stale')
+      } finally {
+        reveal()
       }
     })()
+    return () => clearTimeout(revealTimer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userType, sessionId])
 

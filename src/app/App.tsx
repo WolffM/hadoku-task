@@ -402,9 +402,9 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   }
 
   // Show loading skeleton only on initial load (not on theme changes). Reveal
-  // once session/prefs (isLoaded, preferencesLoaded) AND the first board paint
-  // (boardsLoaded, from useTasks' fast cache read) are ready — so the shell
-  // never flashes an empty board area, without waiting on the network sync.
+  // once session/prefs (isLoaded, preferencesLoaded) AND the boards
+  // (boardsLoaded — the server's for a synced user, capped; see useTasks) are
+  // ready, so the shell never shows boards that haven't loaded yet.
   // Use system preference for theme during initial load, then switch to user preference
   if (!isLoaded || (isInitialThemeLoad && !isThemeReady) || !preferencesLoaded || !boardsLoaded) {
     return (
