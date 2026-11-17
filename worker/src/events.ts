@@ -30,7 +30,7 @@ export interface EventStats {
  * never stored), so netting on read is the only place this can happen: a
  * complete/uncomplete/complete cycle must read as one completion, not two.
  */
-function tallyEvents(rows: Array<{ event_type: string; count: number }>): EventStats {
+export function tallyEvents(rows: Array<{ event_type: string; count: number }>): EventStats {
   const stats: EventStats = { created: 0, completed: 0, edited: 0, deleted: 0 }
   let uncompleted = 0
 
@@ -95,6 +95,9 @@ export async function getBoardStats(
   return tallyEvents(result.results as unknown as Array<{ event_type: string; count: number }>)
 }
 
+/** How many recent events a board's stats timeline carries. */
+export const TIMELINE_LIMIT = 100
+
 /**
  * Get recent events for a board (replaces old stats.timeline)
  */
@@ -102,7 +105,7 @@ export async function getBoardTimeline(
   db: D1Database,
   userKey: string,
   boardId: string,
-  limit = 100
+  limit = TIMELINE_LIMIT
 ): Promise<{ timestamp: string; event: string; id: string }[]> {
   const result = await db
     .prepare(

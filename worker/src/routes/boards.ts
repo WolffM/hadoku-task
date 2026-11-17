@@ -8,9 +8,10 @@ import { TaskHandlers } from '@wolffm/task/api'
 import { requireFields } from '@wolffm/worker-utils'
 import { logRequest, logError } from '../logger'
 import { StepTimer } from '../server-timing'
-import { getContext, withBoardLock, parseIfMatch, resolveBoardCtx } from './route-utils'
+import { getContext, withBoardLock, parseIfMatch } from './route-utils'
 import { annotatedSharesByBoard } from './share-registry'
-import { liveClaimedTaskIds, liveClaimedTaskIdsForUser } from './board-claims'
+import { liveClaimedTaskIdsForUser } from './board-claims'
+import { readSharedBoards } from './d1-storage'
 import { validateBoardId } from '../request-utils'
 import { boardsKey } from '../kv-keys'
 import type { AppContext } from '../types'
@@ -63,32 +64,27 @@ export function createBoardRoutes() {
       // SHARED with this viewer — their task rows live under the OWNER's id, so
       // the handler's viewer-scoped read comes back empty. Re-hydrate those from
       // the owner's scope here at the route edge (where sharing is resolved, §7.1),
-      // in parallel so one slow owner can't stall the rest. A shared board's `id`
-      // is its globally-unique handle, which resolveBoardCtx routes to the owner.
-      timing.step('shared', () =>
-        Promise.all(
-          boardsData.boards.map(async board => {
-            if (!board.access || board.access === 'owner') return
-            const ctx = await resolveBoardCtx(c.env, authContext, board.id)
-            if (!ctx) return
-            const [tasksFile, statsFile, claimed] = await Promise.all([
-              ctx.storage.getTasks(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
-              ctx.storage.getStats(ctx.auth.userType, ctx.auth.sessionId, ctx.boardId),
-              // A shared board's claims live under the OWNER's id, like its tasks, so
-              // the caller-scoped sweep below cannot see them.
-              liveClaimedTaskIds(c.env.DB, ctx.ownerId, ctx.boardId)
-            ])
-            board.tasks = tasksFile.tasks.map(t =>
-              claimed.has(t.id) ? { ...t, claimed: true } : t
-            )
-            board.stats = statsFile
-            // The calendar descriptor counts the board's dated tasks, so it has to be
-            // recomputed against the tasks we just swapped in — the handler built it
-            // from the viewer-scoped (empty) read.
-            board.calendar = TaskHandlers.boardCalendar(board)
-          })
+      // all of them in one round trip. A shared board's `id` is its
+      // globally-unique handle, and it carries its `ownerUserId`.
+      timing.step('shared', async () => {
+        const shared = boardsData.boards.filter(
+          b => b.access && b.access !== 'owner' && b.ownerUserId
         )
-      ),
+        const contents = await readSharedBoards(
+          c.env,
+          shared.map(b => ({ handle: b.id, ownerUserId: b.ownerUserId as string }))
+        )
+        for (const board of shared) {
+          const got = contents.get(board.id)
+          if (!got) continue
+          board.tasks = got.tasks.map(t => (got.claimed.has(t.id) ? { ...t, claimed: true } : t))
+          board.stats = got.stats
+          // The calendar descriptor counts the board's dated tasks, so it has to be
+          // recomputed against the tasks we just swapped in — the handler built it
+          // from the viewer-scoped (empty) read.
+          board.calendar = TaskHandlers.boardCalendar(board)
+        }
+      }),
 
       // Flag the tasks an agent is holding right now (§5.5). One query for every
       // owned board rather than one per board, and only where claims can exist at

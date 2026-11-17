@@ -37,7 +37,9 @@ import {
   getBoardStats as getD1BoardStats,
   getBoardTimeline,
   deleteBoardEvents,
-  logTaskEvents
+  logTaskEvents,
+  tallyEvents,
+  TIMELINE_LIMIT
 } from '../events'
 import { maskKey } from '@wolffm/worker-utils'
 import type { Env } from '../types'
@@ -161,8 +163,73 @@ const trackerDeletes = (db: D1Like, uid: string, boardId: string) => [
   db.prepare('DELETE FROM trackers WHERE user_id = ? AND board_id = ?').bind(uid, boardId)
 ]
 
+/** The task columns every task read selects, in rowToTask's shape. */
+const TASK_COLUMNS = `id, title, notes, tag, state, date, start_time, end_time, source, source_id,
+                  metadata, status, created_at, updated_at, closed_at`
+
+type CountRow = { board_id: string; event_type: string; count: number }
+type EventRow = { board_id: string; task_id: string; event_type: string; timestamp: string }
+
+type BoundStmt = ReturnType<ReturnType<D1Like['prepare']>['bind']>
+
+function statsFile(counters: StatsFile['counters'], timeline: StatsFile['timeline']): StatsFile {
+  return { version: 2, counters, timeline, tasks: {}, updatedAt: nowIso() }
+}
+
+function toTimeline(rows: Array<{ task_id: string; event_type: string; timestamp: string }>) {
+  return rows.map(r => ({
+    t: r.timestamp,
+    event: r.event_type as 'created' | 'completed' | 'edited' | 'deleted',
+    id: r.task_id
+  }))
+}
+
+/** Group rows by a key, keeping each group in row order. */
+function groupBy<T>(rows: T[], key: (r: T) => string): Map<string, T[]> {
+  const out = new Map<string, T[]>()
+  for (const r of rows) {
+    const k = key(r)
+    const g = out.get(k)
+    if (g) g.push(r)
+    else out.set(k, [r])
+  }
+  return out
+}
+
 export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
   const db = env.DB as unknown as D1Like
+
+  /**
+   * Several reads in ONE D1 round trip. From an edge isolate each round trip is
+   * ~75ms (the D1 primary is not where the user is), so GET /boards' cost is
+   * its count of SERIAL round trips — not its query count. Rows per statement,
+   * in order.
+   */
+  async function readBatch(stmts: BoundStmt[]): Promise<unknown[][]> {
+    const res = (await db.batch(stmts)) as Array<{ results?: unknown[] }>
+    return res.map(r => r.results ?? [])
+  }
+
+  /**
+   * Board contents getBoards already read, for the per-board getTasks/getStats
+   * calls TaskHandlers.getBoards fans out right after it. Each entry is used
+   * once, and every write drops them all, so nothing here can outlive the read
+   * it came from. Without this, GET /boards was ~7 serial round trips (~600ms);
+   * with it, one.
+   */
+  const prefetchedTasks = new Map<string, TasksFile>()
+  const prefetchedStats = new Map<string, StatsFile>()
+  const dropPrefetched = () => {
+    prefetchedTasks.clear()
+    prefetchedStats.clear()
+  }
+  const takePrefetched = <T>(m: Map<string, T>, key: string): T | undefined => {
+    const v = m.get(key)
+    m.delete(key)
+    return v
+  }
+
+  let initializedFor: string | undefined
 
   /**
    * Ensure a user's D1 scaffolding exists before a read/write. Fast no-op once
@@ -173,11 +240,15 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
    */
   async function ensureInitialized(sessionId: string | undefined): Promise<void> {
     const uid = sessionId ?? 'public'
+    if (initializedFor === uid) return
     const exists = await db
       .prepare('SELECT 1 AS ok FROM board_meta WHERE user_id = ?')
       .bind(uid)
       .first<number>('ok')
-    if (exists === 1) return
+    if (exists === 1) {
+      initializedFor = uid
+      return
+    }
     const ts = nowIso()
     await db.batch([
       db
@@ -191,17 +262,18 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         )
         .bind(uid, DEFAULT_BOARD_ID, newHandle(), DEFAULT_BOARD_NAME, ts, ts)
     ])
+    initializedFor = uid
   }
 
   return {
     // --- Boards ----------------------------------------------------------
     async getBoards(_userType: UserType, sessionId?: string): Promise<BoardsFile> {
-      await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
-      const meta = await db
-        .prepare('SELECT version, updated_at FROM board_meta WHERE user_id = ?')
-        .bind(uid)
-        .first<{ version: number; updated_at: string }>()
+      const userKey = sessionId ? maskKey(sessionId) : 'public'
+      // Pre-userId-flip event rows live under the legacy key; getStats falls
+      // back to them for a board with none under the current one. Read both here.
+      const legacyKey = legacyId ? maskKey(legacyId) : undefined
+      const eventKeys = legacyKey && legacyKey !== userKey ? [userKey, legacyKey] : [userKey]
       // LEFT JOIN board_prefs for this viewer's pin/position state (§7.2). For
       // own boards owner_id = uid; the join stays correct when T5 adds shared
       // boards (a grantee pins under the sharer's owner_id). COALESCE so a board
@@ -211,9 +283,16 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // owner id + this viewer's access level, and both join board_prefs keyed by
       // the VIEWER (§7.2) so a grantee's pins are their own. Pinned-first order is
       // stable across the union.
-      const { results } = await db
-        .prepare(
-          `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.lanes, b.schema_id, b.schema_version,
+      //
+      // Everything the handler's per-board fan-out would read — every owned
+      // board's visible tasks, event counts and recent timeline — comes back in
+      // the SAME batch, and is handed to those reads through the prefetch maps.
+      const read = () =>
+        readBatch([
+          db.prepare('SELECT version, updated_at FROM board_meta WHERE user_id = ?').bind(uid),
+          db
+            .prepare(
+              `SELECT b.id, b.name, b.tags, b.mode, b.repo, b.lanes, b.schema_id, b.schema_version,
                   b.version, b.tasks_version, b.handle,
                   b.user_id AS owner_user_id, 'owner' AS access,
                   COALESCE(p.pinned, 0)   AS pinned,
@@ -238,11 +317,86 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
             WHERE s.grantee_user_id = ?
             ORDER BY pinned DESC, position ASC, owner_user_id, id`
+            )
+            .bind(uid, uid, uid, uid),
+          db
+            .prepare(
+              `SELECT board_id, ${TASK_COLUMNS}
+                 FROM tasks WHERE user_id = ? AND ${VISIBLE_PREDICATE}
+                 ORDER BY created_at, id`
+            )
+            .bind(uid, completedCutoff()),
+          ...eventKeys.flatMap(key => [
+            db
+              .prepare(
+                `SELECT board_id, event_type, COUNT(*) AS count
+                   FROM task_events WHERE user_key = ?
+                  GROUP BY board_id, event_type`
+              )
+              .bind(key),
+            db
+              .prepare(
+                `SELECT board_id, task_id, event_type, timestamp FROM (
+                   SELECT board_id, task_id, event_type, timestamp,
+                          ROW_NUMBER() OVER (PARTITION BY board_id ORDER BY timestamp DESC) AS rn
+                     FROM task_events WHERE user_key = ?)
+                  WHERE rn <= ?
+                  ORDER BY board_id, timestamp DESC`
+              )
+              .bind(key, TIMELINE_LIMIT)
+          ])
+        ])
+      let rows = await read()
+      // A brand-new user: scaffold board_meta + the default board, then re-read.
+      if (rows[0].length === 0) {
+        await ensureInitialized(sessionId)
+        rows = await read()
+      }
+      initializedFor = uid
+      const [metaRows, boardRows, taskRows, ...eventRows] = rows as [
+        Array<{ version: number; updated_at: string }>,
+        BoardRow[],
+        Array<TaskRow & { board_id: string }>,
+        ...Array<Array<{ board_id: string } & Partial<EventRow & CountRow>>>
+      ]
+
+      const tasksByBoard = groupBy(taskRows, r => r.board_id)
+      // Per event key (current, then legacy): counts and timeline by board.
+      const eventsByKey = eventKeys.map((_, i) => ({
+        counts: groupBy(eventRows[2 * i] as CountRow[], r => r.board_id),
+        timeline: groupBy(eventRows[2 * i + 1] as EventRow[], r => r.board_id)
+      }))
+      dropPrefetched()
+      for (const r of boardRows) {
+        // A shared board's rows live under its OWNER's id, so the viewer-scoped
+        // reads the handler makes for it are empty by definition (the route
+        // re-hydrates it from the owner's scope). Hand them that empty answer
+        // without a round trip.
+        const own = r.access === 'owner'
+        const key = own ? r.id : r.handle
+        prefetchedTasks.set(key, {
+          version: own ? (r.tasks_version ?? 1) : 1,
+          updatedAt: nowIso(),
+          tasks: own ? (tasksByBoard.get(r.id) ?? []).map(rowToTask) : []
+        })
+        // getStats' dual-read: the first key with any rows for this board.
+        const events = (own &&
+          eventsByKey.find(k => k.counts.has(r.id) || k.timeline.has(r.id))) || {
+          counts: new Map<string, CountRow[]>(),
+          timeline: new Map<string, EventRow[]>()
+        }
+        prefetchedStats.set(
+          key,
+          statsFile(
+            tallyEvents(events.counts.get(r.id) ?? []),
+            toTimeline(events.timeline.get(r.id) ?? [])
+          )
         )
-        .bind(uid, uid, uid, uid)
-        .all<BoardRow>()
-      const boards = results.length
-        ? results.map(rowToBoard)
+      }
+
+      const meta = metaRows[0]
+      const boards = boardRows.length
+        ? boardRows.map(rowToBoard)
         : [{ id: DEFAULT_BOARD_ID, name: DEFAULT_BOARD_NAME, tags: [], tasks: [] }]
       return {
         version: (meta?.version ?? 1) as 1,
@@ -257,6 +411,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       sessionId?: string,
       expectedVersion?: number
     ): Promise<void> {
+      dropPrefetched()
       await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       const ts = nowIso()
@@ -375,26 +530,43 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
     // --- Tasks (board scoped) -------------------------------------------
     async getTasks(_userType: UserType, sessionId?: string, boardId?: string): Promise<TasksFile> {
-      await ensureInitialized(sessionId)
       if (!boardId) boardId = DEFAULT_BOARD_ID
+      const cached = takePrefetched(prefetchedTasks, boardId)
+      if (cached) return cached
       const uid = sessionId ?? 'public'
-      const tasksVersion = await db
-        .prepare('SELECT tasks_version FROM boards WHERE user_id = ? AND id = ?')
-        .bind(uid, boardId)
-        .first<number>('tasks_version')
-      const { results } = await db
-        .prepare(
-          `SELECT id, title, notes, tag, state, date, start_time, end_time, source, source_id,
-                  metadata, status, created_at, updated_at, closed_at
-             FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}
-             ORDER BY created_at, id`
-        )
-        .bind(uid, boardId, completedCutoff())
-        .all<TaskRow>()
+      // The scaffolding check rides in the same batch as the read. A first read
+      // DOES scaffold a new user (their default board must exist for whatever
+      // they do next), so a miss scaffolds and reads again — new users only.
+      const bid = boardId
+      const read = () =>
+        readBatch([
+          db.prepare('SELECT 1 AS ok FROM board_meta WHERE user_id = ?').bind(uid),
+          db
+            .prepare('SELECT tasks_version FROM boards WHERE user_id = ? AND id = ?')
+            .bind(uid, bid),
+          db
+            .prepare(
+              `SELECT ${TASK_COLUMNS}
+                 FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}
+                 ORDER BY created_at, id`
+            )
+            .bind(uid, bid, completedCutoff())
+        ])
+      let rows = initializedFor === uid ? null : await read()
+      if (rows && rows[0].length === 0) {
+        await ensureInitialized(sessionId)
+        rows = null
+      }
+      initializedFor = uid
+      const [, versionRows, taskRows] = (rows ?? (await read())) as [
+        unknown[],
+        Array<{ tasks_version: number }>,
+        TaskRow[]
+      ]
       return {
-        version: tasksVersion ?? 1,
+        version: versionRows[0]?.tasks_version ?? 1,
         updatedAt: nowIso(),
-        tasks: results.map(rowToTask)
+        tasks: taskRows.map(rowToTask)
       }
     },
 
@@ -404,6 +576,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       boardId: string | undefined,
       tasks: TasksFile
     ): Promise<void> {
+      dropPrefetched()
       await ensureInitialized(sessionId)
       if (!boardId) boardId = DEFAULT_BOARD_ID
       const uid = sessionId ?? 'public'
@@ -453,6 +626,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       sessionId: string | undefined,
       writes: Array<{ boardId: string; tasks: TasksFile }>
     ): Promise<void> {
+      dropPrefetched()
       await ensureInitialized(sessionId)
       const uid = sessionId ?? 'public'
       const ts = nowIso()
@@ -507,28 +681,28 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
     // --- Stats (D1 events; identical to the KV adapter's stats path) ------
     async getStats(_userType: UserType, sessionId?: string, boardId?: string): Promise<StatsFile> {
       if (!boardId) boardId = DEFAULT_BOARD_ID
+      const cached = takePrefetched(prefetchedStats, boardId)
+      if (cached) return cached
       const userKey = sessionId ? maskKey(sessionId) : 'public'
-      let counters = await getD1BoardStats(env.DB, userKey, boardId)
-      let timeline = await getBoardTimeline(env.DB, userKey, boardId, 100)
+      const read = (key: string) =>
+        Promise.all([
+          getD1BoardStats(env.DB, key, boardId),
+          getBoardTimeline(env.DB, key, boardId, TIMELINE_LIMIT)
+        ])
+      let [counters, timeline] = await read(userKey)
       const noRows = timeline.length === 0 && Object.values(counters).every(v => !v || v === 0)
       if (noRows && legacyId) {
         const legacyKey = maskKey(legacyId)
-        if (legacyKey !== userKey) {
-          counters = await getD1BoardStats(env.DB, legacyKey, boardId)
-          timeline = await getBoardTimeline(env.DB, legacyKey, boardId, 100)
-        }
+        if (legacyKey !== userKey) [counters, timeline] = await read(legacyKey)
       }
-      return {
-        version: 2,
+      return statsFile(
         counters,
-        timeline: timeline.map(event => ({
+        timeline.map(event => ({
           t: event.timestamp,
           event: event.event as 'created' | 'completed' | 'edited' | 'deleted',
           id: event.id
-        })),
-        tasks: {},
-        updatedAt: nowIso()
-      }
+        }))
+      )
     },
 
     async saveStats(
@@ -537,6 +711,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       boardId: string | undefined,
       stats: StatsFile
     ): Promise<void> {
+      dropPrefetched()
       if (!boardId) boardId = DEFAULT_BOARD_ID
       const userKey = sessionId ? maskKey(sessionId) : 'public'
       // The operation's events are the timeline's tail, and they all carry the
@@ -562,6 +737,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
 
     // --- Delete board data ----------------------------------------------
     async deleteBoardData(_userType: UserType, sessionId: string, boardId: string): Promise<void> {
+      dropPrefetched()
       await ensureInitialized(sessionId)
       // `sessionId` is a required string, so the `?? 'public'` that used to sit
       // here could never fire — a dead guard, and a misleading one: it sat on
@@ -668,4 +844,73 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
       task.updatedAt ?? null,
       task.closedAt ?? null
     )
+}
+
+/** What a shared board needs from its owner's scope to render. */
+export interface SharedBoardContents {
+  tasks: Task[]
+  stats: StatsFile
+  claimed: Set<string>
+}
+
+/**
+ * Tasks, stats and live claims of the boards SHARED with a viewer, read from
+ * each OWNER's scope in ONE round trip for all of them.
+ *
+ * The boards come from the viewer's own GET /boards in the same request — the
+ * board_shares join already established the access — so each is addressed by
+ * (ownerUserId, handle) directly instead of being re-resolved one by one, which
+ * was three serial round trips per board.
+ */
+export async function readSharedBoards(
+  env: Env,
+  boards: Array<{ handle: string; ownerUserId: string }>
+): Promise<Map<string, SharedBoardContents>> {
+  const out = new Map<string, SharedBoardContents>()
+  if (boards.length === 0) return out
+  const db = env.DB as unknown as D1Like
+  const now = nowIso()
+  const cutoff = completedCutoff()
+  const BOARD = '(SELECT id FROM boards WHERE user_id = ? AND handle = ?)'
+  const stmts = boards.flatMap(({ handle, ownerUserId: owner }) => [
+    db
+      .prepare(
+        `SELECT ${TASK_COLUMNS}
+           FROM tasks WHERE user_id = ? AND board_id = ${BOARD} AND ${VISIBLE_PREDICATE}
+           ORDER BY created_at, id`
+      )
+      .bind(owner, owner, handle, cutoff),
+    db
+      .prepare(
+        `SELECT event_type, COUNT(*) AS count FROM task_events
+          WHERE user_key = ? AND board_id = ${BOARD} GROUP BY event_type`
+      )
+      .bind(maskKey(owner), owner, handle),
+    db
+      .prepare(
+        `SELECT task_id, event_type, timestamp FROM task_events
+          WHERE user_key = ? AND board_id = ${BOARD}
+          ORDER BY timestamp DESC LIMIT ?`
+      )
+      .bind(maskKey(owner), owner, handle, TIMELINE_LIMIT),
+    db
+      .prepare(
+        `SELECT task_id FROM task_claims
+          WHERE user_id = ? AND board_id = ${BOARD} AND expires_at > ?`
+      )
+      .bind(owner, owner, handle, now)
+  ])
+  const res = (await db.batch(stmts)) as Array<{ results?: unknown[] }>
+  boards.forEach(({ handle }, i) => {
+    const [tasks, counts, timeline, claims] = res.slice(4 * i, 4 * i + 4).map(r => r.results ?? [])
+    out.set(handle, {
+      tasks: (tasks as TaskRow[]).map(rowToTask),
+      stats: statsFile(
+        tallyEvents(counts as Array<{ event_type: string; count: number }>),
+        toTimeline(timeline as EventRow[])
+      ),
+      claimed: new Set((claims as Array<{ task_id: string }>).map(r => r.task_id))
+    })
+  })
+  return out
 }

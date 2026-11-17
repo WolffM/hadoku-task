@@ -116,3 +116,18 @@ gear-click (whoami 167ms + content-level 186ms, both paid after the panel was
 already open). It now consumes `window.__hadokuWhoami` like prefs-client does
 and prefetches at mount, so it adds nothing to boot beyond the one
 content-level request and nothing at all to the click.
+
+## GET /boards is counted in round trips (2026-11)
+
+From an edge isolate one D1 round trip is ~75ms — read it off any single-query
+step in `request_logs.server_timing` (`claims;dur=…`). So this route's latency is
+its number of SERIAL round trips, not its number of queries. It used to fan out
+~5 queries per owned board (three of them serial) plus a 3-deep chain per shared
+board, and took ~1.2s for a real account (`boards;dur≈600, shared;dur≈300`).
+Since the loading skeleton waits on it, that was the cold load.
+
+Now `getBoards` reads every owned board's tasks, counts and timeline in ONE
+`db.batch()` and hands them to the handler's per-board reads; shared boards are
+one more batch (`readSharedBoards`). `worker/test/boards-roundtrips-verify.ts`
+pins it: the count must not grow with the number of boards. Adding a per-board
+read to this route is the regression to look for.
