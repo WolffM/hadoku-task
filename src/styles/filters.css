@@ -75,20 +75,12 @@
   border-color: var(--color-warning);
 }
 
-/* "Widget": opens Add a widget (a tracker, wife tier and up). */
+/* Add a widget (a tracker, wife tier and up): icon only, named by aria-label
+   and its tooltip. */
 .task-app__filter-widget {
   display: inline-flex;
   align-items: center;
-  gap: var(--hdk-space-xs);
-}
-/* On a phone the label goes, to keep the cluster narrow. */
-@media (max-width: 640px) {
-  .task-app__filter-widget-label {
-    display: none;
-  }
-  .task-app__filter-widget {
-    padding: var(--hdk-space-sm);
-  }
+  padding: var(--hdk-space-sm);
 }
 
 /* "Automate open items" (§5.6). A filled primary pill, not another outline one:

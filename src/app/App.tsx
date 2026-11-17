@@ -44,7 +44,7 @@ import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { countUpcomingScheduled } from '../domain/utils/calendar'
 import { boardTypeConfig } from '../domain/boardType'
 import { canUseTrackers } from '../domain/trackers'
-import { LazyTrackerStrip } from '../components/trackers/LazyTrackerStrip'
+import { LazyTrackerStrip, preloadTrackerStrip } from '../components/trackers/LazyTrackerStrip'
 import { boardRef } from '../components/modals/shareApi'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
@@ -331,6 +331,22 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
     (currentBoardId ? trackerCounts[currentBoardId] : undefined) ?? currentBoard?.trackerCount ?? 0
   const showTrackers =
     trackersAllowed && currentView === 'board' && (trackerCount > 0 || addingWidget)
+  // Fetch the tracker chunk once the core page is up, so opening a widget (or a
+  // board that has trackers) never waits on it. The effect runs after the page's
+  // first real paint; the delay leaves its own requests ahead of this one.
+  const pageReady = isLoaded && preferencesLoaded && boardsLoaded
+  const canHaveTrackers = canUseTrackers(userType)
+  useEffect(() => {
+    if (!pageReady || !canHaveTrackers) return
+    // A failure here is only logged: the strip's own mount retries the import
+    // and shows its reload prompt if that fails too.
+    const preload = () =>
+      void preloadTrackerStrip().catch((err: unknown) =>
+        logger.warn('[App] tracker chunk preload failed', { error: formatError(err) })
+      )
+    const id = window.setTimeout(preload, 300)
+    return () => window.clearTimeout(id)
+  }, [pageReady, canHaveTrackers])
   const reportTrackerCount = React.useCallback(
     (n: number) => {
       if (currentBoardId)

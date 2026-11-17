@@ -206,7 +206,6 @@ export function TagFiltersSection({
               aria-label="Add a widget"
             >
               <Icon name="activity" />
-              <span className="task-app__filter-widget-label">Widget</span>
             </button>
           </Tooltip>
         )}

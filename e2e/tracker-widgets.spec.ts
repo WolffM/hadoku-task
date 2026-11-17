@@ -5,7 +5,7 @@ import { API } from './helpers/stack'
  * Tracker widgets, end to end against the REAL worker and its sqlite D1.
  *
  * Trackers are a widget on any board: a strip of tiles above the lanes, added
- * from the board toolbar's "Widget" button. Nothing is mocked. The only request
+ * from the board toolbar's widget button (icon only, named "Add a widget"). Nothing is mocked. The only request
  * rewrite is the dev shim's identity headers: `X-Dev-Tier` stamps the tier the
  * edge would stamp in production (trackers are wife tier and up) and `X-Dev-As`
  * gives each test its own user, so boards and trackers never leak between tests.
@@ -73,7 +73,7 @@ async function createBoard(page: Page, name: string) {
 }
 
 async function addTracker(page: Page, name: string, kind: 'Count' | 'Value', unit = '') {
-  await page.getByRole('button', { name: 'Widget' }).click()
+  await page.getByRole('button', { name: 'Add a widget' }).click()
   const dialog = page.getByRole('dialog', { name: 'Add a widget' })
   await dialog.getByLabel('New tracker name').fill(name)
   await dialog.getByRole('radio', { name: kind }).click()
@@ -252,10 +252,10 @@ test.describe('tracker widgets', () => {
     await createBoard(page, 'plain')
     await addTask(page, 'Water the plants')
     await openBoard(page, 'main')
-    await expect(page.getByRole('button', { name: 'Widget' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add a widget' })).toBeVisible()
     expect(trackerCalls).toEqual([])
     // Opening "Add a widget" and cancelling leaves no strip behind.
-    await page.getByRole('button', { name: 'Widget' }).click()
+    await page.getByRole('button', { name: 'Add a widget' }).click()
     await page
       .getByRole('dialog', { name: 'Add a widget' })
       .getByRole('button', { name: 'Cancel' })
@@ -264,11 +264,42 @@ test.describe('tracker widgets', () => {
     await expect(strip(page)).toHaveCount(0)
   })
 
+  test('Add a widget opens at once: the chunk is preloaded and nothing says loading', async ({
+    page
+  }) => {
+    await signInAs(page, 'wife', newUser())
+    // The chunk is fetched after the core page is up, without a click.
+    const preloaded = page.waitForRequest(r =>
+      r.url().includes('/components/trackers/TrackerStrip')
+    )
+    await page.goto('/')
+    await addTask(page, 'Ready')
+    await preloaded
+
+    // Hold the board's tracker list: the dialog must not wait on it.
+    let release!: () => void
+    const held = new Promise<void>(r => (release = r))
+    await page.route(/\/task\/api\/.*\/trackers(\?|$)/, async route => {
+      await held
+      await route.fallback()
+    })
+    await page.getByRole('button', { name: 'Add a widget' }).click()
+    await expect(page.getByRole('dialog', { name: 'Add a widget' })).toBeVisible()
+    await expect(page.getByText(/loading/i)).toHaveCount(0)
+    await expect(strip(page)).toHaveCount(0)
+    release()
+
+    const dialog = page.getByRole('dialog', { name: 'Add a widget' })
+    await dialog.getByLabel('New tracker name').fill('Water')
+    await dialog.getByRole('button', { name: 'Add tracker' }).click()
+    await expect(card(page, 'Water')).toBeVisible()
+  })
+
   test('below wife tier there is no Widget button and no board type to pick', async ({ page }) => {
     await signInAs(page, 'friend', newUser())
     await page.goto('/')
     await expect(page.locator('.task-app__input')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Widget' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add a widget' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Create board' }).click()
     await expect(page.getByPlaceholder('Board name')).toBeVisible()
     await expect(page.getByRole('radio')).toHaveCount(0)
@@ -284,7 +315,7 @@ test.describe('tracker widgets', () => {
     await page.goto('/')
     await addTask(page, 'Still here')
 
-    await page.getByRole('button', { name: 'Widget' }).click()
+    await page.getByRole('button', { name: 'Add a widget' }).click()
     const alert = strip(page).getByRole('alert')
     await expect(alert).toContainText("Couldn't load the trackers")
     await expect(alert.getByRole('button', { name: 'Reload' })).toBeVisible()

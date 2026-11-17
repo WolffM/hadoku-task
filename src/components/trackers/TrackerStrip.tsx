@@ -138,6 +138,8 @@ export function TrackerStrip({
     try {
       const t = await api.createTracker(boardRef, input)
       setData(d => d && { ...d, trackers: [...d.trackers, t] })
+      // Added before the first list landed: that list may predate the add.
+      if (!data) void load()
       // Now, not from the count effect: the dialog's close lands in this same
       // render, and a board that showed the strip only for the add would unmount
       // it before the effect could say there is a tracker to show.
@@ -180,20 +182,22 @@ export function TrackerStrip({
 
   const addDialog = adding && <AddTrackerDialog onAdd={addTracker} onClose={onAddingDone} />
 
+  // Until the first list lands there is nothing to draw — no placeholder row —
+  // but an add the user asked for opens now, not after the fetch.
+  if (!data && !loadError) return addDialog || null
   if (!data) {
     return (
-      <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
-        {loadError ? (
+      <>
+        <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
           <div className="tracker-strip__status tracker-strip__status--error" role="alert">
             Couldn't load trackers: {loadError}
             <button type="button" className="tracker-btn" onClick={() => void load()}>
               <Icon name="refresh" /> Retry
             </button>
           </div>
-        ) : (
-          <div className="tracker-strip__status">Loading trackers…</div>
-        )}
-      </section>
+        </section>
+        {addDialog}
+      </>
     )
   }
 
