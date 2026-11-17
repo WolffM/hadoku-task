@@ -232,6 +232,86 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
   let initializedFor: string | undefined
 
   /**
+   * What each board looked like when THIS request read it: task id → the row it
+   * would write. A save then writes only what the operation changed — upserts
+   * the tasks that differ, deletes the ones it removed — instead of the whole
+   * board it read.
+   *
+   * Every task write is read → change → save, and two of them on one board can
+   * overlap (different isolates; withBoardLock only serializes within one). When
+   * a save wrote its whole snapshot, the later of two overlapping writes put
+   * back its stale copy of what the earlier one changed — completes came back
+   * Active, and a task created meanwhile was deleted as "missing from the file".
+   * Writing the diff, overlapping writes to DIFFERENT tasks both land; two to the
+   * same task are last-write-wins, as before.
+   */
+  const readSnapshots = new Map<string, Map<string, string>>()
+  const snapshotKey = (uid: string, boardId: string) => `${uid}\u0000${boardId}`
+  const remember = (uid: string, boardId: string, tasks: Task[]) =>
+    readSnapshots.set(
+      snapshotKey(uid, boardId),
+      new Map(tasks.map(t => [t.id, taskFingerprint(boardId, t)]))
+    )
+
+  /**
+   * The statements that take a board from what this request read to `tasks`.
+   * With no read to diff against, falls back to reconciling the board's visible
+   * rows against the file (the old whole-board write).
+   */
+  async function taskWriteStmts(
+    uid: string,
+    boardId: string,
+    tasks: Task[]
+  ): Promise<{ deletes: BoundStmt[]; upserts: BoundStmt[] }> {
+    const deletes: BoundStmt[] = []
+    const upserts: BoundStmt[] = []
+    const desiredIds = new Set(tasks.map(t => t.id))
+    const before = readSnapshots.get(snapshotKey(uid, boardId))
+    let removed: Iterable<string>
+    if (before) {
+      for (const t of tasks) {
+        if (before.get(t.id) !== taskFingerprint(boardId, t)) {
+          upserts.push(upsertTaskStmt(db, uid, boardId, t))
+        }
+      }
+      removed = [...before.keys()].filter(id => !desiredIds.has(id))
+    } else {
+      // No read to diff against. The existing-id scan uses the SAME visible
+      // predicate getTasks reads with, so a closed or deleted row that aged out
+      // of view never becomes a deletion candidate. completedCutoff() is
+      // monotonic, so this window is a subset of any earlier read's.
+      const existing = await db
+        .prepare(`SELECT id FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}`)
+        .bind(uid, boardId, completedCutoff())
+        .all<{ id: string }>()
+      for (const t of tasks) upserts.push(upsertTaskStmt(db, uid, boardId, t))
+      removed = existing.results.map(r => r.id).filter(id => !desiredIds.has(id))
+    }
+    for (const id of removed) {
+      // Scoped to this board: a task moved away by an overlapping write is no
+      // longer this board's to delete.
+      deletes.push(
+        db
+          .prepare('DELETE FROM tasks WHERE user_id = ? AND board_id = ? AND id = ?')
+          .bind(uid, boardId, id)
+      )
+    }
+    return { deletes, upserts }
+  }
+
+  /**
+   * Bump the board's task version. MAX, not a plain set: two overlapping writes
+   * both compute "what I read + 1", and the version must still move forward for
+   * each of them — an If-Match holder relies on it never repeating.
+   */
+  const bumpTasksVersion = (uid: string, boardId: string, version: number, ts: string) =>
+    db
+      .prepare(
+        'UPDATE boards SET tasks_version = MAX(tasks_version + 1, ?), updated_at = ? WHERE user_id = ? AND id = ?'
+      )
+      .bind(version, ts, uid, boardId)
+
+  /**
    * Ensure a user's D1 scaffolding exists before a read/write. Fast no-op once
    * board_meta is present. For a brand-new user it creates the collection-version
    * row and the default `main` board row (so getTasks has a tasks_version home and
@@ -374,11 +454,13 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         // without a round trip.
         const own = r.access === 'owner'
         const key = own ? r.id : r.handle
+        const boardTasks = own ? (tasksByBoard.get(r.id) ?? []).map(rowToTask) : []
         prefetchedTasks.set(key, {
           version: own ? (r.tasks_version ?? 1) : 1,
           updatedAt: nowIso(),
-          tasks: own ? (tasksByBoard.get(r.id) ?? []).map(rowToTask) : []
+          tasks: boardTasks
         })
+        remember(uid, key, boardTasks)
         // getStats' dual-read: the first key with any rows for this board.
         const events = (own &&
           eventsByKey.find(k => k.counts.has(r.id) || k.timeline.has(r.id))) || {
@@ -563,10 +645,12 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         Array<{ tasks_version: number }>,
         TaskRow[]
       ]
+      const tasks = taskRows.map(rowToTask)
+      remember(uid, bid, tasks)
       return {
         version: versionRows[0]?.tasks_version ?? 1,
         updatedAt: nowIso(),
-        tasks: taskRows.map(rowToTask)
+        tasks
       }
     },
 
@@ -582,42 +666,10 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       const uid = sessionId ?? 'public'
       const ts = nowIso()
 
-      // Reconcile the board's VISIBLE rows to match the file. The file is the
-      // full visible set, never the full table — so the existing-id scan uses the
-      // SAME predicate getTasks read with. Without that, every closed task (and
-      // every Deleted row) would be hard-deleted by the next write, silently
-      // destroying the history this whole design exists to keep.
-      //
-      // No race: completedCutoff() is monotonic, so this cutoff is always >= the
-      // one the read used. The write's window is a subset of the read's, meaning
-      // a task can never be absent from the file yet still look deletable.
-      const existing = await db
-        .prepare(`SELECT id FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}`)
-        .bind(uid, boardId, completedCutoff())
-        .all<{ id: string }>()
-      const existingIds = new Set(existing.results.map(r => r.id))
-      const desiredIds = new Set(tasks.tasks.map(t => t.id))
-
-      const stmts: Array<{ run(): Promise<unknown> }> = []
-      for (const task of tasks.tasks) {
-        stmts.push(upsertTaskStmt(db, uid, boardId, task))
-      }
-      for (const id of existingIds) {
-        if (!desiredIds.has(id)) {
-          stmts.push(db.prepare('DELETE FROM tasks WHERE user_id = ? AND id = ?').bind(uid, id))
-        }
-      }
-      // tasks_version is the board's task-collection OCC counter (mirrors the
-      // KV TasksFile.version). Last-write-wins here — the opt-in App-level
-      // check in withTaskOperation already rejects a stale If-Match at read.
-      stmts.push(
-        db
-          .prepare(
-            'UPDATE boards SET tasks_version = ?, updated_at = ? WHERE user_id = ? AND id = ?'
-          )
-          .bind(tasks.version ?? 1, ts, uid, boardId)
-      )
+      const { deletes, upserts } = await taskWriteStmts(uid, boardId, tasks.tasks)
+      const stmts = [...deletes, ...upserts, bumpTasksVersion(uid, boardId, tasks.version ?? 1, ts)]
       await batchTaskWrite(db, uid, stmts, tasks.tasks)
+      remember(uid, boardId, tasks.tasks)
     },
 
     // --- Batch task write across boards (atomic) ------------------------
@@ -637,37 +689,14 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
       // new board_id) on the target. If the upsert ran first, the source's delete
       // would then wipe the just-moved row. Deletes-first makes it correct
       // regardless of the order boards appear in `writes`.
-      const deletes: Array<{ run(): Promise<unknown> }> = []
-      const upserts: Array<{ run(): Promise<unknown> }> = []
+      const deletes: BoundStmt[] = []
+      const upserts: BoundStmt[] = []
 
       for (const w of writes) {
         const boardId = w.boardId || DEFAULT_BOARD_ID
-        // Same visible-window scan as saveTasks — a closed or deleted row must
-        // never become a deletion candidate just because it aged out of view.
-        const existing = await db
-          .prepare(
-            `SELECT id FROM tasks WHERE user_id = ? AND board_id = ? AND ${VISIBLE_PREDICATE}`
-          )
-          .bind(uid, boardId, completedCutoff())
-          .all<{ id: string }>()
-        const existingIds = new Set(existing.results.map(r => r.id))
-        const desiredIds = new Set(w.tasks.tasks.map(t => t.id))
-
-        for (const task of w.tasks.tasks) {
-          upserts.push(upsertTaskStmt(db, uid, boardId, task))
-        }
-        for (const id of existingIds) {
-          if (!desiredIds.has(id)) {
-            deletes.push(db.prepare('DELETE FROM tasks WHERE user_id = ? AND id = ?').bind(uid, id))
-          }
-        }
-        upserts.push(
-          db
-            .prepare(
-              'UPDATE boards SET tasks_version = ?, updated_at = ? WHERE user_id = ? AND id = ?'
-            )
-            .bind(w.tasks.version ?? 1, ts, uid, boardId)
-        )
+        const stmts = await taskWriteStmts(uid, boardId, w.tasks.tasks)
+        deletes.push(...stmts.deletes)
+        upserts.push(...stmts.upserts, bumpTasksVersion(uid, boardId, w.tasks.version ?? 1, ts))
       }
 
       await batchTaskWrite(
@@ -676,6 +705,7 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
         [...deletes, ...upserts],
         writes.flatMap(w => w.tasks.tasks)
       )
+      for (const w of writes) remember(uid, w.boardId || DEFAULT_BOARD_ID, w.tasks.tasks)
     },
 
     // --- Stats (D1 events; identical to the KV adapter's stats path) ------
@@ -801,8 +831,37 @@ async function batchTaskWrite(
   }
 }
 
+/** The values a task's row is written with, in upsertTaskStmt's order. */
+function taskRowValues(boardId: string, task: Task): unknown[] {
+  return [
+    boardId,
+    task.id,
+    task.title,
+    task.notes ?? null,
+    task.tag ?? null,
+    task.state ?? 'Active',
+    task.date ?? null,
+    task.startTime ?? null,
+    task.endTime ?? null,
+    task.source ?? null,
+    task.sourceId ?? null,
+    task.metadata ? JSON.stringify(task.metadata) : null,
+    task.status ? JSON.stringify(task.status) : null,
+    task.createdAt ?? null,
+    task.updatedAt ?? null,
+    task.closedAt ?? null
+  ]
+}
+
+/** Equal fingerprints ⇒ writing the task would change nothing in its row. */
+function taskFingerprint(boardId: string, task: Task): string {
+  return JSON.stringify(taskRowValues(boardId, task))
+}
+
 /** Upsert a single task row (INSERT … ON CONFLICT(user_id,id) DO UPDATE). */
 function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
+  const values = taskRowValues(boardId, task)
+  values[13] ??= nowIso() // created_at
   return db
     .prepare(
       `INSERT INTO tasks
@@ -825,25 +884,7 @@ function upsertTaskStmt(db: D1Like, uid: string, boardId: string, task: Task) {
          updated_at = excluded.updated_at,
          closed_at = excluded.closed_at`
     )
-    .bind(
-      uid,
-      boardId,
-      task.id,
-      task.title,
-      task.notes ?? null,
-      task.tag ?? null,
-      task.state ?? 'Active',
-      task.date ?? null,
-      task.startTime ?? null,
-      task.endTime ?? null,
-      task.source ?? null,
-      task.sourceId ?? null,
-      task.metadata ? JSON.stringify(task.metadata) : null,
-      task.status ? JSON.stringify(task.status) : null,
-      task.createdAt ?? nowIso(),
-      task.updatedAt ?? null,
-      task.closedAt ?? null
-    )
+    .bind(uid, ...values)
 }
 
 /** What a shared board needs from its owner's scope to render. */
