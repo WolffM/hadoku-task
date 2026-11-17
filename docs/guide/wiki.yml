@@ -1,0 +1,38 @@
+title: Task
+summary: >-
+  A multi-user task and calendar manager at
+  [hadoku.me/task](https://hadoku.me/task/), usable from the browser alone
+  or, once signed in, synced and shared across devices.
+features:
+  - name: Tasks and boards
+    summary: 'Quick entry, #tags, drag-and-drop, and more than one board.'
+    anchor: tasks-and-boards
+  - name: Sharing a board
+    summary: "A board's owner grants another person contributor or read-only access by name."
+    anchor: sharing-a-board
+  - name: Calendar
+    summary: 'A day and agenda view of scheduled tasks, dragged onto a time instead of a list.'
+    anchor: calendar
+  - name: Automation boards
+    summary: 'Link a GitHub repo to a board; its open issues and PRs become tracked lanes.'
+    anchor: automation-boards
+    tier: friend
+  - name: Trackers
+    summary: 'Counters and logged values on any board, each with its own history.'
+    anchor: trackers
+    tier: wife
+  - name: Theme editor
+    summary: 'Edit the live site colors from the browser; a save commits and publishes itself.'
+    anchor: theme-editor
+    tier: service
+  - name: MCP for agents
+    summary: 'A remote MCP endpoint lets an agent create and read your tasks and calendar directly.'
+    anchor: mcp-for-agents
+  - name: Kate plugin
+    summary: 'A native plugin puts Tasks and Calendar tool views in the Kate text editor sidebar.'
+    anchor: kate-plugin
+trivia:
+  - 'Two phases of the Kate plugin and the agent MCP server all shipped in one afternoon, 2026-06-06 (`52d0b22`, `b039c16`, `9c4979b`).'
+  - 'The commit that added the Cloudflare Worker export touched 164 files and nearly 56,000 lines, the biggest single commit in the repo (`082d5a4`).'
+  - 'A worktree once skipped every pre-commit gate silently, because the hook directory husky writes is not the one git checks out; the fix moved the hooks into a tracked directory (`755a535`).'
+  - 'The shortest commit message in the repo is one letter: "m" (`7c09a49`).'
