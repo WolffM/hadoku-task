@@ -21,6 +21,10 @@ export { HadokuThemePicker } from './components/HadokuThemePicker'
 export { AppHeader } from './components/AppHeader'
 export { ConnectedSettings } from './components/ConnectedSettings'
 export { AVATAR_EVENT } from './lib/avatarEvent'
+// The verify dialog's two ways in: an app asks before an action that needs a
+// verified account, or the header sees a 403 MEMBER_NOT_VERIFIED itself.
+export { requestVerification, VERIFY_EVENT, type VerifyEventDetail } from './lib/verification'
+export { MEMBER_NOT_VERIFIED } from './lib/accountPrompts'
 export { NAME_EVENT, type NameEventDetail } from './lib/nameEvent'
 export {
   relayIdentityChanges,

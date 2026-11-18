@@ -35,9 +35,9 @@
  * </HadokuThemeRoot>
  * ```
  */
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import {
-  ConnectedSettings,
+  HeaderSettings,
   type AppSettingsTab,
   type ConnectedSettingsProps
 } from './ConnectedSettings'
@@ -78,20 +78,29 @@ export function AppHeader({
   // No useHadokuTheme() call here: <HadokuThemePicker> reads the context and
   // throws its own actionable error when the app root was never wrapped, so a
   // second read would only duplicate that.
+  //
+  // The settings gear's notices (the keep-your-account banner) render under
+  // the header, in an element that exists only while one shows (NoticeSlot).
+  const [noticeHost, setNoticeHost] = useState<HTMLDivElement | null>(null)
+  const [noticeWanted, setNoticeWanted] = useState(false)
+  const slot = useMemo(() => ({ host: noticeHost, want: setNoticeWanted }), [noticeHost])
   return (
-    <header className={`app-header ${className}`.trim()}>
-      {typeof title === 'string' ? (
-        <h1 className="app-header__title">{title}</h1>
-      ) : (
-        <div className="app-header__title">{title}</div>
-      )}
-      <div className="app-header__actions">
-        {status}
-        <HadokuThemePicker />
-        <ConnectedSettings {...settingsProps} appTabs={appTabs}>
-          {children}
-        </ConnectedSettings>
-      </div>
-    </header>
+    <>
+      <header className={`app-header ${className}`.trim()}>
+        {typeof title === 'string' ? (
+          <h1 className="app-header__title">{title}</h1>
+        ) : (
+          <div className="app-header__title">{title}</div>
+        )}
+        <div className="app-header__actions">
+          {status}
+          <HadokuThemePicker />
+          <HeaderSettings {...settingsProps} appTabs={appTabs} noticeSlot={slot}>
+            {children}
+          </HeaderSettings>
+        </div>
+      </header>
+      {noticeWanted && <div className="app-header-notice" ref={setNoticeHost} />}
+    </>
   )
 }

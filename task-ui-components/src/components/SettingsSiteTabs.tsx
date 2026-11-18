@@ -92,6 +92,8 @@ export interface SettingsSiteTabsProps {
   passkeyCount: number | null
   passkeySaved: boolean
   onPasskeySaved: () => void
+  /** A guest's "Link your account": opens the verify dialog. */
+  onLinkAccount: () => void
   serviceGrants: number
   /** The Switch key form is open; outlives a close of the popout. */
   keyFormOpen: boolean
@@ -115,6 +117,7 @@ export function SettingsSiteTabs({
   passkeyCount,
   passkeySaved,
   onPasskeySaved,
+  onLinkAccount,
   serviceGrants,
   keyFormOpen,
   setKeyFormOpen,
@@ -306,6 +309,23 @@ export function SettingsSiteTabs({
             <span className="settings-popout__label">Access tier</span>
             {resolving ? (
               <span className="settings-popout__value">…</span>
+            ) : userType === 'guest' ? (
+              // A guest's way to a verified account: sign in to the one they
+              // have, or ask (the verify dialog).
+              <span className="settings-popout__inline">
+                <span className="settings-popout__tier settings-popout__tier--guest">
+                  {tierLabel(userType, verified)}
+                </span>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  className="settings-popout__btn"
+                  aria-haspopup="dialog"
+                  onClick={onLinkAccount}
+                >
+                  Link your account
+                </button>
+              </span>
             ) : (
               <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
                 {tierLabel(userType, verified)}

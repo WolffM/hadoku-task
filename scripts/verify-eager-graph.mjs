@@ -28,6 +28,8 @@ const dist = join(root, 'task-ui-components/dist')
 /** Modules that must only ever be reached through import(). */
 const LAZY = [
   'components/SettingsSiteTabs.js',
+  'components/AccountPrompts.js',
+  'lib/verifyRequest.js',
   'components/AvatarDialog.js',
   'components/AvatarBuilder.js',
   'components/AvatarPicker.js',
@@ -40,11 +42,14 @@ const LAZY = [
 ]
 
 /** Relative static imports and re-exports; `import(` is excluded by the shape. */
-const STATIC = /(?:^|[\s;])(?:import|export)\s*(?:[\w*{}\s,$]+\s*from\s*)?["'](\.{1,2}\/[^"']+)["']/g
+const STATIC =
+  /(?:^|[\s;])(?:import|export)\s*(?:[\w*{}\s,$]+\s*from\s*)?["'](\.{1,2}\/[^"']+)["']/g
 
 const entry = join(dist, 'index.js')
 if (!existsSync(entry)) {
-  console.error(`verify-eager-graph: ${relative(root, entry)} missing — build task-ui-components first.`)
+  console.error(
+    `verify-eager-graph: ${relative(root, entry)} missing — build task-ui-components first.`
+  )
   process.exit(1)
 }
 
@@ -67,7 +72,9 @@ if (leaked.length) {
   for (const f of leaked) {
     const chain = []
     for (let at = f; at; at = via.get(at)) chain.unshift(relative(dist, at))
-    console.error(`verify-eager-graph: ${relative(dist, f)} is statically reachable: ${chain.join(' -> ')}`)
+    console.error(
+      `verify-eager-graph: ${relative(dist, f)} is statically reachable: ${chain.join(' -> ')}`
+    )
   }
   console.error('Load it with import() / React.lazy instead (#111).')
   process.exit(1)

@@ -35,7 +35,10 @@ export const ThemePrefsSchema = z.object({
   // The settings popout's last-open tab, keyed by app (see ./settingsTab). The
   // popout is platform UI, not an app's, so it shares this row — which the
   // theme has already read at boot, so remembering the tab costs no request.
-  settingsTabs: z.record(z.string(), z.string()).optional()
+  settingsTabs: z.record(z.string(), z.string()).optional(),
+  // The header's keep-your-account banner (task-ui-components lib/keepAccount):
+  // epoch ms its Later runs to. User scope, so the snooze follows the person.
+  keepAccountSnoozedUntil: z.number().optional()
 })
 
 export type ThemePrefs = z.infer<typeof ThemePrefsSchema>

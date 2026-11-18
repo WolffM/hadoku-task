@@ -32,19 +32,35 @@
  * maxLevel comes from the server so the tier ceiling is never trusted from the
  * client.
  */
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useSettingsTab } from '@wolffm/themes'
 import { SettingsIcon } from './ThemeIcons'
 import {
-  loadSignInClient,
-  passkeyHref,
+  addPasskeyHere,
   prefetchSettings,
   passkeysSupported,
+  refreshSettings,
   type ContentLevelState,
+  type SettingsSnapshot,
   type Tier
 } from '../lib/settingsClient'
 import { PASSKEY_PULSE_CLASS, reportErr } from './settingsShared'
 import { relayIdentityChanges } from '../lib/identityRelay'
+import { keepAccountDue, offersVerification } from '../lib/accountPrompts'
+import {
+  fetchOpensDialog,
+  holdFetchOpensUntilInteraction,
+  installVerifyFetchHook,
+  onVerifyNeeded,
+  requestVerification
+} from '../lib/verification'
+import {
+  dismissKeepAccount,
+  keepAccountState,
+  snoozeKeepAccount,
+  subscribeKeepAccount,
+  watchFirstClick
+} from '../lib/keepAccount'
 
 // The Account, Content and Connections tab bodies are most of this component, and
 // opened now and then, but this module is on every page of every app through
@@ -58,6 +74,13 @@ const SITE_TABS = new Set(['account', 'content', 'connections'])
 function preloadSiteTabs() {
   loadSiteTabs().catch(reportErr)
 }
+
+// The verify dialog and the keep-your-account banner: a guest's, now and then.
+const loadAccountPrompts = () => import('./AccountPrompts')
+const VerifyDialog = React.lazy(() => loadAccountPrompts().then(m => ({ default: m.VerifyDialog })))
+const KeepAccountBanner = React.lazy(() =>
+  loadAccountPrompts().then(m => ({ default: m.KeepAccountBanner }))
+)
 import '../app-header.css'
 
 export interface ConnectedSettingsProps {
@@ -311,13 +334,10 @@ function PasskeyOffer({ onSaved, onDone }: { onSaved: () => void; onDone: () => 
     setBusy(true)
     setError(null)
     try {
-      const client = await loadSignInClient()
-      if (!client?.addPasskey) {
+      if ((await addPasskeyHere(c.signal)) === 'away') {
         retirePasskeyOffer()
-        window.location.assign(passkeyHref('add'))
         return
       }
-      await client.addPasskey({ signal: c.signal })
       onSaved()
       onDone()
     } catch (err) {
@@ -407,14 +427,36 @@ function useStripFades(
   }, [strip, active, tabCount])
 }
 
-export function ConnectedSettings({
+/**
+ * Where a notice from the gear renders: under the AppHeader, as the header's
+ * next sibling. AppHeader renders that element only while a notice asks for it
+ * (`want(true)`), so a page without one keeps exactly the DOM it had, and no
+ * `.app-header + …` rule an app wrote shifts. A prop between the two, not a
+ * context: this package creates no React context (verify-single-context.mjs).
+ *
+ * Without an AppHeader (an app that mounts ConnectedSettings on its own) there
+ * is no slot, and the notice pins itself to the top of the viewport instead.
+ */
+export interface NoticeSlot {
+  /** The element to portal into; null until the header has rendered it. */
+  host: HTMLElement | null
+  want: (on: boolean) => void
+}
+
+export function ConnectedSettings(props: ConnectedSettingsProps) {
+  return <HeaderSettings {...props} />
+}
+
+/** ConnectedSettings, with the notice slot only AppHeader can hand it. */
+export function HeaderSettings({
   userType: userTypeProp,
   name: nameProp,
   onNameChange,
   contentVisibility = false,
   children,
-  appTabs
-}: ConnectedSettingsProps) {
+  appTabs,
+  noticeSlot = null
+}: ConnectedSettingsProps & { noticeSlot?: NoticeSlot | null }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const tabIdBase = useId()
@@ -578,21 +620,32 @@ export function ConnectedSettings({
   // The client memoises across callers, so mounting this in several places (or
   // remounting it) does not multiply requests, and on hadoku.me the identity
   // half is free — it awaits the whoami the shell already had in flight.
+  const applySnapshot = useCallback(
+    ({
+      identity,
+      content: state,
+      passkeys,
+      serviceGrants: grants,
+      verified: v
+    }: SettingsSnapshot) => {
+      setPasskeyCount(passkeys)
+      setServiceGrants(grants)
+      setVerified(v)
+      // Props stay authoritative: the host passed them because it can see an
+      // identity this component can't resolve for itself.
+      if (userTypeProp === undefined) {
+        setUserType(identity.userType)
+        setLocalName(identity.name)
+      }
+      if (state) setContent(state)
+    },
+    [userTypeProp]
+  )
   useEffect(() => {
     let live = true
     prefetchSettings({ userType: userTypeProp, name: nameProp, content: contentVisibility })
-      .then(({ identity, content: state, passkeys, serviceGrants: grants, verified: v }) => {
-        if (!live) return
-        setPasskeyCount(passkeys)
-        setServiceGrants(grants)
-        setVerified(v)
-        // Props stay authoritative: the host passed them because it can see an
-        // identity this component can't resolve for itself.
-        if (userTypeProp === undefined) {
-          setUserType(identity.userType)
-          setLocalName(identity.name)
-        }
-        if (state) setContent(state)
+      .then(snap => {
+        if (live) applySnapshot(snap)
       })
       .catch(reportErr)
       .finally(() => {
@@ -624,6 +677,57 @@ export function ConnectedSettings({
 
   const onPasskeySaved = useCallback(() => setPasskeySaved(true), [])
 
+  // The verify dialog (J5): opened by an app's requestVerification() or by a
+  // same-origin 403 MEMBER_NOT_VERIFIED on any fetch the page makes, for a
+  // guest only. `undefined` = closed; otherwise the reason it opened for.
+  const [verifyFor, setVerifyFor] = useState<{ reason?: string } | undefined>(undefined)
+  // Read by the listener at event time, not captured at mount.
+  const userTypeRef = useRef(userTypeProp)
+  userTypeRef.current = userTypeProp
+  useEffect(() => {
+    installVerifyFetchHook()
+    return onVerifyNeeded(({ reason, source }) => {
+      if (source === 'fetch' && !fetchOpensDialog()) return
+      // An early refusal can beat whoami; the snapshot settles it either way.
+      prefetchSettings()
+        .then(snap => {
+          if (offersVerification(userTypeRef.current ?? snap.identity.userType)) {
+            loadAccountPrompts().catch(reportErr)
+            setVerifyFor({ reason })
+          }
+        })
+        .catch(reportErr)
+    })
+  }, [])
+  const closeVerify = useCallback(() => {
+    setVerifyFor(undefined)
+    holdFetchOpensUntilInteraction()
+  }, [])
+  const onVerified = useCallback(() => {
+    refreshSettings().then(applySnapshot).catch(reportErr)
+  }, [applySnapshot])
+
+  // The keep-your-account banner (§4): a guest with no passkey, after their
+  // first click anywhere on the page, once per page, unless snoozed.
+  useEffect(() => watchFirstClick(), [])
+  const keepPage = useSyncExternalStore(subscribeKeepAccount, keepAccountState, keepAccountState)
+  const showKeepAccount =
+    !resolving &&
+    keepPage.clicked &&
+    !keepPage.dismissed &&
+    !showOffer &&
+    passkeysSupported() &&
+    keepAccountDue({
+      userType,
+      passkeys: passkeyCount,
+      passkeySaved,
+      snoozedUntil: keepPage.snoozedUntil,
+      now: Date.now()
+    })
+  useEffect(() => {
+    noticeSlot?.want(showKeepAccount)
+  }, [noticeSlot, showKeepAccount])
+
   // No caller-supplied class on the root. The four rows below are the
   // platform's, not the app's, and a className here is enough to restyle or
   // hide any of them — which is the drift this component exists to prevent.
@@ -647,6 +751,35 @@ export function ConnectedSettings({
       </button>
 
       {showOffer && <PasskeyOffer onSaved={() => setPasskeySaved(true)} onDone={endOffer} />}
+
+      {verifyFor && (
+        <React.Suspense fallback={null}>
+          <VerifyDialog
+            reason={verifyFor.reason}
+            name={displayName}
+            onClose={closeVerify}
+            onVerified={onVerified}
+          />
+        </React.Suspense>
+      )}
+
+      {/* Under the header when there is one; it renders the slot a beat after
+          asking, and the banner waits for it rather than flashing up pinned. */}
+      {showKeepAccount && (!noticeSlot || noticeSlot.host) && (
+        <React.Suspense fallback={null}>
+          <KeepAccountBanner
+            name={displayName}
+            host={noticeSlot?.host ?? null}
+            onSaved={() => {
+              setPasskeySaved(true)
+              dismissKeepAccount()
+            }}
+            onLater={() => {
+              snoozeKeepAccount().catch(reportErr)
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {open && <div className="settings-popout__overlay" onClick={() => setOpen(false)} />}
 
@@ -718,6 +851,10 @@ export function ConnectedSettings({
                 passkeyCount={passkeyCount}
                 passkeySaved={passkeySaved}
                 onPasskeySaved={onPasskeySaved}
+                onLinkAccount={() => {
+                  setOpen(false)
+                  requestVerification()
+                }}
                 serviceGrants={serviceGrants}
                 keyFormOpen={keyFormOpen}
                 setKeyFormOpen={setKeyFormOpen}

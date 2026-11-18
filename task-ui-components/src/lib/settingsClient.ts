@@ -413,6 +413,8 @@ export interface SettingsPrefetchHints {
 }
 
 let snapshot: Promise<SettingsSnapshot> | null = null
+/** What the first prefetch was told, for refreshSettings. */
+let firstHints: SettingsPrefetchHints = {}
 
 /**
  * Resolve — once per page load — everything the settings popout shows.
@@ -434,8 +436,38 @@ let snapshot: Promise<SettingsSnapshot> | null = null
  * resolveSettings for the fallback when it doesn't.
  */
 export function prefetchSettings(hints: SettingsPrefetchHints = {}): Promise<SettingsSnapshot> {
-  snapshot ??= resolveSettings(hints)
+  if (!snapshot) {
+    firstHints = hints
+    snapshot = resolveSettings(hints)
+  }
   return snapshot
+}
+
+/**
+ * Resolve identity again, for the rare moment it changed under the page
+ * without a reload: the verify dialog learning (409) that the operator has
+ * verified this person since whoami answered. Drops the page's whoami, the
+ * shell's parked one included, so every later reader sees the new answer.
+ */
+export function refreshSettings(): Promise<SettingsSnapshot> {
+  delete (globalThis as { [WHOAMI_GLOBAL]?: unknown })[WHOAMI_GLOBAL]
+  snapshot = null
+  return prefetchSettings(firstHints)
+}
+
+/**
+ * Save a passkey for the signed-in person on this device, through the site's
+ * sign-in client. Where that client has no passkey half, the /auth page's own
+ * flow takes over: `'away'` means the page is navigating there.
+ */
+export async function addPasskeyHere(signal?: AbortSignal): Promise<'saved' | 'away'> {
+  const client = await loadSignInClient()
+  if (!client?.addPasskey) {
+    window.location.assign(passkeyHref('add'))
+    return 'away'
+  }
+  await client.addPasskey({ signal })
+  return 'saved'
 }
 
 async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSnapshot> {
