@@ -1,6 +1,6 @@
 /**
- * A host that opts in to the Content tab (`contentVisibility`), as conjure and
- * pygmalion do. The task app does not — it makes no content determination —
+ * A host that opts in to the Content tab (`contentVisibility`), as conjure
+ * does. The task app does not — it makes no content determination —
  * so e2e/settings-prefetch.spec.ts drives the Content tab here and asserts its
  * absence on the task app.
  */

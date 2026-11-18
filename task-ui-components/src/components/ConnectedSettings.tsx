@@ -73,9 +73,9 @@ export interface ConnectedSettingsProps {
   /** Notify the host (e.g. a "Signed in as …" label) of a rename. */
   onNameChange?: (name: string | null) => void
   /** Offer the Content tab (the global content-visibility level). Off unless
-   *  the app gates what it serves on X-Hadoku-Content-Level — conjure,
-   *  pygmalion. Everywhere else the setting changes nothing, so it is not
-   *  shown and its level is never fetched. */
+   *  the app gates what it serves on X-Hadoku-Content-Level (conjure).
+   *  Everywhere else the setting changes nothing, so it is not shown and its
+   *  level is never fetched. */
   contentVisibility?: boolean
   /** App-specific settings as ONE tab, labelled "App", after the site's own
    *  tabs — so an app with its own preferences keeps one unified gear instead
