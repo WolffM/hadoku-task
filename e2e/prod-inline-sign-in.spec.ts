@@ -85,6 +85,6 @@ test.describe('Inline sign-in (production)', () => {
     // The settings tier row reflects the switch too.
     await page.getByRole('button', { name: 'User settings' }).click()
     await page.getByRole('tab', { name: 'Account' }).click()
-    await expect(page.locator('.settings-popout__tier')).not.toHaveText('Guest')
+    await expect(page.locator('.settings-popout__tier')).not.toHaveText('Not signed in')
   })
 })

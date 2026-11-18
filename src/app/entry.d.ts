@@ -26,7 +26,7 @@ export interface TaskAppProps {
    * straight through, so the app was type-lying about values it already
    * received at runtime.
    */
-  userType?: 'public' | 'member' | 'friend' | 'service' | 'wife' | 'admin'
+  userType?: 'public' | 'guest' | 'member' | 'friend' | 'service' | 'wife' | 'admin'
   /**
    * The registry userId from whoami (what the edge stamps as X-User-Id).
    * Accepted and deliberately unused: the worker reads identity off the edge.

@@ -154,7 +154,7 @@ test.describe('settings popout: asks someone with no passkey to save one', () =>
   for (const [why, identity] of [
     ['already has one', { userType: 'friend', name: 'alice', passkeys: 1 }],
     ['an edge that does not say', { userType: 'friend', name: 'alice' }],
-    ['a guest', { userType: 'public', name: null, passkeys: 0 }]
+    ['someone not signed in', { userType: 'public', name: null, passkeys: 0 }]
   ] as const) {
     test(`no prompt for ${why}`, async ({ page }) => {
       await mockWhoami(page, identity)
@@ -252,6 +252,14 @@ test.describe('a new member is asked beside the gear, once', () => {
     await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
     await expect(offer(page)).toHaveCount(0)
     expect(await flag(page)).toBeNull()
+  })
+
+  test('a guest (an account the visitor made) is asked too, with the dot', async ({ page }) => {
+    await mockWhoami(page, { userType: 'guest', name: 'newbie', passkeys: 0 })
+    await signedUp(page)
+    await load(page)
+    await expect(offer(page)).toBeVisible()
+    await expect(page.locator('.settings-toggle-btn__dot')).toBeVisible()
   })
 
   test('nobody is asked without a sign-up', async ({ page }) => {
@@ -607,6 +615,16 @@ test.describe('settings popout: a member deletes their own account', () => {
     await panel.getByRole('button', { name: 'Delete for good' }).click()
     await reloaded
     expect(deletes).toBe(1)
+  })
+
+  test('a guest deletes their own account too', async ({ page }) => {
+    await mockWhoami(page, { userType: 'guest', name: 'Stranger', passkeys: 1 })
+    await load(page)
+    const panel = await openSettings(page)
+    await expect(panel.getByText('Guest', { exact: true })).toBeVisible()
+    await panel.getByRole('tab', { name: 'Account' }).click()
+    await panel.getByRole('button', { name: 'Delete account' }).click()
+    await expect(panel.getByRole('button', { name: 'Delete for good' })).toBeVisible()
   })
 
   test('a friend has no delete control', async ({ page }) => {

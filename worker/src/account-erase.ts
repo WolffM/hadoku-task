@@ -150,8 +150,9 @@ export async function eraseAccountData(db: EraseDb, userId: string): Promise<Era
  */
 export async function handleAccountErase(c: Context<AppContext>) {
   const auth = c.get('authContext')
-  if (!auth?.userId || !tierAtLeast(auth, 'member')) {
-    return c.json({ error: 'An edge-sealed member identity is required' }, 401)
+  // Any account, guest and up: a self-made account can delete itself.
+  if (!auth?.userId || !tierAtLeast(auth, 'guest')) {
+    return c.json({ error: 'An edge-sealed account identity is required' }, 401)
   }
   const erased = await eraseAccountData(c.env.DB as unknown as EraseDb, auth.userId)
   return c.json({ erased }, 200)

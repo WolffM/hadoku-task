@@ -19,6 +19,7 @@ function check(label: string, actual: unknown, expected: unknown) {
 check('public', throttleTierOf({ userType: 'public' }), 'public')
 check('an unverified member', throttleTierOf({ userType: 'member', verified: false }), 'public')
 check('a member with no verified flag', throttleTierOf({ userType: 'member' }), 'public')
+check('a guest', throttleTierOf({ userType: 'guest' }), 'public')
 check('a verified member', throttleTierOf({ userType: 'member', verified: true }), null)
 check('friend', throttleTierOf({ userType: 'friend' }), null)
 check('service', throttleTierOf({ userType: 'service', verified: true }), 'service')

@@ -22,11 +22,11 @@ function taskApiCalls(page: Page): Request[] {
   return seen
 }
 
-async function bootAsMember(page: Page, query: string) {
-  await page.addInitScript(() => {
-    localStorage.setItem('hadoku_user_type', 'member')
-    localStorage.setItem('hadoku_session_id', 'member-session')
-  })
+async function bootAsMember(page: Page, query: string, tier: 'member' | 'guest' = 'member') {
+  await page.addInitScript(t => {
+    localStorage.setItem('hadoku_user_type', t)
+    localStorage.setItem('hadoku_session_id', `${t}-session`)
+  }, tier)
   await page.goto(`/${query}`)
   await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
 }
@@ -48,6 +48,18 @@ test.describe('member storage', () => {
     await page.reload()
     await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
     await expect(page.getByText('Kept locally', { exact: true })).toBeVisible()
+    expect(calls.map(r => `${r.method()} ${new URL(r.url()).pathname}`)).toEqual([])
+  })
+
+  test('a guest stays on this device too: no task API calls, and the task survives a reload', async ({
+    page
+  }) => {
+    const calls = taskApiCalls(page)
+    await bootAsMember(page, '', 'guest')
+    await addTask(page, 'Guest kept locally')
+    await page.reload()
+    await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
+    await expect(page.getByText('Guest kept locally', { exact: true })).toBeVisible()
     expect(calls.map(r => `${r.method()} ${new URL(r.url()).pathname}`)).toEqual([])
   })
 

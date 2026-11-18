@@ -11,7 +11,8 @@
  *   - friend and up: storage, as before. The operator handed out the key.
  *   - a VERIFIED member (`X-Hadoku-Verified: 1`: a spare the operator made, or
  *     a member verified on the Members page): storage, exactly as a friend.
- *   - an unverified member, or anyone with no edge-stamped userId: none. The
+ *   - a guest or an unverified member: 403 MEMBER_NOT_VERIFIED. Anyone with no
+ *     edge-stamped userId: 401. Neither gets storage. The
  *     app runs them local-only (src/app/entry.tsx), as it always ran public.
  *
  * Kept import-light: root runs it on every storage request, cold isolates too.
@@ -31,8 +32,10 @@ export function hasStorage(auth: Auth | undefined): boolean {
 }
 
 export function storageRefusal(auth: Auth | undefined): StorageRefusal | null {
-  // Below member there is no person to store for, whatever headers arrived.
-  if (!auth?.userId || !tierAtLeast(auth, 'member')) {
+  // Below guest there is no person to store for, whatever headers arrived. A
+  // guest (an account the visitor made) is a person, refused below exactly as
+  // an unverified member is.
+  if (!auth?.userId || !tierAtLeast(auth, 'guest')) {
     return {
       status: 401,
       body: {

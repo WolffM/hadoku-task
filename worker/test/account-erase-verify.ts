@@ -454,6 +454,18 @@ async function main() {
     JSON.stringify(second.json)
   )
 
+  section('6b. A guest (an account the visitor made) is erased like a member')
+  const asGuest = await call('POST', PATH, {
+    'X-Edge-Auth': EDGE_SECRET,
+    'X-Hadoku-Tier': 'guest',
+    'X-User-Id': VICTIM.id
+  })
+  check(
+    'a sealed guest → 200',
+    asGuest.status === 200 && JSON.stringify(asGuest.json?.erased) === JSON.stringify(zeros),
+    `${asGuest.status} ${JSON.stringify(asGuest.json)}`
+  )
+
   section('7. A person who shared nothing leaves no row')
   const loner = await edgeErase(LONER.id)
   check(

@@ -63,7 +63,8 @@ const TIER_LABEL: Record<Tier, string> = {
   service: 'Service',
   friend: 'Friend',
   member: 'Member',
-  public: 'Guest'
+  guest: 'Guest',
+  public: 'Not signed in'
 }
 
 /** A member the operator made or verified reads as such; every other tier is verified by rank. */
@@ -298,7 +299,7 @@ export function SettingsSiteTabs({
       {activeTab === 'account' && (
         <>
           {/* Access tier. While resolving, the state still says 'public' —
-              rendering "Guest" there would be a wrong answer that corrects
+              rendering "Not signed in" there would be a wrong answer that corrects
               itself a moment later, which reads exactly like the lag this
               placeholder exists to remove. */}
           <section className="settings-popout__row">
@@ -582,10 +583,10 @@ export function SettingsSiteTabs({
             </section>
           )}
 
-          {/* A self-made account (member) can delete itself. The confirm is a
-              separate button on its own line, so a double click on Delete
-              never confirms. */}
-          {!resolving && userType === 'member' && (
+          {/* A self-made account (guest, or member) can delete itself. The
+              confirm is a separate button on its own line, so a double click
+              on Delete never confirms. */}
+          {!resolving && (userType === 'guest' || userType === 'member') && (
             <section className="settings-popout__row settings-popout__row--stack">
               <span className="settings-popout__inline">
                 <span className="settings-popout__label settings-popout__label--grow">Account</span>

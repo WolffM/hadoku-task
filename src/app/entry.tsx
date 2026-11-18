@@ -103,10 +103,12 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
   const storedUserType = getStoredUserType()
 
   const hostTier = storedUserType || props.userType || 'public'
-  // The server stores nothing for an unverified member (worker/src/storage-access.ts),
-  // so the app runs them exactly as it runs a public visitor: local-only, keyed
-  // by the anon session id. Every other tier keeps what the host said.
-  const userType = hostTier === 'member' && props.verified !== true ? 'public' : hostTier
+  // The server stores nothing for a guest or an unverified member
+  // (worker/src/storage-access.ts), so the app runs them exactly as it runs a
+  // public visitor: local-only, keyed by the anon session id. Every other tier
+  // keeps what the host said.
+  const userType =
+    hostTier === 'guest' || (hostTier === 'member' && props.verified !== true) ? 'public' : hostTier
 
   // Authed users' sessionId comes from the host (via hadoku_session_id / props).
   // Public users get the stable, host-independent anon id so their local tasks

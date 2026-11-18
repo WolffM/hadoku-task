@@ -3,7 +3,9 @@ import { test, expect, type Page } from '@playwright/test'
 /**
  * The popout's Access tier row. A member the operator made or verified (the
  * edge's whoami `verified`) reads "Member-verified"; one who signed up alone
- * reads "Member"; every tier above member reads its own name, flag or not.
+ * reads "Member"; every tier above member reads its own name, flag or not. A
+ * guest (an account the visitor made) reads "Guest"; nobody signed in reads
+ * "Not signed in".
  */
 
 async function showTier(page: Page, body: Record<string, unknown>) {
@@ -26,7 +28,9 @@ for (const [why, body, label] of [
   ['a verified member', { userType: 'member', verified: true }, 'Member-verified'],
   ['a member who signed up alone', { userType: 'member', verified: false }, 'Member'],
   ['a member on an edge that sends no flag', { userType: 'member' }, 'Member'],
-  ['a friend', { userType: 'friend', verified: true }, 'Friend']
+  ['a friend', { userType: 'friend', verified: true }, 'Friend'],
+  ['a guest', { userType: 'guest', verified: false }, 'Guest'],
+  ['nobody signed in', { valid: false, userType: 'public', name: null }, 'Not signed in']
 ] as const) {
   test(`access tier for ${why}: ${label}`, async ({ page }) => {
     await expect(await showTier(page, body)).toHaveText(label)

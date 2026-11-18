@@ -106,6 +106,10 @@ function section(t: string) {
 
 const ANON: Caller = { tier: 'public' }
 const MEMBER: Caller = { tier: 'member', userId: 'member-uid' }
+// A guest is an account the visitor made: refused exactly where an unverified
+// member is, and a verified flag alone does not lift it (only a member's does).
+const GUEST: Caller = { tier: 'guest', userId: 'guest-uid' }
+const FLAGGED_GUEST: Caller = { tier: 'guest', userId: 'flagged-guest-uid', verified: true }
 const VERIFIED: Caller = { tier: 'member', userId: 'verified-uid', verified: true }
 const FRIEND: Caller = { tier: 'friend', userId: 'friend-uid' }
 
@@ -151,19 +155,31 @@ async function main() {
   }
   check("nothing was written under 'public'", (await rowsOwnedBy('public')) === 0)
 
-  section('2. An unverified member: refused')
-  for (const [method, path, body] of [
-    ['GET', '/task/api/boards', undefined],
-    ['POST', '/task/api', createTask('member')]
+  section('2. An unverified member, or a guest: refused')
+  for (const [label, who, userId] of [
+    ['unverified member', MEMBER, 'member-uid'],
+    ['guest', GUEST, 'guest-uid'],
+    ['guest with a verified flag', FLAGGED_GUEST, 'flagged-guest-uid']
   ] as const) {
-    const r = await req(MEMBER, method, path, body)
+    for (const [method, path, body] of [
+      ['GET', '/task/api/boards', undefined],
+      ['POST', '/task/api', createTask(label)]
+    ] as const) {
+      const r = await req(who, method, path, body)
+      check(
+        `${label} ${method} ${path} → 403 MEMBER_NOT_VERIFIED`,
+        r.status === 403 && r.json?.code === 'MEMBER_NOT_VERIFIED',
+        `status=${r.status} ${JSON.stringify(r.json)}`
+      )
+    }
+    const search = await req(who, 'GET', '/task/api/users/search?q=a')
     check(
-      `unverified member ${method} ${path} → 403 MEMBER_NOT_VERIFIED`,
-      r.status === 403 && r.json?.code === 'MEMBER_NOT_VERIFIED',
-      `status=${r.status} ${JSON.stringify(r.json)}`
+      `${label} may not enumerate names → 403 MEMBER_NOT_VERIFIED`,
+      search.status === 403 && search.json?.code === 'MEMBER_NOT_VERIFIED',
+      `status=${search.status} ${JSON.stringify(search.json)}`
     )
+    check(`nothing was written for the ${label}`, (await rowsOwnedBy(userId)) === 0)
   }
-  check('nothing was written for the unverified member', (await rowsOwnedBy('member-uid')) === 0)
 
   section('3. A verified member stores like a friend')
   for (const [who, userId] of [
