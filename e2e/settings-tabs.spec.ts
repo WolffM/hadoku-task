@@ -8,12 +8,12 @@ import { PREFS_BASE, asFreshUser, prefsUp, pointPrefsAtLocalStack } from './help
  *
  * Runs against the REAL prefs-api, because "remembered" means the
  * value survives a reload through the server, not only the SDK's local cache.
- * The task app passes `children` and no `appTabs`, so its strip is
- * Profile · Content · Account · App.
+ * The task app passes `children`, no `appTabs` and no `contentVisibility`, so
+ * its strip is Profile · Account · App.
  */
 
 const PORTFOLIO_ROW = `${PREFS_BASE}/api/v1/portfolio`
-const TABS = ['Profile', 'Content', 'Account', 'App']
+const TABS = ['Profile', 'Account', 'App']
 
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'User settings' }).click()
@@ -87,8 +87,8 @@ test.describe('settings tabs', () => {
     await page.keyboard.press('Home')
     await expect(selected(page)).toHaveText('Profile')
     await page.keyboard.press('ArrowRight')
-    await expect(selected(page)).toHaveText('Content')
-    await expect(page.locator('.settings-popout__pill')).toBeVisible()
+    await expect(selected(page)).toHaveText('Account')
+    await expect(page.getByRole('button', { name: 'Switch key' })).toBeVisible()
 
     await page.keyboard.press('End')
     await expect(selected(page)).toHaveText('App')
@@ -149,10 +149,10 @@ test.describe('settings tabs', () => {
     await expect(strip).not.toHaveAttribute('data-fade-start')
     await expect(strip).not.toHaveAttribute('data-fade-end')
 
-    // Narrowed while open, enough that the task app's four tabs overflow: the
+    // Narrowed while open, enough that the task app's three tabs overflow: the
     // strip's resize is seen, and with it scrolled to the start, only the end
     // hides a tab.
-    await page.setViewportSize({ width: 240, height: 640 })
+    await page.setViewportSize({ width: 180, height: 640 })
     expect(await strip.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
     await expect(strip).toHaveAttribute('data-fade-end', '')
     await expect(strip).not.toHaveAttribute('data-fade-start')

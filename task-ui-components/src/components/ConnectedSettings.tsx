@@ -26,6 +26,8 @@
  * Mirrors ThemePicker's controlled-popout pattern: owns its own `open` state +
  * a full-viewport overlay for click-outside dismiss. The content pill renders
  * `maxLevel` segments (friend ⇒ 3, admin ⇒ 4) and is hidden for public callers.
+ * The Content tab shows only in an app that passes `contentVisibility`: most
+ * apps make no content determination, and a control there changes nothing.
  * maxLevel comes from the server so the tier ceiling is never trusted from the
  * client.
  */
@@ -70,6 +72,11 @@ export interface ConnectedSettingsProps {
   name?: string | null
   /** Notify the host (e.g. a "Signed in as …" label) of a rename. */
   onNameChange?: (name: string | null) => void
+  /** Offer the Content tab (the global content-visibility level). Off unless
+   *  the app gates what it serves on X-Hadoku-Content-Level — conjure,
+   *  pygmalion. Everywhere else the setting changes nothing, so it is not
+   *  shown and its level is never fetched. */
+  contentVisibility?: boolean
   /** App-specific settings as ONE tab, labelled "App", after the site's own
    *  tabs — so an app with its own preferences keeps one unified gear instead
    *  of a second control. For more than one section, use `appTabs`.
@@ -403,6 +410,7 @@ export function ConnectedSettings({
   userType: userTypeProp,
   name: nameProp,
   onNameChange,
+  contentVisibility = false,
   children,
   appTabs
 }: ConnectedSettingsProps) {
@@ -452,7 +460,7 @@ export function ConnectedSettings({
   // is an exact-match allowlist: it silently excluded `wife` the moment that
   // tier existed, which is the failure the rank model is meant to prevent.
   // There is no rank helper in this bundle, but "above public" needs none.
-  const showContentPill = userType !== 'public'
+  const showContentPill = contentVisibility && userType !== 'public'
 
   // Signed in on a key with no passkey: the gear carries a dot and Save passkey
   // is the primary action until one is saved. Unknown counts never prompt.
@@ -570,7 +578,7 @@ export function ConnectedSettings({
   // half is free — it awaits the whoami the shell already had in flight.
   useEffect(() => {
     let live = true
-    prefetchSettings({ userType: userTypeProp, name: nameProp })
+    prefetchSettings({ userType: userTypeProp, name: nameProp, content: contentVisibility })
       .then(({ identity, content: state, passkeys, serviceGrants: grants, verified: v }) => {
         if (!live) return
         setPasskeyCount(passkeys)

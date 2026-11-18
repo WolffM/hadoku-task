@@ -406,6 +406,9 @@ export interface SettingsPrefetchHints {
   userType?: Tier
   /** Caller's display name. Only meaningful alongside `userType`. */
   name?: string | null
+  /** The host shows the Content tab. False skips the content level entirely,
+   *  so a page without the tab never issues the fallback GET. */
+  content?: boolean
 }
 
 let snapshot: Promise<SettingsSnapshot> | null = null
@@ -466,6 +469,7 @@ async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSn
   // written by the loader before anything mounts, so where it already says
   // "signed in" the fallback goes out concurrently rather than behind whoami.
   const contentPromise = bodyPromise.then(body => {
+    if (!hints.content) return null
     const carried = contentFromWhoami(body)
     if (carried) return carried
     if (looksSignedIn(hints.userType)) return getContentLevel()

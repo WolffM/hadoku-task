@@ -19,9 +19,16 @@ import { test, expect, type Page } from '@playwright/test'
  *
  * This spec is the enforcement. If someone moves the fetch back behind the
  * click, or stops reusing the shell's whoami, test 1 or test 3 goes red.
+ *
+ * The Content tab is opt-in (`contentVisibility`), and the task app does not
+ * opt in, so the content-level tests run on the dev settings host that does
+ * (dev/gallery/settings.html). The last test pins the task app's side: no tab,
+ * and no content-level request.
  */
 
 const APP_HEADER = 'h1.app-header__title'
+const TASK_APP = '/?userType=friend'
+const CONTENT_HOST = '/dev/gallery/settings.html'
 const WHOAMI_PATH = '/session/whoami'
 const CONTENT_PATH = '/prefs/api/v1/content-level'
 
@@ -77,8 +84,8 @@ async function signedIn(page: Page) {
   })
 }
 
-async function bootApp(page: Page) {
-  await page.goto('/?userType=friend')
+async function bootApp(page: Page, url = TASK_APP) {
+  await page.goto(url)
   await page.waitForSelector(APP_HEADER, { timeout: 15000 })
 }
 
@@ -87,7 +94,7 @@ test.describe('settings prefetch', () => {
     const counts = countRequests(page)
     await stubBoot(page)
     await signedIn(page)
-    await bootApp(page)
+    await bootApp(page, CONTENT_HOST)
 
     // The prefetch must have happened WITHOUT any interaction. This is the half
     // that fails if the fetch goes back behind the click.
@@ -148,7 +155,7 @@ test.describe('settings prefetch', () => {
       })
     )
 
-    await bootApp(page)
+    await bootApp(page, CONTENT_HOST)
     await page.getByRole('button', { name: 'User settings' }).click()
     await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
     await page.getByRole('tab', { name: 'Content' }).click()
@@ -169,7 +176,7 @@ test.describe('settings prefetch', () => {
     const counts = countRequests(page)
     await stubBoot(page) // IDENTITY has no contentLevel fields
     await signedIn(page)
-    await bootApp(page)
+    await bootApp(page, CONTENT_HOST)
 
     await expect
       .poll(() => counts.content, { timeout: 10000, message: 'fallback GET never issued' })
@@ -208,5 +215,26 @@ test.describe('settings prefetch', () => {
       timeout: 2000
     })
     expect(counts.whoami, 'refetched whoami the shell had already resolved').toBe(0)
+  })
+
+  test('an app that does not opt in shows no Content tab and never fetches the level', async ({
+    page
+  }) => {
+    // The task app makes no content determination, so the setting would change
+    // nothing there. Neither the tab nor the fallback GET may appear.
+    const counts = countRequests(page)
+    await stubBoot(page) // no contentLevel on whoami: the fallback GET is what is at stake
+    await signedIn(page)
+    await bootApp(page)
+
+    await page.getByRole('button', { name: 'User settings' }).click()
+    await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
+    await page.getByRole('tab', { name: 'Profile' }).click()
+    await expect(page.locator('.settings-popout__tier')).toHaveText('Friend')
+    await expect(page.getByRole('tab', { name: 'Content' })).toHaveCount(0)
+
+    // The tier renders only once the whole prefetch has settled, so a
+    // content-level request, had one been made, has already gone out.
+    expect(counts.content, 'fetched a content level the app never shows').toBe(0)
   })
 })

@@ -49,6 +49,11 @@ only that page creates sessions). "Connected": it self-wires to the
 hadoku.me edge-router via same-origin fetches, so it needs zero props. Injected
 automatically by `AppHeader`; can also be used standalone.
 
+The content-visibility level is opt-in: pass `contentVisibility` (on
+`AppHeader`, `settingsProps={{ contentVisibility: true }}`) only in an app that
+gates what it serves on `X-Hadoku-Content-Level`. Without it the Content tab is
+not shown and the level is never fetched.
+
 A rename or avatar change fires `NAME_EVENT` (`hadoku:name`) / `AVATAR_EVENT`
 (`hadoku:avatar`) on `window`. The gear also starts `relayIdentityChanges()`,
 which carries those events over `BroadcastChannel('hadoku:identity')` to every
