@@ -113,7 +113,7 @@ test.describe('settings prefetch', () => {
     // Populated in the same paint the panel appears in — no placeholder, no
     // round trip. A short timeout on purpose: this must be already-resolved
     // state, not a request that merely happens to be fast.
-    await page.getByRole('tab', { name: 'Profile' }).click()
+    await page.getByRole('tab', { name: 'Account' }).click()
     await expect(page.locator('.settings-popout__tier')).toHaveText('Friend', { timeout: 1000 })
     await page.getByRole('tab', { name: 'Content' }).click()
     await expect(page.locator('.settings-popout__pill')).toBeVisible({ timeout: 1000 })
@@ -133,7 +133,7 @@ test.describe('settings prefetch', () => {
 
     await page.getByRole('button', { name: 'User settings' }).click()
     await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
-    await page.getByRole('tab', { name: 'Profile' }).click()
+    await page.getByRole('tab', { name: 'Account' }).click()
     await expect(page.locator('.settings-popout__tier')).toHaveText('Friend', { timeout: 1000 })
 
     await page.waitForTimeout(1000)
@@ -210,7 +210,7 @@ test.describe('settings prefetch', () => {
     await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
 
     // Identity came from the shell's promise, not the network.
-    await page.getByRole('tab', { name: 'Profile' }).click()
+    await page.getByRole('tab', { name: 'Account' }).click()
     await expect(page.locator('.settings-popout__value').first()).toHaveText('Shell Identity', {
       timeout: 2000
     })
@@ -229,7 +229,7 @@ test.describe('settings prefetch', () => {
 
     await page.getByRole('button', { name: 'User settings' }).click()
     await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
-    await page.getByRole('tab', { name: 'Profile' }).click()
+    await page.getByRole('tab', { name: 'Account' }).click()
     await expect(page.locator('.settings-popout__tier')).toHaveText('Friend')
     await expect(page.getByRole('tab', { name: 'Content' })).toHaveCount(0)
 

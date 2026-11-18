@@ -1,5 +1,5 @@
 /**
- * The site's own settings tabs — Profile, Content and Account — split out of
+ * The site's own settings tabs — Account, Content and Connections — split out of
  * ConnectedSettings into a chunk of their own (#111). The gear, the prefetch,
  * the tab strip and the app's tabs stay in ConnectedSettings, which every page
  * of every app loads; this body is fetched when the popout first opens (and
@@ -37,7 +37,7 @@ const ServiceAccess = React.lazy(() =>
 // The avatar builder (with AvatarPicker and the whole cosmetics catalogue) and
 // the linked-accounts row are opened now and then, so each is its own chunk too:
 // the dialog's is fetched on the first hover/focus/click of Change, the linked
-// accounts' when the Account tab shows.
+// accounts' when the Connections tab shows.
 const loadAvatarDialog = () => import('./AvatarDialog')
 const AvatarDialog = React.lazy(() => loadAvatarDialog().then(m => ({ default: m.AvatarDialog })))
 const LinkedAccounts = React.lazy(() =>
@@ -72,7 +72,7 @@ function tierLabel(tier: Tier, verified: boolean): string {
 }
 
 export interface SettingsSiteTabsProps {
-  /** The popout's active tab; this renders only for profile, content, account. */
+  /** The popout's active tab; this renders only for account, content, connections. */
   activeTab: string
   /** The mount-time prefetch has not settled yet. */
   resolving: boolean
@@ -293,7 +293,9 @@ export function SettingsSiteTabs({
 
   return (
     <>
-      {activeTab === 'profile' && (
+      {/* Account: who you are here (tier, name, avatar), then how you sign
+          in, its security and, for a member, deletion. */}
+      {activeTab === 'account' && (
         <>
           {/* Access tier. While resolving, the state still says 'public' —
               rendering "Guest" there would be a wrong answer that corrects
@@ -413,62 +415,14 @@ export function SettingsSiteTabs({
               )}
             </section>
           )}
-        </>
-      )}
 
-      {/* Content visibility level. Held back until the first-open fetch
-              settles, so it lands in the same paint as the tier and name
-              rather than a round trip behind them. `content` is fetched
-              concurrently with whoami(), so by then it is already here. */}
-      {activeTab === 'content' && (
-        <section className="settings-popout__row settings-popout__row--stack">
-          <span className="settings-popout__label">Content visibility</span>
-          {content ? (
-            <>
-              <div
-                className="settings-popout__pill"
-                role="radiogroup"
-                aria-label="Content visibility level"
-              >
-                {Array.from({ length: content.maxLevel }, (_, i) => i + 1).map(lvl => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    role="radio"
-                    aria-checked={lvl === content.level}
-                    aria-label={`Level ${lvl}`}
-                    className={`settings-popout__seg${
-                      lvl <= content.level ? ' settings-popout__seg--filled' : ''
-                    }`}
-                    disabled={levelSaving}
-                    onClick={() => {
-                      pickLevel(lvl).catch(reportErr)
-                    }}
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
-              <span className="settings-popout__hint">
-                Higher levels reveal more mature content across apps. Level 1 is safe-for-everyone.
-              </span>
-            </>
-          ) : (
-            // Not "Loading…" — the fetch has already settled by the time
-            // this section renders at all, so a null here means it failed.
-            <span className="settings-popout__hint">Currently unavailable.</span>
-          )}
-        </section>
-      )}
-
-      {/* Switch key. Signs in inline through the SITE's sign-in client
-              (the /auth page's own code path), never a post of ours. A real
-              <form> with a username + current-password pair, so password
-              managers offer and save the key. */}
-      {activeTab === 'account' && (
-        <>
+          {/* Switch key. Signs in inline through the SITE's sign-in client
+                  (the /auth page's own code path), never a post of ours. A real
+                  <form> with a username + current-password pair, so password
+                  managers offer and save the key. */}
+          {/* The sign-in group, ruled off from the identity rows above. */}
           {keyFormOpen ? (
-            <section className="settings-popout__row settings-popout__row--stack">
+            <section className="settings-popout__row settings-popout__row--stack settings-popout__row--divided">
               <form
                 className="settings-popout__key-form"
                 onSubmit={e => {
@@ -550,7 +504,7 @@ export function SettingsSiteTabs({
               </form>
             </section>
           ) : (
-            <section className="settings-popout__row settings-popout__row--stack">
+            <section className="settings-popout__row settings-popout__row--stack settings-popout__row--divided">
               <span className="settings-popout__inline">
                 <span className="settings-popout__label settings-popout__label--grow">
                   Access key
@@ -610,18 +564,6 @@ export function SettingsSiteTabs({
             >
               <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
                 <Authenticator />
-              </React.Suspense>
-            </section>
-          )}
-
-          {/* Discord and Steam: linked here, so their pictures can be chosen in
-              the avatar dialog. Mounted with the Account tab: the read can refresh
-              a linked picture, which opening the gear on another tab must not cost. */}
-          {!resolving && userType !== 'public' && (
-            <section className="settings-popout__row settings-popout__row--stack settings-popout__row--divided">
-              <span className="settings-popout__label">Linked accounts</span>
-              <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
-                <LinkedAccounts />
               </React.Suspense>
             </section>
           )}
@@ -703,6 +645,62 @@ export function SettingsSiteTabs({
             </section>
           )}
         </>
+      )}
+      {/* Content visibility level. Held back until the first-open fetch
+              settles, so it lands in the same paint as the tier and name
+              rather than a round trip behind them. `content` is fetched
+              concurrently with whoami(), so by then it is already here. */}
+      {activeTab === 'content' && (
+        <section className="settings-popout__row settings-popout__row--stack">
+          <span className="settings-popout__label">Content visibility</span>
+          {content ? (
+            <>
+              <div
+                className="settings-popout__pill"
+                role="radiogroup"
+                aria-label="Content visibility level"
+              >
+                {Array.from({ length: content.maxLevel }, (_, i) => i + 1).map(lvl => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    role="radio"
+                    aria-checked={lvl === content.level}
+                    aria-label={`Level ${lvl}`}
+                    className={`settings-popout__seg${
+                      lvl <= content.level ? ' settings-popout__seg--filled' : ''
+                    }`}
+                    disabled={levelSaving}
+                    onClick={() => {
+                      pickLevel(lvl).catch(reportErr)
+                    }}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+              <span className="settings-popout__hint">
+                Higher levels reveal more mature content across apps. Level 1 is safe-for-everyone.
+              </span>
+            </>
+          ) : (
+            // Not "Loading…" — the fetch has already settled by the time
+            // this section renders at all, so a null here means it failed.
+            <span className="settings-popout__hint">Currently unavailable.</span>
+          )}
+        </section>
+      )}
+
+      {/* Discord and Steam: linked here, so their pictures can be chosen in
+          the avatar dialog. Mounted with this tab only: the read can refresh a
+          linked picture, which opening the gear on another tab must not cost.
+          The tab is offered only to someone signed in. */}
+      {activeTab === 'connections' && (
+        <section className="settings-popout__row settings-popout__row--stack">
+          <React.Suspense fallback={<span className="settings-popout__hint">…</span>}>
+            <LinkedAccounts />
+          </React.Suspense>
+        </section>
       )}
     </>
   )

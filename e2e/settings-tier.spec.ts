@@ -18,7 +18,7 @@ async function showTier(page: Page, body: Record<string, unknown>) {
   await page.waitForSelector('h1.app-header__title', { timeout: 10000 })
   await page.getByRole('button', { name: 'User settings' }).click()
   const panel = page.locator('.settings-popout__panel')
-  await panel.getByRole('tab', { name: 'Profile' }).click()
+  await panel.getByRole('tab', { name: 'Account' }).click()
   return panel.locator('.settings-popout__tier')
 }
 

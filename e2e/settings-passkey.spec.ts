@@ -78,11 +78,11 @@ const abandoned = (page: Page) => expect.poll(() => aborted(page)).toBe(1)
 const settle = (page: Page, msg: string) =>
   page.evaluate(m => (window as unknown as { __settle: (m: string) => void }).__settle(m), msg)
 
-async function openSettings(page: Page, tab: 'Account' | 'Profile' = 'Account') {
+async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'User settings' }).click()
   const panel = page.locator('.settings-popout__panel')
   await expect(panel).toBeVisible()
-  await panel.getByRole('tab', { name: tab }).click()
+  await panel.getByRole('tab', { name: 'Account' }).click()
   return panel
 }
 
@@ -509,7 +509,7 @@ test.describe('settings popout: display name', () => {
         w.__names.push((e as Event & { detail: unknown }).detail)
       )
     })
-    const panel = await openSettings(page, 'Profile')
+    const panel = await openSettings(page)
     await expect(panel.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0)
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
@@ -539,7 +539,7 @@ test.describe('settings popout: display name', () => {
           })
     )
     await load(page)
-    const panel = await openSettings(page, 'Profile')
+    const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
     await input.fill('Bob')
@@ -563,7 +563,7 @@ test.describe('settings popout: display name', () => {
       return route.fulfill({ status: 200, body: '{}' })
     })
     await load(page)
-    const panel = await openSettings(page, 'Profile')
+    const panel = await openSettings(page)
     await panel.getByRole('button', { name: 'Edit display name' }).click()
     const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
     await input.fill('nope')
@@ -588,7 +588,7 @@ test.describe('settings popout: a member deletes their own account', () => {
       })
     })
     await load(page)
-    const panel = await openSettings(page, 'Profile')
+    const panel = await openSettings(page)
     await expect(panel.getByText('Member', { exact: true })).toBeVisible()
     await panel.getByRole('tab', { name: 'Account' }).click()
 

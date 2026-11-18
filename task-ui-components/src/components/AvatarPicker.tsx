@@ -7,7 +7,7 @@
  * protocol cannot drift from the callback page).
  *
  * Everything happens in place: picking, uploading and removing are requests
- * from here. Discord and Steam are managed in the popout's Account tab
+ * from here. Discord and Steam are managed in the popout's Connections tab
  * (LinkedAccounts); one not linked yet can also be linked from its tile here,
  * with the same consent step, and its picture is then worn.
  *

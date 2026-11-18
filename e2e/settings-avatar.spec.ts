@@ -10,7 +10,7 @@ import { test, expect, type Page, type Route } from '@playwright/test'
  *   - picking a character writes it through prefs-api, and the page never
  *     navigates;
  *   - the character grid shows only while the picture is the character;
- *   - linking lives under Account (Linked accounts), and an unlinked Discord
+ *   - linking lives under Connections, and an unlinked Discord
  *     or Steam tile in the Picture tab offers the same consent step; either
  *     signs in through a POPUP opened inside the click, and re-reads the
  *     settings when the callback page reports back on the BroadcastChannel
@@ -97,7 +97,7 @@ async function openSettings(page: Page, userType: 'friend' | 'public') {
   await page.waitForSelector(APP_HEADER, { timeout: 15000 })
   await page.getByRole('button', { name: 'User settings' }).click()
   await page.waitForSelector('.settings-popout__panel', { state: 'visible', timeout: 5000 })
-  await page.getByRole('tab', { name: 'Profile' }).click()
+  await page.getByRole('tab', { name: 'Account' }).click()
   await expect(page.locator('.settings-popout__tier')).toBeVisible({ timeout: 5000 })
 }
 
@@ -224,10 +224,8 @@ test.describe('settings avatar row', () => {
     )
     await openSettings(page, 'friend')
     const url = page.url()
-    await page.getByRole('tab', { name: 'Account' }).click()
-    const links = page.locator('.settings-popout__row', {
-      has: page.getByText('Linked accounts', { exact: true })
-    })
+    await page.getByRole('tab', { name: 'Connections' }).click()
+    const links = page.getByRole('tabpanel')
     await links.getByRole('button', { name: 'Link' }).first().click()
     await expect(links.getByText(/identify/)).toBeVisible()
 

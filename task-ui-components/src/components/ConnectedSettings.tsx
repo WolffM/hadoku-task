@@ -7,8 +7,9 @@
  *   - avatar: picture and character, chosen in a dialog (AvatarDialog)
  *   - global content-visibility level (tiered pill → PUT /prefs/api/v1/content-level)
  *   - switch key (an inline sign-in form, on the site's own sign-in client)
+ *   - linked Discord and Steam accounts
  *
- * Those are grouped into tabs (Profile, Content, Account), followed by the
+ * Those are grouped into tabs (Account, Content, Connections), followed by the
  * app's own: `children` as one "App" tab, `appTabs` as one tab each. The open
  * tab is remembered per user and per app (useSettingsTab, @wolffm/themes).
  *
@@ -45,7 +46,7 @@ import {
 import { PASSKEY_PULSE_CLASS, reportErr } from './settingsShared'
 import { relayIdentityChanges } from '../lib/identityRelay'
 
-// The Profile, Content and Account tab bodies are most of this component, and
+// The Account, Content and Connections tab bodies are most of this component, and
 // opened now and then, but this module is on every page of every app through
 // the site's shared vendor bundle (#111). So they are a chunk of their own,
 // fetched when the popout opens and preloaded on the gear's hover or focus.
@@ -53,7 +54,7 @@ const loadSiteTabs = () => import('./SettingsSiteTabs')
 const SettingsSiteTabs = React.lazy(() =>
   loadSiteTabs().then(m => ({ default: m.SettingsSiteTabs }))
 )
-const SITE_TABS = new Set(['profile', 'content', 'account'])
+const SITE_TABS = new Set(['account', 'content', 'connections'])
 function preloadSiteTabs() {
   loadSiteTabs().catch(reportErr)
 }
@@ -495,17 +496,18 @@ export function ConnectedSettings({
   // The site's own groups first, then the app's. App ids are namespaced so an
   // app tab called "account" can never collide with the site's.
   const tabs: { id: string; label: string; dot?: boolean }[] = [
-    { id: 'profile', label: 'Profile' },
-    ...(!resolving && showContentPill ? [{ id: 'content', label: 'Content' }] : []),
     // The gear's dot asks for a passkey; this one says where Save passkey is.
     { id: 'account', label: 'Account', dot: needsPasskey },
+    ...(!resolving && showContentPill ? [{ id: 'content', label: 'Content' }] : []),
+    // Linking needs a signed-in person to attach the account to.
+    ...(!resolving && userType !== 'public' ? [{ id: 'connections', label: 'Connections' }] : []),
     ...(children ? [{ id: 'app:', label: 'App' }] : []),
     ...(appTabs ?? []).map(t => ({ id: `app:${t.id}`, label: t.label }))
   ]
   const tabIds = tabs.map(t => t.id)
   // Nothing remembered: open on the app's first tab, which is usually why the
   // gear was clicked inside an app.
-  const defaultTab = tabIds.find(id => id.startsWith('app:')) ?? 'profile'
+  const defaultTab = tabIds.find(id => id.startsWith('app:')) ?? 'account'
   const activeTab =
     [pickedTab, savedTab].find((id): id is string => id !== null && tabIds.includes(id)) ??
     defaultTab

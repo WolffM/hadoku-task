@@ -9,11 +9,11 @@ import { PREFS_BASE, asFreshUser, prefsUp, pointPrefsAtLocalStack } from './help
  * Runs against the REAL prefs-api, because "remembered" means the
  * value survives a reload through the server, not only the SDK's local cache.
  * The task app passes `children`, no `appTabs` and no `contentVisibility`, so
- * its strip is Profile · Account · App.
+ * its strip is Account · Connections · App.
  */
 
 const PORTFOLIO_ROW = `${PREFS_BASE}/api/v1/portfolio`
-const TABS = ['Profile', 'Account', 'App']
+const TABS = ['Account', 'Connections', 'App']
 
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'User settings' }).click()
@@ -63,12 +63,16 @@ test.describe('settings tabs', () => {
     // The app's own section, and none of the site's rows.
     await expect(tabpanel.locator('.settings-popout__tier')).toHaveCount(0)
 
-    await panel.getByRole('tab', { name: 'Profile' }).click()
-    await expect(tabpanel.locator('.settings-popout__tier')).toHaveText('Friend')
-    await expect(tabpanel.getByRole('button', { name: 'Switch key' })).toHaveCount(0)
-
+    // Account holds who you are and how you sign in, in that order.
     await panel.getByRole('tab', { name: 'Account' }).click()
+    await expect(tabpanel.locator('.settings-popout__tier')).toHaveText('Friend')
     await expect(tabpanel.getByRole('button', { name: 'Switch key' })).toBeVisible()
+
+    // Connections holds the linked accounts and nothing of Account's.
+    await panel.getByRole('tab', { name: 'Connections' }).click()
+    await expect(tabpanel.getByText(/^Discord/)).toBeVisible()
+    await expect(tabpanel.locator('.settings-popout__tier')).toHaveCount(0)
+    await expect(tabpanel.getByRole('button', { name: 'Switch key' })).toHaveCount(0)
   })
 
   test('arrow keys, Home and End move between tabs and open them', async ({ page }) => {
@@ -78,17 +82,17 @@ test.describe('settings tabs', () => {
     await selected(page).focus()
 
     await page.keyboard.press('ArrowRight') // wraps past the end
-    await expect(selected(page)).toHaveText('Profile')
+    await expect(selected(page)).toHaveText('Account')
     await expect(selected(page)).toBeFocused()
 
     await page.keyboard.press('ArrowLeft') // and back past the start
     await expect(selected(page)).toHaveText('App')
 
     await page.keyboard.press('Home')
-    await expect(selected(page)).toHaveText('Profile')
-    await page.keyboard.press('ArrowRight')
     await expect(selected(page)).toHaveText('Account')
     await expect(page.getByRole('button', { name: 'Switch key' })).toBeVisible()
+    await page.keyboard.press('ArrowRight')
+    await expect(selected(page)).toHaveText('Connections')
 
     await page.keyboard.press('End')
     await expect(selected(page)).toHaveText('App')

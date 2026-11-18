@@ -33,7 +33,7 @@ async function boot(
 ) {
   const userType = who.userType ?? 'friend'
   await page.route('**/prefs/api/**', route => json(route, {}))
-  // The Account tab mounts Linked accounts, which reads the avatar settings.
+  // Stubbed for the Connections tab, whose Linked accounts reads the avatar settings.
   await page.route('**/prefs/api/v1/_avatar', route =>
     json(route, { linked: {}, providers: { discord: true, steam: true } })
   )
@@ -152,7 +152,7 @@ async function openAccount(page: Page, userType = 'friend') {
   const panel = page.locator('.settings-popout__panel')
   await expect(panel).toBeVisible()
   await panel.getByRole('tab', { name: 'Account' }).click()
-  await expect(panel.getByText('Linked accounts', { exact: true })).toBeVisible({ timeout: 5000 })
+  await expect(panel.getByRole('button', { name: 'Switch key' })).toBeVisible({ timeout: 5000 })
   return panel
 }
 

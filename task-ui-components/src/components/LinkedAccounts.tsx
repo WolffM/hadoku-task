@@ -1,10 +1,10 @@
 /**
  * LinkedAccounts — Discord and Steam, linked and unlinked from the settings
- * popout's Account tab (operator, 2026-11-02: linking is an account matter, not
- * part of changing the avatar). A linked account's picture then shows up as a
- * choice in the avatar dialog's Picture tab.
+ * popout's Connections tab (operator, 2026-11-02: linking is an account matter,
+ * not part of changing the avatar; 2026-11-18: its own tab). A linked account's
+ * picture then shows up as a choice in the avatar dialog's Picture tab.
  *
- * Mounted only with the Account tab, never when the gear opens elsewhere: the
+ * Mounted only with the Connections tab, never when the gear opens elsewhere: the
  * read can refresh a linked picture from Discord or Steam, which opening the
  * gear must not cost (settings-prefetch e2e).
  *

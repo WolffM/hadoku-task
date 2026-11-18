@@ -80,7 +80,7 @@ async function openDialog(page: Page) {
   await page.goto('/?userType=friend')
   await page.waitForSelector('h1.app-header__title', { timeout: 15000 })
   await page.getByRole('button', { name: 'User settings' }).click()
-  await page.getByRole('tab', { name: 'Profile' }).click()
+  await page.getByRole('tab', { name: 'Account' }).click()
   await page.getByRole('button', { name: 'Change' }).click()
   const dialog = page.getByRole('dialog', { name: 'Avatar' })
   await expect(dialog.getByRole('tab', { name: /Overlay/ })).toBeVisible()

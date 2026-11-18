@@ -61,7 +61,7 @@ test('a rename in the gear reaches another tab of the same browser, once, with n
 
   await renaming.getByRole('button', { name: 'User settings' }).click()
   const panel = renaming.locator('.settings-popout__panel')
-  await panel.getByRole('tab', { name: 'Profile' }).click()
+  await panel.getByRole('tab', { name: 'Account' }).click()
   await panel.getByRole('button', { name: 'Edit display name' }).click()
   const input = panel.locator('section', { hasText: 'Display name' }).getByRole('textbox')
   await input.fill('Alice W')
