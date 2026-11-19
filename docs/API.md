@@ -1341,7 +1341,7 @@ interface StatsFile {
 
 For complete integration examples with Express, Hono, and Cloudflare Workers, see:
 
-- [README.md - Installation](../README.md#installation)
+- [README.md - Installation](../README.md#-installation)
 - [ARCHITECTURE.md - Server Architecture](ARCHITECTURE.md#server-architecture)
 
 ---
