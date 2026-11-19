@@ -34,6 +34,9 @@ import {
   verifyRequestOpen
 } from '../../task-ui-components/src/lib/verifyRequest'
 
+/** The whole ladder (settingsClient.ts `Tier`); every case below but guest is cut from it. */
+const LADDER = ['public', 'guest', 'member', 'friend', 'service', 'wife', 'admin'] as const
+
 let failures = 0
 let checks = 0
 
@@ -71,7 +74,7 @@ check('403 no body', isVerifyRefusal(403, null), false)
 check('403 string body', isVerifyRefusal(403, 'MEMBER_NOT_VERIFIED'), false)
 
 console.log('\noffersVerification: the guest tier and nothing else')
-for (const tier of ['public', 'member', 'friend', 'service', 'wife', 'admin']) {
+for (const tier of LADDER.filter(t => t !== 'guest')) {
   check(`${tier}: no`, offersVerification(tier), false)
 }
 check('guest: yes', offersVerification('guest'), true)
@@ -258,7 +261,7 @@ console.log('\nkeepAccountDue: a guest with no passkey, not snoozed')
   check('guest with a passkey', keepAccountDue({ ...base, passkeys: 1 }), false)
   check('passkey count unknown', keepAccountDue({ ...base, passkeys: null }), false)
   check('saved one on this page', keepAccountDue({ ...base, passkeySaved: true }), false)
-  for (const tier of ['public', 'member', 'friend', 'admin']) {
+  for (const tier of LADDER.filter(t => t !== 'guest')) {
     check(`${tier}: never`, keepAccountDue({ ...base, userType: tier }), false)
   }
   const until = keepAccountSnoozeUntil(now)
