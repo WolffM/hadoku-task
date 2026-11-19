@@ -70,8 +70,8 @@ importers:
         specifier: ^1.0.18
         version: 1.0.18
       '@wolffm/e2e-harness':
-        specifier: ^0.2.55
-        version: 0.2.55(@playwright/test@1.60.0)
+        specifier: ^0.2.56
+        version: 0.2.56(@playwright/test@1.60.0)
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
@@ -1111,8 +1111,8 @@ packages:
     resolution: {integrity: sha512-ZnW1nQ9AkF7SiFWXM0Up+BnR7IuYnMZiTvJmiw8eZZ67h3UcUx2Ks4Zf8QxRpiAp6IMP85wTTLLK0HnGK0cMwQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.18/a5d75f88b8a3a2e01c2be28c4788fe17d738113d}
     engines: {node: '>=18'}
 
-  '@wolffm/e2e-harness@0.2.55':
-    resolution: {integrity: sha512-3CdX/yVuiWsciPaYfj9h7qRXvsXZsgied+VjFYupr7SBESeO9rhjKqvQhgXj2H23iheqg42Le2taVIrKTpRUeg==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.55/38e7a4613709a0efe342ca0b09fed3ea20bdc61b}
+  '@wolffm/e2e-harness@0.2.56':
+    resolution: {integrity: sha512-ZgUBmDz8wr7JbtKpuMcIyszBIMb5TOcJSxI6U8p8zptsuSj/gozPN/3zzo9WfwxI3b3pn7HPbAALDJ1CJZeOqA==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.56/fee0b9e5822bc9c1ed684ae8327ab12efd830faf}
     engines: {node: '>=18'}
     peerDependencies:
       '@playwright/test': '>=1.50.0'
@@ -1128,8 +1128,8 @@ packages:
       react: ^18.0.0 || ^19.0.0
       zod: ^4.0.0
 
-  '@wolffm/shared-vendor@0.1.3':
-    resolution: {integrity: sha512-/E3VMZtWS5yYOlY2w+wQpqAwl+CO2sLCMxBz+RikK8Eaz7mxx24sgYxGkjj4v7dSK1UMZl45EFBMuKwuITBsJw==, tarball: https://npm.pkg.github.com/download/@wolffm/shared-vendor/0.1.3/b7733a17a2945b9f60c524c9c72da9066013373c}
+  '@wolffm/shared-vendor@0.1.4':
+    resolution: {integrity: sha512-Gr1LhP6SEeY3vKlxwL/D24r7VqkEGdLKU1Bsh7zR8Pc2TxFZMXHdjD20laWjjYjgi9Bz4pciBwV6UmIbqCvkMQ==, tarball: https://npm.pkg.github.com/download/@wolffm/shared-vendor/0.1.4/c5648d41d2bf592c48e823f79bb2e1dabb9ae4cc}
     engines: {node: '>=20'}
 
   '@wolffm/worker-utils@1.7.32':
@@ -3404,10 +3404,10 @@ snapshots:
 
   '@wolffm/catalogue@1.0.18': {}
 
-  '@wolffm/e2e-harness@0.2.55(@playwright/test@1.60.0)':
+  '@wolffm/e2e-harness@0.2.56(@playwright/test@1.60.0)':
     dependencies:
       '@playwright/test': 1.60.0
-      '@wolffm/shared-vendor': 0.1.3
+      '@wolffm/shared-vendor': 0.1.4
 
   '@wolffm/logger@1.4.4': {}
 
@@ -3421,7 +3421,7 @@ snapshots:
       react: 19.2.8
       zod: 4.6.7
 
-  '@wolffm/shared-vendor@0.1.3':
+  '@wolffm/shared-vendor@0.1.4':
     dependencies:
       esbuild: 0.28.2
 
