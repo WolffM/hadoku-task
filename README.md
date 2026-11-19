@@ -1,5 +1,7 @@
 ﻿# Hadoku Task Manager
 
+**Guide:** [overview](docs/guide/index.md) · [features](docs/guide/features.md) · [contributing](docs/guide/contributing.md) · [history](docs/guide/history.md) · [trivia](docs/guide/trivia.md)
+
 ## A minimalist, portable task tracking micro-frontend
 
 Live at: <https://hadoku.me/task/>
