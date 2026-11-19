@@ -7,8 +7,8 @@
  * The UI end of both is e2e/account-prompts.spec.ts. What is here is the part
  * that fails quietly: a trigger that fires on the wrong 403 pops a dialog at a
  * friend; one that misses the code leaves a guest at a wall with no way past;
- * a due rule keyed on `verified` instead of the guest tier shows both prompts
- * to every unverified member before the platform has minted a single guest.
+ * a due rule keyed on anything but the guest tier shows both prompts to the
+ * wrong people.
  */
 import {
   isVerifyRefusal,

@@ -29,7 +29,7 @@ export interface ThrottleLimits {
 
 /**
  * The tiers the throttle middleware actually calls `checkThrottle` with —
- * anonymous and machine callers. Human tiers (friend, wife, admin) are exempt,
+ * anonymous, guest and machine callers. Human tiers (member and up) are exempt,
  * so they never reach it and deliberately have no ceiling here.
  *
  * Naming the subset rather than widening to the full tier union is what keeps
@@ -49,19 +49,14 @@ function isThrottledTier(tier: string): tier is ThrottledTier {
  *
  * A policy, not an access gate, and not monotonic in rank: `service` outranks
  * `friend` yet is throttled (a runaway bot is bounded at its own generous
- * ceiling), while humans the operator knows are exempt. A member below friend
- * is a human only once the operator has verified them (`X-Hadoku-Verified`,
- * the same test storage-access.ts uses); an unverified member is a stranger
- * with a passkey and gets the anonymous ceiling. Until 2026-11-10 the edge
- * sent an unverified member here as `public`; it now sends every member as
- * `member`, and this keeps them throttled.
+ * ceiling), while humans the operator knows are exempt. That is member and up:
+ * the edge sends `member` only for an account the operator verified (the same
+ * test storage-access.ts uses). A guest is a stranger with a passkey and gets
+ * the anonymous ceiling.
  */
-export function throttleTierOf(auth: {
-  userType: string
-  verified?: boolean
-}): ThrottledTier | null {
+export function throttleTierOf(auth: { userType: string }): ThrottledTier | null {
   if (isThrottledTier(auth.userType)) return auth.userType
-  if (!tierAtLeast(auth, 'friend') && auth.verified !== true) return 'public'
+  if (!tierAtLeast(auth, 'member')) return 'public'
   return null
 }
 

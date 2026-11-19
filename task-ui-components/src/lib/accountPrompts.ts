@@ -10,9 +10,9 @@
  *   - the keep-your-account banner: a guest with no passkey loses the account
  *     with the cookie, so after their first click they are asked to save one.
  *
- * Both are keyed on `userType === 'guest'` and nothing else. Until the
- * platform mints guests, an unverified account still arrives as `member` with
- * `verified: false`, and neither prompt may appear for it.
+ * Both are keyed on `userType === 'guest'` and nothing else: the edge sends
+ * `member` only once the operator verified the account, so the tier alone says
+ * who is unverified.
  */
 
 /** What every backend answers a guest with when the action needs a verified account. */

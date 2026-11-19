@@ -82,7 +82,7 @@ const requestVerification = (page: Page, reason?: string) =>
 
 test.describe('verify dialog', () => {
   test('a 403 MEMBER_NOT_VERIFIED on any fetch opens it for a guest', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await refusal(page, { error: 'Forbidden', code: 'MEMBER_NOT_VERIFIED' })
     await load(page)
@@ -95,7 +95,7 @@ test.describe('verify dialog', () => {
   })
 
   test('any other 403 opens nothing', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await refusal(page, { error: 'Forbidden', code: 'FORBIDDEN' })
     await load(page)
     expect(await hitRefusal(page)).toBe(403)
@@ -105,12 +105,8 @@ test.describe('verify dialog', () => {
 
   for (const [why, identity] of [
     ['public', { valid: false, userType: 'public', name: null }],
-    [
-      'an unverified member (before the platform mints guests)',
-      { userType: 'member', verified: false }
-    ],
-    ['a verified member', { userType: 'member', verified: true }],
-    ['a friend', { userType: 'friend', verified: true }]
+    ['a member', { userType: 'member' }],
+    ['a friend', { userType: 'friend' }]
   ] as const) {
     test(`nothing for ${why}`, async ({ page }) => {
       await as(page, identity)
@@ -124,7 +120,7 @@ test.describe('verify dialog', () => {
   }
 
   test('requestVerification opens it titled by the reason', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await load(page)
     await requestVerification(page, 'Saving decks')
@@ -134,7 +130,7 @@ test.describe('verify dialog', () => {
   })
 
   test('focus stays inside, Escape closes, Not now closes', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await load(page)
     await requestVerification(page)
@@ -154,7 +150,7 @@ test.describe('verify dialog', () => {
   })
 
   test('after Not now, a repeated refusal waits for the next action', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await refusal(page, { code: 'MEMBER_NOT_VERIFIED' })
     await load(page)
@@ -170,7 +166,7 @@ test.describe('verify dialog', () => {
   })
 
   test('I already have an account signs in and comes back here', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await page.route('**/auth?**', route =>
       route.fulfill({ status: 200, contentType: 'text/html', body: '<p>auth</p>' })
@@ -190,7 +186,7 @@ test.describe('verify dialog', () => {
   })
 
   test('Ask to be verified posts the reason, then says it was sent', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     const posts = await verifyRequestRoute(page)
     await load(page)
     await requestVerification(page, 'Saving decks')
@@ -201,7 +197,7 @@ test.describe('verify dialog', () => {
   })
 
   test('a request already sent says so (fresh: false)', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page, {
       post: { status: 200, body: { requested: true, fresh: false, requestedAt: 1 } }
     })
@@ -213,7 +209,7 @@ test.describe('verify dialog', () => {
   })
 
   test('an open request shows Requested in place of the button', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page, { open: true })
     await load(page)
     await requestVerification(page)
@@ -232,8 +228,8 @@ test.describe('verify dialog', () => {
         contentType: 'application/json',
         body: JSON.stringify(
           verifiedNow
-            ? { valid: true, userType: 'member', verified: true, name: 'Player 12345', passkeys: 1 }
-            : { valid: true, userType: 'guest', verified: false, name: 'Player 12345', passkeys: 1 }
+            ? { valid: true, userType: 'member', name: 'Player 12345', passkeys: 1 }
+            : { valid: true, userType: 'guest', name: 'Player 12345', passkeys: 1 }
         )
       })
     })
@@ -249,11 +245,11 @@ test.describe('verify dialog', () => {
     await page.getByRole('button', { name: 'User settings' }).click()
     const panel = page.locator('.settings-popout__panel')
     await panel.getByRole('tab', { name: 'Account' }).click()
-    await expect(panel.locator('.settings-popout__tier')).toHaveText('Member-verified')
+    await expect(panel.locator('.settings-popout__tier')).toHaveText('Member')
   })
 
   test('the account tab: "Guest · Link your account" opens it', async ({ page }) => {
-    await as(page, { userType: 'guest', verified: false })
+    await as(page, { userType: 'guest' })
     await verifyRequestRoute(page)
     await load(page)
     await page.getByRole('button', { name: 'User settings' }).click()
@@ -267,7 +263,7 @@ test.describe('verify dialog', () => {
   })
 
   test('no Link your account line for a member', async ({ page }) => {
-    await as(page, { userType: 'member', verified: false })
+    await as(page, { userType: 'member' })
     await load(page)
     await page.getByRole('button', { name: 'User settings' }).click()
     const panel = page.locator('.settings-popout__panel')
@@ -288,7 +284,6 @@ test.describe('keep-your-account banner', () => {
     // A real userId: the prefs client keys the person's row by it.
     await as(page, {
       userType: 'guest',
-      verified: false,
       passkeys: 0,
       userId: await asFreshUser(page)
     })
@@ -311,7 +306,7 @@ test.describe('keep-your-account banner', () => {
     browser
   }) => {
     const userId = await asFreshUser(page)
-    const guest = { userType: 'guest', verified: false, passkeys: 0, userId }
+    const guest = { userType: 'guest', passkeys: 0, userId }
     await as(page, guest)
     await load(page)
     await page.locator(APP_HEADER).click()
@@ -359,7 +354,6 @@ test.describe('keep-your-account banner', () => {
     // A real userId: the prefs client keys the person's row by it.
     await as(page, {
       userType: 'guest',
-      verified: false,
       passkeys: 0,
       userId: await asFreshUser(page)
     })
@@ -382,9 +376,9 @@ export async function addPasskey() { window.__added = (window.__added || 0) + 1;
   })
 
   for (const [why, identity] of [
-    ['a guest with a passkey', { userType: 'guest', verified: false, passkeys: 1 }],
-    ['an unverified member with none', { userType: 'member', verified: false, passkeys: 0 }],
-    ['a friend with none', { userType: 'friend', verified: true, passkeys: 0 }],
+    ['a guest with a passkey', { userType: 'guest', passkeys: 1 }],
+    ['a member with none', { userType: 'member', passkeys: 0 }],
+    ['a friend with none', { userType: 'friend', passkeys: 0 }],
     ['public', { valid: false, userType: 'public', name: null, passkeys: 0 }]
   ] as const) {
     test(`never for ${why}`, async ({ page }) => {

@@ -67,19 +67,12 @@ const TIER_LABEL: Record<Tier, string> = {
   public: 'Not signed in'
 }
 
-/** A member the operator made or verified reads as such; every other tier is verified by rank. */
-function tierLabel(tier: Tier, verified: boolean): string {
-  return tier === 'member' && verified ? 'Member-verified' : TIER_LABEL[tier]
-}
-
 export interface SettingsSiteTabsProps {
   /** The popout's active tab; this renders only for account, content, connections. */
   activeTab: string
   /** The mount-time prefetch has not settled yet. */
   resolving: boolean
   userType: Tier
-  /** The operator verified this person (whoami.verified). */
-  verified: boolean
   displayName: string | null
   /** A rename was saved; the shell keeps the name across opens. */
   onNameSaved: (name: string | null) => void
@@ -107,7 +100,6 @@ export function SettingsSiteTabs({
   activeTab,
   resolving,
   userType,
-  verified,
   displayName,
   onNameSaved,
   onNameChange,
@@ -314,7 +306,7 @@ export function SettingsSiteTabs({
               // have, or ask (the verify dialog).
               <span className="settings-popout__inline">
                 <span className="settings-popout__tier settings-popout__tier--guest">
-                  {tierLabel(userType, verified)}
+                  {TIER_LABEL[userType]}
                 </span>
                 <span aria-hidden="true">·</span>
                 <button
@@ -328,7 +320,7 @@ export function SettingsSiteTabs({
               </span>
             ) : (
               <span className={`settings-popout__tier settings-popout__tier--${userType}`}>
-                {tierLabel(userType, verified)}
+                {TIER_LABEL[userType]}
               </span>
             )}
           </section>

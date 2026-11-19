@@ -69,7 +69,6 @@ interface WhoamiBody {
   maxContentLevel?: number
   passkeys?: number
   serviceGrants?: number
-  verified?: boolean
 }
 
 // Hard timeout on every settings request. Without it, a request throttled by
@@ -393,12 +392,6 @@ export interface SettingsSnapshot {
   passkeys: number | null
   /** Service identities this person may mint for; 0 when unknown. */
   serviceGrants: number
-  /**
-   * The operator verified this person (the edge's `isVerified`): every tier
-   * above member, and a member the operator made or verified. False when
-   * unknown, as the edge reads a missing flag.
-   */
-  verified: boolean
 }
 
 /** Identity the host already knows, so we don't ask the server for it again. */
@@ -518,8 +511,7 @@ async function resolveSettings(hints: SettingsPrefetchHints): Promise<SettingsSn
     identity,
     content,
     passkeys: passkeysFromWhoami(body),
-    serviceGrants: body?.valid && typeof body.serviceGrants === 'number' ? body.serviceGrants : 0,
-    verified: body?.valid === true && body.verified === true
+    serviceGrants: body?.valid && typeof body.serviceGrants === 'number' ? body.serviceGrants : 0
   }
 }
 

@@ -30,7 +30,7 @@ export const DOMAIN_ERROR_CODES = [
   // hand-rolled emitter went when POST /boards/{ref}/repo became a createRoute.)
   'FORBIDDEN', // 403 — readonly grantee, or not the board owner
   'IDENTITY_REQUIRED', // 401 — no edge-stamped identity: no server storage (#107)
-  'MEMBER_NOT_VERIFIED', // 403 — a member the operator has not verified: no server storage
+  'MEMBER_NOT_VERIFIED', // 403 — a guest (not yet verified to member): no server storage
   'RATE_LIMITED', // 429 — throttled (carries `retryAfter`)
   // Lookup
   'BOARD_NOT_FOUND', // 404

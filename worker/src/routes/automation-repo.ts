@@ -108,7 +108,7 @@ export function registerRepoValidateRoute(app: OpenAPIHono<AppContext>) {
   })
   app.openapi(repoValidateRoute, async c => {
     const auth = c.get('authContext')
-    // Only a verified member gets this far below friend (root refuses anyone
+    // Only a member gets this far below friend (root refuses anyone
     // without storage); repo automation stays friend and up.
     if (!tierAtLeast(auth, 'friend')) {
       return c.json(

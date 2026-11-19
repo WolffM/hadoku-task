@@ -211,7 +211,6 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
           auth.legacyId = auth.sessionId
         }
         auth.sessionId = userId
-        auth.verified = c.req.header('X-Hadoku-Verified') === '1'
       }
     }
     return next()
@@ -232,9 +231,9 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
     // Skip throttling for:
     // - Health check endpoint (monitoring)
     // - Validate-key endpoint - needed for initial connection, users don't have session yet
-    // - Humans the operator knows: friend and up, and a verified member
+    // - Humans the operator knows: member and up (a member is verified)
     // Which ceiling everyone else gets is throttleTierOf's (throttle.ts):
-    // anonymous callers and unverified members the public one, `service` its own.
+    // anonymous callers and guests the public one, `service` its own.
     const skipThrottlePaths = ['/task/api/health', '/task/api/validate-key']
     const ceiling = throttleTierOf(auth)
     if (skipThrottlePaths.includes(c.req.path) || ceiling === null) {
@@ -348,7 +347,7 @@ export function createTaskHandler(): OpenAPIHono<AppContext> {
   for (const [method, path, group] of ROUTE_MANIFEST) {
     const gated = STORAGE_GROUPS.has(group)
     app.on(method, path, async c => {
-      // No server storage without a verified identity (#107) — refused before
+      // No server storage below member (#107) — refused before
       // the group even loads.
       const refused = gated ? storageRefusal(c.get('authContext')) : null
       if (refused) return c.json(refused.body, refused.status)

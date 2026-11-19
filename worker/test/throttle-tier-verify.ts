@@ -1,7 +1,7 @@
 /**
  * Who the throttle bounds (throttle.ts throttleTierOf): anonymous callers and
- * unverified members at the public ceiling, `service` at its own, and humans
- * the operator knows (friend and up, a verified member) not at all.
+ * guests at the public ceiling, `service` at its own, and humans the operator
+ * knows (member and up — a member is verified) not at all.
  *
  * Run via: pnpm run test:worker  (or `... throttle-tier-verify`).
  */
@@ -17,12 +17,10 @@ function check(label: string, actual: unknown, expected: unknown) {
 }
 
 check('public', throttleTierOf({ userType: 'public' }), 'public')
-check('an unverified member', throttleTierOf({ userType: 'member', verified: false }), 'public')
-check('a member with no verified flag', throttleTierOf({ userType: 'member' }), 'public')
 check('a guest', throttleTierOf({ userType: 'guest' }), 'public')
-check('a verified member', throttleTierOf({ userType: 'member', verified: true }), null)
+check('a member', throttleTierOf({ userType: 'member' }), null)
 check('friend', throttleTierOf({ userType: 'friend' }), null)
-check('service', throttleTierOf({ userType: 'service', verified: true }), 'service')
+check('service', throttleTierOf({ userType: 'service' }), 'service')
 check('wife', throttleTierOf({ userType: 'wife' }), null)
 check('admin', throttleTierOf({ userType: 'admin' }), null)
 check('an unknown tier ranks as public', throttleTierOf({ userType: 'stranger' }), 'public')

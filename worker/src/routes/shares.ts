@@ -82,7 +82,7 @@ export function createShareRoutes() {
   app.openapi(searchRoute, async c => {
     const auth = c.get('authContext')
     // Only people with storage may enumerate names (avoids anonymous scraping):
-    // a verified member shares boards exactly as a friend does.
+    // a member shares boards exactly as a friend does.
     if (!hasStorage(auth)) {
       return c.json({ users: [] }, 200)
     }

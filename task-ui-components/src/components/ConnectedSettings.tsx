@@ -485,8 +485,6 @@ export function HeaderSettings({
   const [avatarOpen, setAvatarOpen] = useState(false)
   // Service identities this person may mint for (whoami.serviceGrants).
   const [serviceGrants, setServiceGrants] = useState(0)
-  // The operator verified this person (whoami.verified); a member shows it.
-  const [verified, setVerified] = useState(false)
 
   // Content level
   const [content, setContent] = useState<ContentLevelState | null>(null)
@@ -621,16 +619,9 @@ export function HeaderSettings({
   // remounting it) does not multiply requests, and on hadoku.me the identity
   // half is free — it awaits the whoami the shell already had in flight.
   const applySnapshot = useCallback(
-    ({
-      identity,
-      content: state,
-      passkeys,
-      serviceGrants: grants,
-      verified: v
-    }: SettingsSnapshot) => {
+    ({ identity, content: state, passkeys, serviceGrants: grants }: SettingsSnapshot) => {
       setPasskeyCount(passkeys)
       setServiceGrants(grants)
-      setVerified(v)
       // Props stay authoritative: the host passed them because it can see an
       // identity this component can't resolve for itself.
       if (userTypeProp === undefined) {
@@ -841,7 +832,6 @@ export function HeaderSettings({
                 activeTab={activeTab}
                 resolving={resolving}
                 userType={userType}
-                verified={verified}
                 displayName={displayName}
                 onNameSaved={setLocalName}
                 onNameChange={onNameChange}

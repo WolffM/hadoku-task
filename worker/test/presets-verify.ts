@@ -384,22 +384,21 @@ async function main() {
       envWith([{ id: 'p', label: 'P', url: 'https://p.test/wrapped' }])
     )
     check('public caller → 401', pub.status === 401, `status=${pub.status}`)
-    const verifiedMember = await app.request(
+    const member = await app.request(
       'http://localhost/task/api/automation/presets',
       {
         headers: {
           'X-Edge-Auth': EDGE_SECRET,
           'X-Hadoku-Tier': 'member',
           'X-User-Key': 'member-key',
-          'X-User-Id': 'member-uid',
-          'X-Hadoku-Verified': '1'
+          'X-User-Id': 'member-uid'
         }
       },
       envWith([{ id: 'p', label: 'P', url: 'https://p.test/wrapped' }])
     )
-    const vm = (await verifiedMember.json()) as { presets: PresetRow[]; sources: SourceRow[] }
-    check('verified member → no presets (automation stays friend+)', vm.presets.length === 0)
-    check('verified member → no sources', vm.sources.length === 0)
+    const vm = (await member.json()) as { presets: PresetRow[]; sources: SourceRow[] }
+    check('member → no presets (automation stays friend+)', vm.presets.length === 0)
+    check('member → no sources', vm.sources.length === 0)
   }
 
   // ────────────────────────────────────────────────────────────────────────────

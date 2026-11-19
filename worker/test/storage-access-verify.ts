@@ -4,10 +4,10 @@
  *
  *   - no edge-stamped userId (anonymous; a member the edge withheld) → 401,
  *     and nothing is written under the old shared `'public'` owner;
- *   - an unverified member → 403;
- *   - a verified member → stores and reads back, exactly as a friend does,
- *     including the share-name search a friend gets;
- *   - friend and up → unchanged, with or without the verified header;
+ *   - a guest (an account the operator has not verified) → 403;
+ *   - a member (the edge sends `member` only once verified) → stores and
+ *     reads back, exactly as a friend does, including the share-name search;
+ *   - every tier from member up → storage, read off the tier alone;
  *   - routes that need no identity (health, validate-key, openapi) stay open.
  *
  * Run via: pnpm run test:worker  (or `... storage-access-verify`).
@@ -55,7 +55,6 @@ const app = createTaskHandler()
 interface Caller {
   tier: string
   userId?: string
-  verified?: boolean
 }
 
 async function req(
@@ -73,7 +72,6 @@ async function req(
     headers['X-User-Key'] = `key-${who.userId}`
     headers['X-User-Id'] = who.userId
   }
-  if (who.verified) headers['X-Hadoku-Verified'] = '1'
   const res = await app.request(
     'http://localhost' + path,
     { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined },
@@ -105,12 +103,9 @@ function section(t: string) {
 }
 
 const ANON: Caller = { tier: 'public' }
-const MEMBER: Caller = { tier: 'member', userId: 'member-uid' }
-// A guest is an account the visitor made: refused exactly where an unverified
-// member is, and a verified flag alone does not lift it (only a member's does).
+// A guest is an account the visitor made; verifying it makes it a member.
 const GUEST: Caller = { tier: 'guest', userId: 'guest-uid' }
-const FLAGGED_GUEST: Caller = { tier: 'guest', userId: 'flagged-guest-uid', verified: true }
-const VERIFIED: Caller = { tier: 'member', userId: 'verified-uid', verified: true }
+const MEMBER: Caller = { tier: 'member', userId: 'member-uid' }
 const FRIEND: Caller = { tier: 'friend', userId: 'friend-uid' }
 
 const createTask = (title: string) => ({ id: `t-${title}`, title, board: 'main' })
@@ -155,12 +150,8 @@ async function main() {
   }
   check("nothing was written under 'public'", (await rowsOwnedBy('public')) === 0)
 
-  section('2. An unverified member, or a guest: refused')
-  for (const [label, who, userId] of [
-    ['unverified member', MEMBER, 'member-uid'],
-    ['guest', GUEST, 'guest-uid'],
-    ['guest with a verified flag', FLAGGED_GUEST, 'flagged-guest-uid']
-  ] as const) {
+  section('2. A guest: refused')
+  for (const [label, who, userId] of [['guest', GUEST, 'guest-uid']] as const) {
     for (const [method, path, body] of [
       ['GET', '/task/api/boards', undefined],
       ['POST', '/task/api', createTask(label)]
@@ -181,12 +172,12 @@ async function main() {
     check(`nothing was written for the ${label}`, (await rowsOwnedBy(userId)) === 0)
   }
 
-  section('3. A verified member stores like a friend')
+  section('3. A member stores like a friend')
   for (const [who, userId] of [
-    [VERIFIED, 'verified-uid'],
+    [MEMBER, 'member-uid'],
     [FRIEND, 'friend-uid']
   ] as const) {
-    const label = who === VERIFIED ? 'verified member' : 'friend'
+    const label = who === MEMBER ? 'member' : 'friend'
     const created = await req(who, 'POST', '/task/api', createTask(label))
     check(`${label} creates a task → 200`, created.status === 200, `status=${created.status}`)
     const boards = await req(who, 'GET', '/task/api/boards')
@@ -207,15 +198,14 @@ async function main() {
     )
   }
 
-  section('4. Friend and up need no verified header; a member still does')
-  // Derived from the ladder rather than a hand-typed "friend and up" list, so
-  // a tier added above friend is covered automatically. member is the one
-  // non-public tier that fails this (sections 2-3 already pin why: it needs
-  // the header).
+  section('4. Member and up store, read off the tier alone; guest does not')
+  // Derived from the ladder rather than a hand-typed "member and up" list, so
+  // a tier added above member is covered automatically. guest is the one
+  // non-public tier that fails this (section 2 already pins why).
   for (const tier of Object.keys(TIER_RANK).filter(t => t !== 'public')) {
     const r = await req({ tier, userId: `${tier}-2` }, 'GET', '/task/api/boards')
-    const want = TIER_RANK[tier] >= TIER_RANK.friend ? 200 : 403
-    check(`${tier} without X-Hadoku-Verified → ${want}`, r.status === want, `status=${r.status}`)
+    const want = TIER_RANK[tier] >= TIER_RANK.member ? 200 : 403
+    check(`${tier} → ${want}`, r.status === want, `status=${r.status}`)
   }
 
   section('5. Routes that need no identity stay open')
