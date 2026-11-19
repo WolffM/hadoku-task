@@ -25,15 +25,10 @@ Native Android app available! Built with Capacitor WebView wrapper.
 
 ## ✨ Features
 
-- ⚡ **Quick Task Entry** - Type and press Enter
-- 🏷️ **Tag Support** - Organize with `#tags`
-- 🔍 **Smart Filtering** - Filter by tag or view all
-- 🎯 **Drag & Drop** - Reorder tasks and move between boards
-- 🎨 **8 Theme Families** - Light, Dark, Ocean, Cyberpunk, Coffee, Lavender, Nature, Pink, Izakaya
-- 📋 **Multi-Board** - Organize tasks across multiple boards
-- ⚡ **Optimistic Updates** - Instant UI response with background sync
-- 👥 **Multi-User** - Public (localStorage), Friend/Admin (server sync)
-- 🔌 **Framework Agnostic** - Pure handlers work with any backend
+What each feature does and how to use it — tasks and boards, sharing,
+calendar, automation boards, trackers, the theme editor and picker, MCP for
+agents, and the Kate plugin — is in
+[docs/guide/features.md](docs/guide/features.md).
 
 ---
 
@@ -54,8 +49,9 @@ pnpm run test:worker         # worker harnesses against a real SQLite D1
 pnpm exec playwright test    # e2e; starts the real stack + vite on free ports
 ```
 
-CI runs the e2e suite too, but on a direct push to main that is detection, not
-prevention — run it locally first.
+CI runs the same suites (plus typecheck, lint and lint:css); see
+[contributing.md](docs/guide/contributing.md#tests-and-gates) for why a push
+to `main` is detection there, not prevention.
 
 ### Build for Production
 
@@ -120,39 +116,6 @@ const newTask = await TaskHandlers.createTask(storage, auth, { title: 'Task' })
 
 ---
 
-## 💡 Usage
-
-### Creating Tasks
-
-```text
-Buy groceries [Enter]                    # Plain task
-Buy groceries #home [Enter]              # With tag
-Fix bug #high-priority [Enter]           # Tagged task
-```
-
-### Task Actions
-
-- **✓** Mark complete
-- **×** Delete task
-- **✎** Edit title
-- **+** Add tag
-- **Drag** Reorder or move between boards
-
-### Themes
-
-Choose from 8 theme families via the theme picker (top-right), each with light and dark variants:
-
-- **☼ Light / ☽ Dark** - Clean and sophisticated defaults
-- **≈ Ocean** - Deep sea blues
-- **◆ Cyberpunk** - Neon dystopia
-- **◉ Coffee** - Rich espresso
-- **✿ Lavender** - Soft purple
-- **🌿 Nature** - Lush forest greens
-- **💗 Pink** - Bubblegum vibes
-- **🏮 Izakaya** - Cozy Japanese bar aesthetic
-
----
-
 ## 📚 Documentation
 
 | Document                                    | Purpose                                       | Audience                            |
@@ -171,35 +134,6 @@ Choose from 8 theme families via the theme picker (top-right), each with light a
 - **API endpoints**: [Complete API Reference](docs/API.md)
 - **Agents / MCP**: [MCP Server](docs/MCP.md)
 - **Add features**: [Contributing Guide](CONTRIBUTING.md)
-
----
-
-## 🏗️ Architecture Highlights
-
-### Universal Adapter Pattern
-
-This package separates pure business logic from framework-specific code:
-
-```typescript
-// Handlers are pure functions - work with ANY framework
-await TaskHandlers.getTasks(storage, auth)
-await TaskHandlers.createTask(storage, auth, input)
-```
-
-**Deployment flexibility:**
-
-- ✅ Cloudflare Workers (KV storage)
-- ✅ Node.js + Express (filesystem storage)
-- ✅ Any framework that can call JavaScript functions
-
-### Client Architecture
-
-- React-based UI with optimistic updates
-- All user types use localStorage for instant feedback
-- Non-public users sync to server in background
-- 8 theme families (16 themes) with CSS custom properties
-
-**See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design documentation.**
 
 ---
 

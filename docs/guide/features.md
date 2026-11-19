@@ -11,6 +11,8 @@ including signed out ("public").
 
 **What it does.** Type a task's title and press Enter to add it. Give it a
 `#tag` anywhere in the title to file it, and filter the list down to one tag.
+On an existing task: check it off (and reopen it the same way), click its
+title to rename it, use the tag button to retag it, or delete it outright.
 Drag a task to reorder it, or drop it onto another board's chip to move it
 there. A board can hold more than one view: the task list, or (see
 [Calendar](#calendar)) a schedule.
@@ -157,6 +159,23 @@ under Kate's **Settings → Configure Kate → Plugins**.
 packaged download; there is no automated install. Sharing, automation boards
 and trackers are not in the plugin's view yet — only plain tasks and the
 calendar.
+
+## Theme picker
+
+**What it does.** Eight theme families, each with a light and a dark
+variant: sixteen themes total. The families: Light/Dark (the defaults),
+Ocean (deep sea blues), Cyberpunk (neon dystopia), Coffee (rich espresso),
+Lavender (soft purple), Nature (lush forest greens), Pink (bubblegum), and
+Izakaya (a cozy Japanese bar aesthetic).
+
+**How to use it.** Pick one from the theme picker, top-right of the board.
+Every color in the app, including the theme editor's own live preview, is a
+token from the chosen family — see
+[contributing.md](contributing.md#architecture) for how that's enforced.
+
+**What it does not do.** A theme is a per-browser preference; it is not part
+of what a shared board stores, so two people viewing the same board can see
+it in different themes.
 
 ## Trivia
 
