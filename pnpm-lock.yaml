@@ -70,8 +70,8 @@ importers:
         specifier: ^1.0.18
         version: 1.0.18
       '@wolffm/e2e-harness':
-        specifier: ^0.2.56
-        version: 0.2.56(@playwright/test@1.60.0)
+        specifier: ^0.2.57
+        version: 0.2.57(@playwright/test@1.60.0)
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
@@ -1111,8 +1111,8 @@ packages:
     resolution: {integrity: sha512-ZnW1nQ9AkF7SiFWXM0Up+BnR7IuYnMZiTvJmiw8eZZ67h3UcUx2Ks4Zf8QxRpiAp6IMP85wTTLLK0HnGK0cMwQ==, tarball: https://npm.pkg.github.com/download/@wolffm/catalogue/1.0.18/a5d75f88b8a3a2e01c2be28c4788fe17d738113d}
     engines: {node: '>=18'}
 
-  '@wolffm/e2e-harness@0.2.56':
-    resolution: {integrity: sha512-ZgUBmDz8wr7JbtKpuMcIyszBIMb5TOcJSxI6U8p8zptsuSj/gozPN/3zzo9WfwxI3b3pn7HPbAALDJ1CJZeOqA==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.56/fee0b9e5822bc9c1ed684ae8327ab12efd830faf}
+  '@wolffm/e2e-harness@0.2.57':
+    resolution: {integrity: sha512-Mnbvs1Qp2w1g4LzweDFonACGU8aj7sDG67Ttw9TO+XKWqa7J6kZBnLmJpQzsbDYvM8QZtAMDrkWZZlrRWGnPvg==, tarball: https://npm.pkg.github.com/download/@wolffm/e2e-harness/0.2.57/0ea407fe47ab681f5c08e88c9180717d1a0b4c6d}
     engines: {node: '>=18'}
     peerDependencies:
       '@playwright/test': '>=1.50.0'
@@ -3404,7 +3404,7 @@ snapshots:
 
   '@wolffm/catalogue@1.0.18': {}
 
-  '@wolffm/e2e-harness@0.2.56(@playwright/test@1.60.0)':
+  '@wolffm/e2e-harness@0.2.57(@playwright/test@1.60.0)':
     dependencies:
       '@playwright/test': 1.60.0
       '@wolffm/shared-vendor': 0.1.4
