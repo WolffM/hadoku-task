@@ -326,6 +326,16 @@ async function main() {
     tasks: 4, // s1, s2, m1, orphan
     tracker_entries: 1, // te-solo; te-team rides the shared board
     trackers: 1, // tk-solo
+    // The library has its own erase cases in sequences-verify.ts; none seeded here.
+    exercise_versions: 0,
+    exercises: 0,
+    sequence_nodes: 0,
+    sequence_versions: 0,
+    sequences: 0,
+    board_sequences: 0,
+    sequence_run_nodes: 0,
+    sequence_runs: 0,
+    library_uploads: 0,
     task_claims: 1, // s1 on solo
     task_claim_log: 1, // s2 on solo
     task_events: 3, // created s1, s2, m1

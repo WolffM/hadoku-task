@@ -29,6 +29,10 @@ export const ROUTE_GROUPS = {
   calendar: () => import('./routes/calendar').then(m => m.createCalendarRoutes()),
   // Trackers: a widget on any board — counters/values and their entry log, wife tier and up.
   trackers: () => import('./routes/trackers').then(m => m.createTrackerRoutes()),
+  // Sequence widgets: a library sequence pinned on a board (board storage, member and up).
+  sequences: () => import('./routes/sequences').then(m => m.createSequenceRoutes()),
+  // The shared exercise library + run log: guest and up, NOT board storage.
+  library: () => import('./routes/library').then(m => m.createLibraryRoutes()),
   // Automation activation (§5.4): owner-only activate / deactivate.
   automation: () => import('./routes/automation').then(m => m.createAutomationRoutes()),
   // Agent claim protocol (§4): claim / heartbeat / set-lane / release / history
@@ -48,13 +52,15 @@ export type RouteGroup = keyof typeof ROUTE_GROUPS
 /**
  * Groups that read or write a person's boards and tasks: root refuses them to
  * any caller without server storage (storage-access.ts, #107). The rest gate
- * themselves (admin, theme-editor) or need no identity (misc).
+ * themselves (admin, theme-editor, library — which a guest may use: it is keyed
+ * by userId, not a board) or need no identity (misc).
  */
 export const STORAGE_GROUPS: ReadonlySet<RouteGroup> = new Set<RouteGroup>([
   'boards',
   'shares',
   'calendar',
   'trackers',
+  'sequences',
   'automation',
   'agent',
   'tags-batch',

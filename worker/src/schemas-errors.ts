@@ -56,7 +56,18 @@ export const DOMAIN_ERROR_CODES = [
   'STATUS_INVALID', // 422 — `status` isn't { kind: <closed set>, label, href? }
   // Trackers
   'TRACKER_NOT_FOUND', // 404
-  'ENTRY_NOT_FOUND' // 404
+  'ENTRY_NOT_FOUND', // 404
+  // Exercise library and sequences
+  'EXERCISE_NOT_FOUND', // 404
+  'SEQUENCE_NOT_FOUND', // 404 — the sequence, or the version asked for
+  'WIDGET_NOT_FOUND', // 404 — no such sequence widget on the board
+  'RUN_NOT_FOUND', // 404 — no such run, or not the caller's
+  'RUN_FINISHED', // 409 — the run already ended; it takes no more node plays
+  'NODE_OUT_OF_RANGE', // 422 — a node position the run's sequence version doesn't have
+  'IMAGE_UNKNOWN', // 422 — an imageKey that was never uploaded through POST /library/images
+  'UPLOAD_REFUSED', // 413 / 415 — too large, or not an inert image (the CDN's verdict)
+  'UPLOAD_LIMIT', // 429 — the caller's daily picture uploads are used up
+  'UPLOADS_UNAVAILABLE' // 503 — this install can't reach the CDN
 ] as const
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number]
@@ -248,6 +259,27 @@ export const TrackerNotFoundErrorSchema = narrowError(
   'TrackerNotFoundError',
   ['BOARD_NOT_FOUND', 'TRACKER_NOT_FOUND', 'ENTRY_NOT_FOUND'],
   'The board, the tracker on it, or the entry does not exist (or is not shared with you).'
+)
+
+/** 404 on a library route. */
+export const LibraryNotFoundErrorSchema = narrowError(
+  'LibraryNotFoundError',
+  ['EXERCISE_NOT_FOUND', 'SEQUENCE_NOT_FOUND', 'RUN_NOT_FOUND'],
+  'The exercise, the sequence (or that version of it), or the run does not exist.'
+)
+
+/** 404 on a board sequence-widget route. */
+export const SequenceWidgetNotFoundErrorSchema = narrowError(
+  'SequenceWidgetNotFoundError',
+  ['BOARD_NOT_FOUND', 'WIDGET_NOT_FOUND', 'SEQUENCE_NOT_FOUND'],
+  'The board, the widget on it, or the sequence version it names does not exist.'
+)
+
+/** 401 on a library route: no signed-in identity (guest and up use the library). */
+export const IdentityRequiredErrorSchema = narrowError(
+  'IdentityRequiredError',
+  ['IDENTITY_REQUIRED'],
+  'Sign in (guest tier or above) to use the exercise library.'
 )
 
 export const boardRefParam = z.object({

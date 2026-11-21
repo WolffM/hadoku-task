@@ -2,8 +2,7 @@
  * POST /task/api/_account/erase — the account-erase hook (hadoku_site
  * IDENTITY_MODEL R12, "Erase hooks").
  *
- *   200 → { erased: { boards, tasks, board_meta, board_prefs, board_shares,
- *                     task_claims, task_claim_log, task_events } }
+ *   200 → { erased: { <table>: <rows deleted>, … } }, one count per ERASED_TABLES entry
  *
  * Account deletion on the edge calls this beside prefs-api's `_account/erase`,
  * under the edge's seal, for the member it has just authenticated. The person
@@ -43,6 +42,19 @@
  *                owner's namespace and `ensureInitialized` would recreate a
  *                missing row AND a default `main` board under the dead id.
  *
+ * The exercise library (0010_sequences.sql) follows the same rule:
+ *   - exercises / sequences (and their versions and nodes) they made, unless
+ *                someone else depends on one: a sequence on another person's
+ *                board (or a kept shared board of theirs), an exercise in
+ *                another person's sequence (or a kept one). What stays keeps
+ *                naming them by `owner_id`, as a kept board does.
+ *   - board_sequences  sequence widgets on their boards that are not kept.
+ *   - sequence_runs / sequence_run_nodes  every run they played, wherever.
+ *                Other people's runs on their boards are those people's.
+ *   - library_uploads  their picture-upload records. The pictures themselves
+ *                are content-addressed on cdn.hadoku.me, which task does not
+ *                delete from (another upload may share the bytes).
+ *
  * Task stores no copy of a person's name: share lists look names up in the
  * registry when shown (share-registry.ts). TASKS_KV holds only throttle state,
  * which the edge-sealed member tiers never write.
@@ -67,6 +79,17 @@ export const ERASED_TABLES = [
   'tasks',
   'tracker_entries',
   'trackers',
+  // Library before board_sequences (the kept sets read it), all before
+  // board_shares (KEPT_BOARDS reads that).
+  'exercise_versions',
+  'exercises',
+  'sequence_nodes',
+  'sequence_versions',
+  'sequences',
+  'board_sequences',
+  'sequence_run_nodes',
+  'sequence_runs',
+  'library_uploads',
   'task_claims',
   'task_claim_log',
   'task_events',
@@ -84,6 +107,26 @@ const KEPT_BOARDS = `SELECT b.id FROM boards b
     AND EXISTS (SELECT 1 FROM board_shares s
                  WHERE s.owner_user_id = b.user_id AND s.board_id = b.id
                    AND s.grantee_user_id <> ?)`
+
+/**
+ * The person's library sequences someone else depends on: on another person's
+ * board, or on one of their own boards that is kept. Binds the userId 4 times.
+ */
+const KEPT_SEQUENCES = `SELECT s.id FROM sequences s
+  WHERE s.owner_id = ?
+    AND EXISTS (SELECT 1 FROM board_sequences bs
+                 WHERE bs.sequence_id = s.id
+                   AND (bs.user_id <> ? OR bs.board_id IN (${KEPT_BOARDS})))`
+
+/**
+ * The person's exercises someone else depends on: a node of another person's
+ * sequence, or of one of their own kept sequences. Binds the userId 6 times.
+ */
+const KEPT_EXERCISES = `SELECT e.id FROM exercises e
+  WHERE e.owner_id = ?
+    AND EXISTS (SELECT 1 FROM sequence_nodes n JOIN sequences s ON s.id = n.sequence_id
+                 WHERE n.exercise_id = e.id
+                   AND (s.owner_id <> ? OR s.id IN (${KEPT_SEQUENCES})))`
 
 interface EraseDb {
   prepare(sql: string): { bind(...args: unknown[]): unknown }
@@ -103,6 +146,39 @@ export async function eraseAccountData(db: EraseDb, userId: string): Promise<Era
       `DELETE FROM trackers WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
       [u, u, u]
     ],
+    exercise_versions: [
+      `DELETE FROM exercise_versions WHERE exercise_id IN
+         (SELECT id FROM exercises WHERE owner_id = ? AND id NOT IN (${KEPT_EXERCISES}))`,
+      [u, u, u, u, u, u, u]
+    ],
+    exercises: [
+      `DELETE FROM exercises WHERE owner_id = ? AND id NOT IN (${KEPT_EXERCISES})`,
+      [u, u, u, u, u, u, u]
+    ],
+    sequence_nodes: [
+      `DELETE FROM sequence_nodes WHERE sequence_id IN
+         (SELECT id FROM sequences WHERE owner_id = ? AND id NOT IN (${KEPT_SEQUENCES}))`,
+      [u, u, u, u, u]
+    ],
+    sequence_versions: [
+      `DELETE FROM sequence_versions WHERE sequence_id IN
+         (SELECT id FROM sequences WHERE owner_id = ? AND id NOT IN (${KEPT_SEQUENCES}))`,
+      [u, u, u, u, u]
+    ],
+    sequences: [
+      `DELETE FROM sequences WHERE owner_id = ? AND id NOT IN (${KEPT_SEQUENCES})`,
+      [u, u, u, u, u]
+    ],
+    board_sequences: [
+      `DELETE FROM board_sequences WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
+      [u, u, u]
+    ],
+    sequence_run_nodes: [
+      'DELETE FROM sequence_run_nodes WHERE run_id IN (SELECT id FROM sequence_runs WHERE runner_id = ?)',
+      [u]
+    ],
+    sequence_runs: ['DELETE FROM sequence_runs WHERE runner_id = ?', [u]],
+    library_uploads: ['DELETE FROM library_uploads WHERE user_id = ?', [u]],
     task_claims: [
       `DELETE FROM task_claims WHERE user_id = ? AND board_id NOT IN (${KEPT_BOARDS})`,
       [u, u, u]

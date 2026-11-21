@@ -106,6 +106,8 @@ interface BoardRow {
   position: number
   // Trackers on the board (a correlated count; GET /boards only).
   tracker_count?: number
+  // Sequence widgets on the board (likewise).
+  sequence_count?: number
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -150,17 +152,23 @@ function rowToBoard(r: BoardRow): Board {
     schemaId: r.schema_id ?? null,
     schemaVersion: r.schema_version ?? null,
     // Lets the client load the tracker widgets only on a board that has some.
-    ...(r.tracker_count ? { trackerCount: r.tracker_count } : {})
+    ...(r.tracker_count ? { trackerCount: r.tracker_count } : {}),
+    ...(r.sequence_count ? { sequenceCount: r.sequence_count } : {})
   }
 }
 
 const nowIso = () => new Date().toISOString()
 const newHandle = () => TaskUtils.generateULID()
 
-/** A deleted board takes its trackers and their history with it. */
+/**
+ * A deleted board takes its widgets with it: trackers and their history, and
+ * its sequence widgets. Runs started from those widgets stay — they are each
+ * runner's own history — and the library sequences are untouched.
+ */
 const trackerDeletes = (db: D1Like, uid: string, boardId: string) => [
   db.prepare('DELETE FROM tracker_entries WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
-  db.prepare('DELETE FROM trackers WHERE user_id = ? AND board_id = ?').bind(uid, boardId)
+  db.prepare('DELETE FROM trackers WHERE user_id = ? AND board_id = ?').bind(uid, boardId),
+  db.prepare('DELETE FROM board_sequences WHERE user_id = ? AND board_id = ?').bind(uid, boardId)
 ]
 
 /** The task columns every task read selects, in rowToTask's shape. */
@@ -378,7 +386,9 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                   COALESCE(p.pinned, 0)   AS pinned,
                   COALESCE(p.position, 0) AS position,
                   (SELECT COUNT(*) FROM trackers t
-                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count
+                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count,
+                  (SELECT COUNT(*) FROM board_sequences q
+                    WHERE q.user_id = b.user_id AND q.board_id = b.id) AS sequence_count
              FROM boards b
              LEFT JOIN board_prefs p
                ON p.user_id = ? AND p.owner_id = b.user_id AND p.board_id = b.id
@@ -390,7 +400,9 @@ export function createD1Storage(env: Env, legacyId?: string): TaskStorage {
                   COALESCE(p.pinned, 0)   AS pinned,
                   COALESCE(p.position, 0) AS position,
                   (SELECT COUNT(*) FROM trackers t
-                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count
+                    WHERE t.user_id = b.user_id AND t.board_id = b.id) AS tracker_count,
+                  (SELECT COUNT(*) FROM board_sequences q
+                    WHERE q.user_id = b.user_id AND q.board_id = b.id) AS sequence_count
              FROM board_shares s
              JOIN boards b ON b.user_id = s.owner_user_id AND b.id = s.board_id
              LEFT JOIN board_prefs p

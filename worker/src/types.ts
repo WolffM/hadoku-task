@@ -56,6 +56,9 @@ export interface Env {
   // provider says (a 401 on a gated route, a result if it's public). Nothing
   // else degrades.
   HADOKU_SERVICE_KEY?: string
+  // Where cdn.hadoku.me serves exercise pictures from. Unset ⇒ https://cdn.hadoku.me.
+  // The dev stack points it at its in-memory fake CDN (worker/test/dev-server.ts).
+  CDN_PUBLIC_BASE?: string
   // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
   // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
   // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board

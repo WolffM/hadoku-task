@@ -154,6 +154,10 @@ function codesEmittedInSource(): Map<string, string> {
     for (const m of text.matchAll(/\bcode:\s*'([A-Z][A-Z0-9_]{2,})'/g)) {
       if (!found.has(m[1])) found.set(m[1], rel)
     }
+    // Library refusals: new Refusal(404, 'CODE', message) — the status first.
+    for (const m of text.matchAll(/new Refusal\(\s*\d{3},\s*'([A-Z][A-Z0-9_]{2,})'/g)) {
+      if (!found.has(m[1])) found.set(m[1], rel)
+    }
     // DomainError subclasses: super(message, 'CODE', 409) — the status may sit on
     // its own line after prettier, so allow whitespace/newlines between them.
     if (rel.endsWith('domain/types.ts')) {

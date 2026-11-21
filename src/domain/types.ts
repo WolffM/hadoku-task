@@ -250,6 +250,8 @@ export interface Board {
   // How many trackers (widgets) the board holds. Set by GET /boards when > 0, so
   // the client loads the tracker widgets only on a board that has some.
   trackerCount?: number
+  // Sequence widgets on the board, likewise.
+  sequenceCount?: number
 }
 
 /** A grantee on a board, as surfaced to the share UI. */

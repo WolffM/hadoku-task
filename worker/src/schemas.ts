@@ -138,6 +138,11 @@ export const BoardSchema = z
       example: 2,
       description:
         'How many trackers (widgets) the board holds — see /boards/{ref}/trackers. On GET /boards.'
+    }),
+    sequenceCount: z.number().int().optional().openapi({
+      example: 1,
+      description:
+        'How many sequence widgets the board holds — see /boards/{ref}/sequences. On GET /boards.'
     })
   })
   .openapi('Board')
