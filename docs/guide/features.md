@@ -100,6 +100,35 @@ straight to the server and reads it back, so an entry logged from somewhere
 else (automation, another device) shows up immediately. Below wife tier, or
 with only read access to the board, the widget and its button do not appear.
 
+## Exercise sequences
+
+_Guest tier and up for the library; member tier and up to put one on a board_
+(`worker/src/routes/library.ts`, `worker/src/routes/sequences.ts`).
+
+**What it does.** A sequence is a workout you play: exercises in a line, each
+with a name and a picture of the movement. Every exercise starts with a 5 s
+countdown (a tick at 3, 2 and 1, and a "go" sound), then either runs a timer
+and moves on by itself, or waits for you to press **Done — next**. The player
+shows the exercise, a timer bar, and a minimap of every exercise in the
+sequence underneath, with back, play/pause and skip.
+
+**How to use it.** Press the **Exercise library** button on the board toolbar
+to browse everyone's sequences and exercises, play one, or make your own. An
+exercise is a name, a description and a picture. A sequence is exercises in
+order, each timed (in seconds) or manual. To keep one on a board, press
+**Add a widget** and pick a sequence; its tile's button is **Play**, which
+opens the player paused until you press play. Tap the tile anywhere else for
+its recent runs.
+
+**What it does not do.** Nobody else's edit can change your workout. Saving an
+exercise or sequence makes a new version, and a board keeps the version it
+was given until its owner presses **Update**. Deleting one only takes it out of
+the library; boards that have it keep playing it. You can edit or delete only
+what you made (an admin can do either to anything). Pictures are public, up
+to 5 MB and 30 a day. Every exercise played is logged:
+completed, skipped, gone back to, or stopped. The same exercise played twice
+is logged twice.
+
 ## Theme editor
 
 _Service tier and up_ (`worker/src/routes/theme-editor.ts`).

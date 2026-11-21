@@ -44,7 +44,10 @@ import { getTopTags, getAllTags, formatError } from '../domain/utils/tags'
 import { countUpcomingScheduled } from '../domain/utils/calendar'
 import { boardTypeConfig } from '../domain/boardType'
 import { canUseTrackers } from '../domain/trackers'
+import { canUseLibrary, canUseSequenceWidgets } from '../domain/sequences'
+import { createSequenceApi } from '../api/sequences'
 import { LazyTrackerStrip, preloadTrackerStrip } from '../components/trackers/LazyTrackerStrip'
+import { LazySequenceLibrary } from '../components/sequences/LazySequences'
 import { boardRef } from '../components/modals/shareApi'
 import { getRandomPlaceholder } from '../utils/placeholders'
 import { saveTaskPreferences } from '../prefs/taskPrefs'
@@ -71,7 +74,12 @@ export default function App(props: TaskAppProps = {}) {
 }
 
 function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivElement | null> }) {
-  const { userType = 'public', sessionId: propsSessionId = 'public', containerRef } = props
+  const {
+    userType = 'public',
+    sessionId: propsSessionId = 'public',
+    accountTier = userType,
+    containerRef
+  } = props
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null)
@@ -101,6 +109,7 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
   const [placeholder] = useState(() => getRandomPlaceholder())
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
   const [addingWidget, setAddingWidget] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [trackerCounts, setTrackerCounts] = useState<Record<string, number>>({})
   const [isLoaded, setIsLoaded] = useState(false)
   // Restored from the last visit — a reset-to-board on every reload is what made
@@ -321,21 +330,30 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
 
   // Computed values
   const currentBoard = boards?.boards?.find(b => b.id === currentBoardId)
-  // Trackers are a widget any board can hold: a strip above the lanes. GET
-  // /boards says how many a board has, so the lazy strip only loads where there
-  // are some, or while one is being added. The strip reports its live count back
-  // (an add or delete here doesn't refetch the board list).
+  // Widgets — trackers (wife+) and sequences (member+, where boards are stored)
+  // — sit in a strip above the lanes. GET /boards says how many of each a board
+  // has, so the lazy strip only loads where there are some this tier can see,
+  // or while one is being added. The strip reports its live count back (an add
+  // or delete here doesn't refetch the board list).
   const trackersAllowed = canUseTrackers(userType) && !!currentBoard
+  const sequencesAllowed = canUseSequenceWidgets(userType) && !!currentBoard
+  const widgetsAllowed = trackersAllowed || sequencesAllowed
   const canWriteBoard = !!currentBoard && currentBoard.access !== 'readonly'
-  const trackerCount =
-    (currentBoardId ? trackerCounts[currentBoardId] : undefined) ?? currentBoard?.trackerCount ?? 0
+  const widgetCount =
+    (currentBoardId ? trackerCounts[currentBoardId] : undefined) ??
+    (trackersAllowed ? (currentBoard?.trackerCount ?? 0) : 0) +
+      (sequencesAllowed ? (currentBoard?.sequenceCount ?? 0) : 0)
   const showTrackers =
-    trackersAllowed && currentView === 'board' && (trackerCount > 0 || addingWidget)
+    widgetsAllowed && currentView === 'board' && (widgetCount > 0 || addingWidget)
+  const sequenceApi = React.useMemo(
+    () => createSequenceApi(effectiveSessionId || 'public'),
+    [effectiveSessionId]
+  )
   // Fetch the tracker chunk once the core page is up, so opening a widget (or a
   // board that has trackers) never waits on it. The effect runs after the page's
   // first real paint; the delay leaves its own requests ahead of this one.
   const pageReady = isLoaded && preferencesLoaded && boardsLoaded
-  const canHaveTrackers = canUseTrackers(userType)
+  const canHaveTrackers = canUseTrackers(userType) || canUseSequenceWidgets(userType)
   useEffect(() => {
     if (!pageReady || !canHaveTrackers) return
     // A failure here is only logged: the strip's own mount retries the import
@@ -564,14 +582,26 @@ function AppInner(props: TaskAppProps & { containerRef: React.RefObject<HTMLDivE
           automateCount={actionable.count}
           automateDisabled={actionable.disabled}
           onAutomate={() => void actionable.automate()}
-          onAddWidget={trackersAllowed && canWriteBoard ? () => setAddingWidget(true) : undefined}
+          onAddWidget={widgetsAllowed && canWriteBoard ? () => setAddingWidget(true) : undefined}
+          onOpenLibrary={canUseLibrary(accountTier) ? () => setLibraryOpen(true) : undefined}
         />
+
+        {libraryOpen && (
+          <LazySequenceLibrary
+            api={sequenceApi}
+            onError={reportOperationError}
+            onClose={() => setLibraryOpen(false)}
+          />
+        )}
 
         {showTrackers && currentBoard && (
           <LazyTrackerStrip
             key={currentBoard.id}
             boardRef={boardRef(currentBoard)}
             api={trackerApi}
+            sequenceApi={sequenceApi}
+            trackersEnabled={trackersAllowed}
+            sequencesEnabled={sequencesAllowed}
             onError={reportOperationError}
             adding={addingWidget}
             onAddingDone={() => setAddingWidget(false)}

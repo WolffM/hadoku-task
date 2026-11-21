@@ -60,6 +60,8 @@ export interface TagFiltersSectionProps {
   onAutomate?: () => void
   /** Open "Add a widget" (a tracker) for this board. Absent ⇒ no button. */
   onAddWidget?: () => void
+  /** Open the exercise library (guest and up). Absent ⇒ no button. */
+  onOpenLibrary?: () => void
 }
 
 export function TagFiltersSection({
@@ -79,6 +81,7 @@ export function TagFiltersSection({
   onShareBoard,
   canShareBoard,
   onAddWidget,
+  onOpenLibrary,
   currentView,
   onToggleCalendar,
   upcomingScheduledCount = 0,
@@ -206,6 +209,18 @@ export function TagFiltersSection({
               aria-label="Add a widget"
             >
               <Icon name="activity" />
+            </button>
+          </Tooltip>
+        )}
+
+        {currentView === 'board' && onOpenLibrary && (
+          <Tooltip content="Exercise library: workouts to play, and the exercises in them">
+            <button
+              className="pill-btn task-app__filter-widget"
+              onClick={onOpenLibrary}
+              aria-label="Exercise library"
+            >
+              <Icon name="book" />
             </button>
           </Tooltip>
         )}

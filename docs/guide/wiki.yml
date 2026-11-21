@@ -17,10 +17,10 @@ features:
     summary: 'Link a GitHub repo to a board; its open issues and PRs become tracked lanes.'
     anchor: automation-boards
     tier: friend
-  - name: Trackers
-    summary: 'Counters and logged values on any board, each with its own history.'
-    anchor: trackers
-    tier: wife
+  - name: Board widgets
+    summary: 'Workouts from a shared exercise library, played with a countdown and timer (guest and up); counters and logged values on any board (wife and up).'
+    anchor: exercise-sequences
+    tier: guest
   - name: Theme editor
     summary: 'Edit the live site colors from the browser; a save commits and publishes itself.'
     anchor: theme-editor

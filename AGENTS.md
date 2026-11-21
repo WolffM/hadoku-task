@@ -211,6 +211,41 @@ an `ErrorBoundary` that offers a reload. Check the budget before pushing UI:
 A physical button (later) binds to ONE tracker; the tracker detail is where its "Button"
 section goes.
 
+## Sequences (exercise library + a widget)
+
+A sequence is a workout you play: exercise nodes in order, each a 5 s countdown (tick at
+3/2/1, a go sound and "Go!" at 0 — never a 0) then a timer (timed) or a wait for "next"
+(manual). Model: `worker/migrations/0010_sequences.sql`. Two route groups:
+
+- **`library`** (`worker/src/routes/library.ts`): exercises, sequences, pictures, runs. **Guest
+  tier and up, and NOT a storage group** — a guest has no boards (#107) but the library is keyed
+  by userId, not a board. The app runs a guest as `public`, so the UI gates the library on the
+  host's tier (`accountTier`, set in entry.tsx), not `userType`.
+- **`sequences`** (`worker/src/routes/sequences.ts`): a library sequence on a board. Board storage,
+  so member and up; a read-only grantee plays, but the run isn't logged on the board.
+
+**Edits are new versions, deletes are soft, and pins never move by themselves.** A sequence
+version pins each node's exercise version; a widget pins a sequence version and shows "update"
+until its board's owner re-pins. So nobody's edit changes someone else's workout. Owner or admin
+edits/deletes; anyone guest+ uses anything.
+
+**Every node play is a row** in `sequence_run_nodes` (completed / skipped / rewound / stopped);
+a repeat is a second row. `complete` = every position has a completed play. The worker fills in
+the exercise from the run's pinned version, never from the client.
+
+**Pictures go to cdn.hadoku.me under task's own `HADOKU_SERVICE_KEY`** (cdn-api's ingest is
+friend+, which is why the worker forwards rather than the browser). Images only (the CDN also takes
+audio), 5 MB, 30/day/person (`library_uploads`), and an exercise may only carry a key uploaded
+here. The dev stack fakes the CDN in memory (`/__dev/cdn/<key>`); never point dev at the real one —
+it is public. NOT dataplatform's data endpoint: that listener is tailnet-only and refuses proxied
+requests, so a CF worker can't reach it.
+
+The player's clock is pure (`src/domain/sequencePlayer.ts`, proven by
+`src/test/sequence-player-verify.ts`); the component only feeds it frames. The player, builders and
+library are a lazy chunk (`LazySequences.tsx`); the tile lives in the widget strip's chunk.
+Account erase keeps library items someone else's board or sequence depends on. Proof:
+`worker/test/sequences-verify.ts`, `e2e/sequences.spec.ts`.
+
 ## MCP (agent task/calendar management)
 
 - Remote, stateless Streamable-HTTP MCP at `/task/api/mcp` (live: `https://hadoku.me/task/api/mcp`).

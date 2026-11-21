@@ -75,6 +75,12 @@ export interface TaskAppProps {
    * cannot answer, and which stays local.
    */
   platform?: PlatformSeed
+  /**
+   * The host's tier BEFORE a guest is run as `public` below. Set by mount, not
+   * by the host. `userType` decides board storage, which a guest doesn't have;
+   * this decides the exercise library, which a guest does (domain/sequences.ts).
+   */
+  accountTier?: UserType
 }
 
 // Extend HTMLElement to include __root property
@@ -109,7 +115,7 @@ export function mount(el: HTMLElement, props: TaskAppProps = {}) {
       ? getAnonSessionId()
       : storedSessionId || props.sessionId || 'public-session'
 
-  const finalProps = { ...props, userType, sessionId }
+  const finalProps = { ...props, userType, sessionId, accountTier: hostTier as UserType }
   // The host page (Astro) may have rendered a static skeleton into #root to
   // paint at first paint. Clear it before createRoot so React doesn't render
   // alongside the static markup. (createRoot on a non-empty container appends

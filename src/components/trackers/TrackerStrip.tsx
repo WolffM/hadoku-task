@@ -1,13 +1,17 @@
 /**
- * A board's tracker widgets: a strip of tiles above the lanes (one tap on a
- * tile's button logs, a tap anywhere else opens the tracker), and an undo bar
- * after each log. Each tracker's full history is in its detail.
+ * A board's widgets: a strip of tiles above the lanes. Two kinds, each shown
+ * only to a tier that can use it:
+ *
+ *   - trackers (wife+): one tap on a tile's button logs, a tap anywhere else
+ *     opens the tracker; an undo bar follows each log.
+ *   - sequences (member+, where boards are stored): the tile's button is Play,
+ *     which opens the player paused; elsewhere opens the widget's runs.
  *
  * Reads and writes go straight to the server. The strip re-reads every 30s
  * while visible, and on focus, so a hit from somewhere else (another device,
- * later a physical button) shows up without a reload.
+ * later a physical button, a run on a phone) shows up without a reload.
  *
- * With no trackers it renders nothing but the "Add a widget" dialog when asked
+ * With no widgets it renders nothing but the "Add a widget" dialog when asked
  * for it, and reports its count so the board can stop mounting it.
  */
 import React from 'react'
@@ -18,6 +22,15 @@ import { TrackerDetail } from './TrackerDetail'
 import { ReadingDialog } from './ReadingDialog'
 import { AddTrackerDialog } from './AddTrackerDialog'
 import type { TrackerApi } from '../../api/trackers'
+import type { SequenceApi } from '../../api/sequences'
+import type { SequenceBoardData, SequenceSummary, SequenceWidget } from '../../domain/sequences'
+import { SequenceTile } from '../sequences/SequenceTile'
+import { SequenceDetail } from '../sequences/SequenceDetail'
+import {
+  LazySequenceLibrary,
+  LazySequencePlayer,
+  preloadSequences
+} from '../sequences/LazySequences'
 import {
   counterTotalSince,
   describeEntry,
@@ -34,12 +47,17 @@ export interface TrackerStripProps {
   /** The board reference: the slug for an own board, the handle for a shared one. */
   boardRef: string
   api: TrackerApi
+  sequenceApi: SequenceApi
+  /** The caller's tier can use trackers (wife+). */
+  trackersEnabled: boolean
+  /** The caller's tier can use sequence widgets (member+). */
+  sequencesEnabled: boolean
   onError: (message: string) => void
   /** Show the "Add a widget" dialog. */
   adding: boolean
   /** The dialog closed (added or cancelled). */
   onAddingDone: () => void
-  /** How many trackers the board holds, each time that is known. */
+  /** How many widgets the board holds, each time that is known. */
   onCount: (count: number) => void
 }
 
@@ -51,6 +69,9 @@ function newer(a: Tracker, b: Tracker): Tracker {
 export function TrackerStrip({
   boardRef,
   api,
+  sequenceApi,
+  trackersEnabled,
+  sequencesEnabled,
   onError,
   adding,
   onAddingDone,
@@ -67,24 +88,41 @@ export function TrackerStrip({
   const undoTimer = React.useRef<number | undefined>(undefined)
   React.useEffect(() => () => window.clearTimeout(undoTimer.current), [])
 
-  const count = data?.trackers.length
+  const [seqData, setSeqData] = React.useState<SequenceBoardData | null>(null)
+  const [addMode, setAddMode] = React.useState<'tracker' | 'sequence'>('tracker')
+  const [playing, setPlaying] = React.useState<SequenceWidget | null>(null)
+  const [openWidgetId, setOpenWidgetId] = React.useState<string | null>(null)
+  const [confirmRemove, setConfirmRemove] = React.useState<SequenceWidget | null>(null)
+  const [removeError, setRemoveError] = React.useState<string | null>(null)
+
+  // Known once every kind this tier sees has loaded.
+  const count =
+    (trackersEnabled && !data) || (sequencesEnabled && !seqData)
+      ? undefined
+      : (data?.trackers.length ?? 0) + (seqData?.widgets.length ?? 0)
   React.useEffect(() => {
     if (count !== undefined) onCount(count)
   }, [count, onCount])
 
   const load = React.useCallback(async () => {
-    try {
-      const fresh = await api.list(boardRef)
-      setData(fresh)
-      setLoadError(null)
-      setNow(new Date())
-    } catch (err) {
-      setLoadError((err as Error).message)
-    }
-  }, [api, boardRef])
+    const results = await Promise.allSettled([
+      trackersEnabled ? api.list(boardRef).then(setData) : null,
+      sequencesEnabled ? sequenceApi.listWidgets(boardRef).then(setSeqData) : null
+    ])
+    const failed = results.find(r => r.status === 'rejected')
+    setLoadError(failed ? ((failed.reason as Error).message ?? String(failed.reason)) : null)
+    setNow(new Date())
+  }, [api, sequenceApi, boardRef, trackersEnabled, sequencesEnabled])
+
+  const widgetCount = seqData?.widgets.length ?? 0
+  React.useEffect(() => {
+    // A board with sequences: fetch the player now, so Play doesn't wait on it.
+    if (widgetCount > 0) void preloadSequences().catch(() => undefined)
+  }, [widgetCount])
 
   React.useEffect(() => {
     setData(null)
+    setSeqData(null)
     void load()
     const tick = () => {
       if (document.visibilityState === 'visible') void load()
@@ -143,7 +181,7 @@ export function TrackerStrip({
       // Now, not from the count effect: the dialog's close lands in this same
       // render, and a board that showed the strip only for the add would unmount
       // it before the effect could say there is a tracker to show.
-      onCount((data?.trackers.length ?? 0) + 1)
+      onCount((data?.trackers.length ?? 0) + (seqData?.widgets.length ?? 0) + 1)
       return true
     } catch (err) {
       report(err)
@@ -180,17 +218,79 @@ export function TrackerStrip({
     }
   }
 
-  const addDialog = adding && <AddTrackerDialog onAdd={addTracker} onClose={onAddingDone} />
+  const addWidget = async (seq: SequenceSummary) => {
+    try {
+      const w = await sequenceApi.addWidget(boardRef, seq.id)
+      setSeqData(d => d && { ...d, widgets: [...d.widgets, w] })
+      if (!seqData) void load()
+      onCount((data?.trackers.length ?? 0) + (seqData?.widgets.length ?? 0) + 1)
+      return true
+    } catch (err) {
+      report(err)
+      return false
+    }
+  }
 
+  const applyWidget = (w: SequenceWidget) =>
+    setSeqData(d => d && { ...d, widgets: d.widgets.map(x => (x.id === w.id ? w : x)) })
+
+  const updateWidget = async (w: SequenceWidget) => {
+    try {
+      applyWidget(await sequenceApi.repinWidget(boardRef, w.id, w.sequence.latestVersion))
+    } catch (err) {
+      report(err)
+    }
+  }
+
+  const removeWidget = async () => {
+    if (!confirmRemove) return
+    try {
+      await sequenceApi.removeWidget(boardRef, confirmRemove.id)
+      const id = confirmRemove.id
+      setSeqData(d => d && { ...d, widgets: d.widgets.filter(w => w.id !== id) })
+      setConfirmRemove(null)
+      setRemoveError(null)
+      setOpenWidgetId(null)
+    } catch (err) {
+      setRemoveError((err as Error).message)
+    }
+  }
+
+  const closeAdd = () => {
+    setAddMode('tracker')
+    onAddingDone()
+  }
+  const showTrackerForm = adding && trackersEnabled && addMode === 'tracker'
+  const addDialog = adding && (
+    <>
+      {showTrackerForm && (
+        <AddTrackerDialog
+          onAdd={addTracker}
+          onClose={closeAdd}
+          onChooseSequence={sequencesEnabled ? () => setAddMode('sequence') : undefined}
+        />
+      )}
+      {!showTrackerForm && sequencesEnabled && (
+        <LazySequenceLibrary
+          api={sequenceApi}
+          onError={onError}
+          onPick={addWidget}
+          onClose={closeAdd}
+        />
+      )}
+    </>
+  )
+
+  const anyLoaded = data !== null || seqData !== null
   // Until the first list lands there is nothing to draw — no placeholder row —
   // but an add the user asked for opens now, not after the fetch.
-  if (!data && !loadError) return addDialog || null
-  if (!data) {
+  if (!anyLoaded && !loadError) return addDialog || null
+  if (!anyLoaded) {
     return (
       <>
         <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
           <div className="tracker-strip__status tracker-strip__status--error" role="alert">
-            Couldn't load trackers: {loadError}
+            Couldn't load this board's widgets: {loadError}
             <button type="button" className="tracker-btn" onClick={() => void load()}>
               <Icon name="refresh" /> Retry
             </button>
@@ -201,16 +301,23 @@ export function TrackerStrip({
     )
   }
 
-  const { canWrite, trackers, entries } = data
-  if (trackers.length === 0) return addDialog || null
+  const trackers = data?.trackers ?? []
+  const entries = data?.entries ?? []
+  const widgets = seqData?.widgets ?? []
+  const runs = seqData?.runs ?? []
+  const canWrite = (data ?? seqData)?.canWrite ?? false
+  if (trackers.length === 0 && widgets.length === 0) return addDialog || null
 
   const byId = new Map(trackers.map(t => [t.id, t]))
   const opened = openId ? byId.get(openId) : undefined
   const lastTracker = lastLogged ? byId.get(lastLogged.trackerId) : undefined
+  const openWidget = openWidgetId ? widgets.find(w => w.id === openWidgetId) : undefined
+  const runsOf = (w: SequenceWidget) => runs.filter(r => r.widgetId === w.id)
+  const title = widgets.length === 0 ? 'Trackers' : trackers.length === 0 ? 'Sequences' : 'Widgets'
 
   return (
-    <section className="tracker-strip" aria-label="Trackers" data-testid="tracker-strip">
-      <h2 className="tracker-strip__title">Trackers</h2>
+    <section className="tracker-strip" aria-label={title} data-testid="tracker-strip">
+      <h2 className="tracker-strip__title">{title}</h2>
       {loadError && (
         <div className="tracker-strip__status tracker-strip__status--error" role="alert">
           Showing the last good copy — refresh failed: {loadError}
@@ -228,6 +335,17 @@ export function TrackerStrip({
             onIncrement={() => void logEntry(t, { delta: 1 })}
             onLogReading={() => setReadingFor(t)}
             onOpen={() => setOpenId(t.id)}
+          />
+        ))}
+        {widgets.map(w => (
+          <SequenceTile
+            key={w.id}
+            widget={w}
+            runs={runsOf(w)}
+            now={now}
+            canPlay
+            onPlay={() => setPlaying(w)}
+            onOpen={() => setOpenWidgetId(w.id)}
           />
         ))}
       </div>
@@ -274,7 +392,53 @@ export function TrackerStrip({
         />
       )}
 
+      {openWidget && (
+        <SequenceDetail
+          widget={openWidget}
+          runs={runsOf(openWidget)}
+          now={now}
+          canWrite={canWrite}
+          onPlay={() => {
+            setOpenWidgetId(null)
+            setPlaying(openWidget)
+          }}
+          onUpdate={() => void updateWidget(openWidget)}
+          onRemove={() => {
+            setRemoveError(null)
+            setConfirmRemove(openWidget)
+          }}
+          onClose={() => setOpenWidgetId(null)}
+        />
+      )}
+
+      {playing && (
+        <LazySequencePlayer
+          sequence={playing.sequence}
+          api={sequenceApi}
+          // A read-only grantee plays too; the run is theirs, not logged on the board.
+          board={canWrite ? { ref: boardRef, widgetId: playing.id } : undefined}
+          onError={onError}
+          onRunEnded={() => void load()}
+          onClose={() => setPlaying(null)}
+        />
+      )}
+
       {addDialog}
+
+      <ConfirmModal
+        isOpen={confirmRemove !== null}
+        title="Remove sequence?"
+        message={
+          <>
+            <strong>{confirmRemove?.sequence.name}</strong> comes off this board. It stays in the
+            library, and past runs stay in each person's history.
+          </>
+        }
+        confirmLabel="Remove"
+        error={removeError}
+        onCancel={() => setConfirmRemove(null)}
+        onConfirm={removeWidget}
+      />
 
       <ConfirmModal
         isOpen={confirmDelete !== null}

@@ -20,6 +20,10 @@
  * included, because a local save must never commit to the real main. Inspect what a save "committed" at GET :3001/__dev/github, and start
  * over with POST :3001/__dev/github/reset.
  *
+ * Exercise pictures go to an in-memory fake of cdn-api's upload (sniffed by
+ * bytes like the real one) and render from GET :3001/__dev/cdn/<key>, so a
+ * local upload never lands on the public cdn.hadoku.me.
+ *
  * Not a *-verify.ts harness (it's a server, not an assertion run), so
  * run-worker-verify.mjs ignores it. Started by scripts/dev-api.mjs.
  */
@@ -198,7 +202,9 @@ const env = {
   // Our identity at the provider for the open-items scan. The stub above checks
   // it, so the dev stack proves the credential is actually sent. It also arms
   // the lane-change wake (§5.2), which the fetch hook below answers locally.
-  HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY
+  HADOKU_SERVICE_KEY: process.env.DEV_TASK_SERVICE_KEY ?? TASK_KEY,
+  // Exercise pictures render from the fake CDN below, never cdn.hadoku.me.
+  CDN_PUBLIC_BASE: `http://localhost:${API_PORT}/__dev/cdn`
 } as Record<string, unknown>
 
 // ── The theme editor's repo ─────────────────────────────────────────────────
@@ -219,12 +225,46 @@ const realFetch = globalThis.fetch
  * wakes production; the log line shows it fired.
  */
 const WAKE_URL = 'https://hadoku.me/mgmt/api/repo/dispatch'
+
+/**
+ * cdn-api's upload, answered in memory: exercise pictures a dev or e2e run
+ * uploads must never reach the real (public) CDN. Typed by the BYTES, as the
+ * real one is, and served back at GET :3001/__dev/cdn/<key>.
+ */
+const CDN_UPLOAD_URL = 'https://hadoku.me/cdn/api/upload'
+const fakeCdn = new Map<string, { type: string; bytes: Uint8Array }>()
+const SNIFF: Array<[number[], string, string]> = [
+  [[0x89, 0x50, 0x4e, 0x47], 'image/png', '.png'],
+  [[0xff, 0xd8, 0xff], 'image/jpeg', '.jpg'],
+  [[0x47, 0x49, 0x46, 0x38], 'image/gif', '.gif'],
+  [[0x49, 0x44, 0x33], 'audio/mpeg', '.mp3']
+]
+async function fakeCdnUpload(init?: RequestInit): Promise<Response> {
+  if (new Headers(init?.headers).get('X-User-Key') !== TASK_KEY) {
+    return Response.json(
+      { message: 'Uploading to the CDN requires friend tier or above' },
+      { status: 403 }
+    )
+  }
+  const bytes = new Uint8Array(await new Response(init?.body ?? null).arrayBuffer())
+  const hit = SNIFF.find(([magic]) => magic.every((b, i) => bytes[i] === b))
+  if (!hit) {
+    return Response.json({ message: 'Only inert images and audio are accepted' }, { status: 415 })
+  }
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
+  const key = [...digest].map(b => b.toString(16).padStart(2, '0')).join('') + hit[2]
+  fakeCdn.set(key, { type: hit[1], bytes })
+  console.log(`[dev] cdn upload (kept in memory): ${key} ${bytes.byteLength} bytes`)
+  return Response.json({ key, contentType: hit[1], bytes: bytes.byteLength }, { status: 201 })
+}
+
 globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
   const url = input instanceof Request ? input.url : String(input)
   if (url === WAKE_URL) {
     console.log(`[dev] wake dispatch (not sent): ${String(init?.body)}`)
     return Promise.resolve(Response.json({ success: true }))
   }
+  if (url === CDN_UPLOAD_URL) return fakeCdnUpload(init)
   return Promise.resolve(themeRepo.handle(url, init) ?? realFetch(input, init))
 }) as typeof fetch
 
@@ -282,6 +322,12 @@ createServer(NO_IDLE_CLOSE, (req, res) => {
 createServer(NO_IDLE_CLOSE, async (req, res) => {
   if (req.url?.startsWith('/__dev/github')) {
     serveThemeRepo(req, res)
+    return
+  }
+  if (req.url?.startsWith('/__dev/cdn/')) {
+    const hit = fakeCdn.get(req.url.slice('/__dev/cdn/'.length))
+    if (!hit) res.writeHead(404).end()
+    else res.writeHead(200, { 'Content-Type': hit.type }).end(Buffer.from(hit.bytes))
     return
   }
   try {

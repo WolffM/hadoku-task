@@ -102,6 +102,12 @@ export default [
         HTMLUListElement: 'readonly',
         HTMLSelectElement: 'readonly',
         DOMRect: 'readonly',
+        // Exercise pictures (a File from <input type=file>, sent as a Blob body),
+        // the sequence player's Web Audio beeps and its screen wake lock.
+        Blob: 'readonly',
+        File: 'readonly',
+        AudioContext: 'readonly',
+        Navigator: 'readonly',
         // The theme editor injects its chrome stylesheet at mount (src/editor)
         HTMLStyleElement: 'readonly',
         Element: 'readonly',

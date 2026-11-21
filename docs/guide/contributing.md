@@ -53,6 +53,13 @@ flowchart LR
 - **Trackers** (`worker/src/routes/trackers.ts`): wife tier and up, checked on
   the caller on every route; a board's trackers have no `localStorage`
   mirror, so a write from elsewhere shows up on next read.
+- **Exercise sequences** (`worker/src/routes/library.ts`, `sequences.ts`,
+  `library-store.ts`; model in `worker/migrations/0010_sequences.sql`): the
+  library is guest tier and up and is NOT a storage group, since it is keyed
+  by userId rather than a board. Widgets are board storage. Versions are
+  immutable and deletes soft, so a widget's pin never moves under it. The
+  player's clock is the pure `src/domain/sequencePlayer.ts`, proven by
+  `src/test/sequence-player-verify.ts`.
 - **Automation boards** (`worker/src/routes/automation*.ts`,
   `board-automation.ts`): a board's tag vocabulary becomes a provider's fixed
   lane contract on activation; the worker enforces who may write which lane,

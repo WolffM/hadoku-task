@@ -295,11 +295,22 @@ test.describe('tracker widgets', () => {
     await expect(card(page, 'Water')).toBeVisible()
   })
 
-  test('below wife tier there is no Widget button and no board type to pick', async ({ page }) => {
+  test('below wife tier the Widget button offers sequences only, and there is no board type to pick', async ({
+    page
+  }) => {
+    // Trackers are wife tier and up; sequence widgets are member and up
+    // (e2e/sequences.spec.ts). So a friend's widget button skips the tracker
+    // form and opens the sequence library.
     await signInAs(page, 'friend', newUser())
     await page.goto('/')
     await expect(page.locator('.task-app__input')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add a widget' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Add a widget' }).click()
+    const pick = page.getByRole('dialog', { name: 'Add a sequence' })
+    await expect(pick).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Add a widget' })).toHaveCount(0)
+    await expect(page.getByLabel('New tracker name')).toHaveCount(0)
+    await pick.getByRole('button', { name: 'Close' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     await page.getByRole('button', { name: 'Create board' }).click()
     await expect(page.getByPlaceholder('Board name')).toBeVisible()
     await expect(page.getByRole('radio')).toHaveCount(0)

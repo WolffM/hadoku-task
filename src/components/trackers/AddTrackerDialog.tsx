@@ -1,7 +1,8 @@
 /**
- * "Add a widget": for now the only widget is a tracker, so this is the new
- * tracker form — a name, whether it counts or records a value, and an optional
- * unit. Stays open with what was typed when the create fails.
+ * "Add a widget": the new tracker form — a name, whether it counts or records a
+ * value, and an optional unit. Stays open with what was typed when the create
+ * fails. When the caller can also add a sequence, a widget-type choice at the
+ * top switches to the exercise library (the strip opens it).
  */
 import React from 'react'
 import { Modal } from '@wolffm/task-ui-components'
@@ -10,9 +11,11 @@ import type { TrackerKind } from '../../domain/trackers'
 export interface AddTrackerDialogProps {
   onAdd: (input: { name: string; kind: TrackerKind; unit: string | null }) => Promise<boolean>
   onClose: () => void
+  /** Offer "Sequence" as the widget type. Absent ⇒ trackers only. */
+  onChooseSequence?: () => void
 }
 
-export function AddTrackerDialog({ onAdd, onClose }: AddTrackerDialogProps) {
+export function AddTrackerDialog({ onAdd, onClose, onChooseSequence }: AddTrackerDialogProps) {
   const [name, setName] = React.useState('')
   const [kind, setKind] = React.useState<TrackerKind>('counter')
   const [unit, setUnit] = React.useState('')
@@ -44,6 +47,28 @@ export function AddTrackerDialog({ onAdd, onClose }: AddTrackerDialogProps) {
           void submit()
         }}
       >
+        {onChooseSequence && (
+          <div className="tracker-kind" role="radiogroup" aria-label="Widget type">
+            <button
+              type="button"
+              role="radio"
+              aria-checked
+              className="tracker-kind__option tracker-kind__option--active"
+            >
+              Tracker
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={false}
+              title="A workout: exercises played in order, with a timer"
+              className="tracker-kind__option"
+              onClick={onChooseSequence}
+            >
+              Sequence
+            </button>
+          </div>
+        )}
         <p className="tracker-dialog__kind">
           <strong>Tracker</strong> · count something, or log a reading. It sits above the board's
           lanes.

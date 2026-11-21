@@ -49,7 +49,9 @@ publishing the change itself (`9d19397`, 2026-10-23). Seventeen days later,
 **tracker boards** gave wife tier a counter/value board with a history log
 (`19a5e9f`, 2026-11-09); six days after that, trackers stopped being their
 own kind of board and became a widget any board could add (`9fcb121`,
-2026-11-15).
+2026-11-15). Six days after that, **exercise sequences** joined trackers in
+the widget strip: a shared library of exercises and workouts, played with a
+countdown and timer, with every exercise played logged (2026-11-21).
 
 ## The mobile wrapper
 
