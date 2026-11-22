@@ -115,6 +115,9 @@ export interface FakeD1 {
   __raw: DatabaseSync
 }
 
+/** D1's `SQLITE_MAX_EXPR_DEPTH` ("Expression tree is too large (maximum depth 100)"). */
+export const D1_EXPR_DEPTH = 100
+
 /**
  * Build an in-memory D1 shim. If `migrationSqlPath` is given, its SQL is applied
  * to create the schema; otherwise the DB starts empty (caller runs its own DDL).
@@ -127,6 +130,10 @@ export interface FakeD1 {
  */
 export function makeSqliteD1(migrationSqlPath?: string): FakeD1 {
   const db = new DatabaseSync(':memory:')
+  // D1 caps expression depth at 100; node:sqlite defaults to 1000. Without
+  // this, a statement nested one subquery too deep passes every harness and
+  // 500s in prod — account erase did exactly that (#118).
+  db.limits.exprDepth = D1_EXPR_DEPTH
   db.exec('PRAGMA foreign_keys = ON;')
   // task_events predates every migration file (created by hand in prod), so it
   // must exist BEFORE they run — migration 0004 rebuilds it. Creating it here,

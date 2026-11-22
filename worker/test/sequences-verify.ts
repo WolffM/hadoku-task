@@ -585,6 +585,11 @@ async function main() {
     erased.sequences === 1 && erased.exercises === 1 && erased.sequence_nodes === 1,
     erased
   )
+  check(
+    '…with its versions',
+    erased.exercise_versions === 1 && erased.sequence_versions === 1,
+    erased
+  )
   check('…and their runs', erased.sequence_runs === 1 && erased.sequence_run_nodes === 1, erased)
   check(
     "…but keeps the sequence on someone else's board",
@@ -602,6 +607,14 @@ async function main() {
   check(
     "a guest's exercise used in someone else's sequence is kept",
     (await rowCount('SELECT COUNT(*) AS n FROM exercises WHERE id = ?', plank.id)) === 1,
+    guestErase
+  )
+  check(
+    '…with its versions',
+    (await rowCount(
+      'SELECT COUNT(*) AS n FROM exercise_versions WHERE exercise_id = ?',
+      plank.id
+    )) > 0,
     guestErase
   )
   check(

@@ -101,32 +101,34 @@ export const ERASED_TABLES = [
 
 export type ErasedCounts = Record<(typeof ERASED_TABLES)[number], number>
 
+// The kept sets nest inside each other, and D1 caps expression depth at 100
+// (local SQLite: 1000). Each nested EXISTS/IN subquery costs ~20 of it, so they
+// are joins: the deepest statement here needs 38, where the EXISTS form needed
+// 108 and 500ed every erase in prod (#118). The harness DB runs at D1's limit.
+
 /** Slugs of the person's boards that someone else shares. Binds the userId twice. */
-const KEPT_BOARDS = `SELECT b.id FROM boards b
-  WHERE b.user_id = ?
-    AND EXISTS (SELECT 1 FROM board_shares s
-                 WHERE s.owner_user_id = b.user_id AND s.board_id = b.id
-                   AND s.grantee_user_id <> ?)`
+const KEPT_BOARDS = `SELECT s.board_id FROM board_shares s
+  JOIN boards b ON b.user_id = s.owner_user_id AND b.id = s.board_id
+  WHERE b.user_id = ? AND s.grantee_user_id <> ?`
 
 /**
  * The person's library sequences someone else depends on: on another person's
  * board, or on one of their own boards that is kept. Binds the userId 4 times.
  */
-const KEPT_SEQUENCES = `SELECT s.id FROM sequences s
+const KEPT_SEQUENCES = `SELECT bs.sequence_id FROM board_sequences bs
+  JOIN sequences s ON s.id = bs.sequence_id
   WHERE s.owner_id = ?
-    AND EXISTS (SELECT 1 FROM board_sequences bs
-                 WHERE bs.sequence_id = s.id
-                   AND (bs.user_id <> ? OR bs.board_id IN (${KEPT_BOARDS})))`
+    AND (bs.user_id <> ? OR bs.board_id IN (${KEPT_BOARDS}))`
 
 /**
  * The person's exercises someone else depends on: a node of another person's
  * sequence, or of one of their own kept sequences. Binds the userId 6 times.
  */
-const KEPT_EXERCISES = `SELECT e.id FROM exercises e
+const KEPT_EXERCISES = `SELECT n.exercise_id FROM sequence_nodes n
+  JOIN sequences s ON s.id = n.sequence_id
+  JOIN exercises e ON e.id = n.exercise_id
   WHERE e.owner_id = ?
-    AND EXISTS (SELECT 1 FROM sequence_nodes n JOIN sequences s ON s.id = n.sequence_id
-                 WHERE n.exercise_id = e.id
-                   AND (s.owner_id <> ? OR s.id IN (${KEPT_SEQUENCES})))`
+    AND (s.owner_id <> ? OR s.id IN (${KEPT_SEQUENCES}))`
 
 interface EraseDb {
   prepare(sql: string): { bind(...args: unknown[]): unknown }
@@ -147,8 +149,11 @@ export async function eraseAccountData(db: EraseDb, userId: string): Promise<Era
       [u, u, u]
     ],
     exercise_versions: [
-      `DELETE FROM exercise_versions WHERE exercise_id IN
-         (SELECT id FROM exercises WHERE owner_id = ? AND id NOT IN (${KEPT_EXERCISES}))`,
+      // KEPT_EXERCISES at the top level, never inside another IN (SELECT …):
+      // one level deeper is past D1's expression-depth limit of 100 (#118).
+      `DELETE FROM exercise_versions
+        WHERE exercise_id IN (SELECT id FROM exercises WHERE owner_id = ?)
+          AND exercise_id NOT IN (${KEPT_EXERCISES})`,
       [u, u, u, u, u, u, u]
     ],
     exercises: [
@@ -156,13 +161,15 @@ export async function eraseAccountData(db: EraseDb, userId: string): Promise<Era
       [u, u, u, u, u, u, u]
     ],
     sequence_nodes: [
-      `DELETE FROM sequence_nodes WHERE sequence_id IN
-         (SELECT id FROM sequences WHERE owner_id = ? AND id NOT IN (${KEPT_SEQUENCES}))`,
+      `DELETE FROM sequence_nodes
+        WHERE sequence_id IN (SELECT id FROM sequences WHERE owner_id = ?)
+          AND sequence_id NOT IN (${KEPT_SEQUENCES})`,
       [u, u, u, u, u]
     ],
     sequence_versions: [
-      `DELETE FROM sequence_versions WHERE sequence_id IN
-         (SELECT id FROM sequences WHERE owner_id = ? AND id NOT IN (${KEPT_SEQUENCES}))`,
+      `DELETE FROM sequence_versions
+        WHERE sequence_id IN (SELECT id FROM sequences WHERE owner_id = ?)
+          AND sequence_id NOT IN (${KEPT_SEQUENCES})`,
       [u, u, u, u, u]
     ],
     sequences: [
