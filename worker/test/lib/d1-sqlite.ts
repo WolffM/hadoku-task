@@ -133,6 +133,11 @@ export function makeSqliteD1(migrationSqlPath?: string): FakeD1 {
   // D1 caps expression depth at 100; node:sqlite defaults to 1000. Without
   // this, a statement nested one subquery too deep passes every harness and
   // 500s in prod — account erase did exactly that (#118).
+  if (!db.limits) {
+    throw new Error(
+      `node:sqlite has no \`limits\` on Node ${process.version}: the harness DB must run at D1's expression depth, so use a Node that has it (CI runs 24)`
+    )
+  }
   db.limits.exprDepth = D1_EXPR_DEPTH
   db.exec('PRAGMA foreign_keys = ON;')
   // task_events predates every migration file (created by hand in prod), so it

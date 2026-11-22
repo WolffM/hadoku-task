@@ -242,10 +242,13 @@ jobs:
       # setup-pnpm pins pnpm_config_store_dir for the whole job, so pnpm 11's
       # pre-run reinstall never fetches under setup-node's placeholder
       # NODE_AUTH_TOKEN (ERR_PNPM_FETCH_401, hadoku-actions#5).
+      # Node 24: the harness DB sets node:sqlite's `limits.exprDepth` to D1's
+      # 100 (#118), and Node 22's node:sqlite has no `limits`.
       - uses: WolffM/hadoku-actions/setup-pnpm@v1
         id: pnpm
         if: steps.scope.outputs.run == 'true'
         with:
+          node-version: '24'
           npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
           vault-key: ${{ secrets.KEY_SERVICE_TASK }}
 
