@@ -59,6 +59,12 @@ export interface Env {
   // Where cdn.hadoku.me serves exercise pictures from. Unset ⇒ https://cdn.hadoku.me.
   // The dev stack points it at its in-memory fake CDN (worker/test/dev-server.ts).
   CDN_PUBLIC_BASE?: string
+  // Service binding to edge-router (hadoku_site workers/task-api/wrangler.toml).
+  // A Worker's global fetch() to its own zone skips every Worker route on it and
+  // goes to the zone's DNS origin, which answers 522, so a call to
+  // hadoku.me/cdn/api/upload has to go through edge-router by binding. Unbound
+  // (the dev stack, the harnesses) ⇒ the global fetch, which they intercept.
+  EDGE_ROUTER?: { fetch(input: string, init?: RequestInit): Promise<Response> }
   // WHERE the automation runner's workflow lives, e.g. 'WolffM/tenhands' — the
   // target of the `repository_dispatch` that wakes it (§5.2). NOT the board's
   // own `repo`: the runner is ONE workflow in ONE repo that sweeps every board

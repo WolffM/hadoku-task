@@ -273,7 +273,9 @@ async function uploadToCdn(env: Env, bytes: Uint8Array) {
   }
   let res: Response
   try {
-    res = await fetch(CDN_UPLOAD_URL, {
+    // Through the edge-router binding when bound: see EDGE_ROUTER in types.ts.
+    const send = env.EDGE_ROUTER ?? globalThis
+    res = await send.fetch(CDN_UPLOAD_URL, {
       method: 'POST',
       headers: {
         'X-User-Key': key,

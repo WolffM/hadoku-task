@@ -497,6 +497,26 @@ async function main() {
     up.json.imageUrl === `https://cdn.test/${up.json.imageKey}`,
     up.json
   )
+  // In prod the global fetch to hadoku.me goes to the zone origin (522), so a
+  // bound EDGE_ROUTER must carry the upload instead.
+  const viaEdge: string[] = []
+  const bound = {
+    ...keyed,
+    EDGE_ROUTER: {
+      fetch: (url: string, init?: RequestInit) => {
+        viaEdge.push(url)
+        return globalThis.fetch(url, init)
+      }
+    }
+  }
+  const callsBeforeEdge = cdnCalls.length
+  const edgeUp = await req(GUEST, 'POST', `${L}/images`, undefined, PNG, bound)
+  check(
+    'with EDGE_ROUTER bound, the upload goes through edge-router',
+    edgeUp.status === 200 && viaEdge.length === 1 && viaEdge[0] === CDN_UPLOAD,
+    { edgeUp, viaEdge }
+  )
+  check('…exactly once', cdnCalls.length === callsBeforeEdge + 1, cdnCalls)
   const audio = await req(GUEST, 'POST', `${L}/images`, undefined, MP3, keyed)
   check('audio the CDN would take is refused here (415)', audio.status === 415, audio)
   const junk = await req(GUEST, 'POST', `${L}/images`, undefined, new Uint8Array([1, 2, 3]), keyed)

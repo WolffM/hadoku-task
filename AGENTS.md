@@ -238,7 +238,10 @@ friend+, which is why the worker forwards rather than the browser). Images only 
 audio), 5 MB, 30/day/person (`library_uploads`), and an exercise may only carry a key uploaded
 here. The dev stack fakes the CDN in memory (`/__dev/cdn/<key>`); never point dev at the real one —
 it is public. NOT dataplatform's data endpoint: that listener is tailnet-only and refuses proxied
-requests, so a CF worker can't reach it.
+requests, so a CF worker can't reach it. The upload goes through the `EDGE_ROUTER` service binding
+(hadoku_site `workers/task-api/wrangler.toml`), never the global `fetch()`: a Worker's fetch to its
+own zone skips every Worker route and lands on the zone origin, which answers 522. The dev fake
+CDN can't show this; only prod can.
 
 The player's clock is pure (`src/domain/sequencePlayer.ts`, proven by
 `src/test/sequence-player-verify.ts`); the component only feeds it frames. The player, builders and
