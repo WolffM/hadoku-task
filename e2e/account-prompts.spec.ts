@@ -8,11 +8,14 @@ import { asFreshUser, pointPrefsAtLocalStack, PREFS_BASE } from './helpers/prefs
  *
  *   - the verify dialog, opened by a 403 MEMBER_NOT_VERIFIED on any fetch the
  *     page makes, by the app's requestVerification(), or by the account tab's
- *     "Link your account";
+ *     "Link your account", and offering the ways a guest verifies themself:
+ *     save a passkey, connect Discord or Steam (the promotion itself is the
+ *     edge's, proven in hadoku_site's self-verify.e2e.ts);
  *   - the keep-your-account banner, after the first click, once per page,
  *     snoozed for a week by Later on the person's prefs row (the REAL prefs-api).
  *
- * whoami and the edge's /session/verify-request are mocked; prefs are not.
+ * For the dialog, whoami, the site's sign-in client and prefs-api's avatar
+ * routes are mocked; for the banner, prefs are not.
  * The rules underneath are src/test/account-prompts-verify.ts.
  */
 
@@ -29,32 +32,86 @@ async function as(page: Page, identity: Record<string, unknown>) {
   )
 }
 
-/** /session/verify-request: GET answers `open`; POST answers `post`, and is recorded. */
-async function verifyRequestRoute(
+/**
+ * prefs-api's avatar routes as the dialog reads them: which providers can link,
+ * a link's start, and the settings after it (linked once `linked()` says so).
+ */
+async function avatarRoutes(
   page: Page,
   {
-    open = false,
-    post = { status: 200, body: { requested: true, fresh: true, requestedAt: 1 } }
-  } = {}
+    providers = { discord: true, steam: true },
+    linked = () => false
+  }: { providers?: Record<string, boolean>; linked?: () => boolean } = {}
 ) {
-  const posts: unknown[] = []
-  await page.route('**/session/verify-request', route => {
-    const req = route.request()
-    if (req.method() === 'POST') {
-      posts.push(req.postDataJSON())
-      return route.fulfill({
-        status: post.status,
-        contentType: 'application/json',
-        body: JSON.stringify(post.body)
+  await page.route('**/prefs/api/v1/_avatar', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        avatar: { source: 'sprite', sprite: 'sage' },
+        choice: null,
+        sprite: 'sage',
+        linked: linked() ? { discord: { avatarUrl: null, linkedAt: 1, refreshedAt: 1 } } : {},
+        upload: null,
+        providers
       })
-    }
+    })
+  )
+  await page.route('**/prefs/api/v1/_avatar/link/discord', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ authorizeUrl: `${new URL(page.url()).origin}/fake-discord-consent` })
+    })
+  )
+  await page
+    .context()
+    .route('**/fake-discord-consent', route =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<p>consent</p>' })
+    )
+}
+
+/** whoami as a guest until `promoted()`, then as a member; counts the reads. */
+async function promotable(page: Page, promoted: () => boolean) {
+  const reads = { n: 0 }
+  await page.route('**/session/whoami', route => {
+    reads.n++
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ tier: 'guest', requested: open, requestedAt: open ? 1 : null })
+      body: JSON.stringify({
+        valid: true,
+        userType: promoted() ? 'member' : 'guest',
+        name: 'Player 12345',
+        passkeys: 1
+      })
     })
   })
-  return posts
+  return reads
+}
+
+/** The site's sign-in client, its addPasskey answering as `outcome` says. */
+async function signInClient(page: Page, outcome: 'saved' | 'cancelled') {
+  await page.route('**/auth/sign-in.js*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/javascript',
+      body: `export async function signIn() { throw new Error('unused') }
+export async function addPasskey() { ${
+        outcome === 'saved'
+          ? 'window.__added = (window.__added || 0) + 1; return { saved: true, passkeys: 1 }'
+          : "throw new Error('Passkey not saved. The prompt was cancelled.')"
+      } }`
+    })
+  )
+}
+
+/** After the identity re-read, the account tab names the tier. */
+async function tierShown(page: Page) {
+  await page.getByRole('button', { name: 'User settings' }).click()
+  const panel = page.locator('.settings-popout__panel')
+  await panel.getByRole('tab', { name: 'Account' }).click()
+  return panel.locator('.settings-popout__tier')
 }
 
 /** A backend refusing this caller: the route answers 403 with `body`. */
@@ -83,7 +140,7 @@ const requestVerification = (page: Page, reason?: string) =>
 test.describe('verify dialog', () => {
   test('a 403 MEMBER_NOT_VERIFIED on any fetch opens it for a guest', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await refusal(page, { error: 'Forbidden', code: 'MEMBER_NOT_VERIFIED' })
     await load(page)
     expect(await hitRefusal(page)).toBe(403)
@@ -121,7 +178,7 @@ test.describe('verify dialog', () => {
 
   test('requestVerification opens it titled by the reason', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await load(page)
     await requestVerification(page, 'Saving decks')
     await expect(
@@ -131,7 +188,7 @@ test.describe('verify dialog', () => {
 
   test('focus stays inside, Escape closes, Not now closes', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await load(page)
     await requestVerification(page)
     const dialog = page.getByRole('dialog', DIALOG)
@@ -151,7 +208,7 @@ test.describe('verify dialog', () => {
 
   test('after Not now, a repeated refusal waits for the next action', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await refusal(page, { code: 'MEMBER_NOT_VERIFIED' })
     await load(page)
     await hitRefusal(page)
@@ -167,7 +224,7 @@ test.describe('verify dialog', () => {
 
   test('I already have an account signs in and comes back here', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await page.route('**/auth?**', route =>
       route.fulfill({ status: 200, contentType: 'text/html', body: '<p>auth</p>' })
     )
@@ -185,72 +242,124 @@ test.describe('verify dialog', () => {
     expect(url.searchParams.get('return')).toBe('/?board=x#lane')
   })
 
-  test('Ask to be verified posts the reason, then says it was sent', async ({ page }) => {
+  test('offers the ways to verify, and no request', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    const posts = await verifyRequestRoute(page)
+    await avatarRoutes(page)
+    const asked: string[] = []
+    page.on('request', r => {
+      if (r.url().includes('verify-request')) asked.push(r.url())
+    })
     await load(page)
     await requestVerification(page, 'Saving decks')
     const dialog = page.getByRole('dialog', DIALOG)
-    await dialog.getByRole('button', { name: 'Ask to be verified' }).click()
-    await expect(dialog.getByRole('status')).toHaveText('Request sent')
-    expect(posts).toEqual([{ reason: 'Saving decks' }])
+    for (const name of [
+      'I already have an account',
+      'Save a passkey',
+      'Connect Discord',
+      'Connect Steam'
+    ]) {
+      await expect(dialog.getByRole('button', { name })).toBeVisible()
+    }
+    await expect(dialog.getByRole('button', { name: /request|ask/i })).toHaveCount(0)
+    await expect(dialog).not.toContainText(/request/i)
+    expect(asked).toEqual([])
   })
 
-  test('a request already sent says so (fresh: false)', async ({ page }) => {
+  test('a provider prefs-api cannot link is not offered', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page, {
-      post: { status: 200, body: { requested: true, fresh: false, requestedAt: 1 } }
-    })
+    await avatarRoutes(page, { providers: { discord: false, steam: true } })
     await load(page)
     await requestVerification(page)
     const dialog = page.getByRole('dialog', DIALOG)
-    await dialog.getByRole('button', { name: 'Ask to be verified' }).click()
-    await expect(dialog.getByRole('status')).toHaveText('Already requested')
+    await expect(dialog.getByRole('button', { name: 'Connect Steam' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Connect Discord' })).toHaveCount(0)
   })
 
-  test('an open request shows Requested in place of the button', async ({ page }) => {
-    await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page, { open: true })
+  test('Save a passkey: saved, it closes and identity is read again', async ({ page }) => {
+    let saved = false
+    const whoamis = await promotable(page, () => saved)
+    await avatarRoutes(page)
+    await signInClient(page, 'saved')
     await load(page)
     await requestVerification(page)
     const dialog = page.getByRole('dialog', DIALOG)
-    await expect(dialog.getByRole('status')).toHaveText('Requested')
-    await expect(dialog.getByRole('button', { name: 'Ask to be verified' })).toHaveCount(0)
-  })
-
-  test('409: already verified, so it closes and whoami is read again', async ({ page }) => {
-    let whoamis = 0
-    let verifiedNow = false
-    await page.route('**/session/whoami', route => {
-      whoamis++
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          verifiedNow
-            ? { valid: true, userType: 'member', name: 'Player 12345', passkeys: 1 }
-            : { valid: true, userType: 'guest', name: 'Player 12345', passkeys: 1 }
-        )
-      })
-    })
-    await verifyRequestRoute(page, { post: { status: 409, body: { error: 'Already verified' } } })
-    await load(page)
-    const before = whoamis
-    await requestVerification(page)
-    const dialog = page.getByRole('dialog', DIALOG)
-    verifiedNow = true
-    await dialog.getByRole('button', { name: 'Ask to be verified' }).click()
+    const before = whoamis.n
+    saved = true
+    await dialog.getByRole('button', { name: 'Save a passkey' }).click()
     await expect(dialog).toHaveCount(0)
-    await expect.poll(() => whoamis).toBeGreaterThan(before)
-    await page.getByRole('button', { name: 'User settings' }).click()
-    const panel = page.locator('.settings-popout__panel')
-    await panel.getByRole('tab', { name: 'Account' }).click()
-    await expect(panel.locator('.settings-popout__tier')).toHaveText('Member')
+    expect(await page.evaluate(() => (window as unknown as { __added: number }).__added)).toBe(1)
+    await expect.poll(() => whoamis.n).toBeGreaterThan(before)
+    await expect(await tierShown(page)).toHaveText('Member')
+  })
+
+  test('a passkey save that fails says why and stays open', async ({ page }) => {
+    await as(page, { userType: 'guest' })
+    await avatarRoutes(page)
+    await signInClient(page, 'cancelled')
+    await load(page)
+    await requestVerification(page)
+    const dialog = page.getByRole('dialog', DIALOG)
+    await dialog.getByRole('button', { name: 'Save a passkey' }).click()
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'Passkey not saved. The prompt was cancelled.'
+    )
+    await expect(dialog.getByRole('button', { name: 'Save a passkey' })).toBeEnabled()
+  })
+
+  test('Connect Discord: the consent, the popup, and once linked it closes', async ({ page }) => {
+    let linked = false
+    const whoamis = await promotable(page, () => linked)
+    await avatarRoutes(page, { linked: () => linked })
+    await load(page)
+    await requestVerification(page)
+    const dialog = page.getByRole('dialog', DIALOG)
+    await dialog.getByRole('button', { name: 'Connect Discord' }).click()
+    // Nothing is fetched from Discord before the person reads what is kept.
+    await expect(dialog.getByText(/identify/)).toBeVisible()
+    const popupPromise = page.waitForEvent('popup')
+    await dialog.getByRole('button', { name: 'Continue to Discord' }).click()
+    const popup = await popupPromise
+    await popup.waitForURL('**/fake-discord-consent')
+    const before = whoamis.n
+    // What the callback page does once the link lands (and the edge verifies them).
+    linked = true
+    await popup.evaluate(() => {
+      const c = new BroadcastChannel('hadoku-avatar-link')
+      c.postMessage({ type: 'hadoku-avatar-link', ok: true, provider: 'discord' })
+      c.close()
+    })
+    await expect(dialog).toHaveCount(0)
+    await expect.poll(() => whoamis.n).toBeGreaterThan(before)
+    await expect(await tierShown(page)).toHaveText('Member')
+  })
+
+  test('a link that fails says why and stays open', async ({ page }) => {
+    await as(page, { userType: 'guest' })
+    await avatarRoutes(page)
+    await load(page)
+    await requestVerification(page)
+    const dialog = page.getByRole('dialog', DIALOG)
+    await dialog.getByRole('button', { name: 'Connect Discord' }).click()
+    const popupPromise = page.waitForEvent('popup')
+    await dialog.getByRole('button', { name: 'Continue to Discord' }).click()
+    const popup = await popupPromise
+    await popup.waitForURL('**/fake-discord-consent')
+    await popup.evaluate(() => {
+      const c = new BroadcastChannel('hadoku-avatar-link')
+      c.postMessage({
+        type: 'hadoku-avatar-link',
+        ok: false,
+        error: 'Discord declined: access_denied'
+      })
+      c.close()
+    })
+    await expect(dialog.getByRole('alert')).toHaveText('Discord declined: access_denied')
+    await expect(dialog).toBeVisible()
   })
 
   test('the account tab: "Guest · Link your account" opens it', async ({ page }) => {
     await as(page, { userType: 'guest' })
-    await verifyRequestRoute(page)
+    await avatarRoutes(page)
     await load(page)
     await page.getByRole('button', { name: 'User settings' }).click()
     const panel = page.locator('.settings-popout__panel')

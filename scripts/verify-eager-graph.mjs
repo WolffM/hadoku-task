@@ -29,7 +29,6 @@ const dist = join(root, 'task-ui-components/dist')
 const LAZY = [
   'components/SettingsSiteTabs.js',
   'components/AccountPrompts.js',
-  'lib/verifyRequest.js',
   'components/AvatarDialog.js',
   'components/AvatarBuilder.js',
   'components/AvatarPicker.js',

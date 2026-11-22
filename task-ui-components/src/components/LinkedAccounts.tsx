@@ -18,7 +18,7 @@
  */
 import React, { useEffect, useState } from 'react'
 import type { AvatarSettings, LinkProvider } from '@wolffm/prefs-client/avatar'
-import { AVATAR_EVENT } from '../lib/avatarEvent'
+import { announceAvatar } from '../lib/announceAvatar'
 import { avatarClient, avatarErrorText } from '../lib/avatarData'
 
 const LABEL: Record<LinkProvider, string> = { discord: 'Discord', steam: 'Steam' }
@@ -130,7 +130,7 @@ export function LinkedAccounts() {
       setSettings(next)
       // The page under the popout (a watchparty room, a game) re-reads the
       // avatar from this, as it does after a change in the avatar dialog.
-      window.dispatchEvent(new window.CustomEvent<AvatarSettings>(AVATAR_EVENT, { detail: next }))
+      announceAvatar(next)
     } catch (err) {
       setError(avatarErrorText(err))
     } finally {

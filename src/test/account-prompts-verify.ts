@@ -1,8 +1,7 @@
 /**
  * Verification harness for the header's two account prompts
- * (@wolffm/task-ui-components lib/accountPrompts, lib/verification,
- * lib/verifyRequest): the verify dialog's triggers and its request call, and
- * the keep-your-account banner's due rule.
+ * (@wolffm/task-ui-components lib/accountPrompts, lib/verification): the
+ * verify dialog's triggers and the keep-your-account banner's due rule.
  *
  * The UI end of both is e2e/account-prompts.spec.ts. What is here is the part
  * that fails quietly: a trigger that fires on the wrong 403 pops a dialog at a
@@ -16,7 +15,6 @@ import {
   keepAccountSnoozeUntil,
   KEEP_ACCOUNT_SNOOZE_MS,
   offersVerification,
-  verifyRequestOutcome,
   verifyTitle,
   wrapFetchForVerify,
   type KeepAccountState
@@ -29,10 +27,6 @@ import {
   requestVerification,
   type VerifyEventDetail
 } from '../../task-ui-components/src/lib/verification'
-import {
-  sendVerifyRequest,
-  verifyRequestOpen
-} from '../../task-ui-components/src/lib/verifyRequest'
 
 /** The whole ladder (settingsClient.ts `Tier`); every case below but guest is cut from it. */
 const LADDER = ['public', 'guest', 'member', 'friend', 'service', 'wife', 'admin'] as const
@@ -195,56 +189,6 @@ console.log('\nafter a close, a refusal waits for the next touch of the page')
   holdFetchOpensUntilInteraction()
   doc.dispatchEvent(new Event('pointerdown'))
   check('a pointer re-arms', fetchOpensDialog(), true)
-}
-
-console.log('\nverifyRequestOutcome')
-check('fresh', verifyRequestOutcome(200, { requested: true, fresh: true, requestedAt: 1 }), {
-  kind: 'sent'
-})
-check('already open', verifyRequestOutcome(200, { requested: true, fresh: false }), {
-  kind: 'already'
-})
-check('409: verified', verifyRequestOutcome(409, { error: 'Already verified' }), {
-  kind: 'verified'
-})
-check('500: its words', verifyRequestOutcome(500, { error: 'Try later' }), {
-  kind: 'error',
-  message: 'Try later'
-})
-check('429 no body', verifyRequestOutcome(429, null), { kind: 'error', message: 'Not sent (429)' })
-
-console.log('\nthe verify-request calls')
-{
-  const sent: { url: string; init?: Parameters<typeof fetch>[1] }[] = []
-  let answer: Response = json(200, { requested: true, fresh: true, requestedAt: 5 })
-  globalThis.fetch = ((url: string, init?: Parameters<typeof fetch>[1]) => {
-    sent.push({ url, init })
-    return Promise.resolve(answer)
-  }) as typeof fetch
-  check('POST sent', await sendVerifyRequest('Saving decks'), { kind: 'sent' })
-  check(
-    'POST route and method',
-    [sent[0].url, sent[0].init?.method],
-    ['/session/verify-request', 'POST']
-  )
-  check('POST body carries the reason', JSON.parse(String(sent[0].init?.body)), {
-    reason: 'Saving decks'
-  })
-  check('POST is cookie-authed', sent[0].init?.credentials, 'same-origin')
-  answer = json(200, { requested: true, fresh: false, requestedAt: 5 })
-  check('POST already', await sendVerifyRequest(), { kind: 'already' })
-  answer = json(409, { error: 'Already verified' })
-  check('POST 409', await sendVerifyRequest(), { kind: 'verified' })
-  answer = json(200, { tier: 'guest', requested: true, requestedAt: 5 })
-  check('GET open', await verifyRequestOpen(), true)
-  check('GET is a GET', sent[sent.length - 1].init?.method, undefined)
-  answer = json(200, { tier: 'guest', requested: false, requestedAt: null })
-  check('GET none open', await verifyRequestOpen(), false)
-  globalThis.fetch = (() => Promise.reject(new TypeError('offline'))) as typeof fetch
-  check('POST offline', await sendVerifyRequest(), {
-    kind: 'error',
-    message: 'Not sent: no connection'
-  })
 }
 
 console.log('\nkeepAccountDue: a guest with no passkey, not snoozed')

@@ -206,6 +206,28 @@ token from the chosen family — see
 of what a shared board stores, so two people viewing the same board can see
 it in different themes.
 
+## Verifying a guest account
+
+_Guests only_ (`task-ui-components/src/components/AccountPrompts.tsx`).
+
+**What it does.** Every hadoku.me app renders this package's header, and the
+header's verify dialog opens when a guest reaches something that needs a
+verified account (a `403 MEMBER_NOT_VERIFIED`, or an app's
+`requestVerification()`). It offers the ways a guest verifies themself: save
+a passkey, connect Discord, connect Steam. Any one of them makes the account
+a member at once: the site's edge promotes them when the passkey is saved or
+the link completes, so the dialog only refreshes who they are. "I already
+have an account" signs in to the old one.
+
+**How to use it.** Press one of the buttons. Connect shows what Discord or
+Steam shares and keeps before anything is fetched, then links in a popup;
+the page underneath never navigates.
+
+**What it does not do.** It sends nobody a request: the operator does not
+review a guest any more. Unlinking or losing a passkey later does not take
+verification away, and a guest the operator unverified stays a guest until
+the operator verifies them again.
+
 ## Trivia
 
 Trackers started as their own kind of board and became a widget any board

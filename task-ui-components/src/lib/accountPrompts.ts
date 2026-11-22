@@ -70,30 +70,6 @@ export function wrapFetchForVerify(
   }
 }
 
-/** POST /session/verify-request, read into what the dialog says next. */
-export type VerifyRequestOutcome =
-  | { kind: 'sent' }
-  | { kind: 'already' }
-  | { kind: 'verified' }
-  | { kind: 'error'; message: string }
-
-export function verifyRequestOutcome(status: number, body: unknown): VerifyRequestOutcome {
-  const b = (typeof body === 'object' && body !== null ? body : {}) as {
-    requested?: unknown
-    fresh?: unknown
-    error?: unknown
-  }
-  // 409: the operator verified them already.
-  if (status === 409) return { kind: 'verified' }
-  if (status >= 200 && status < 300 && b.requested === true) {
-    return b.fresh === false ? { kind: 'already' } : { kind: 'sent' }
-  }
-  return {
-    kind: 'error',
-    message: typeof b.error === 'string' ? b.error : `Not sent (${status})`
-  }
-}
-
 /** Later snoozes the banner for a week. */
 export const KEEP_ACCOUNT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000
 

@@ -55,7 +55,7 @@ import {
   type Placement
 } from '@wolffm/prefs-client/cosmetics'
 import { AvatarPicker } from './AvatarPicker'
-import { AVATAR_EVENT } from '../lib/avatarEvent'
+import { announceAvatar } from '../lib/announceAvatar'
 import {
   avatarClient,
   avatarErrorText,
@@ -410,7 +410,7 @@ export function AvatarBuilder({ name, isAdmin = false }: AvatarBuilderProps) {
   const announce = (next: AvatarSettings) =>
     // The page under the popout (a watchparty room, a game) re-reads the avatar
     // from this instead of waiting for its next join.
-    window.dispatchEvent(new window.CustomEvent<AvatarSettings>(AVATAR_EVENT, { detail: next }))
+    announceAvatar(next)
 
   const run = useCallback(async (work: () => Promise<AvatarSettings>) => {
     setBusy(true)

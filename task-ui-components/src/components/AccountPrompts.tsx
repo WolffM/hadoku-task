@@ -4,7 +4,9 @@
  * their own: ConnectedSettings is on every page, and these show for a guest,
  * now and then. ConnectedSettings decides WHEN; this is what they look like.
  *
- *   - VerifyDialog: a guest hit something that needs a verified account.
+ *   - VerifyDialog: a guest hit something that needs a verified account, and
+ *     verifies themself there: a saved passkey or a linked Discord or Steam
+ *     makes them a member (hadoku_site edge-router self-verify.ts).
  *   - KeepAccountBanner: a guest with no passkey, after their first click.
  *
  * Styles are inline for the reason AvatarDialog's are: an app compiles this
@@ -15,8 +17,11 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '@wolffm/themes'
 import { verifyTitle } from '../lib/accountPrompts'
-import { sendVerifyRequest, verifyRequestOpen } from '../lib/verifyRequest'
-import { addPasskeyHere, switchKeyHref } from '../lib/settingsClient'
+import type { LinkProvider } from '@wolffm/prefs-client/avatar'
+import { addPasskeyHere, passkeysSupported, switchKeyHref } from '../lib/settingsClient'
+import { announceAvatar } from '../lib/announceAvatar'
+import { avatarClient, avatarErrorText } from '../lib/avatarData'
+import { LinkConsent, linkAndWear } from './LinkedAccounts'
 import { reportErr } from './settingsShared'
 
 const S: Record<string, React.CSSProperties> = {
@@ -52,7 +57,6 @@ const S: Record<string, React.CSSProperties> = {
   body: { margin: 0, fontSize: '0.9rem', color: 'var(--color-text-secondary)' },
   actions: { display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8 },
   action: { fontSize: '0.85rem', padding: '7px 12px' },
-  status: { fontSize: '0.85rem', textAlign: 'center', color: 'var(--color-text-secondary)' },
   later: { alignSelf: 'flex-end', fontSize: '0.85rem', padding: '6px 12px' },
   banner: {
     boxSizing: 'border-box',
@@ -89,11 +93,14 @@ export interface VerifyDialogProps {
   /** The guest's generated name, "Player 12345". */
   name: string | null
   onClose: () => void
-  /** The edge says they are verified already (409): identity has changed. */
+  /** They saved a passkey or linked an account: identity has changed. */
   onVerified: () => void
 }
 
-type RequestState = 'idle' | 'sending' | 'sent' | 'already' | 'open'
+const LINK_LABEL: Record<LinkProvider, string> = {
+  discord: 'Connect Discord',
+  steam: 'Connect Steam'
+}
 
 export function VerifyDialog({ reason, name, onClose, onVerified }: VerifyDialogProps) {
   const titleId = useId()
@@ -101,21 +108,60 @@ export function VerifyDialog({ reason, name, onClose, onVerified }: VerifyDialog
   const cardRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
-  const [request, setRequest] = useState<RequestState>('idle')
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consent, setConsent] = useState<LinkProvider | null>(null)
+  // Which links prefs-api can make; Connect shows only for those.
+  const [providers, setProviders] = useState<Record<LinkProvider, boolean> | null>(null)
+  const ctl = useRef<AbortController | null>(null)
+  const onVerifiedRef = useRef(onVerified)
+  onVerifiedRef.current = onVerified
 
-  // A request this person already has open shows as Requested, not as a button.
   useEffect(() => {
     let live = true
-    verifyRequestOpen()
-      .then(open => {
-        if (live && open) setRequest(r => (r === 'idle' ? 'open' : r))
-      })
+    avatarClient
+      .get()
+      .then(s => live && setProviders(s.providers))
       .catch(reportErr)
     return () => {
       live = false
+      ctl.current?.abort()
     }
   }, [])
+
+  const verified = useCallback(() => {
+    onVerifiedRef.current()
+    onCloseRef.current()
+  }, [])
+
+  const savePasskey = useCallback(async () => {
+    const c = new AbortController()
+    ctl.current = c
+    setBusy(true)
+    setError(null)
+    try {
+      if ((await addPasskeyHere(c.signal)) === 'saved') verified()
+    } catch (err) {
+      if (!c.signal.aborted) setError((err as Error)?.message || 'Passkey not saved')
+    } finally {
+      if (ctl.current === c) ctl.current = null
+      setBusy(false)
+    }
+  }, [verified])
+
+  // Called inside Continue's click: linkAndWear opens the popup before it awaits.
+  const link = (provider: LinkProvider) => {
+    setConsent(null)
+    setBusy(true)
+    setError(null)
+    linkAndWear(provider)
+      .then(next => {
+        announceAvatar(next)
+        if (next.linked[provider]) verified()
+      })
+      .catch((err: unknown) => setError(avatarErrorText(err)))
+      .finally(() => setBusy(false))
+  }
 
   // Focus starts on the first action and stays inside; Escape closes; focus
   // goes back where it was.
@@ -155,32 +201,6 @@ export function VerifyDialog({ reason, name, onClose, onVerified }: VerifyDialog
     }
   }, [])
 
-  const ask = useCallback(async () => {
-    setRequest('sending')
-    setError(null)
-    const outcome = await sendVerifyRequest(reason)
-    if (outcome.kind === 'verified') {
-      onVerified()
-      onCloseRef.current()
-      return
-    }
-    if (outcome.kind === 'error') {
-      setError(outcome.message)
-      setRequest('idle')
-      return
-    }
-    setRequest(outcome.kind)
-  }, [reason, onVerified])
-
-  const status =
-    request === 'sent'
-      ? 'Request sent'
-      : request === 'already'
-        ? 'Already requested'
-        : request === 'open'
-          ? 'Requested'
-          : null
-
   return createPortal(
     <div style={S.overlay} onClick={onClose}>
       <div
@@ -212,22 +232,41 @@ export function VerifyDialog({ reason, name, onClose, onVerified }: VerifyDialog
           >
             I already have an account
           </button>
-          {status ? (
-            <span style={S.status} role="status">
-              {status}
-            </span>
-          ) : (
+          {passkeysSupported() && (
             <button
               type="button"
               className="settings-popout__btn"
               style={S.action}
-              disabled={request === 'sending'}
+              disabled={busy}
               onClick={() => {
-                ask().catch(reportErr)
+                savePasskey().catch(reportErr)
               }}
             >
-              {request === 'sending' ? 'Sending…' : 'Ask to be verified'}
+              Save a passkey
             </button>
+          )}
+          {(['discord', 'steam'] as const)
+            .filter(p => providers?.[p])
+            .map(p => (
+              <button
+                key={p}
+                type="button"
+                className="settings-popout__btn"
+                style={S.action}
+                disabled={busy}
+                aria-expanded={consent === p}
+                onClick={() => setConsent(consent === p ? null : p)}
+              >
+                {LINK_LABEL[p]}
+              </button>
+            ))}
+          {consent && (
+            <LinkConsent
+              provider={consent}
+              busy={busy}
+              onLink={() => link(consent)}
+              onCancel={() => setConsent(null)}
+            />
           )}
           {error && (
             <span className="settings-popout__error" role="alert">

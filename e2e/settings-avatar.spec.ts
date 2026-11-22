@@ -69,7 +69,7 @@ function settings(over: Record<string, unknown> = {}) {
 const json = (route: Route, body: unknown) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
 
-async function stubBoot(page: Page, userType: 'friend' | 'public') {
+async function stubBoot(page: Page, userType: 'guest' | 'friend' | 'public') {
   await page.route('**/prefs/api/**', route => json(route, {}))
   await page.route('**/session/whoami', route =>
     json(
@@ -85,14 +85,14 @@ async function stubBoot(page: Page, userType: 'friend' | 'public') {
   await page.route('**/watchparty/api/characters', route => json(route, CHARACTERS))
   await page.route('**/watchparty/media/**', route => route.fulfill({ status: 404, body: '' }))
   if (userType !== 'public') {
-    await page.addInitScript(() => {
+    await page.addInitScript(tier => {
       localStorage.setItem('hadoku_session_id', 'avatar-session')
-      localStorage.setItem('hadoku_user_type', 'friend')
-    })
+      localStorage.setItem('hadoku_user_type', tier)
+    }, userType)
   }
 }
 
-async function openSettings(page: Page, userType: 'friend' | 'public') {
+async function openSettings(page: Page, userType: 'guest' | 'friend' | 'public') {
   await page.goto(`/?userType=${userType}`)
   await page.waitForSelector(APP_HEADER, { timeout: 15000 })
   await page.getByRole('button', { name: 'User settings' }).click()
@@ -192,6 +192,31 @@ test.describe('settings avatar row', () => {
 
     await picture.getByRole('radio', { name: 'Character' }).click()
     await expect(avatarDialog(page).getByRole('radio', { name: 'Fern' })).toBeVisible()
+  })
+
+  test('a guest links too: Connections is theirs, and Link starts the popup', async ({
+    page,
+    context
+  }) => {
+    // Linking verifies a guest (hadoku_site self-verify.ts), so it is never member-only.
+    await stubBoot(page, 'guest')
+    await page.route(`**${AVATAR_PATH}`, route => json(route, settings()))
+    let started = 0
+    await page.route(`**${AVATAR_PATH}/link/steam`, route => {
+      started++
+      return json(route, { authorizeUrl: `${new URL(page.url()).origin}/fake-steam-consent` })
+    })
+    await context.route('**/fake-steam-consent', route =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<p>consent</p>' })
+    )
+    await openSettings(page, 'guest')
+    await page.getByRole('tab', { name: 'Connections' }).click()
+    const links = page.getByRole('tabpanel')
+    await links.getByRole('button', { name: 'Link' }).last().click()
+    const popupPromise = page.waitForEvent('popup')
+    await links.getByRole('button', { name: 'Continue to Steam' }).click()
+    await (await popupPromise).waitForURL('**/fake-steam-consent')
+    expect(started).toBe(1)
   })
 
   test('linking is under Account: a popup after the consent step, read back when it reports', async ({
