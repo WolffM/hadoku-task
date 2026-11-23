@@ -1,4 +1,5 @@
-import { expect, type Page } from '@playwright/test'
+import { expect } from '@wolffm/e2e-harness/playwright'
+import type { Page } from '@playwright/test'
 
 /**
  * Open the settings popout on its App tab — the task app's own settings, with

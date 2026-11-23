@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Request } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Page, Request } from '@playwright/test'
 import { apiUp } from './helpers/stack'
 
 /**

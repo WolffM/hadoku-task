@@ -1,4 +1,5 @@
-import { test, expect, chromium, type Browser } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import { chromium, type Browser } from '@playwright/test'
 
 /**
  * Production cold-load perf regression test.

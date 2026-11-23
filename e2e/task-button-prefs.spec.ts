@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Page } from '@playwright/test'
 import { prefsUp, pointPrefsAtLocalStack, seedDevicePrefs } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 import { openSettingsAppTab } from './helpers/settings'

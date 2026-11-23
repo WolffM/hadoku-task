@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { APIRequestContext } from '@playwright/test'
 import { API, apiUp } from './helpers/stack'
 
 /**

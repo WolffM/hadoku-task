@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
 import { MAIN_BOARD, mockShellApi } from './helpers/mock-api'
 import { signIn } from './helpers/stack'
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
 
 /**
  * Inline "Switch key" against production, through the site's REAL sign-in

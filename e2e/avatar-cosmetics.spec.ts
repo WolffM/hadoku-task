@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { APIRequestContext, Page } from '@playwright/test'
 import { PREFS_BASE, pointPrefsAtLocalStack, prefsUp } from './helpers/prefs'
 import { mockShellApi } from './helpers/mock-api'
 

@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, devices } from '@playwright/test'
+import { devices } from '@playwright/test'
+import { defineE2eConfig } from '@wolffm/e2e-harness/playwright'
 
 /**
  * EVERY PORT THIS RUN USES IS FREE, CHOSEN AT START (hadoku-task#114)
@@ -50,20 +51,29 @@ if (unpinned.length > 0) {
 const PORT = Number(process.env.E2E_PORT)
 const API_PORT = Number(process.env.DEV_API_PORT)
 
-export default defineConfig({
+/**
+ * THE FLEET PRESET (hadoku-task#119)
+ * ----------------------------------
+ * defineE2eConfig keeps a trace, screenshot and video of EVERY failed attempt
+ * (it refuses a trace mode that records nothing without a retry — the old CI
+ * 'on-first-retry'), adds the `list` reporter so a failure prints in the job
+ * log, and the `json` reporter report-e2e reads (e2e-report.json). It also
+ * pins timezone UTC and locale en-US, and forbidOnly on CI. On a red run
+ * report-e2e uploads each failing test's attachments (trace, screenshot,
+ * video, and the browser-log.jsonl that the preset's `test` writes) as the
+ * e2e-evidence-task-<attempt> artifact — so specs import test/expect from
+ * '@wolffm/e2e-harness/playwright' (an eslint rule holds them to it).
+ */
+export default defineE2eConfig({
   testDir: './e2e',
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
   timeout: 60000,
   outputDir: 'test-results',
   use: {
-    baseURL: `http://localhost:${PORT}`,
-    // Locally there are no retries, so 'on-first-retry' would never record: a
-    // one-off failure under load left nothing to read once the run was rerun.
-    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure'
+    baseURL: `http://localhost:${PORT}`
   },
   projects: [
     {

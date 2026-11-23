@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Page } from '@playwright/test'
 
 /**
  * A rename made in the gear reaches every other hadoku tab of the browser,

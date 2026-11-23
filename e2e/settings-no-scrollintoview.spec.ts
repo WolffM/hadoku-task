@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
 
 /**
  * jsdom implements no Element.prototype.scrollIntoView or ResizeObserver, and every consumer's

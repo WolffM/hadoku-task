@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Locator, Page } from '@playwright/test'
 import { mockShellApi } from './helpers/mock-api'
 import { PREFS_BASE, asFreshUser, prefsUp, pointPrefsAtLocalStack } from './helpers/prefs'
 

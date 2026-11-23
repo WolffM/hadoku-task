@@ -58,7 +58,7 @@
     "gen:worker": "node scripts/gen-worker.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "test:e2e": "pw-isolated playwright test",
-    "test:e2e:ci": "PLAYWRIGHT_JSON_OUTPUT_NAME=e2e-report.json playwright test --reporter=json",
+    "test:e2e:ci": "playwright test",
     "test:e2e:ui": "pw-isolated playwright test --ui",
     "test:e2e:debug": "pw-isolated playwright test --debug",
     "profile": "node scripts/profile-cold-load.mjs",

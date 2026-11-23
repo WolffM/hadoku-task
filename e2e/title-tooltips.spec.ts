@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Locator, Page } from '@playwright/test'
 
 /**
  * installTitleTooltips(): plain `title=` markup shown as the card tooltip,

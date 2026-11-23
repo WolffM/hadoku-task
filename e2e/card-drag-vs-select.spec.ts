@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Page } from '@playwright/test'
 
 /**
  * A task card is a drag handle everywhere except on the text itself.

@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test, expect } from '@wolffm/e2e-harness/playwright'
+import type { Page, Route } from '@playwright/test'
 
 /**
  * The settings popout's Account tab, the parts behind a second factor:

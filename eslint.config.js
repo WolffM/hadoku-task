@@ -301,6 +301,29 @@ export default [
     }
   },
 
+  // Specs take `test`/`expect` from the fleet preset (hadoku-task#119). Its
+  // `test` writes browser-log.jsonl beside a failure's trace, which report-e2e
+  // uploads; a spec on @playwright/test's own `test` fails with no browser log.
+  // Types and `chromium` still come from @playwright/test.
+  {
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test', 'expect'],
+              message:
+                "Import test/expect from '@wolffm/e2e-harness/playwright' — its test records the browser log report-e2e uploads with a failure."
+            }
+          ]
+        }
+      ]
+    }
+  },
+
   // Prettier config (must be last)
   prettierConfig
 ]
