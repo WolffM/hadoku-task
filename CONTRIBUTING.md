@@ -37,9 +37,9 @@ pnpm exec playwright test            # e2e; starts its own stack on free ports
   real prefs-api (`scripts/dev-api.mjs`) and vite on ports it picks free, so a
   running `pnpm run dev:api` or a parallel run cannot collide with it. A
   skipped spec is not a passing one — check the counts.
-- **CI runs the e2e suite, but after you push.** The `e2e` job in `ci.yml`
-  runs it against the real stack; on a direct push to main that is detection,
-  not prevention. Run it yourself first.
+- **CI runs the e2e suite nightly, not on push.** `e2e.yml` runs it against
+  the real stack every night (and on a manual dispatch), so a red spec shows
+  up to a day after the push that broke it. Run it yourself first.
 - **Don't mock a backend you can run.** The prefs specs used to intercept
   `/prefs/api/v1/*`, and the mock hid a real bug for months by answering 404
   where the real worker answers 200. See the Dev Server notes in `CLAUDE.md`.

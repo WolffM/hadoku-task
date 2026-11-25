@@ -92,9 +92,10 @@ pnpm exec playwright test   # ~220 e2e specs against the real local stack, own f
 
 - **The pre-commit hook** runs typecheck, lint-staged and the CSS/theme gate —
   not the e2e suite; run that yourself before pushing a frontend change.
-- **CI** (`ci.yml`) runs typecheck, lint, worker-tests and the full e2e suite
-  on every pull request _and_ on every push to `main`, because work here lands
-  by direct push at least as often as by PR. On a push, CI is detection, not
+- **CI** (`ci.yml`) runs typecheck, lint and worker-tests on every pull
+  request _and_ on every push to `main`, because work here lands by direct
+  push at least as often as by PR. The full e2e suite runs nightly
+  (`e2e.yml`), and on demand by dispatching it. On a push, CI is detection, not
   prevention: the commit has already landed, so a red run is a red `main` to
   fix forward, not a block.
 - **Never edit a version number.** `publish.yml`'s `Version` step sets each

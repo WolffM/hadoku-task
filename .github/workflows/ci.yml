@@ -9,6 +9,11 @@ name: CI
 # The repo already had `typecheck`, `lint`, `lint:css` and `test:worker` in
 # package.json. This runs them.
 #
+# NOT the Playwright suite. It ran here on every push and PR from #87 until
+# 2026-11-25, when the operator moved heavy e2e off the mainline: it is the
+# same run the nightly `e2e.yml` makes (hadoku_site's nightly-e2e dispatches
+# it), and dispatching `e2e.yml` runs it on demand.
+#
 # DELIBERATELY UNFILTERED on pull_request. A required check that never runs
 # never reports, and auto-merge waits only on required checks — so a `paths:`
 # filter is a gate that is ABSENT on some PRs (they merge with nothing
@@ -264,88 +269,3 @@ jobs:
       - name: Worker verify harnesses
         if: steps.scope.outputs.run == 'true'
         run: pnpm run test:worker
-
-  e2e:
-    name: e2e
-    # The full Playwright suite on every push and PR, against the real local
-    # stack (playwright.config.ts starts it) — the same run the nightly e2e.yml
-    # makes. Before this, Playwright ran only locally and nightly, so a red spec
-    # surfaced a day late at best (hadoku-task#87).
-    #
-    # Hosted for unauthorized fork PRs, like the jobs above, and for the same
-    # reason: `pnpm install` and the specs run the PR's own code.
-    runs-on: ${{ fromJSON((github.event_name == 'pull_request' && !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) && '["ubuntu-latest"]') || vars.CI_RUNNER) }}
-    timeout-minutes: 20
-    # No shared concurrency group: playwright.config.ts starts the stack and
-    # vite on ports the kernel picks, so runs on one claw cannot collide
-    # (hadoku-task#114).
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Does this diff need the e2e suite?
-        id: scope
-        run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          changed="$(git diff --name-only \
-            "${{ github.event.pull_request.base.sha }}" \
-            "${{ github.event.pull_request.head.sha }}")"
-          echo "changed files:"; echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -qE '^(src/|worker/|themes/|task-ui-components/|scripts/|e2e/|[^/]*\.html|e2e\.json|playwright\.config\.ts|vite\.config\.ts|package\.json|pnpm-lock\.yaml|\.github/workflows/ci\.yml)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "→ nothing the app, the stack or the specs are built from was touched."
-          fi
-
-      - uses: WolffM/hadoku-actions/setup-pnpm@v1
-        id: pnpm
-        with:
-          node-version: '24'
-          npm-token: ${{ secrets.HADOKU_NPM_READ_TOKEN }}
-          vault-key: ${{ secrets.KEY_SERVICE_TASK }}
-
-      - name: Install
-        if: steps.scope.outputs.run == 'true'
-        run: pnpm install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.pnpm.outputs.npm-token }}
-
-      # The app imports the BUILT entrypoints of these two (dist/ is gitignored).
-      - name: Build workspace packages
-        if: steps.scope.outputs.run == 'true'
-        run: pnpm run build:packages
-
-      # A claw has chromium's system libraries already and no sudo for apt;
-      # a hosted runner (fork PRs) has neither the browser nor its libraries.
-      - name: Install browser
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          if [ "${{ runner.environment }}" = github-hosted ]; then
-            pnpm exec playwright install --with-deps chromium
-          else
-            pnpm exec playwright install chromium
-          fi
-
-      - name: e2e
-        if: steps.scope.outputs.run == 'true'
-        run: pnpm run test:e2e:ci
-
-      # The nightly's checks — 0 tests, a skip e2e.json's e2eSkipAllow does not
-      # name, a failed test — with post 'false': these runs are not the
-      # nightly's to record, and a fork PR has no key to send one with. A
-      # passing run that silently skipped the stack-backed specs would
-      # otherwise be green.
-      # !cancelled(), not always(): a cancelled run's report is half-written,
-      # and reading it would turn "cancelled" into a fake test failure.
-      - name: Fail on 0 tests, an unallowed skip or a failed test
-        if: '!cancelled() && steps.scope.outputs.run == ''true'''
-        uses: WolffM/hadoku-actions/report-e2e@v1
-        with:
-          report: e2e-report.json
-          runner: playwright
-          app: task
-          post: 'false'
