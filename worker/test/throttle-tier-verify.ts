@@ -11,8 +11,10 @@ let failed = 0
 function check(label: string, actual: unknown, expected: unknown) {
   const ok = actual === expected
   if (!ok) failed++
+  // The `  ✓ name` / `  ✗ name  detail` lines every harness prints, which
+  // run-worker-verify.mjs reads into its JUnit report.
   console.log(
-    `${ok ? 'ok  ' : 'FAIL'} ${label}: ${String(actual)}${ok ? '' : ` (want ${String(expected)})`}`
+    ok ? `  ✓ ${label}` : `  ✗ ${label}  got ${String(actual)} (want ${String(expected)})`
   )
 }
 

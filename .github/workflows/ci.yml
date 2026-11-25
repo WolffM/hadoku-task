@@ -203,9 +203,24 @@ jobs:
         run: pnpm run lint
 
       # stylelint over src/**/*.css plus the themes package's own validator.
+      # lint:css ends in themes' `validate`, which runs its node:test suite
+      # (themes/test/); that writes themes/reports/node-test.xml.
       - name: Stylelint
+        id: stylelint
         if: steps.scope.outputs.run == 'true'
         run: pnpm run lint:css
+
+      # Every test, red runs too, into the fleet test store (hadoku_site
+      # docs/planning/unified-test-reporting-2026-11-23.md). Advisory: it
+      # never fails the job.
+      - name: Report the tests
+        if: always() && steps.stylelint.outcome != 'skipped'
+        uses: WolffM/hadoku-actions/report-tests@v1
+        with:
+          suite: themes
+          kind: unit
+          reports: node-test themes/reports/node-test.xml
+          key: ${{ secrets.KEY_SERVICE_TASK }}
 
   worker-tests:
     name: worker-tests
@@ -266,6 +281,18 @@ jobs:
       # Boots the REAL worker (createTaskHandler) in-process against an
       # in-memory KV. Each harness runs in its own child process and asserts by
       # exit code.
+      # Each harness's `  ✓`/`  ✗` check lines land in
+      # reports/worker-verify.xml (JUnit, scripts/run-worker-verify.mjs).
       - name: Worker verify harnesses
+        id: harnesses
         if: steps.scope.outputs.run == 'true'
         run: pnpm run test:worker
+
+      - name: Report the tests
+        if: always() && steps.harnesses.outcome != 'skipped'
+        uses: WolffM/hadoku-actions/report-tests@v1
+        with:
+          suite: worker-verify
+          kind: unit
+          reports: junit reports/worker-verify.xml
+          key: ${{ secrets.KEY_SERVICE_TASK }}

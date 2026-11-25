@@ -67,7 +67,7 @@
   "scripts": {
     "build": "tsc && node ../scripts/fix-imports.cjs dist && node scripts/build-theme-bootstrap.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'test/*.test.mjs'",
+    "test": "mkdir -p reports && node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/node-test.xml 'test/*.test.mjs'",
     "prepublishOnly": "pnpm run build",
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",

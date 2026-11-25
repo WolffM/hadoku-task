@@ -79,6 +79,8 @@ playwright-report/
 test-results/
 .playwright-mcp/
 e2e-report.json
+# Test reports (JUnit) that CI posts to the fleet test store
+reports/
 
 # Tooling caches (under node_modules/.cache/* but list explicitly for clarity)
 .eslintcache

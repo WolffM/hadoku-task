@@ -98,6 +98,13 @@ pnpm exec playwright test   # ~220 e2e specs against the real local stack, own f
   (`e2e.yml`), and on demand by dispatching it. On a push, CI is detection, not
   prevention: the commit has already landed, so a red run is a red `main` to
   fix forward, not a block.
+- **Every test lands in the fleet test store.** Each test job ends in a
+  `report-tests` step, red runs included: the themes node:test suite
+  (`themes`, from the lint job), the worker harnesses (`worker-verify`) and
+  the nightly Playwright run (`e2e`). The harnesses have no standard runner,
+  so `scripts/run-worker-verify.mjs` reads every `  ✓ name` / `  ✗ name` line
+  a harness prints into `reports/worker-verify.xml` (JUnit); a new harness
+  reports as long as its checks print that way.
 - **Never edit a version number.** `publish.yml`'s `Version` step sets each
   changed package's version at publish time, one patch above the registry's
   newest; the committed `version` fields are stale by design. A committed
