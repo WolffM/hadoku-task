@@ -68,7 +68,7 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.4.0",
     "@wolffm/logger": "^1.4.5",
-    "@wolffm/prefs-client": "^1.2.1",
+    "@wolffm/prefs-client": "^1.2.2",
     "@wolffm/task-ui-components": "workspace:*",
     "@wolffm/themes": "workspace:*",
     "@wolffm/worker-utils": "^2.0.2",
